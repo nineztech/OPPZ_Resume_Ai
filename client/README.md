@@ -1,69 +1,148 @@
-# React + TypeScript + Vite
+# ResumeAI Landing Page
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A professional, animated landing page inspired by Zety's CV Maker, built with React, TypeScript, Tailwind CSS, and Framer Motion.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 🎨 **Professional Design**: Clean, modern UI with professional color palette
+- ✨ **Smooth Animations**: Framer Motion powered animations and transitions
+- 📱 **Responsive**: Fully responsive design for all devices
+- 🎯 **ATS Optimized**: Templates designed to pass Applicant Tracking Systems
+- 🚀 **Performance**: Optimized for fast loading and smooth interactions
+- ♿ **Accessible**: Built with accessibility best practices
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **React 19** - Latest React with hooks
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first CSS framework
+- **Framer Motion** - Animation library
+- **Lucide React** - Beautiful icons
+- **Shadcn/ui** - Professional UI components
+- **Vite** - Fast build tool
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Installation
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+1. **Install Dependencies**
+   ```bash
+   cd client
+   npm install
+   ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+2. **Install Additional Dependencies**
+   ```bash
+   npm install framer-motion react-intersection-observer @radix-ui/react-icons
+   ```
+
+3. **Start Development Server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Build for Production**
+   ```bash
+   npm run build
+   ```
+
+## Project Structure
+
+```
+client/
+├── src/
+│   ├── components/
+│   │   ├── layout/
+│   │   │   ├── Header.tsx          # Navigation header
+│   │   │   └── Footer.tsx          # Footer component
+│   │   ├── sections/
+│   │   │   ├── HeroSection.tsx     # Hero section with animated CV preview
+│   │   │   ├── FeaturesSection.tsx # Features showcase
+│   │   │   ├── TemplatesSection.tsx # CV templates gallery
+│   │   │   └── TestimonialsSection.tsx # User testimonials
+│   │   └── ui/
+│   │       └── button.tsx          # Shadcn/ui button component
+│   ├── lib/
+│   │   └── utils.ts                # Utility functions
+│   ├── App.tsx                     # Main app component
+│   ├── main.tsx                    # App entry point
+│   └── index.css                   # Global styles
+├── public/                         # Static assets
+├── tailwind.config.js              # Tailwind configuration
+└── package.json                    # Dependencies
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Key Features
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### 🎨 Design System
+- Professional color palette (blues, whites, grays)
+- Inter font family for modern typography
+- Consistent spacing and sizing
+- Smooth transitions and hover effects
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### ✨ Animations
+- Scroll-triggered animations using `react-intersection-observer`
+- Framer Motion for complex animations
+- Animated hero section with rolling CV preview
+- Staggered animations for lists and grids
+
+### 📱 Responsive Design
+- Mobile-first approach
+- Responsive typography
+- Adaptive layouts for all screen sizes
+- Touch-friendly interactions
+
+### 🎯 Components
+- **Header**: Fixed navigation with mobile menu
+- **Hero Section**: Animated CV preview with floating elements
+- **Features**: Interactive cards with hover effects
+- **Templates**: Gallery with preview functionality
+- **Testimonials**: User reviews with ratings
+- **Footer**: Comprehensive links and social media
+
+## Customization
+
+### Colors
+Update the color scheme in `tailwind.config.js`:
+```javascript
+colors: {
+  primary: {
+    50: '#eff6ff',
+    // ... customize your colors
+  }
+}
 ```
+
+### Animations
+Modify animation variants in individual components or add new ones to `tailwind.config.js`.
+
+### Content
+Update the content in each section component to match your brand and messaging.
+
+## Performance Optimizations
+
+- Lazy loading with `react-intersection-observer`
+- Optimized animations with Framer Motion
+- Efficient CSS with Tailwind's purge
+- Minimal bundle size with tree shaking
+
+## Browser Support
+
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+MIT License - feel free to use this project for your own purposes.
+
+## Credits
+
+Inspired by [Zety's CV Maker](https://zety.com/lp/cv-maker) landing page design and functionality.
