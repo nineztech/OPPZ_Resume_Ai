@@ -59,7 +59,7 @@ const Footer = () => {
                 <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-xl">R</span>
                 </div>
-                <span className="ml-3 text-2xl font-bold">ResumeAI</span>
+                <span className="ml-3 text-2xl font-bold">OPPZ ResumeAI</span>
               </div>
               <p className="text-gray-400 mb-6 leading-relaxed">
                 The best CV maker online. Fast, easy, and effective. Create professional CVs that stand out 

@@ -63,7 +63,7 @@ const Header = () => {
             <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">R</span>
             </div>
-            <span className="ml-2 text-xl font-bold text-gray-900 transition-colors duration-300">ResumeAI</span>
+            <span className="ml-2 text-xl font-bold text-gray-900 transition-colors duration-300">OPPZ ResumeAI</span>
           </motion.div>
 
           {/* Desktop Navigation */}
