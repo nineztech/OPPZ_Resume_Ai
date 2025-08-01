@@ -161,8 +161,8 @@ const LoginPage = () => {
             transition={{ duration: 0.6, delay: 0.8 }}
             className="text-center"
           >
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Welcome Back!</h2>
-            <p className="text-gray-600 text-lg leading-relaxed max-w-md">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Welcome Back!</h2>
+            <p className="text-gray-600 text-base leading-relaxed max-w-md">
               Access your account and continue building amazing resumes with our AI-powered platform.
             </p>
           </motion.div>
@@ -184,7 +184,7 @@ const LoginPage = () => {
               Back to Home
             </Link>
             
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Sign In</h1>
+            <h1 className="text-xl font-bold text-gray-900 mb-2">Sign In</h1>
             <p className="text-gray-600">Welcome back! Please enter your details.</p>
           </div>
 

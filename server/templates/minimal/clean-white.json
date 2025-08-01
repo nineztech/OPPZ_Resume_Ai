@@ -1,0 +1,119 @@
+{
+  "id": "4",
+  "name": "Minimal Clean",
+  "category": "minimal",
+  "version": "1.0",
+  "description": "Simple and elegant template focusing on content",
+  "author": "OPPZ ResumeAI",
+  "createdAt": "2024-01-15",
+  "updatedAt": "2024-01-15",
+  "settings": {
+    "primaryColor": "#000000",
+    "secondaryColor": "#374151",
+    "accentColor": "#6b7280",
+    "textColor": "#1f2937",
+    "backgroundColor": "#ffffff",
+    "fontFamily": "Helvetica, Arial, sans-serif",
+    "fontSize": "11px",
+    "lineHeight": "1.4"
+  },
+  "sections": {
+    "header": {
+      "enabled": true,
+      "order": 1,
+      "style": {
+        "backgroundColor": "#ffffff",
+        "color": "#000000",
+        "padding": "1rem",
+        "textAlign": "left",
+        "borderBottom": "1px solid #e5e7eb"
+      },
+      "fields": [
+        "name",
+        "title",
+        "contact"
+      ]
+    },
+    "summary": {
+      "enabled": true,
+      "order": 2,
+      "style": {
+        "margin": "0.5rem 0",
+        "padding": "0 1rem"
+      },
+      "fields": [
+        "summary"
+      ]
+    },
+    "experience": {
+      "enabled": true,
+      "order": 3,
+      "style": {
+        "margin": "0.5rem 0",
+        "padding": "0 1rem"
+      },
+      "fields": [
+        "company",
+        "position",
+        "duration",
+        "description"
+      ]
+    },
+    "education": {
+      "enabled": true,
+      "order": 4,
+      "style": {
+        "margin": "0.5rem 0",
+        "padding": "0 1rem"
+      },
+      "fields": [
+        "institution",
+        "degree",
+        "year"
+      ]
+    },
+    "skills": {
+      "enabled": true,
+      "order": 5,
+      "style": {
+        "margin": "0.5rem 0",
+        "padding": "0 1rem"
+      },
+      "fields": [
+        "skillName"
+      ]
+    }
+  },
+  "layout": {
+    "type": "minimal-single",
+    "maxWidth": "600px",
+    "margin": "0 auto",
+    "padding": "0"
+  },
+  "features": [
+    "Minimal Design",
+    "Clean Layout",
+    "Focus on Content",
+    "Easy to Read",
+    "Space Efficient",
+    "Print Friendly"
+  ],
+  "formats": [
+    "PDF",
+    "DOCX"
+  ],
+  "preview": {
+    "image": "templates/assets/previews/clean-white.png",
+    "thumbnail": "templates/assets/previews/clean-white.png"
+  },
+  "css": {
+    "file": "templates/assets/styles/clean-white.css",
+    "variables": {
+      "--primary-color": "#000000",
+      "--secondary-color": "#374151",
+      "--accent-color": "#6b7280",
+      "--text-color": "#1f2937",
+      "--bg-color": "#ffffff"
+    }
+  }
+}

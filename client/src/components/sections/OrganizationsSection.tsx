@@ -32,10 +32,10 @@ const OrganizationsSection = () => {
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8 }}
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
             Our users have been hired at
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-base text-gray-600 max-w-2xl mx-auto">
             Join thousands of professionals who trust our platform to advance their careers
           </p>
         </motion.div>
@@ -60,7 +60,7 @@ const OrganizationsSection = () => {
                 }}
               >
                 <span 
-                  className="text-2xl sm:text-3xl font-medium text-gray-400 transition-all duration-300 cursor-pointer hover:font-semibold"
+                  className="text-xl sm:text-2xl font-medium text-gray-400 transition-all duration-300 cursor-pointer hover:font-semibold"
                   style={{
                     '--hover-color': org.color
                   } as React.CSSProperties}

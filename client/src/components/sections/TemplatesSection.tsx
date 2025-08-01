@@ -3,6 +3,7 @@ import { useInView } from 'react-intersection-observer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, Download } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const TemplatesSection = () => {
   const [ref, inView] = useInView({
@@ -86,13 +87,13 @@ const TemplatesSection = () => {
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8 }}
         >
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">
             Pick a{' '}
             <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               CV template
             </span>
           </h2>
-          <p className="text-base sm:text-lg text-gray-600 max-w-3xl mx-auto px-4">
+          <p className="text-sm sm:text-base text-gray-600 max-w-3xl mx-auto px-4">
             Choose from our professionally designed templates that are optimized for ATS systems
           </p>
         </motion.div>
@@ -170,13 +171,15 @@ const TemplatesSection = () => {
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8, delay: 0.5 }}
         >
-          <Button 
-            variant="outline"
-            size="lg"
-            className="border-2 border-gray-300 hover:border-blue-600 text-gray-700 px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-semibold"
-          >
-            View more templates
-          </Button>
+          <Link to="/resume/templates">
+            <Button 
+              variant="outline"
+              size="lg"
+              className="border-2 border-gray-300 hover:border-blue-600 text-gray-700 px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-semibold"
+            >
+              View more templates
+            </Button>
+          </Link>
         </motion.div>
       </div>
     </section>

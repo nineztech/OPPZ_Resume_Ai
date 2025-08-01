@@ -1,0 +1,268 @@
+/* Classic Traditional Template - Black Theme */
+:root {
+  --primary-color: #000000;
+  --secondary-color: #374151;
+  --accent-color: #6b7280;
+  --text-color: #1f2937;
+  --bg-color: #ffffff;
+  --border-color: #e5e7eb;
+  --muted-color: #6b7280;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+}
+
+/* Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Times New Roman', serif;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+}
+
+/* Resume Container */
+.resume-container {
+  max-width: 800px;
+  margin: 0 auto;
+  background: var(--bg-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Header Section */
+.resume-header {
+  background: var(--bg-color);
+  color: var(--text-color);
+  padding: 2rem;
+  text-align: center;
+  border-bottom: 3px solid var(--primary-color);
+}
+
+.resume-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--primary-color);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.resume-header .title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  color: var(--secondary-color);
+  font-style: italic;
+}
+
+.contact-info {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted-color);
+}
+
+/* Summary Section */
+.summary {
+  padding: 1.5rem 2rem;
+  background-color: var(--bg-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.summary h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--primary-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.summary p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-color);
+  text-align: justify;
+}
+
+/* Section Styles */
+.resume-section {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.resume-section:last-child {
+  border-bottom: none;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--primary-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 0.5rem;
+}
+
+/* Experience Section */
+.experience-item {
+  margin-bottom: 1.5rem;
+}
+
+.experience-item:last-child {
+  margin-bottom: 0;
+}
+
+.experience-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.experience-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-color);
+}
+
+.experience-company {
+  font-weight: 600;
+  color: var(--primary-color);
+  font-size: 0.875rem;
+}
+
+.experience-duration {
+  font-size: 0.75rem;
+  color: var(--muted-color);
+  font-style: italic;
+}
+
+.experience-description {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--text-color);
+  margin-top: 0.5rem;
+  text-align: justify;
+}
+
+/* Education Section */
+.education-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.education-item:last-child {
+  margin-bottom: 0;
+}
+
+.education-details h3 {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-color);
+  margin-bottom: 0.25rem;
+}
+
+.education-details p {
+  font-size: 0.875rem;
+  color: var(--muted-color);
+}
+
+.education-year {
+  font-size: 0.75rem;
+  color: var(--muted-color);
+  font-style: italic;
+}
+
+/* Skills Section */
+.skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.skill-item {
+  font-size: 0.875rem;
+  color: var(--text-color);
+  background: var(--border-color);
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .resume-container {
+    margin: 0;
+    box-shadow: none;
+  }
+  
+  .resume-header {
+    padding: 1.5rem 1rem;
+  }
+  
+  .resume-header h1 {
+    font-size: 2rem;
+  }
+  
+  .contact-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .resume-section {
+    padding: 1rem;
+  }
+  
+  .experience-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .education-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .resume-container {
+    box-shadow: none;
+    margin: 0;
+  }
+  
+  body {
+    font-size: 11px;
+  }
+  
+  .resume-header h1 {
+    font-size: 2rem;
+  }
+  
+  .section-title {
+    font-size: 1.125rem;
+  }
+} 

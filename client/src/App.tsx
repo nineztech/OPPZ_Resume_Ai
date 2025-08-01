@@ -5,6 +5,7 @@ import { ToastProvider } from '@/components/ui/use-toast';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import TemplatesPage from './pages/TemplatesPage';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/resume/login" element={<LoginPage />} />
              <Route path="/resume/signup" element={<SignupPage />} />
+             <Route path="/resume/templates" element={<TemplatesPage />} />
           </Routes>
           <Toaster />
         </div>

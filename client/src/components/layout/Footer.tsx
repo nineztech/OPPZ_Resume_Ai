@@ -59,7 +59,7 @@ const Footer = () => {
                 <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-xl">R</span>
                 </div>
-                <span className="ml-3 text-2xl font-bold">OPPZ ResumeAI</span>
+                <span className="ml-3 text-xl font-bold">OPPZ ResumeAI</span>
               </div>
               <p className="text-gray-400 mb-6 leading-relaxed">
                 The best CV maker online. Fast, easy, and effective. Create professional CVs that stand out 
@@ -92,7 +92,7 @@ const Footer = () => {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
-              <h3 className="text-lg font-semibold mb-4 capitalize">
+              <h3 className="text-base font-semibold mb-4 capitalize">
                 {category}
               </h3>
               <ul className="space-y-3">

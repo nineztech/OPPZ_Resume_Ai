@@ -20,7 +20,7 @@ const Header = () => {
   const [user, setUser] = useState<any>(null);
 
   const navItems = [
-    { name: 'Templates', href: '#templates' },
+    { name: 'Templates', href: '/resume/templates' },
     { name: 'Features', href: '#features' },
     { name: 'Pricing', href: '#pricing' },
     { name: 'Help', href: '#help' },
@@ -63,21 +63,31 @@ const Header = () => {
             <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">R</span>
             </div>
-            <span className="ml-2 text-xl font-bold text-gray-900 transition-colors duration-300">OPPZ ResumeAI</span>
+            <span className="ml-2 text-lg font-bold text-gray-900 transition-colors duration-300">OPPZ ResumeAI</span>
           </motion.div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-8">
             {navItems.map((item) => (
-              <motion.a
-                key={item.name}
-                href={item.href}
-                className="text-gray-600 hover:text-blue-600 transition-colors duration-300 font-medium"
-                whileHover={{ y: -2 }}
-                transition={{ duration: 0.2 }}
-              >
-                {item.name}
-              </motion.a>
+              <motion.div key={item.name}>
+                {item.href.startsWith('/') ? (
+                  <Link
+                    to={item.href}
+                    className="text-gray-600 hover:text-blue-600 transition-colors duration-300 font-medium"
+                  >
+                    {item.name}
+                  </Link>
+                ) : (
+                  <motion.a
+                    href={item.href}
+                    className="text-gray-600 hover:text-blue-600 transition-colors duration-300 font-medium"
+                    whileHover={{ y: -2 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {item.name}
+                  </motion.a>
+                )}
+              </motion.div>
             ))}
           </nav>
 
@@ -164,14 +174,25 @@ const Header = () => {
           >
             <div className="px-2 pt-2 pb-3 space-y-1 bg-white border-t border-gray-100">
               {navItems.map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  className="block px-3 py-2 text-gray-600 hover:text-blue-600 transition-colors duration-200"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {item.name}
-                </a>
+                <div key={item.name}>
+                  {item.href.startsWith('/') ? (
+                    <Link
+                      to={item.href}
+                      className="block px-3 py-2 text-gray-600 hover:text-blue-600 transition-colors duration-200"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  ) : (
+                    <a
+                      href={item.href}
+                      className="block px-3 py-2 text-gray-600 hover:text-blue-600 transition-colors duration-200"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {item.name}
+                    </a>
+                  )}
+                </div>
               ))}
               <div className="pt-4 space-y-2">
                 {user ? (

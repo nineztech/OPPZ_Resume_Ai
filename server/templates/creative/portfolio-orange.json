@@ -1,0 +1,161 @@
+{
+  "id": "2",
+  "name": "Modern Sidebar",
+  "category": "creative",
+  "version": "1.0",
+  "description": "Bold modern layout with prominent sidebar and strong visual hierarchy",
+  "author": "OPPZ ResumeAI",
+  "createdAt": "2024-01-15",
+  "updatedAt": "2024-01-15",
+  "settings": {
+    "primaryColor": "#059669",
+    "secondaryColor": "#047857",
+    "accentColor": "#10b981",
+    "textColor": "#1f2937",
+    "backgroundColor": "#ffffff",
+    "fontFamily": "Arial, sans-serif",
+    "fontSize": "11px",
+    "lineHeight": "1.4"
+  },
+  "sections": {
+    "header": {
+      "enabled": true,
+      "order": 1,
+      "style": {
+        "backgroundColor": "#ffffff",
+        "color": "#1f2937",
+        "padding": "1.5rem 0",
+        "textAlign": "left"
+      },
+      "fields": [
+        "name",
+        "title",
+        "contact"
+      ]
+    },
+    "summary": {
+      "enabled": true,
+      "order": 2,
+      "style": {
+        "margin": "1rem 0",
+        "padding": "0 1rem"
+      },
+      "fields": [
+        "summary"
+      ]
+    },
+    "experience": {
+      "enabled": true,
+      "order": 3,
+      "style": {
+        "margin": "1rem 0",
+        "padding": "0 1rem"
+      },
+      "fields": [
+        "company",
+        "position",
+        "duration",
+        "description"
+      ]
+    },
+    "education": {
+      "enabled": true,
+      "order": 4,
+      "style": {
+        "margin": "1rem 0",
+        "padding": "0 1rem"
+      },
+      "fields": [
+        "institution",
+        "degree",
+        "year"
+      ]
+    },
+    "skills": {
+      "enabled": true,
+      "order": 5,
+      "style": {
+        "margin": "1rem 0",
+        "padding": "0 1rem"
+      },
+      "fields": [
+        "skillName",
+        "category"
+      ]
+    },
+    "achievements": {
+      "enabled": true,
+      "order": 6,
+      "style": {
+        "margin": "1rem 0",
+        "padding": "0 1rem"
+      },
+      "fields": [
+        "achievement",
+        "description"
+      ]
+    },
+    "certifications": {
+      "enabled": true,
+      "order": 7,
+      "style": {
+        "margin": "1rem 0",
+        "padding": "0 1rem"
+      },
+      "fields": [
+        "certificationName",
+        "year"
+      ]
+    },
+    "projects": {
+      "enabled": true,
+      "order": 8,
+      "style": {
+        "margin": "1rem 0",
+        "padding": "0 1rem"
+      },
+      "fields": [
+        "projectName",
+        "description",
+        "technologies"
+      ]
+    }
+  },
+  "layout": {
+    "type": "sidebar-modern",
+    "maxWidth": "800px",
+    "margin": "0 auto",
+    "padding": "0",
+    "columns": {
+      "sidebar": "40%",
+      "main": "60%"
+    }
+  },
+  "features": [
+    "Modern Sidebar Design",
+    "Bold Visual Hierarchy",
+    "Skills & Achievements Sidebar",
+    "Clean Typography",
+    "Green Accent Colors",
+    "Professional Layout"
+  ],
+  "formats": [
+    "PDF",
+    "DOCX",
+    "HTML"
+  ],
+  "preview": {
+    "image": "templates/assets/previews/portfolio-orange.png",
+    "thumbnail": "templates/assets/previews/portfolio-orange.png"
+  },
+  "css": {
+    "file": "templates/assets/styles/portfolio-orange.css",
+    "variables": {
+      "--primary-color": "#059669",
+      "--secondary-color": "#047857",
+      "--accent-color": "#10b981",
+      "--text-color": "#1f2937",
+      "--bg-color": "#ffffff"
+    }
+  }
+}

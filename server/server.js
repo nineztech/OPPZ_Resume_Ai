@@ -21,6 +21,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Serve static files from templates directory
+app.use('/templates', express.static('templates'));
+
 // Test endpoint
 app.get("/", (req, res) => {
   res.json({ message: "Server is running!" });

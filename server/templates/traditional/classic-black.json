@@ -1,0 +1,135 @@
+{
+  "id": "3",
+  "name": "Classic Traditional",
+  "category": "traditional",
+  "version": "1.0",
+  "description": "Timeless design that works for any industry",
+  "author": "OPPZ ResumeAI",
+  "createdAt": "2024-01-15",
+  "updatedAt": "2024-01-15",
+  "settings": {
+    "primaryColor": "#374151",
+    "secondaryColor": "#6b7280",
+    "accentColor": "#9ca3af",
+    "textColor": "#1f2937",
+    "backgroundColor": "#ffffff",
+    "fontFamily": "Times New Roman, serif",
+    "fontSize": "12px",
+    "lineHeight": "1.5"
+  },
+  "sections": {
+    "header": {
+      "enabled": true,
+      "order": 1,
+      "style": {
+        "backgroundColor": "#374151",
+        "color": "#ffffff",
+        "padding": "1.5rem",
+        "textAlign": "center",
+        "borderBottom": "2px solid #6b7280"
+      },
+      "fields": [
+        "name",
+        "title",
+        "contact"
+      ]
+    },
+    "summary": {
+      "enabled": true,
+      "order": 2,
+      "style": {
+        "margin": "1rem 0",
+        "padding": "0 1.5rem"
+      },
+      "fields": [
+        "summary"
+      ]
+    },
+    "experience": {
+      "enabled": true,
+      "order": 3,
+      "style": {
+        "margin": "1rem 0",
+        "padding": "0 1.5rem"
+      },
+      "fields": [
+        "company",
+        "position",
+        "duration",
+        "description"
+      ]
+    },
+    "education": {
+      "enabled": true,
+      "order": 4,
+      "style": {
+        "margin": "1rem 0",
+        "padding": "0 1.5rem"
+      },
+      "fields": [
+        "institution",
+        "degree",
+        "year",
+        "gpa"
+      ]
+    },
+    "skills": {
+      "enabled": true,
+      "order": 5,
+      "style": {
+        "margin": "1rem 0",
+        "padding": "0 1.5rem"
+      },
+      "fields": [
+        "skillName",
+        "proficiency"
+      ]
+    },
+    "certifications": {
+      "enabled": true,
+      "order": 6,
+      "style": {
+        "margin": "1rem 0",
+        "padding": "0 1.5rem"
+      },
+      "fields": [
+        "certificationName",
+        "issuer",
+        "date",
+        "expiry"
+      ]
+    }
+  },
+  "layout": {
+    "type": "traditional-single",
+    "maxWidth": "800px",
+    "margin": "0 auto",
+    "padding": "0"
+  },
+  "features": [
+    "Traditional Layout",
+    "Clean Typography",
+    "Professional Appearance",
+    "Widely Accepted",
+    "ATS Friendly",
+    "Print Optimized"
+  ],
+  "formats": [
+    "PDF",
+    "DOCX"
+  ],
+  "preview": {
+    "image": "templates/assets/previews/classic-black.png",
+    "thumbnail": "templates/assets/previews/classic-black.png"
+  },
+  "css": {
+    "file": "templates/assets/styles/classic-black.css",
+    "variables": {
+      "--primary-color": "#374151",
+      "--secondary-color": "#6b7280",
+      "--accent-color": "#9ca3af",
+      "--text-color": "#1f2937",
+      "--bg-color": "#ffffff"
+    }
+  }
+}

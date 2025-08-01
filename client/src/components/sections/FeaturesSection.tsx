@@ -87,13 +87,13 @@ const FeaturesSection = () => {
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8 }}
         >
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 sm:mb-6 px-4">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 px-4">
             Enhance your CV with our{' '}
             <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               expert features
             </span>
           </h2>
-          <p className="text-base sm:text-lg text-gray-600 max-w-3xl mx-auto px-4">
+          <p className="text-sm sm:text-base text-gray-600 max-w-3xl mx-auto px-4">
             Everything you need to create a professional CV that stands out from the crowd
           </p>
         </motion.div>
@@ -142,10 +142,10 @@ const FeaturesSection = () => {
           transition={{ duration: 0.8, delay: 0.5 }}
         >
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl p-6 sm:p-8 lg:p-12 mx-4">
-            <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-4">
+                            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-4">
               Ready to create your professional CV?
             </h3>
-            <p className="text-sm sm:text-base lg:text-lg text-gray-600 mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
+                          <p className="text-xs sm:text-sm lg:text-base text-gray-600 mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
               Join thousands of professionals who have already created standout CVs with our platform
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center px-4">

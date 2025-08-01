@@ -49,7 +49,7 @@ const HeroSection = () => {
           >
             <div className="space-y-4">
               <motion.h1 
-                className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight"
+                className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
@@ -62,7 +62,7 @@ const HeroSection = () => {
               </motion.h1>
               
               <motion.p 
-                className="text-lg text-gray-600 leading-relaxed max-w-lg"
+                className="text-base text-gray-600 leading-relaxed max-w-lg"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
@@ -81,7 +81,7 @@ const HeroSection = () => {
             >
               <Button 
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 Create new CV
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -89,7 +89,7 @@ const HeroSection = () => {
               <Button 
                 variant="outline"
                 size="lg"
-                className="border-2 border-gray-300 hover:border-blue-600 text-gray-700 hover:text-blue-600 px-8 py-3 text-base font-semibold transition-all duration-300"
+                className="border-2 border-gray-300 hover:border-blue-600 text-gray-700 hover:text-blue-600 px-8 py-3 text-sm font-semibold transition-all duration-300"
               >
                 Improve my CV
               </Button>
@@ -165,7 +165,7 @@ const HeroSection = () => {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1.4 }}
                   >
-                    <h3 className="text-lg font-bold text-gray-800 mb-1">John Anderson</h3>
+                    <h3 className="text-base font-bold text-gray-800 mb-1">John Anderson</h3>
                     <p className="text-sm text-gray-600">Senior Software Engineer</p>
                   </motion.div>
                 </motion.div>
