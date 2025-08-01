@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, Filter, Star, Download, Eye } from 'lucide-react';
-import TemplatePreviewModal from '@/components/TemplatePreviewModal';
-import { templateService } from '@/services/templateService';
-import type { Template } from '@/services/templateService';
+import TemplatePreviewModal from '@/components/modals/TemplatePreviewModal';
+import TemplateRenderer from '@/components/templates/TemplateRenderer';
+import { templates as templateData, getTemplateById } from '@/data/templates';
+import type { Template } from '@/data/templates';
 
 const TemplatesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,31 +22,24 @@ const TemplatesPage = () => {
 
   const categories = [
     { id: 'all', name: 'All Templates' },
-    { id: 'creative', name: 'Creative' },
-    { id: 'traditional', name: 'Traditional' },
-    { id: 'modern', name: 'Modern' },
-    { id: 'simple', name: 'Simple' },
-    { id: 'professional', name: 'Professional' },
-    { id: 'minimal', name: 'Minimal' },
+    { id: 'Professional', name: 'Professional' },
+    { id: 'Minimal', name: 'Minimal' },
+    { id: 'Creative', name: 'Creative' },
+    { id: 'Traditional', name: 'Traditional' },
   ];
 
-  // Fetch templates from API
+  // Load templates from frontend data
   useEffect(() => {
-    const fetchTemplates = async () => {
-      try {
-        setLoading(true);
-        const data = await templateService.getAllTemplates();
-        setTemplates(data);
-        setError(null);
-      } catch (err) {
-        setError('Failed to load templates. Please try again later.');
-        console.error('Error fetching templates:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTemplates();
+    setLoading(true);
+    try {
+      setTemplates(templateData);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load templates. Please try again later.');
+      console.error('Error loading templates:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const filteredTemplates = templates.filter(template => {
@@ -60,10 +54,21 @@ const TemplatesPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleDownloadTemplate = (templateId: string) => {
-    // Handle template download logic here
-    console.log('Downloading template:', templateId);
-    setIsModalOpen(false);
+  const handleDownloadTemplate = (templateId: string, selectedColor?: string) => {
+    console.log('Downloading template:', templateId, 'with color:', selectedColor);
+    // In a real implementation, you would handle the download with the selected color
+    // For now, we'll just log the action
+    alert(`Downloading template ${templateId} with color ${selectedColor || 'default'}`);
+  };
+
+  const handleUseTemplate = (templateId: string, selectedColor?: string) => {
+    console.log('Using template:', templateId, 'with color:', selectedColor);
+    // Navigate to use-template page with template and color parameters
+    const params = new URLSearchParams({
+      templateId,
+      color: selectedColor || ''
+    });
+    window.location.href = `/resume/templates/use-template?${params.toString()}`;
   };
 
   return (
@@ -144,25 +149,13 @@ const TemplatesPage = () => {
                 <Card key={template.id} className="group hover:shadow-lg transition-shadow duration-300">
                   <div className="relative">
                     <div className="aspect-[3/4] bg-gray-200 rounded-t-lg overflow-hidden">
-                      {template.image ? (
-                        <img 
-                          src={`http://localhost:5000/${template.image}`}
-                          alt={template.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            // Fallback to placeholder if image fails to load
-                            e.currentTarget.style.display = 'none';
-                            const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (nextElement) {
-                              nextElement.style.display = 'flex';
-                            }
-                          }}
-                        />
-                      ) : null}
-                      <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center" style={{ display: template.image ? 'none' : 'flex' }}>
-                        <div className="text-center">
-                          <div className="w-16 h-20 bg-white rounded shadow-sm mx-auto mb-2"></div>
-                          <p className="text-sm text-gray-600">{template.name}</p>
+                      <div className="w-full h-full bg-white p-2 overflow-hidden">
+                        <div className="transform scale-50 origin-top-left w-full h-full">
+                          <TemplateRenderer 
+                            templateId={template.id} 
+                            data={template.templateData} 
+                            color={template.colors[0]}
+                          />
                         </div>
                       </div>
                     </div>
@@ -250,6 +243,7 @@ const TemplatesPage = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onDownload={handleDownloadTemplate}
+        onUseTemplate={handleUseTemplate}
       />
       
       <Footer />

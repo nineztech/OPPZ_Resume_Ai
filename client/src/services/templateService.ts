@@ -1,147 +1,52 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+import { templates, getTemplateById, getTemplatesByCategory } from '@/data/templates';
+import type { Template } from '@/data/templates';
 
-export interface Template {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  image: string;
-  rating: number;
-  downloads: number;
-  isPopular?: boolean;
-  isNew?: boolean;
-  features: string[];
-  colors: string[];
-  formats: string[];
-  filePath?: string;
-  previewPath?: string;
-  cssPath?: string;
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  count?: number;
-  message?: string;
-  error?: string;
-}
-
-class TemplateService {
-  private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
-    try {
-      const url = `${API_BASE_URL}${endpoint}`;
-      console.log('🌐 Making API request to:', url);
-      
-      const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
-        ...options,
-      });
-
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', response.headers);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+export interface TemplateService {
+  getAllTemplates(): Promise<Template[]>;
+  getTemplateById(id: string): Promise<Template | undefined>;
+  getTemplatesByCategory(category: string): Promise<Template[]>;
+  downloadTemplate(templateId: string, color?: string, format?: string): Promise<void>;
+  getTemplatePreviewWithColor(templateId: string, color: string): Promise<{ previewUrl: string }>;
       }
 
-      const data = await response.json();
-      console.log('📦 Response data:', data);
-      return data;
-    } catch (error) {
-      console.error('❌ API request failed:', error);
-      throw error;
-    }
-  }
-
-  // Get all templates
+class FrontendTemplateService implements TemplateService {
   async getAllTemplates(): Promise<Template[]> {
-    const response = await this.makeRequest<Template[]>('/templates');
-    return response.data;
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return templates;
   }
 
-  // Get template by ID
-  async getTemplateById(id: string): Promise<Template> {
-    const response = await this.makeRequest<Template>(`/templates/${id}`);
-    return response.data;
+  async getTemplateById(id: string): Promise<Template | undefined> {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 50));
+    return getTemplateById(id);
   }
 
-  // Get templates by category
   async getTemplatesByCategory(category: string): Promise<Template[]> {
-    const response = await this.makeRequest<Template[]>(`/templates/category/${category}`);
-    return response.data;
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return getTemplatesByCategory(category);
   }
 
-  // Search templates
-  async searchTemplates(query: string): Promise<Template[]> {
-    const response = await this.makeRequest<Template[]>(`/templates/search/${encodeURIComponent(query)}`);
-    return response.data;
+  async downloadTemplate(templateId: string, color?: string, format?: string): Promise<void> {
+    // Simulate download process
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log(`Downloading template ${templateId} with color ${color} in format ${format}`);
+    
+    // In a real implementation, this would trigger a file download
+    // For now, we'll just log the action
+    alert(`Template ${templateId} download started with color ${color || 'default'} in ${format || 'PDF'} format`);
   }
 
-  // Get popular templates
-  async getPopularTemplates(): Promise<Template[]> {
-    const response = await this.makeRequest<Template[]>('/templates/popular');
-    return response.data;
-  }
-
-  // Get new templates
-  async getNewTemplates(): Promise<Template[]> {
-    const response = await this.makeRequest<Template[]>('/templates/new');
-    return response.data;
-  }
-
-  // Download template
-  async downloadTemplate(id: string, token?: string): Promise<{ downloadUrl: string; templateName: string }> {
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await this.makeRequest<{ downloadUrl: string; templateName: string }>(
-      `/templates/${id}/download`,
-      { headers }
-    );
-    return response.data;
-  }
-
-  // Get template preview
-  async getTemplatePreview(id: string): Promise<{ previewUrl: string; cssUrl: string }> {
-    const response = await this.makeRequest<{ previewUrl: string; cssUrl: string }>(
-      `/templates/${id}/preview`
-    );
-    return response.data;
-  }
-
-  // Get template CSS
-  async getTemplateCSS(cssPath: string): Promise<string> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/templates/css/${encodeURIComponent(cssPath)}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.text();
-    } catch (error) {
-      console.error('Failed to fetch template CSS:', error);
-      throw error;
-    }
-  }
-
-  // Get template preview image
-  async getTemplatePreviewImage(previewPath: string): Promise<string> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/templates/preview/${encodeURIComponent(previewPath)}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const blob = await response.blob();
-      return URL.createObjectURL(blob);
-    } catch (error) {
-      console.error('Failed to fetch template preview:', error);
-      throw error;
-    }
+  async getTemplatePreviewWithColor(templateId: string, color: string): Promise<{ previewUrl: string }> {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Return a placeholder preview URL
+    return {
+      previewUrl: `/api/templates/${templateId}/preview?color=${color}`
+    };
   }
 }
 
-export const templateService = new TemplateService(); 
+export const templateService = new FrontendTemplateService(); 

@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import TemplatesPage from './pages/TemplatesPage';
+import UseTemplatePage from './pages/UseTemplatePage';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
             <Route path="/resume/login" element={<LoginPage />} />
              <Route path="/resume/signup" element={<SignupPage />} />
              <Route path="/resume/templates" element={<TemplatesPage />} />
+             <Route path="/resume/templates/use-template" element={<UseTemplatePage />} />
           </Routes>
           <Toaster />
         </div>
