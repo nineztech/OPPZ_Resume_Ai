@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, FileText, Sparkles, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import ResumeUploadModal from '@/components/modals/ResumeUploadModal';
+import { fileExtractionService } from '@/services/fileExtractionService';
 
 const UseTemplatePage = () => {
   const navigate = useNavigate();
@@ -13,41 +14,45 @@ const UseTemplatePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [extractedData, setExtractedData] = useState<any>(null);
 
   const templateId = searchParams.get('templateId');
   const selectedColor = searchParams.get('color');
 
-  const handleFileUpload = (file: File) => {
+  const handleFileUpload = async (file: File) => {
     setUploadedFile(file);
     setIsUploading(true);
-    
-    // Simulate upload process
-    setTimeout(() => {
+    try {
+      console.log("Starting extraction...");
+      const data = await fileExtractionService.extractTextFromFile(file);
+      console.log("Extraction finished", data);
+      setExtractedData(data);
       setIsUploading(false);
-      setIsModalOpen(true);
-    }, 2000);
+      setIsModalOpen(true); // <-- This should open the modal
+    } catch (err) {
+      setIsUploading(false);
+      alert('Failed to extract data');
+    }
   };
 
   const handleContinueWithRaw = () => {
-    // Navigate to resume builder with raw text
     navigate('/resume/builder', { 
       state: { 
         templateId, 
         selectedColor, 
         mode: 'raw',
-        resumeData: uploadedFile 
+        extractedData // pass extracted data, not file!
       } 
     });
   };
 
   const handleCustomizeWithAI = () => {
-    // Navigate to resume builder with AI customization
     navigate('/resume/builder', { 
       state: { 
         templateId, 
         selectedColor, 
         mode: 'ai',
-        resumeData: uploadedFile 
+        extractedData // pass extracted data, not file!
       } 
     });
   };

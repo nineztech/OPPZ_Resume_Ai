@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import TemplatesPage from './pages/TemplatesPage';
 import UseTemplatePage from './pages/UseTemplatePage';
+import ResumeBuilderPage from './pages/ResumeBuilderPage';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
              <Route path="/resume/signup" element={<SignupPage />} />
              <Route path="/resume/templates" element={<TemplatesPage />} />
              <Route path="/resume/templates/use-template" element={<UseTemplatePage />} />
+             <Route path="/resume/builder" element={<ResumeBuilderPage />} />
           </Routes>
           <Toaster />
         </div>

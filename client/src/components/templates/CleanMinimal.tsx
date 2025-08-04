@@ -38,91 +38,90 @@ interface CleanMinimalProps {
   color?: string;
 }
 
-const CleanMinimal: React.FC<CleanMinimalProps> = ({ data, color = '#374151' }) => {
+const CleanMinimal: React.FC<CleanMinimalProps> = ({ data, color = '#2563eb' }) => {
   return (
-    <div className="bg-white p-8 max-w-4xl mx-auto font-sans" style={{ color: '#1f2937' }}>
+    <div className="bg-white max-w-4xl mx-auto font-serif" style={{ 
+      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontSize: '11px',
+      lineHeight: '1.4',
+      color: '#333333'
+    }}>
       {/* Header */}
-      <div className="mb-8 text-center">
-        <h1 className="text-4xl font-bold mb-2 uppercase tracking-wide" style={{ color }}>
-          {data.personalInfo.name}
+      <div className="mb-6 pb-4 border-b-2" style={{ borderColor: color }}>
+        <h1 className="text-3xl font-bold mb-1 tracking-wide" style={{ 
+          color: color,
+          fontWeight: '700',
+          letterSpacing: '0.5px'
+        }}>
+          {data.personalInfo.name.toUpperCase()}
         </h1>
-        <h2 className="text-xl font-semibold mb-3 text-gray-800 uppercase tracking-wide">
-          {data.personalInfo.title}
-        </h2>
-        <div className="text-sm text-gray-600">
-          {data.personalInfo.address} | {data.personalInfo.email} | {data.personalInfo.website}
+        <div className="text-sm text-gray-600 mb-2" style={{ fontSize: '10px' }}>
+          {data.personalInfo.title} | B2B | Networking
+        </div>
+        <div className="text-xs text-gray-600 flex items-center gap-4" style={{ fontSize: '9px' }}>
+          <span>📧 {data.personalInfo.email}</span>
+          <span>🌐 {data.personalInfo.website}</span>
+          <span>📍 {data.personalInfo.address}</span>
         </div>
       </div>
 
-      {/* Separator */}
-      <div className="border-b border-gray-300 mb-8"></div>
-
       {/* Summary */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-3 uppercase tracking-wide" style={{ color }}>
-          Summary
+      <div className="mb-6">
+        <h3 className="text-sm font-bold mb-2 tracking-wide" style={{ 
+          color: color,
+          fontSize: '11px',
+          fontWeight: '700',
+          letterSpacing: '0.3px'
+        }}>
+          SUMMARY
         </h3>
-        <p className="text-gray-700 leading-relaxed">
+        <p className="text-gray-800 leading-relaxed text-justify" style={{ 
+          fontSize: '10px',
+          lineHeight: '1.5'
+        }}>
           {data.summary}
         </p>
       </div>
 
-      {/* Skills Section */}
-      <div className="mb-8">
-        <div className="grid grid-cols-2 gap-8">
-          {/* Professional Skills */}
-          {data.skills.professional && (
-            <div>
-              <h3 className="text-lg font-semibold mb-3 uppercase tracking-wide" style={{ color }}>
-                Professional Skills
-              </h3>
-              <div className="space-y-2">
-                {data.skills.professional.map((skill, index) => (
-                  <div key={index} className="text-gray-700">
-                    {skill}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Technical Skills */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3 uppercase tracking-wide" style={{ color }}>
-              Technical Skills
-            </h3>
-            <div className="space-y-2">
-              {data.skills.technical.map((skill, index) => (
-                <div key={index} className="text-gray-700">
-                  {skill}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Professional Experience */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-3 uppercase tracking-wide" style={{ color }}>
-          Professional Experience
+      {/* Experience */}
+      <div className="mb-6">
+        <h3 className="text-sm font-bold mb-3 tracking-wide" style={{ 
+          color: color,
+          fontSize: '11px',
+          fontWeight: '700',
+          letterSpacing: '0.3px'
+        }}>
+          EXPERIENCE
         </h3>
-        <div className="space-y-6">
+        <div className="space-y-4">
           {data.experience.map((exp, index) => (
             <div key={index}>
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h4 className="font-semibold text-gray-900">
-                    {exp.title}, {exp.company}
-                  </h4>
-                </div>
-                <span className="text-sm text-gray-600 font-medium">
+              <div className="flex justify-between items-baseline mb-1">
+                <h4 className="font-bold text-gray-900" style={{ 
+                  fontSize: '10px',
+                  fontWeight: '600'
+                }}>
+                  {exp.title}
+                </h4>
+                <span className="text-gray-600 font-medium" style={{ 
+                  fontSize: '9px'
+                }}>
                   {exp.dates}
                 </span>
               </div>
-              <ul className="list-disc list-inside space-y-1 text-gray-700">
+              <div className="text-gray-700 font-medium mb-2" style={{ 
+                fontSize: '10px',
+                fontWeight: '500'
+              }}>
+                {exp.company}
+              </div>
+              <ul className="space-y-1 ml-4">
                 {exp.achievements.map((achievement, idx) => (
-                  <li key={idx} className="text-sm">
+                  <li key={idx} className="text-gray-800 relative" style={{ 
+                    fontSize: '9px',
+                    lineHeight: '1.4'
+                  }}>
+                    <span className="absolute -left-3 top-0">•</span>
                     {achievement}
                   </li>
                 ))}
@@ -132,27 +131,96 @@ const CleanMinimal: React.FC<CleanMinimalProps> = ({ data, color = '#374151' }) 
         </div>
       </div>
 
-      {/* Projects */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-3 uppercase tracking-wide" style={{ color }}>
-          Projects
+      {/* Skills Section - Two Column Layout */}
+      <div className="mb-6">
+        <div className="grid grid-cols-2 gap-8">
+          {/* Professional Skills */}
+          {data.skills.professional && (
+            <div>
+              <h3 className="text-sm font-bold mb-3 tracking-wide" style={{ 
+                color: color,
+                fontSize: '11px',
+                fontWeight: '700',
+                letterSpacing: '0.3px'
+              }}>
+                CORE COMPETENCIES
+              </h3>
+              <div className="space-y-1">
+                {data.skills.professional.map((skill, index) => (
+                  <div key={index} className="text-gray-800" style={{ 
+                    fontSize: '9px',
+                    lineHeight: '1.4'
+                  }}>
+                    • {skill}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Technical Skills */}
+          <div>
+            <h3 className="text-sm font-bold mb-3 tracking-wide" style={{ 
+              color: color,
+              fontSize: '11px',
+              fontWeight: '700',
+              letterSpacing: '0.3px'
+            }}>
+              TECHNICAL PROFICIENCIES
+            </h3>
+            <div className="space-y-1">
+              {data.skills.technical.map((skill, index) => (
+                <div key={index} className="text-gray-800" style={{ 
+                  fontSize: '9px',
+                  lineHeight: '1.4'
+                }}>
+                  • {skill}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Projects Section */}
+      <div className="mb-6">
+        <h3 className="text-sm font-bold mb-3 tracking-wide" style={{ 
+          color: color,
+          fontSize: '11px',
+          fontWeight: '700',
+          letterSpacing: '0.3px'
+        }}>
+          KEY PROJECTS
         </h3>
-        <div className="space-y-6">
+        <div className="space-y-4">
           {data.education.slice(0, 1).map((project, index) => (
             <div key={index}>
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h4 className="font-semibold text-gray-900">
-                    {project.degree}, {project.institution}
-                  </h4>
-                </div>
-                <span className="text-sm text-gray-600 font-medium">
+              <div className="flex justify-between items-baseline mb-1">
+                <h4 className="font-bold text-gray-900" style={{ 
+                  fontSize: '10px',
+                  fontWeight: '600'
+                }}>
+                  {project.degree}
+                </h4>
+                <span className="text-gray-600 font-medium" style={{ 
+                  fontSize: '9px'
+                }}>
                   {project.dates}
                 </span>
               </div>
-              <ul className="list-disc list-inside space-y-1 text-gray-700">
+              <div className="text-gray-700 font-medium mb-2" style={{ 
+                fontSize: '10px',
+                fontWeight: '500'
+              }}>
+                {project.institution}
+              </div>
+              <ul className="space-y-1 ml-4">
                 {project.details.map((detail, idx) => (
-                  <li key={idx} className="text-sm">
+                  <li key={idx} className="text-gray-800 relative" style={{ 
+                    fontSize: '9px',
+                    lineHeight: '1.4'
+                  }}>
+                    <span className="absolute -left-3 top-0">•</span>
                     {detail}
                   </li>
                 ))}
@@ -163,57 +231,103 @@ const CleanMinimal: React.FC<CleanMinimalProps> = ({ data, color = '#374151' }) 
       </div>
 
       {/* Education */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-3 uppercase tracking-wide" style={{ color }}>
-          Education
+      <div className="mb-6">
+        <h3 className="text-sm font-bold mb-3 tracking-wide" style={{ 
+          color: color,
+          fontSize: '11px',
+          fontWeight: '700',
+          letterSpacing: '0.3px'
+        }}>
+          EDUCATION
         </h3>
-        <div className="space-y-6">
+        <div className="space-y-3">
           {data.education.slice(1).map((edu, index) => (
             <div key={index}>
-              <div className="flex justify-between items-start mb-2">
+              <div className="flex justify-between items-baseline">
                 <div>
-                  <h4 className="font-semibold text-gray-900">
-                    {edu.degree}, {edu.institution}
+                  <h4 className="font-bold text-gray-900" style={{ 
+                    fontSize: '10px',
+                    fontWeight: '600'
+                  }}>
+                    {edu.degree}
                   </h4>
+                  <div className="text-gray-700" style={{ 
+                    fontSize: '9px'
+                  }}>
+                    {edu.institution}
+                  </div>
                 </div>
-                <span className="text-sm text-gray-600 font-medium">
+                <span className="text-gray-600 font-medium" style={{ 
+                  fontSize: '9px'
+                }}>
                   {edu.dates}
                 </span>
               </div>
-              <ul className="list-disc list-inside space-y-1 text-gray-700">
-                {edu.details.map((detail, idx) => (
-                  <li key={idx} className="text-sm">
-                    {detail}
-                  </li>
-                ))}
-              </ul>
+              {edu.details.length > 0 && (
+                <div className="mt-1">
+                  {edu.details.map((detail, idx) => (
+                    <div key={idx} className="text-gray-800" style={{ 
+                      fontSize: '9px',
+                      lineHeight: '1.3'
+                    }}>
+                      {detail}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Additional Information */}
+      {/* Key Achievements */}
       <div>
-        <h3 className="text-lg font-semibold mb-3 uppercase tracking-wide" style={{ color }}>
-          Additional Information
+        <h3 className="text-sm font-bold mb-3 tracking-wide" style={{ 
+          color: color,
+          fontSize: '11px',
+          fontWeight: '700',
+          letterSpacing: '0.3px'
+        }}>
+          KEY ACHIEVEMENTS
         </h3>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {data.additionalInfo.languages && (
             <div>
-              <span className="font-medium text-gray-900">Languages: </span>
-              <span className="text-gray-700">{data.additionalInfo.languages.join(', ')}.</span>
+              <span className="font-semibold text-gray-900" style={{ 
+                fontSize: '9px',
+                fontWeight: '600'
+              }}>
+                Languages: 
+              </span>
+              <span className="text-gray-800 ml-1" style={{ fontSize: '9px' }}>
+                {data.additionalInfo.languages.join(', ')}
+              </span>
             </div>
           )}
           {data.additionalInfo.certifications && (
             <div>
-              <span className="font-medium text-gray-900">Certifications: </span>
-              <span className="text-gray-700">{data.additionalInfo.certifications.join(', ')}.</span>
+              <span className="font-semibold text-gray-900" style={{ 
+                fontSize: '9px',
+                fontWeight: '600'
+              }}>
+                Certifications: 
+              </span>
+              <span className="text-gray-800 ml-1" style={{ fontSize: '9px' }}>
+                {data.additionalInfo.certifications.join(', ')}
+              </span>
             </div>
           )}
           {data.additionalInfo.awards && (
             <div>
-              <span className="font-medium text-gray-900">Awards/Activities: </span>
-              <span className="text-gray-700">{data.additionalInfo.awards.join(', ')}.</span>
+              <span className="font-semibold text-gray-900" style={{ 
+                fontSize: '9px',
+                fontWeight: '600'
+              }}>
+                Awards & Recognition: 
+              </span>
+              <span className="text-gray-800 ml-1" style={{ fontSize: '9px' }}>
+                {data.additionalInfo.awards.join(', ')}
+              </span>
             </div>
           )}
         </div>
@@ -222,4 +336,4 @@ const CleanMinimal: React.FC<CleanMinimalProps> = ({ data, color = '#374151' }) 
   );
 };
 
-export default CleanMinimal; 
+export default CleanMinimal;
