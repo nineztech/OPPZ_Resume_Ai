@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -28,9 +28,17 @@ import {
   Languages,
   Activity,
   Heart,
-  FileText
+  FileText,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
+import { templates as templateData, getTemplateById } from '@/data/templates';
+import type { Template } from '@/data/templates';
+import ResumePreviewModal from '@/components/modals/ResumePreviewModal';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface ResumeData {
   basicDetails: {
@@ -77,6 +85,10 @@ const ResumeBuilderPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('basic-details');
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [templateScrollIndex, setTemplateScrollIndex] = useState(0);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const resumeRef = useRef<HTMLDivElement>(null);
   const [resumeData, setResumeData] = useState<ResumeData>({
     basicDetails: {
       fullName: '',
@@ -100,8 +112,47 @@ const ResumeBuilderPage = () => {
   const selectedColor = location.state?.selectedColor || 'blue';
 
   useEffect(() => {
+    // Initialize selected template
+    const currentTemplate = getTemplateById(templateId);
+    setSelectedTemplate(currentTemplate || templateData[0]);
+  }, [templateId]);
+
+  useEffect(() => {
     if (location.state?.extractedData && location.state?.mode === 'raw') {
       parseExtractedText(location.state.extractedData);
+    } else if (location.state?.defaultData && location.state?.mode === 'default') {
+      // Use default template data
+      const defaultData = location.state.defaultData;
+      setResumeData({
+        basicDetails: {
+          fullName: defaultData.personalInfo.name || '',
+          title: defaultData.personalInfo.title || '',
+          phone: defaultData.personalInfo.phone || '',
+          email: defaultData.personalInfo.email || '',
+          location: defaultData.personalInfo.address || '',
+          website: defaultData.personalInfo.website || ''
+        },
+        summary: defaultData.summary || '',
+        objective: '',
+        experience: defaultData.experience?.map((exp: any) => ({
+          id: Date.now().toString() + Math.random(),
+          company: exp.company || '',
+          position: exp.title || '',
+          duration: exp.dates || '',
+          description: exp.achievements?.join('\n') || ''
+        })) || [],
+        education: defaultData.education?.map((edu: any) => ({
+          id: Date.now().toString() + Math.random(),
+          institution: edu.institution || '',
+          degree: edu.degree || '',
+          year: edu.dates || '',
+          description: edu.details?.join('\n') || ''
+        })) || [],
+        skills: defaultData.skills?.technical || [],
+        languages: defaultData.additionalInfo?.languages || [],
+        activities: [],
+        volunteering: []
+      });
     }
   }, [location.state]);
 
@@ -329,6 +380,84 @@ const ResumeBuilderPage = () => {
     }));
   };
 
+  const handleTemplateChange = (template: Template) => {
+    setSelectedTemplate(template);
+  };
+
+  const scrollTemplates = (direction: 'left' | 'right') => {
+    if (direction === 'left' && templateScrollIndex > 0) {
+      setTemplateScrollIndex(templateScrollIndex - 1);
+    } else if (direction === 'right' && templateScrollIndex < templateData.length - 4) {
+      setTemplateScrollIndex(templateScrollIndex + 1);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!resumeRef.current) return;
+
+    try {
+      // Create a temporary container for the resume
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '800px';
+      tempContainer.style.backgroundColor = 'white';
+      tempContainer.style.padding = '40px';
+      document.body.appendChild(tempContainer);
+
+      // Clone the resume content
+      const resumeClone = resumeRef.current.cloneNode(true) as HTMLElement;
+      tempContainer.appendChild(resumeClone);
+
+      // Wait for any images to load
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Convert to canvas
+      const canvas = await html2canvas(tempContainer, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 800,
+        height: tempContainer.scrollHeight
+      });
+
+      // Remove temporary container
+      document.body.removeChild(tempContainer);
+
+      // Create PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 295; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add additional pages if needed
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // Download the PDF
+      const fileName = `${resumeData.basicDetails.fullName.replace(/\s+/g, '_')}_Resume.pdf`;
+      pdf.save(fileName);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    }
+  };
+
   const sections = [
     { id: 'basic-details', label: 'Basic details', icon: User },
     { id: 'summary', label: 'Summary & Objective', icon: FileText },
@@ -341,6 +470,29 @@ const ResumeBuilderPage = () => {
 
   return (
     <>
+      <style>
+        {`
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 12px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f7fafc;
+            border-radius: 6px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 6px;
+            border: 2px solid #f7fafc;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+          }
+          .custom-scrollbar {
+            scrollbar-width: thick;
+            scrollbar-color: #cbd5e0 #f7fafc;
+          }
+        `}
+      </style>
       <Header />
       <div className="min-h-screen bg-gray-50 mt-14">
         {/* Top Bar */}
@@ -355,8 +507,51 @@ const ResumeBuilderPage = () => {
               Back to Templates
             </Button>
             
+            {/* Centered Template Selector */}
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => scrollTemplates('left')}
+                disabled={templateScrollIndex === 0}
+                className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              
+              <div className="flex items-center gap-1">
+                {templateData.slice(templateScrollIndex, templateScrollIndex + 4).map((template) => (
+                  <button
+                    key={template.id}
+                    onClick={() => handleTemplateChange(template)}
+                    className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-all duration-200 ${
+                      selectedTemplate?.id === template.id
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                    }`}
+                  >
+                    {template.name}
+                  </button>
+                ))}
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => scrollTemplates('right')}
+                disabled={templateScrollIndex >= templateData.length - 4}
+                className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setIsPreviewModalOpen(true)}
+              >
                 <Eye className="w-4 h-4 mr-2" />
                 Preview
               </Button>
@@ -364,7 +559,7 @@ const ResumeBuilderPage = () => {
                 <Save className="w-4 h-4 mr-2" />
                 Save
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={handleDownloadPDF}>
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </Button>
@@ -374,10 +569,10 @@ const ResumeBuilderPage = () => {
 
         <div className="flex h-[calc(100vh-140px)]">
           {/* Left Panel - Resume Preview */}
-          <div className="w-1/2 bg-white border-r border-gray-200 overflow-auto">
-            <div className="p-6">
+          <div className="w-[60%] bg-white border-r border-gray-200 overflow-auto custom-scrollbar">
+            <div className="p-6" ref={resumeRef}>
               <TemplateRenderer
-                templateId={templateId}
+                templateId={selectedTemplate?.id || templateId}
                 data={{
                   personalInfo: {
                     name: resumeData.basicDetails.fullName,
@@ -414,7 +609,7 @@ const ResumeBuilderPage = () => {
           </div>
 
           {/* Right Panel - Editing Panel */}
-          <div className="w-1/2 bg-gray-50 overflow-auto">
+          <div className="w-[40%] bg-gray-50 overflow-auto custom-scrollbar">
             <div className="p-6">
               {/* Navigation */}
               <div className="mb-6">
@@ -423,28 +618,93 @@ const ResumeBuilderPage = () => {
                   {sections.map((section) => {
                     const Icon = section.icon;
                     return (
-                      <button
-                        key={section.id}
-                        onClick={() => setActiveSection(section.id)}
-                        className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
-                          activeSection === section.id
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                            : 'hover:bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Icon className="w-4 h-4" />
-                          <span className="font-medium">{section.label}</span>
-                        </div>
-                        <div className="w-4 h-4">→</div>
-                      </button>
+                      <div key={section.id}>
+                        <button
+                          onClick={() => setActiveSection(activeSection === section.id ? '' : section.id)}
+                          className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
+                            activeSection === section.id
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : 'hover:bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon className="w-4 h-4" />
+                            <span className="font-medium">{section.label}</span>
+                          </div>
+                          <div className={`w-4 h-4 transition-transform ${activeSection === section.id ? 'rotate-90' : ''}`}>→</div>
+                        </button>
+                        
+                        {/* Dropdown Content */}
+                        {activeSection === section.id && (
+                          <div className="mt-2 bg-white rounded-lg border border-gray-200 p-4">
+                            {section.id === 'basic-details' && (
+                              <BasicDetailsSection
+                                data={resumeData.basicDetails}
+                                onChange={(data) => updateResumeData('basicDetails', data)}
+                              />
+                            )}
+
+                            {section.id === 'skills' && (
+                              <SkillsSection
+                                skills={resumeData.skills}
+                                languages={resumeData.languages}
+                                onChange={(skills, languages) => {
+                                  updateResumeData('skills', skills);
+                                  updateResumeData('languages', languages);
+                                }}
+                              />
+                            )}
+
+                            {section.id === 'experience' && (
+                              <ExperienceSection
+                                experience={resumeData.experience}
+                                onAdd={addExperience}
+                                onUpdate={updateExperience}
+                                onRemove={removeExperience}
+                              />
+                            )}
+
+                            {section.id === 'education' && (
+                              <EducationSection
+                                education={resumeData.education}
+                                onChange={(education) => updateResumeData('education', education)}
+                              />
+                            )}
+
+                            {section.id === 'activities' && (
+                              <ActivitiesSection
+                                activities={resumeData.activities}
+                                onChange={(activities) => updateResumeData('activities', activities)}
+                              />
+                            )}
+
+                            {section.id === 'volunteering' && (
+                              <VolunteeringSection
+                                volunteering={resumeData.volunteering}
+                                onChange={(volunteering) => updateResumeData('volunteering', volunteering)}
+                              />
+                            )}
+
+                            {section.id === 'summary' && (
+                              <SummarySection
+                                summary={resumeData.summary}
+                                objective={resumeData.objective}
+                                onChange={(summary, objective) => {
+                                  updateResumeData('summary', summary);
+                                  updateResumeData('objective', objective);
+                                }}
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Content Area */}
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
+              {/* Content Area - Remove this section since content now appears in dropdowns */}
+              {/* <div className="bg-white rounded-lg border border-gray-200 p-6">
                 {activeSection === 'basic-details' && (
                   <BasicDetailsSection
                     data={resumeData.basicDetails}
@@ -503,11 +763,50 @@ const ResumeBuilderPage = () => {
                     }}
                   />
                 )}
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Resume Preview Modal */}
+      <ResumePreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        templateId={selectedTemplate?.id || templateId}
+        data={{
+          personalInfo: {
+            name: resumeData.basicDetails.fullName,
+            title: resumeData.basicDetails.title,
+            address: resumeData.basicDetails.location,
+            email: resumeData.basicDetails.email,
+            website: resumeData.basicDetails.website,
+            phone: resumeData.basicDetails.phone
+          },
+          summary: resumeData.summary,
+          skills: {
+            technical: resumeData.skills,
+            professional: resumeData.languages
+          },
+          experience: resumeData.experience.map(exp => ({
+            title: exp.position,
+            company: exp.company,
+            dates: exp.duration,
+            achievements: [exp.description]
+          })),
+          education: resumeData.education.map(edu => ({
+            degree: edu.degree,
+            institution: edu.institution,
+            dates: edu.year,
+            details: [edu.description]
+          })),
+          additionalInfo: {
+            languages: resumeData.languages
+          }
+        }}
+        color={selectedColor}
+      />
+      
       <Footer />
     </>
   );

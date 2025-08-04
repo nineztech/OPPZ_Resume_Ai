@@ -3,6 +3,7 @@ import ModernProfessional from './ModernProfessional';
 import CleanMinimal from './CleanMinimal';
 import CreativeDesigner from './CreativeDesigner';
 import ExecutiveClassic from './ExecutiveClassic';
+import BusinessProfessional from './BusinessProfessional';
 
 interface TemplateData {
   personalInfo: {
@@ -54,6 +55,8 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({ templateId, data, c
         return <CreativeDesigner data={data} color={color} />;
       case 'executive-classic':
         return <ExecutiveClassic data={data} color={color} />;
+      case 'business-professional':
+        return <BusinessProfessional data={data} color={color} />;
       default:
         return <ModernProfessional data={data} color={color} />;
     }

@@ -38,170 +38,311 @@ interface CreativeDesignerProps {
   color?: string;
 }
 
-const CreativeDesigner: React.FC<CreativeDesignerProps> = ({ data, color = '#ec4899' }) => {
-  return (
-    <div className="bg-white p-8 max-w-4xl mx-auto font-sans" style={{ color: '#1f2937' }}>
-      {/* Header with Creative Design */}
-      <div className="mb-8 relative">
-        <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full opacity-20"></div>
-        <div className="absolute top-4 right-4 w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full opacity-20"></div>
-        
-        <div className="relative z-10">
-          <h1 className="text-5xl font-black mb-2 uppercase tracking-wider" style={{ color }}>
-            {data.personalInfo.name}
-          </h1>
-          <h2 className="text-2xl font-bold mb-4 text-gray-800 uppercase tracking-wide">
-            {data.personalInfo.title}
-          </h2>
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-            <span className="flex items-center">
-              <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: color }}></div>
-              {data.personalInfo.address}
-            </span>
-            <span className="flex items-center">
-              <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: color }}></div>
-              {data.personalInfo.email}
-            </span>
-            <span className="flex items-center">
-              <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: color }}></div>
-              {data.personalInfo.website}
-            </span>
-          </div>
-        </div>
-      </div>
+const accent = '#2c5aa0'; // Professional blue instead of pink
 
-      {/* Summary with Creative Border */}
-      <div className="mb-8 relative">
-        <div className="border-l-4 pl-6" style={{ borderColor: color }}>
-          <h3 className="text-xl font-bold mb-3 uppercase tracking-wide" style={{ color }}>
+const CreativeDesigner: React.FC<CreativeDesignerProps> = ({ data, color = accent }) => {
+  return (
+    <div
+      className="bg-white max-w-4xl mx-auto px-8 py-10"
+      style={{
+        fontFamily: 'Georgia, "Times New Roman", serif',
+        color: '#333333',
+        fontSize: '12px',
+        lineHeight: '1.4',
+      }}
+    >
+      {/* Header */}
+      <header className="mb-10 pb-6 border-b" style={{ borderColor: color, borderBottomWidth: 2 }}>
+        <h1
+          className="text-4xl font-extrabold mb-1 uppercase tracking-widest"
+          style={{ 
+            color, 
+            letterSpacing: '0.09em', 
+            fontWeight: 900, 
+            lineHeight: 1.1,
+            fontSize: '32px'
+          }}
+        >
+          {data.personalInfo.name}
+        </h1>
+        <h2
+          className="text-lg font-bold text-gray-700 mb-2 uppercase tracking-wide"
+          style={{ 
+            fontWeight: 700, 
+            letterSpacing: '0.08em',
+            fontSize: '18px'
+          }}
+        >
+          {data.personalInfo.title}
+        </h2>
+        <div className="flex flex-wrap gap-x-6 text-sm text-gray-700" style={{ 
+          fontSize: '11px', 
+          marginBottom: '0.5rem' 
+        }}>
+          <span>{data.personalInfo.address}</span>
+          <span>|</span>
+          <span>{data.personalInfo.email}</span>
+          <span>|</span>
+          <span>{data.personalInfo.website}</span>
+          {data.personalInfo.phone && (
+            <>
+              <span>|</span>
+              <span>{data.personalInfo.phone}</span>
+            </>
+          )}
+        </div>
+      </header>
+
+      {/* Summary */}
+      <section className="mb-8">
+        <div style={{ borderLeft: `4px solid ${color}`, paddingLeft: '1.1rem' }}>
+          <h3 className="text-base font-bold mb-2 uppercase tracking-wide" style={{ 
+            color, 
+            fontSize: '14px',
+            fontWeight: '700',
+            letterSpacing: '0.3px'
+          }}>
             About Me
           </h3>
-          <p className="text-gray-700 leading-relaxed text-lg">
-            {data.summary}
-          </p>
+          <p style={{ 
+            fontSize: '11px', 
+            color: '#25324b', 
+            marginBottom: 0,
+            lineHeight: '1.5',
+            textAlign: 'justify'
+          }}>{data.summary}</p>
         </div>
-      </div>
+      </section>
 
-      {/* Skills with Creative Layout */}
-      <div className="mb-8">
-        <h3 className="text-xl font-bold mb-4 uppercase tracking-wide" style={{ color }}>
+      {/* Skills Section */}
+      <section className="mb-8">
+        <h3
+          className="text-base font-bold mb-2 uppercase tracking-wide"
+          style={{
+            color,
+            fontSize: '14px',
+            letterSpacing: '0.08em',
+            marginBottom: '0.7rem',
+            fontWeight: '700'
+          }}
+        >
           Skills & Expertise
         </h3>
-        <div className="grid grid-cols-3 gap-6">
-          {data.skills.technical.map((skill, index) => (
-            <div key={index} className="relative group">
-              <div className="p-4 border-2 border-gray-200 rounded-lg hover:border-pink-300 transition-all duration-300 group-hover:shadow-lg">
-                <div className="text-center">
-                  <div className="w-8 h-8 mx-auto mb-2 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: color }}>
-                    {index + 1}
-                  </div>
-                  <span className="text-gray-700 font-medium">{skill}</span>
-                </div>
-              </div>
-            </div>
+        {data.skills.professional && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {data.skills.professional.map((skill, idx) => (
+              <span
+                key={idx}
+                className="inline-block px-3 py-1 rounded-full"
+                style={{
+                  background: '#f3f7fa',
+                  border: `1.2px solid ${color}`,
+                  color,
+                  fontWeight: 600,
+                  fontSize: '11px',
+                  marginBottom: '4px',
+                }}
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {data.skills.technical.map((skill, idx) => (
+            <span
+              key={idx}
+              className="inline-block px-3 py-1 rounded-full"
+              style={{
+                background: '#f3f6fd',
+                border: `1.2px solid ${color}`,
+                color,
+                fontWeight: 500,
+                fontSize: '10px',
+                marginBottom: '3px',
+              }}
+            >
+              {skill}
+            </span>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Experience with Creative Timeline */}
-      <div className="mb-8">
-        <h3 className="text-xl font-bold mb-4 uppercase tracking-wide" style={{ color }}>
+      {/* Experience */}
+      <section className="mb-8">
+        <h3
+          className="text-base font-bold mb-3 uppercase tracking-wide"
+          style={{
+            color,
+            fontSize: '14px',
+            letterSpacing: '0.08em',
+            fontWeight: '700'
+          }}
+        >
           Professional Journey
         </h3>
-        <div className="space-y-8">
-          {data.experience.map((exp, index) => (
-            <div key={index} className="relative">
-              <div className="flex items-start">
-                <div className="flex-shrink-0 w-4 h-4 rounded-full mr-4 mt-2" style={{ backgroundColor: color }}></div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h4 className="text-lg font-bold text-gray-900">
-                        {exp.title}
-                      </h4>
-                      <p className="text-gray-600 font-medium">{exp.company}</p>
-                    </div>
-                    <span className="text-sm text-gray-500 font-medium bg-gray-100 px-3 py-1 rounded-full">
-                      {exp.dates}
-                    </span>
-                  </div>
-                  <ul className="space-y-2">
-                    {exp.achievements.map((achievement, idx) => (
-                      <li key={idx} className="text-gray-700 text-sm flex items-start">
-                        <div className="w-1.5 h-1.5 rounded-full mr-3 mt-2 flex-shrink-0" style={{ backgroundColor: color }}></div>
-                        {achievement}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              {index < data.experience.length - 1 && (
-                <div className="absolute left-2 top-6 w-0.5 h-8 bg-gray-200"></div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Education */}
-      <div className="mb-8">
-        <h3 className="text-xl font-bold mb-4 uppercase tracking-wide" style={{ color }}>
-          Education
-        </h3>
-        <div className="space-y-6">
-          {data.education.map((edu, index) => (
-            <div key={index} className="bg-gradient-to-r from-gray-50 to-white p-6 rounded-lg border-l-4" style={{ borderColor: color }}>
-              <div className="flex justify-between items-start mb-3">
+        <div className="flex flex-col gap-7">
+          {data.experience.map((exp, idx) => (
+            <div key={idx}>
+              <div className="flex items-baseline justify-between mb-1 gap-x-4">
                 <div>
-                  <h4 className="text-lg font-bold text-gray-900">
-                    {edu.degree}
-                  </h4>
-                  <p className="text-gray-600 font-medium">{edu.institution}</p>
+                  <h4 className="font-semibold" style={{ 
+                    fontSize: '13px', 
+                    marginBottom: 0,
+                    fontWeight: '600'
+                  }}>{exp.title}</h4>
+                  <span className="text-gray-700" style={{ 
+                    fontSize: '11px',
+                    fontWeight: '500'
+                  }}>{exp.company}</span>
                 </div>
-                <span className="text-sm text-gray-500 font-medium">
-                  {edu.dates}
+                <span
+                  className="text-xs text-gray-600 font-medium"
+                  style={{
+                    background: '#e4f0fa',
+                    borderRadius: '1rem',
+                    padding: '2px 12px',
+                    color,
+                    fontSize: '10px'
+                  }}
+                >
+                  {exp.dates}
                 </span>
               </div>
-              <ul className="space-y-1">
-                {edu.details.map((detail, idx) => (
-                  <li key={idx} className="text-gray-700 text-sm">
-                    • {detail}
+              <ul className="pl-4" style={{ 
+                color: '#2c2c34', 
+                fontSize: '10px',
+                lineHeight: '1.4'
+              }}>
+                {exp.achievements.map((achievement, subidx) => (
+                  <li key={subidx} style={{ 
+                    marginBottom: 3, 
+                    listStyle: 'disc' 
+                  }}>
+                    {achievement}
                   </li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Additional Information with Creative Layout */}
-      <div>
-        <h3 className="text-xl font-bold mb-4 uppercase tracking-wide" style={{ color }}>
-          Additional Information
+      {/* Education */}
+      <section className="mb-8">
+        <h3
+          className="text-base font-bold mb-3 uppercase tracking-wide"
+          style={{
+            color,
+            fontSize: '14px',
+            letterSpacing: '0.08em',
+            fontWeight: '700'
+          }}
+        >
+          Education
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {data.additionalInfo.languages && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-bold text-gray-900 mb-2">Languages</h4>
-              <p className="text-gray-700">{data.additionalInfo.languages.join(', ')}</p>
+        <div className="flex flex-col gap-6">
+          {data.education.map((edu, idx) => (
+            <div
+              key={idx}
+              className="pl-6 py-3"
+              style={{
+                borderLeft: `4px solid ${color}`,
+                background: idx % 2 === 0 ? '#f7fafc' : '#eef4fb',
+                borderRadius: '0 10px 10px 0',
+              }}
+            >
+              <div className="flex justify-between items-baseline mb-1">
+                <div>
+                  <h4 className="font-semibold" style={{ 
+                    fontSize: '13px', 
+                    marginBottom: 0,
+                    fontWeight: '600'
+                  }}>{edu.degree}</h4>
+                  <div className="text-gray-700" style={{ 
+                    fontSize: '11px',
+                    fontWeight: '500'
+                  }}>{edu.institution}</div>
+                </div>
+                <span className="text-xs text-gray-600 font-medium" style={{ 
+                  fontSize: '10px' 
+                }}>{edu.dates}</span>
+              </div>
+              <ul className="pl-4" style={{ 
+                color: '#3f4848', 
+                fontSize: '10px',
+                lineHeight: '1.4'
+              }}>
+                {edu.details.map((detail, idx3) => (
+                  <li key={idx3} style={{ 
+                    marginBottom: 1, 
+                    listStyle: 'circle' 
+                  }}>
+                    {detail}
+                  </li>
+                ))}
+              </ul>
             </div>
-          )}
-          {data.additionalInfo.certifications && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-bold text-gray-900 mb-2">Certifications</h4>
-              <p className="text-gray-700">{data.additionalInfo.certifications.join(', ')}</p>
-            </div>
-          )}
-          {data.additionalInfo.awards && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-bold text-gray-900 mb-2">Awards</h4>
-              <p className="text-gray-700">{data.additionalInfo.awards.join(', ')}</p>
-            </div>
-          )}
+          ))}
         </div>
-      </div>
+      </section>
+
+      {/* Additional Information */}
+      {(data.additionalInfo.languages || data.additionalInfo.certifications || data.additionalInfo.awards) && (
+        <section>
+          <h3
+            className="text-base font-bold mb-3 uppercase tracking-wide"
+            style={{
+              color,
+              fontSize: '14px',
+              letterSpacing: '0.08em',
+              fontWeight: '700'
+            }}
+          >
+            Additional Information
+          </h3>
+          <div className="flex flex-wrap gap-6">
+            {data.additionalInfo.languages && (
+              <div style={{ minWidth: 180 }}>
+                <span className="font-bold" style={{ 
+                  color,
+                  fontSize: '12px',
+                  fontWeight: '700'
+                }}>Languages:</span>
+                <span className="ml-2" style={{
+                  fontSize: '10px'
+                }}>{data.additionalInfo.languages.join(', ')}</span>
+              </div>
+            )}
+            {data.additionalInfo.certifications && (
+              <div style={{ minWidth: 180 }}>
+                <span className="font-bold" style={{ 
+                  color,
+                  fontSize: '12px',
+                  fontWeight: '700'
+                }}>Certifications:</span>
+                <span className="ml-2" style={{
+                  fontSize: '10px'
+                }}>{data.additionalInfo.certifications.join(', ')}</span>
+              </div>
+            )}
+            {data.additionalInfo.awards && (
+              <div style={{ minWidth: 180 }}>
+                <span className="font-bold" style={{ 
+                  color,
+                  fontSize: '12px',
+                  fontWeight: '700'
+                }}>Awards:</span>
+                <span className="ml-2" style={{
+                  fontSize: '10px'
+                }}>{data.additionalInfo.awards.join(', ')}</span>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 };
 
-export default CreativeDesigner; 
+export default CreativeDesigner;

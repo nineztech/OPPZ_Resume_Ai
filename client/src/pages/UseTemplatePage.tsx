@@ -4,9 +4,10 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, FileText, Sparkles, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Sparkles, ArrowLeft, CheckCircle, AlertCircle, User } from 'lucide-react';
 import ResumeUploadModal from '@/components/modals/ResumeUploadModal';
 import { fileExtractionService } from '@/services/fileExtractionService';
+import { getTemplateById } from '@/data/templates';
 
 const UseTemplatePage = () => {
   const navigate = useNavigate();
@@ -53,6 +54,21 @@ const UseTemplatePage = () => {
         selectedColor, 
         mode: 'ai',
         extractedData // pass extracted data, not file!
+      } 
+    });
+  };
+
+  const handleContinueWithoutResume = () => {
+    // Get default template data
+    const template = getTemplateById(templateId || 'modern-professional');
+    const defaultData = template?.templateData;
+    
+    navigate('/resume/builder', { 
+      state: { 
+        templateId, 
+        selectedColor, 
+        mode: 'default',
+        defaultData // pass default template data
       } 
     });
   };
@@ -170,6 +186,31 @@ const UseTemplatePage = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Continue without resume button */}
+            <div className="mt-8 text-center">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-gradient-to-br from-blue-50 via-white to-purple-50 text-gray-500">or</span>
+                </div>
+              </div>
+              
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleContinueWithoutResume}
+                className="mt-4 bg-white hover:bg-gray-50 border-gray-300 text-gray-700 hover:text-gray-900"
+              >
+                <User className="w-5 h-5 mr-2" />
+                Continue without resume
+              </Button>
+              <p className="text-sm text-gray-500 mt-2">
+                Start with a blank template and fill in your details manually
+              </p>
+            </div>
 
             {/* Features */}
             <div className="mt-12 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6 w-full">

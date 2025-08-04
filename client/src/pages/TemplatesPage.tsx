@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Filter, Star, Download, Eye } from 'lucide-react';
+import { Search, Filter, Star, Download, Eye, FileText } from 'lucide-react';
 import TemplatePreviewModal from '@/components/modals/TemplatePreviewModal';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 import { templates as templateData, getTemplateById } from '@/data/templates';
@@ -64,9 +64,11 @@ const TemplatesPage = () => {
   const handleUseTemplate = (templateId: string, selectedColor?: string) => {
     console.log('Using template:', templateId, 'with color:', selectedColor);
     // Navigate to use-template page with template and color parameters
+    const template = templateData.find(t => t.id === templateId);
+    const defaultColor = template?.colors[0] || '';
     const params = new URLSearchParams({
       templateId,
-      color: selectedColor || ''
+      color: selectedColor || defaultColor
     });
     window.location.href = `/resume/templates/use-template?${params.toString()}`;
   };
@@ -143,69 +145,87 @@ const TemplatesPage = () => {
             </div>
           )}
           
-                    {!loading && !error && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {!loading && !error && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
               {filteredTemplates.map((template) => (
-                <Card key={template.id} className="group hover:shadow-lg transition-shadow duration-300">
+                <Card key={template.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-md">
                   <div className="relative">
-                    <div className="aspect-[3/4] bg-gray-200 rounded-t-lg overflow-hidden">
-                      <div className="w-full h-full bg-white p-2 overflow-hidden">
-                        <div className="transform scale-50 origin-top-left w-full h-full">
-                          <TemplateRenderer 
-                            templateId={template.id} 
-                            data={template.templateData} 
-                            color={template.colors[0]}
-                          />
+                    {/* Template Preview Container */}
+                    <div className="aspect-[3/2] bg-gradient-to-br from-gray-50 to-gray-100 rounded-t-lg overflow-hidden border-b">
+                      <div className="w-full h-full bg-white p-1 sm:p-2 lg:p-3 overflow-hidden">
+                        {/* Resume Preview with smaller scaling for better visibility */}
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="w-full h-full transform scale-75 origin-center">
+                            <TemplateRenderer 
+                              templateId={template.id} 
+                              data={template.templateData} 
+                              color={template.colors[0]}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
                     
                     {/* Badges */}
-                    <div className="absolute top-2 left-2 flex gap-1">
+                    <div className="absolute top-2 sm:top-3 left-2 sm:left-3 flex gap-1 sm:gap-2">
                       {template.isPopular && (
-                        <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                        <Badge variant="secondary" className="bg-orange-500 text-white text-xs font-medium px-2 py-1">
                           Popular
                         </Badge>
                       )}
                       {template.isNew && (
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                        <Badge variant="secondary" className="bg-green-500 text-white text-xs font-medium px-2 py-1">
                           New
                         </Badge>
                       )}
                     </div>
                   </div>
                   
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">{template.name}</CardTitle>
-                    <CardDescription className="text-sm text-gray-600">
+                  <CardHeader className="pb-3 sm:pb-4 pt-4 sm:pt-6">
+                    <CardTitle className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">{template.name}</CardTitle>
+                    <CardDescription className="text-sm text-gray-600 leading-relaxed">
                       {template.description}
                     </CardDescription>
                   </CardHeader>
                   
                   <CardContent className="pt-0">
-                    <div className="flex items-center justify-between mb-3">
+                    {/* Rating and Downloads */}
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
                       <div className="flex items-center gap-1">
                         <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                        <span className="text-sm font-medium">{template.rating}</span>
+                        <span className="text-sm font-semibold text-gray-700">{template.rating}</span>
                       </div>
-                      <span className="text-sm text-gray-500">{template.downloads} downloads</span>
+                      <span className="text-sm text-gray-500 font-medium">{template.downloads} downloads</span>
                     </div>
                     
+                    {/* Action Buttons */}
                     <div className="flex gap-2">
+                      {/* Use Template Button - Primary Action */}
+                      <Button 
+                        size="sm"
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs sm:text-sm"
+                        onClick={() => handleUseTemplate(template.id, template.colors[0])}
+                      >
+                        <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                        Use
+                      </Button>
+                      
+                      {/* Secondary Actions */}
                       <Button 
                         size="sm" 
-                        className="flex-1"
+                        variant="outline"
+                        className="border-gray-300 hover:bg-gray-50 text-xs sm:text-sm"
                         onClick={() => handlePreviewTemplate(template)}
                       >
-                        <Eye className="w-4 h-4 mr-1" />
-                        Preview
+                        <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                       </Button>
                       <Button 
                         size="sm" 
                         variant="outline"
+                        className="border-gray-300 hover:bg-gray-50 text-xs sm:text-sm"
                         onClick={() => handleDownloadTemplate(template.id)}
                       >
-                        <Download className="w-4 h-4" />
+                        <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                       </Button>
                     </div>
                   </CardContent>
