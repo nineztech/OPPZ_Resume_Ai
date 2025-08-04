@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,8 @@ import TemplatePreviewModal from '@/components/modals/TemplatePreviewModal';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 import { templates as templateData, getTemplateById } from '@/data/templates';
 import type { Template } from '@/data/templates';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const TemplatesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,11 +56,150 @@ const TemplatesPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleDownloadTemplate = (templateId: string, selectedColor?: string) => {
-    console.log('Downloading template:', templateId, 'with color:', selectedColor);
-    // In a real implementation, you would handle the download with the selected color
-    // For now, we'll just log the action
-    alert(`Downloading template ${templateId} with color ${selectedColor || 'default'}`);
+  const handleDownloadTemplate = async (template: Template, selectedColor?: string) => {
+    try {
+      // Create a temporary container for the resume
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '800px';
+      tempContainer.style.backgroundColor = 'white';
+      tempContainer.style.padding = '40px';
+      document.body.appendChild(tempContainer);
+
+      // Create the resume content
+      const resumeContent = document.createElement('div');
+      resumeContent.innerHTML = `
+        <div style="font-family: Arial, sans-serif; font-size: 12px; color: #333; line-height: 1.4;">
+          <div style="margin-bottom: 20px; border-bottom: 2px solid ${selectedColor || template.colors[0]}; padding-bottom: 10px;">
+            <h1 style="font-size: 28px; font-weight: bold; color: ${selectedColor || template.colors[0]}; margin: 0 0 5px 0;">
+              ${template.templateData.personalInfo.name}
+            </h1>
+            <h2 style="font-size: 18px; font-weight: 600; color: #666; margin: 0 0 10px 0;">
+              ${template.templateData.personalInfo.title}
+            </h2>
+            <div style="font-size: 11px; color: #888;">
+              ${template.templateData.personalInfo.address} | ${template.templateData.personalInfo.email} | ${template.templateData.personalInfo.website}
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 14px; font-weight: bold; color: ${selectedColor || template.colors[0]}; margin: 0 0 10px 0; text-transform: uppercase;">
+              Professional Summary
+            </h3>
+            <p style="font-size: 11px; color: #333; margin: 0; text-align: justify;">
+              ${template.templateData.summary}
+            </p>
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 14px; font-weight: bold; color: ${selectedColor || template.colors[0]}; margin: 0 0 10px 0; text-transform: uppercase;">
+              Skills
+            </h3>
+            <div style="font-size: 11px; color: #333;">
+              ${template.templateData.skills.technical.join(', ')}
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 14px; font-weight: bold; color: ${selectedColor || template.colors[0]}; margin: 0 0 10px 0; text-transform: uppercase;">
+              Experience
+            </h3>
+            ${template.templateData.experience.map(exp => `
+              <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                  <h4 style="font-size: 12px; font-weight: bold; color: #333; margin: 0;">
+                    ${exp.title}
+                  </h4>
+                  <span style="font-size: 10px; color: #888;">
+                    ${exp.dates}
+                  </span>
+                </div>
+                <p style="font-size: 11px; color: #666; margin: 0 0 5px 0;">
+                  ${exp.company}
+                </p>
+                <ul style="font-size: 10px; color: #333; margin: 0; padding-left: 15px;">
+                  ${exp.achievements.map(achievement => `<li style="margin-bottom: 3px;">${achievement}</li>`).join('')}
+                </ul>
+              </div>
+            `).join('')}
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 14px; font-weight: bold; color: ${selectedColor || template.colors[0]}; margin: 0 0 10px 0; text-transform: uppercase;">
+              Education
+            </h3>
+            ${template.templateData.education.map(edu => `
+              <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                  <h4 style="font-size: 12px; font-weight: bold; color: #333; margin: 0;">
+                    ${edu.degree}
+                  </h4>
+                  <span style="font-size: 10px; color: #888;">
+                    ${edu.dates}
+                  </span>
+                </div>
+                <p style="font-size: 11px; color: #666; margin: 0 0 5px 0;">
+                  ${edu.institution}
+                </p>
+                <ul style="font-size: 10px; color: #333; margin: 0; padding-left: 15px;">
+                  ${edu.details.map(detail => `<li style="margin-bottom: 3px;">${detail}</li>`).join('')}
+                </ul>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      
+      tempContainer.appendChild(resumeContent);
+
+      // Wait for any images to load
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Convert to canvas
+      const canvas = await html2canvas(tempContainer, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 800,
+        height: tempContainer.scrollHeight
+      });
+
+      // Remove temporary container
+      document.body.removeChild(tempContainer);
+
+      // Create PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 295; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add additional pages if needed
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // Download the PDF
+      const fileName = `${template.name.replace(/\s+/g, '_')}_Template_Resume.pdf`;
+      pdf.save(fileName);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    }
   };
 
   const handleUseTemplate = (templateId: string, selectedColor?: string) => {
@@ -223,7 +364,7 @@ const TemplatesPage = () => {
                         size="sm" 
                         variant="outline"
                         className="border-gray-300 hover:bg-gray-50 text-xs sm:text-sm"
-                        onClick={() => handleDownloadTemplate(template.id)}
+                        onClick={() => handleDownloadTemplate(template)}
                       >
                         <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                       </Button>
@@ -262,7 +403,12 @@ const TemplatesPage = () => {
         template={selectedTemplate}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onDownload={handleDownloadTemplate}
+        onDownload={(templateId, selectedColor) => {
+          const template = templateData.find(t => t.id === templateId);
+          if (template) {
+            handleDownloadTemplate(template, selectedColor);
+          }
+        }}
         onUseTemplate={handleUseTemplate}
       />
       
