@@ -1,11 +1,18 @@
-// Optimized file extraction service for PDF and DOC files
-// This version uses a more reliable approach for PDF extraction
+// fileExtractionService.ts
+// Complete FileExtractionService for resume extraction (name, email, phone, location, education)
+// Requires pdf.js available as window.pdfjsLib (or loaded via CDN) and mammoth for .docx
 
 export interface ExtractedText {
   text: string;
-  sections: {
-    [key: string]: string;
+  sections: { [key: string]: string };
+  contact?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    title?: string;
   };
+  education?: string;
 }
 
 class FileExtractionService {
@@ -19,435 +26,405 @@ class FileExtractionService {
 
   private async initializeLibraries() {
     if (this.isInitialized) return;
-    
     try {
-      console.log('Initializing file extraction libraries...');
-      
       if (typeof window !== 'undefined') {
-        // For PDF extraction - use a simpler approach
-        try {
-          // Try to load PDF.js from CDN if not available as module
-          if (!window.pdfjsLib) {
-            await this.loadPDFJSFromCDN();
-          } else {
-            this.pdfjsLib = window.pdfjsLib;
-          }
-          console.log('PDF.js loaded successfully');
-        } catch (error) {
-          console.warn('PDF.js not available, trying alternative approach:', error);
+        // Try to use existing window.pdfjsLib, or load from CDN
+        if (!window.pdfjsLib) {
+          await this.loadPDFJSFromCDN();
+        } else {
+          this.pdfjsLib = window.pdfjsLib;
         }
-
-        // For DOC extraction
+        // mammoth for docx
         try {
           this.mammoth = await import('mammoth');
-          console.log('Mammoth imported successfully');
-        } catch (error) {
-          console.warn('Mammoth library not available:', error);
+        } catch (e) {
+          console.warn('mammoth import failed (DOCX support not available):', e);
         }
       }
-      
       this.isInitialized = true;
-    } catch (error) {
-      console.error('Error initializing libraries:', error);
+    } catch (err) {
+      console.error('Initialization error:', err);
     }
   }
 
-  private async loadPDFJSFromCDN(): Promise<void> {
+  private loadPDFJSFromCDN(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (window.pdfjsLib) {
         this.pdfjsLib = window.pdfjsLib;
         resolve();
         return;
       }
-
       const script = document.createElement('script');
       script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
       script.onload = () => {
         if (window.pdfjsLib) {
           this.pdfjsLib = window.pdfjsLib;
-          // Configure worker
-          this.pdfjsLib.GlobalWorkerOptions.workerSrc = 
+          this.pdfjsLib.GlobalWorkerOptions.workerSrc =
             'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
           resolve();
         } else {
-          reject(new Error('PDF.js failed to load'));
+          reject(new Error('PDF.js loaded but window.pdfjsLib missing'));
         }
       };
-      script.onerror = () => reject(new Error('Failed to load PDF.js'));
+      script.onerror = () => reject(new Error('Failed to load PDF.js from CDN'));
       document.head.appendChild(script);
     });
   }
 
   async extractTextFromFile(file: File): Promise<ExtractedText> {
-    console.log('Extracting text from file:', file.name, file.type, 'Size:', file.size);
-    
-    // Ensure libraries are initialized
     await this.initializeLibraries();
-    
-    try {
-      let extractedText = '';
-      const startTime = Date.now();
 
-      if (file.type === 'application/pdf') {
-        console.log('Processing PDF file...');
-        extractedText = await this.extractFromPDF(file);
+    try {
+      let rawText = '';
+      if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        rawText = await this.extractFromPDF(file);
       } else if (this.isWordDocument(file)) {
-        console.log('Processing Word document...');
-        extractedText = await this.extractFromDOC(file);
+        rawText = await this.extractFromDOC(file);
       } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
-        console.log('Processing text file...');
-        extractedText = await file.text();
+        rawText = await file.text();
       } else {
-        throw new Error(`Unsupported file type: ${file.type}`);
+        throw new Error(`Unsupported file type: ${file.type || file.name}`);
       }
 
-      const endTime = Date.now();
-      console.log(`Text extraction completed in ${endTime - startTime}ms, length: ${extractedText.length}`);
-      
-      const result = this.parseExtractedText(extractedText);
+      const parsed = this.parseExtractedText(rawText);
+      // Extract contact and education
+      const contact = this.extractContactInfo(parsed.text);
+      const education = this.extractEducation(parsed.text, parsed.sections);
+
+      const result: ExtractedText = {
+        text: parsed.text,
+        sections: parsed.sections,
+        contact,
+        education
+      };
+
       return result;
-    } catch (error) {
-      console.error('Error extracting text from file:', error);
-      throw new Error(`Failed to extract text: ${error.message}`);
+    } catch (err: any) {
+      console.error('extractTextFromFile error:', err);
+      throw err;
     }
   }
 
-  private isWordDocument(file: File): boolean {
-    return file.type.includes('word') || 
-           file.type.includes('document') ||
-           file.name.endsWith('.docx') || 
-           file.name.endsWith('.doc') ||
-           file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  private isWordDocument(file: File) {
+    const name = (file.name || '').toLowerCase();
+    return name.endsWith('.docx') || name.endsWith('.doc') ||
+      file.type.includes('word') ||
+      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
   }
 
+  // ---------- PDF extraction with improved ordering and column detection ----------
   private async extractFromPDF(file: File): Promise<string> {
-    if (!this.pdfjsLib) {
-      throw new Error('PDF.js library not available. Please ensure PDF.js is loaded.');
+    if (!this.pdfjsLib) throw new Error('PDF.js not available');
+
+    const arrayBuffer = await file.arrayBuffer();
+    const loadingTask = this.pdfjsLib.getDocument({
+      data: arrayBuffer,
+      disableWorker: false,
+      disableAutoFetch: true,
+      disableStream: true
+    });
+
+    const pdf = await loadingTask.promise;
+    const maxPages = Math.min(pdf.numPages || 1, 30); // limit pages
+    const pageTexts: string[] = [];
+
+    for (let i = 1; i <= maxPages; i++) {
+      const pageText = await this.extractPageText(pdf, i);
+      if (pageText && pageText.trim()) pageTexts.push(pageText);
     }
 
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      console.log('PDF ArrayBuffer size:', arrayBuffer.byteLength);
-      
-      // Configure PDF.js for better performance
-      const loadingTask = this.pdfjsLib.getDocument({
-        data: arrayBuffer,
-        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-        cMapPacked: true,
-        standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/',
-        // Disable worker for simpler setup
-        disableWorker: false,
-        // Optimize for speed
-        disableAutoFetch: true,
-        disableStream: true
-      });
-
-      const pdf = await loadingTask.promise;
-      console.log(`PDF loaded successfully. Pages: ${pdf.numPages}`);
-      
-      let fullText = '';
-      const maxPages = Math.min(pdf.numPages, 50); // Limit pages for performance
-      
-      // Extract text from all pages
-      const pagePromises = [];
-      for (let i = 1; i <= maxPages; i++) {
-        pagePromises.push(this.extractPageText(pdf, i));
-      }
-      
-      const pageTexts = await Promise.all(pagePromises);
-      fullText = pageTexts.join('\n\n');
-      
-      console.log(`PDF extraction completed. Total text length: ${fullText.length}`);
-      return fullText;
-    } catch (error) {
-      console.error('PDF extraction error:', error);
-      
-      // Fallback: try simpler extraction method
-      if (error.message && error.message.includes('worker')) {
-        console.log('Retrying with worker disabled...');
-        return this.extractFromPDFSimple(file);
-      }
-      
-      throw new Error(`PDF extraction failed: ${error.message}`);
-    }
+    return pageTexts.join('\n\n');
   }
 
   private async extractPageText(pdf: any, pageNum: number): Promise<string> {
     try {
       const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      
-      // Extract text items and join them
-      const textItems = textContent.items || [];
-      const pageText = textItems
-        .filter((item: any) => item.str && item.str.trim())
-        .map((item: any) => item.str)
-        .join(' ');
-      
-      return pageText;
-    } catch (error) {
-      console.warn(`Error extracting page ${pageNum}:`, error);
+      const textContent = await page.getTextContent({ normalizeWhitespace: true });
+      const items = (textContent.items || []).map((it: any) => {
+        const t = it.transform || it.transformMatrix || [];
+        const x = (t[4] !== undefined) ? t[4] : (it.x ?? 0);
+        const y = (t[5] !== undefined) ? t[5] : (it.y ?? 0);
+        return {
+          str: (it.str || '').replace(/\u00A0/g, ' '),
+          x: Number(x),
+          y: Number(y),
+          width: Number(it.width || 0)
+        };
+      }).filter((m: any) => m.str && m.str.trim());
+
+      if (!items.length) return '';
+
+      // Debugging helper (dev): enable to inspect coordinates for tuning
+      // console.log('DEBUG mapped items:', items.slice(0,150).map(m=>({s:m.str,x:Math.round(m.x),y:Math.round(m.y)})));
+
+      // 1) group into Y buckets (lines)
+      const yTolerance = 4; // tweak as needed (increase if lines are split)
+      const linesMap = new Map<number, any[]>();
+      for (const it of items) {
+        const bucket = Math.round(it.y / yTolerance) * yTolerance;
+        const arr = linesMap.get(bucket) ?? [];
+        arr.push(it);
+        linesMap.set(bucket, arr);
+      }
+
+      const sortedBuckets = Array.from(linesMap.keys()).sort((a, b) => b - a);
+
+      // 2) detect a column boundary if present
+      const xs = Array.from(new Set(items.map(i => Math.round(i.x)))).sort((a, b) => a - b);
+      let columnBoundary: number | null = null;
+      if (xs.length > 4) {
+        const gaps = xs.slice(1).map((v, i) => ({ gap: v - xs[i], mid: (v + xs[i]) / 2 }));
+        const largest = gaps.reduce((p, c) => c.gap > p.gap ? c : p, { gap: 0, mid: 0 });
+        const totalWidth = xs[xs.length - 1] - xs[0];
+        if (largest.gap > Math.max(40, totalWidth / 5)) {
+          columnBoundary = Math.round(largest.mid);
+        }
+      }
+
+      // 3) assemble lines, keeping left then right (if column detected)
+      const assembledLines: string[] = [];
+      for (const bucket of sortedBuckets) {
+        const rowItems = (linesMap.get(bucket) || []).slice();
+        if (!rowItems.length) continue;
+        rowItems.sort((a, b) => a.x - b.x);
+
+        const joinRow = (arr: any[]) => {
+          if (!arr.length) return '';
+          arr.sort((a: any, b: any) => a.x - b.x);
+          let out = '';
+          let lastEnd = -Infinity;
+          for (const it of arr) {
+            if (!out) {
+              out = it.str;
+              lastEnd = it.x + (it.width || 0);
+            } else {
+              const gap = it.x - lastEnd;
+              if (gap <= 10) out += it.str;
+              else out += ' ' + it.str;
+              lastEnd = it.x + (it.width || 0);
+            }
+          }
+          return out.replace(/\s+/g, ' ').trim();
+        };
+
+        if (columnBoundary == null) {
+          const line = joinRow(rowItems);
+          if (line) assembledLines.push(line);
+        } else {
+          const left = rowItems.filter((it: any) => it.x <= columnBoundary);
+          const right = rowItems.filter((it: any) => it.x > columnBoundary);
+          const leftText = joinRow(left);
+          const rightText = joinRow(right);
+          if (leftText) assembledLines.push(leftText);
+          if (rightText) assembledLines.push(rightText);
+        }
+      }
+
+      // cleanup: remove separators and duplicate neighbor lines
+      const cleaned = assembledLines
+        .map(l => l.replace(/^[\s\-\u2014_]{2,}$/g, '').trim())
+        .filter((l, idx, arr) => l && (idx === 0 || l !== arr[idx - 1]))
+        .join('\n');
+
+      return cleaned;
+    } catch (err) {
+      console.warn(`extractPageText error page ${pageNum}:`, err);
       return '';
     }
   }
 
-  private async extractFromPDFSimple(file: File): Promise<string> {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      
-      // Disable worker completely for simpler extraction
-      const originalWorkerSrc = this.pdfjsLib.GlobalWorkerOptions.workerSrc;
-      this.pdfjsLib.GlobalWorkerOptions.workerSrc = '';
-      
-      const pdf = await this.pdfjsLib.getDocument({
-        data: arrayBuffer,
-        disableWorker: true,
-        useWorkerFetch: false,
-        isEvalSupported: false
-      }).promise;
-      
-      let fullText = '';
-      for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
-        try {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageText = textContent.items
-            .map((item: any) => item.str || '')
-            .filter((str: string) => str.trim())
-            .join(' ');
-          
-          if (pageText.trim()) {
-            fullText += pageText + '\n\n';
-          }
-        } catch (pageError) {
-          console.warn(`Error processing page ${i}:`, pageError);
-        }
-      }
-      
-      // Restore worker setting
-      this.pdfjsLib.GlobalWorkerOptions.workerSrc = originalWorkerSrc;
-      
-      return fullText;
-    } catch (error) {
-      console.error('Simple PDF extraction failed:', error);
-      throw error;
-    }
-  }
-
+  // ---------- DOCX extraction ----------
   private async extractFromDOC(file: File): Promise<string> {
-    if (!this.mammoth) {
-      throw new Error('Mammoth library not available for Word document processing');
-    }
-
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const result = await this.mammoth.extractRawText({ arrayBuffer });
-      return result.value || '';
-    } catch (error) {
-      console.error('Word document extraction error:', error);
-      throw new Error(`Word document extraction failed: ${error.message}`);
-    }
+    if (!this.mammoth) throw new Error('Mammoth not available for .docx extraction');
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await this.mammoth.extractRawText({ arrayBuffer });
+    return result.value || '';
   }
 
-  private parseExtractedText(text: string): ExtractedText {
-    if (!text || text.trim().length === 0) {
-      return { text: '', sections: {} };
-    }
+  // ---------- Parsing ----------
+  private parseExtractedText(text: string): { text: string, sections: { [k: string]: string } } {
+    if (!text || !text.trim()) return { text: '', sections: {} };
 
-    console.log('Parsing extracted text, length:', text.length);
-    
     const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    const lines = normalizedText.split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
-    
-    const sections: { [key: string]: string } = {};
-    let currentSection = 'general';
-    let currentContent: string[] = [];
-
-    for (const line of lines) {
-      if (this.isSectionHeader(line)) {
-        // Save previous section
-        if (currentContent.length > 0) {
-          sections[currentSection] = currentContent.join('\n').trim();
-        }
-        
-        // Start new section
-        currentSection = this.getSectionKey(line);
-        currentContent = [];
-      } else if (line.length > 2) { // Ignore very short lines
-        currentContent.push(line);
+    // Split by newlines but keep short lines (headers are often short)
+    const rawLines = normalizedText.split('\n').map(l => l.trim());
+    // Remove repeated blank lines and trim separators
+    const lines: string[] = [];
+    for (const l of rawLines) {
+      if (!l) {
+        if (lines.length && lines[lines.length - 1] !== '') lines.push('');
+      } else if (/^[\-\u2014_]{2,}$/.test(l)) {
+        // treat lines of dashes as separators -> add blank
+        if (lines.length && lines[lines.length - 1] !== '') lines.push('');
+      } else {
+        lines.push(l);
       }
     }
 
-    // Save last section
-    if (currentContent.length > 0) {
-      sections[currentSection] = currentContent.join('\n').trim();
+    // Section detection: iterate lines and consider headers
+    const sections: { [k: string]: string } = {};
+    let currentKey = 'general';
+    let buffer: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line) {
+        // blank => end current paragraph but don't end section
+        if (buffer.length) {
+          const content = buffer.join(' ').trim();
+          if (!sections[currentKey]) sections[currentKey] = content;
+          else sections[currentKey] += '\n' + content;
+          buffer = [];
+        }
+        continue;
+      }
+
+      if (this.isSectionHeader(line)) {
+        // commit previous buffer
+        if (buffer.length) {
+          const content = buffer.join(' ').trim();
+          if (!sections[currentKey]) sections[currentKey] = content;
+          else sections[currentKey] += '\n' + content;
+          buffer = [];
+        }
+        // new section key
+        const key = this.getSectionKey(line);
+        currentKey = key;
+        // If next line is short underline, skip it
+        if (i + 1 < lines.length && /^[\-\u2014_]{2,}$/.test(lines[i + 1])) {
+          i++;
+        }
+        continue;
+      }
+
+      buffer.push(line);
     }
 
-    // If no specific sections found, add some basic parsing
-    if (Object.keys(sections).length <= 1) {
-      this.parseUnstructuredText(normalizedText, sections);
+    if (buffer.length) {
+      const content = buffer.join(' ').trim();
+      if (!sections[currentKey]) sections[currentKey] = content;
+      else sections[currentKey] += '\n' + content;
     }
 
-    console.log('Parsed sections:', Object.keys(sections));
-    
-    return {
-      text: normalizedText,
-      sections
-    };
-  }
-
-  private parseUnstructuredText(text: string, sections: { [key: string]: string }) {
-    // Try to identify sections even without clear headers
-    const lowerText = text.toLowerCase();
-    
-    // Look for experience keywords
-    const experienceKeywords = ['work experience', 'experience', 'employment', 'career', 'job'];
-    const educationKeywords = ['education', 'academic', 'university', 'college', 'degree'];
-    const skillsKeywords = ['skills', 'technical skills', 'competencies', 'expertise'];
-    
-    if (experienceKeywords.some(keyword => lowerText.includes(keyword))) {
-      sections.experience = text;
-    }
-    if (educationKeywords.some(keyword => lowerText.includes(keyword))) {
-      sections.education = text;
-    }
-    if (skillsKeywords.some(keyword => lowerText.includes(keyword))) {
-      sections.skills = text;
-    }
+    return { text: normalizedText, sections };
   }
 
   private isSectionHeader(line: string): boolean {
-    if (line.length > 100) return false; // Headers are usually short
-    
-    const lowerLine = line.toLowerCase().trim();
-    
-    // Check if line is all caps (common for headers)
-    const isAllCaps = line === line.toUpperCase() && line.length > 2;
-    
-    // Common section keywords
-    const sectionKeywords = [
-      'professional summary', 'summary', 'profile', 'objective', 'about',
-      'work experience', 'experience', 'employment history', 'career',
-      'education', 'academic background', 'qualifications', 'degrees',
-      'skills', 'technical skills', 'core competencies', 'expertise',
-      'languages', 'language skills', 'language proficiency',
-      'projects', 'key projects', 'notable projects',
-      'achievements', 'accomplishments', 'awards', 'honors',
-      'certifications', 'certificates', 'licenses',
-      'volunteer', 'volunteering', 'volunteer work',
-      'activities', 'extracurricular', 'interests', 'hobbies',
-      'references', 'contact', 'personal details'
-    ];
+    if (!line || line.length > 120) return false;
+    const trimmed = line.trim();
 
-    const containsKeyword = sectionKeywords.some(keyword => 
-      lowerLine === keyword || lowerLine.startsWith(keyword + ':') || lowerLine.endsWith(keyword)
-    );
+    // All caps short lines are likely headings
+    const isAllCaps = /[A-Z]/.test(trimmed) && (trimmed === trimmed.toUpperCase()) && trimmed.length <= 40;
+    if (isAllCaps) return true;
 
-    return isAllCaps || containsKeyword || (line.endsWith(':') && line.length < 50);
+    const lower = trimmed.toLowerCase();
+    const keywords = ['summary','profile','about','experience','education','skills','projects','certificates','technical skills','core competencies','contact','contact info','key projects','achievements','work experience'];
+    if (keywords.some(k => lower.startsWith(k) || lower === k || lower.includes(k))) return true;
+
+    // Title case short (1-4 words): possible header "Key Projects"
+    if (/^([A-Z][a-z]+(\s|$)){1,4}$/.test(trimmed)) return true;
+
+    // ends with colon
+    if (trimmed.endsWith(':')) return true;
+
+    return false;
   }
 
   private getSectionKey(header: string): string {
-    const lowerHeader = header.toLowerCase().replace(/[:\-_]/g, '').trim();
-    
-    const sectionMap: { [key: string]: string[] } = {
-      'summary': ['summary', 'profile', 'objective', 'about', 'overview'],
-      'experience': ['experience', 'work experience', 'employment', 'career', 'work history'],
-      'education': ['education', 'academic', 'qualifications', 'degrees', 'schooling'],
-      'skills': ['skills', 'technical skills', 'competencies', 'expertise', 'abilities'],
-      'languages': ['languages', 'language skills', 'language proficiency'],
-      'activities': ['activities', 'projects', 'interests', 'hobbies', 'extracurricular'],
-      'volunteering': ['volunteer', 'volunteering', 'volunteer work', 'community service'],
-      'achievements': ['achievements', 'accomplishments', 'awards', 'honors', 'certifications']
-    };
-
-    for (const [section, keywords] of Object.entries(sectionMap)) {
-      if (keywords.some(keyword => lowerHeader.includes(keyword))) {
-        return section;
-      }
-    }
-    
-    return 'general';
+    const lower = header.toLowerCase();
+    if (lower.includes('summary') || lower.includes('profile') || lower.includes('about')) return 'summary';
+    if (lower.includes('experience') || lower.includes('work')) return 'experience';
+    if (lower.includes('education') || lower.includes('university') || lower.includes('school') || lower.includes('college')) return 'education';
+    if (lower.includes('skill')) return 'skills';
+    if (lower.includes('project')) return 'projects';
+    if (lower.includes('certificate') || lower.includes('certification')) return 'certificates';
+    if (lower.includes('contact')) return 'contact';
+    return lower.replace(/\s+/g, '_').slice(0, 40) || 'general';
   }
 
-  extractContactInfo(text: string): {
-    email?: string;
-    phone?: string;
-    name?: string;
-    location?: string;
-    title?: string;
-  } {
-    const contactInfo: any = {};
-    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  // ---------- Contact extraction ----------
+  extractContactInfo(text: string): { name?: string; email?: string; phone?: string; location?: string; title?: string } {
+    const res: any = {};
+    if (!text) return res;
 
-    // Email extraction
-    const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+    // EMAIL
+    const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/;
     const emailMatch = text.match(emailRegex);
-    if (emailMatch) {
-      contactInfo.email = emailMatch[0];
-    }
+    if (emailMatch) res.email = emailMatch[0];
 
-    // Phone extraction (improved patterns)
-    const phonePatterns = [
-      /(?:\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/,
-      /\+?[\d\s\-\(\)]{10,}/,
-      /(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})/
+    // PHONE - several patterns
+    const phoneRegexes = [
+      /(\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}/g,
+      /(?:\+?\d[\d\-\s().]{7,}\d)/g
     ];
-    
-    for (const pattern of phonePatterns) {
-      const phoneMatch = text.match(pattern);
-      if (phoneMatch) {
-        contactInfo.phone = phoneMatch[0].trim();
+    for (const r of phoneRegexes) {
+      const m = text.match(r);
+      if (m && m.length) {
+        // pick first reasonably short one
+        const candidate = m.find((s: string) => s.replace(/[^\d]/g, '').length >= 6 && s.replace(/[^\d]/g, '').length <= 15);
+        if (candidate) {
+          res.phone = candidate.trim();
+          break;
+        } else {
+          res.phone = m[0].trim();
+          break;
+        }
+      }
+    }
+
+    // NAME: attempt from top lines - choose first line that looks like a name
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    for (let i = 0; i < Math.min(6, lines.length); i++) {
+      const l = lines[i];
+      if (this.looksLikeName(l)) {
+        res.name = l;
         break;
       }
     }
 
-    // Name extraction (from first few lines)
-    for (let i = 0; i < Math.min(5, lines.length); i++) {
-      const line = lines[i];
-      if (this.looksLikeName(line)) {
-        contactInfo.name = line;
-        break;
-      }
-    }
+    // LOCATION: look for "City, State" patterns or words like "Address" nearby
+    const locRegex1 = /([A-Za-z\s]{2,50},\s*[A-Za-z]{2,50})(?:\s+\d{5})?/;
+    const locMatch1 = text.match(locRegex1);
+    if (locMatch1) res.location = locMatch1[1].trim();
 
-    // Location extraction
-    const locationPatterns = [
-      /(?:address|location|city|lives in):\s*([^,\n]+(?:,\s*[^,\n]+)*)/i,
-      /([A-Za-z\s]+,\s*[A-Z]{2}(?:\s+\d{5})?)/,
-      /([A-Za-z\s]+,\s*[A-Za-z\s]+(?:,\s*[A-Za-z\s]+)?)/
-    ];
-    
-    for (const pattern of locationPatterns) {
-      const locationMatch = text.match(pattern);
-      if (locationMatch) {
-        contactInfo.location = locationMatch[1].trim();
-        break;
-      }
-    }
+    const addressMarker = text.match(/(?:address|location|city):\s*([^\n]+)/i);
+    if (addressMarker && addressMarker[1]) res.location = addressMarker[1].trim();
 
-    return contactInfo;
+    return res;
   }
 
   private looksLikeName(line: string): boolean {
-    if (!line || line.length < 3 || line.length > 50) return false;
-    if (line.includes('@') || line.includes('http') || line.includes('www')) return false;
-    if (/^\d/.test(line) || line.includes('resume') || line.includes('cv')) return false;
-    
-    // Should contain at least 2 words with proper capitalization
+    if (!line) return false;
+    if (line.length < 3 || line.length > 50) return false;
+    if (line.includes('@') || line.includes('http') || /\d/.test(line)) return false;
+    // must have 2 words, each start with capital letter
     const words = line.split(/\s+/);
-    if (words.length < 2) return false;
-    
-    return words.every(word => 
-      word.length > 0 && 
-      word[0] === word[0].toUpperCase() && 
-      /^[A-Za-z\s\-'\.]+$/.test(word)
-    );
+    if (words.length < 2 || words.length > 5) return false;
+    return words.every(w => /^[A-Z][a-zA-Z.'-]{1,}$/.test(w));
+  }
+
+  // ---------- Education extraction ----------
+  private extractEducation(fullText: string, sections: { [k: string]: string }): string | undefined {
+    // prefer 'education' section
+    if (sections && sections.education) return sections.education;
+
+    // fallback: try to find degree lines in text
+    const degreeKeywords = ['bachelor', 'b.tech', 'b.sc', 'b.e', 'm.tech', 'master', 'msc', 'mba', 'phd', 'bachelor of', 'master of', 'degree', 'college', 'university'];
+    const lines = fullText.split('\n').map(l => l.trim()).filter(Boolean);
+    const matches: string[] = [];
+    for (const l of lines) {
+      const lower = l.toLowerCase();
+      if (degreeKeywords.some(k => lower.includes(k))) {
+        matches.push(l);
+      }
+    }
+    if (matches.length) return matches.slice(0, 6).join('\n');
+
+    return undefined;
   }
 }
 
-// Add type declaration for PDF.js global
+// global window typing
 declare global {
   interface Window {
     pdfjsLib: any;
@@ -455,3 +432,4 @@ declare global {
 }
 
 export const fileExtractionService = new FileExtractionService();
+export default fileExtractionService;

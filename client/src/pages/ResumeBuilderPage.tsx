@@ -170,65 +170,106 @@ const ResumeBuilderPage = () => {
   const parseExtractedText = (extractedData: any) => {
     console.log('Parsing extracted text:', extractedData);
     // Parse extracted text and update resume data
-    const { text, sections } = extractedData;
-    const contactInfo = fileExtractionService.extractContactInfo(text);
+    const { text, sections, contact } = extractedData;
+    const contactInfo = contact || fileExtractionService.extractContactInfo(text);
     console.log('Extracted contact info:', contactInfo);
     
     const updatedData = { ...resumeData };
     
     // Update basic details from extracted contact info
-    if (contactInfo.name) {
+    if (contactInfo?.name) {
       updatedData.basicDetails.fullName = contactInfo.name;
     }
-    if (contactInfo.title) {
+    if (contactInfo?.title) {
       updatedData.basicDetails.title = contactInfo.title;
     }
-    if (contactInfo.email) {
+    if (contactInfo?.email) {
       updatedData.basicDetails.email = contactInfo.email;
     }
-    if (contactInfo.phone) {
+    if (contactInfo?.phone) {
       updatedData.basicDetails.phone = contactInfo.phone;
     }
-    if (contactInfo.location) {
+    if (contactInfo?.location) {
       updatedData.basicDetails.location = contactInfo.location;
     }
 
     console.log('Updated basic details:', updatedData.basicDetails);
 
-    // Update sections based on parsed data
-    if (sections.summary) {
+    // Update summary section
+    if (sections?.summary) {
       updatedData.summary = sections.summary;
+    } else if (sections?.profile) {
+      updatedData.summary = sections.profile;
+    } else if (sections?.about) {
+      updatedData.summary = sections.about;
     }
-    if (sections.objective) {
+
+    // Try to extract additional information from the full text if sections are missing
+    if (!sections?.experience && text) {
+      const experienceSection = extractSectionFromText(text, 'experience');
+      if (experienceSection) {
+        sections.experience = experienceSection;
+      }
+    }
+
+    if (!sections?.education && text) {
+      const educationSection = extractSectionFromText(text, 'education');
+      if (educationSection) {
+        sections.education = educationSection;
+      }
+    }
+
+    // Update objective section
+    if (sections?.objective) {
       updatedData.objective = sections.objective;
     }
 
-    // Parse experience section
-    if (sections.experience) {
+    // Parse experience section with improved logic
+    if (sections?.experience) {
       console.log('Parsing experience section:', sections.experience);
       const experienceLines = sections.experience.split('\n').filter((line: string) => line.trim());
       const experiences = [];
-      let currentExp: any = { id: Date.now().toString() };
+      let currentExp: any = { id: Date.now().toString() + Math.random() };
 
-      for (const line of experienceLines) {
-        if (line.includes('Company') || line.includes('Employer')) {
-          if (currentExp.company) {
+      for (let i = 0; i < experienceLines.length; i++) {
+        const trimmedLine = experienceLines[i].trim();
+        
+        // Skip empty lines
+        if (!trimmedLine) continue;
+        
+        // Try to detect if this is a new experience entry
+        if (isNewExperienceEntry(trimmedLine, i, experienceLines)) {
+          // Save previous experience if it has meaningful data
+          if (currentExp.company || currentExp.position) {
             experiences.push(currentExp);
-            currentExp = { id: Date.now().toString() };
           }
-          currentExp.company = line.replace(/Company|Employer|:/gi, '').trim();
-        } else if (line.includes('Position') || line.includes('Title') || line.includes('Role')) {
-          currentExp.position = line.replace(/Position|Title|Role|:/gi, '').trim();
-        } else if (line.includes('Duration') || line.includes('Date') || line.includes('Period')) {
-          currentExp.duration = line.replace(/Duration|Date|Period|:/gi, '').trim();
-        } else if (currentExp.description) {
-          currentExp.description += ' ' + line.trim();
-        } else {
-          currentExp.description = line.trim();
+          currentExp = { id: Date.now().toString() + Math.random() };
+        }
+        
+        // Check if this line contains company information
+        if (isCompanyLine(trimmedLine)) {
+          currentExp.company = extractCompanyName(trimmedLine);
+        }
+        // Check if this line contains position/title information
+        else if (isPositionLine(trimmedLine)) {
+          currentExp.position = extractPosition(trimmedLine);
+        }
+        // Check if this line contains date/duration information
+        else if (isDateLine(trimmedLine)) {
+          currentExp.duration = extractDuration(trimmedLine);
+        }
+        // Otherwise, treat as description
+        else {
+          if (currentExp.description) {
+            currentExp.description += ' ' + trimmedLine;
+          } else {
+            currentExp.description = trimmedLine;
+          }
         }
       }
       
-      if (currentExp.company) {
+      // Add the last experience if it has meaningful data
+      if (currentExp.company || currentExp.position) {
         experiences.push(currentExp);
       }
       
@@ -236,32 +277,52 @@ const ResumeBuilderPage = () => {
       console.log('Parsed experiences:', experiences);
     }
 
-    // Parse education section
-    if (sections.education) {
+    // Parse education section with improved logic
+    if (sections?.education) {
       console.log('Parsing education section:', sections.education);
       const educationLines = sections.education.split('\n').filter((line: string) => line.trim());
       const educations = [];
-      let currentEdu: any = { id: Date.now().toString() };
+      let currentEdu: any = { id: Date.now().toString() + Math.random() };
 
-      for (const line of educationLines) {
-        if (line.includes('Institution') || line.includes('University') || line.includes('School')) {
-          if (currentEdu.institution) {
+      for (let i = 0; i < educationLines.length; i++) {
+        const trimmedLine = educationLines[i].trim();
+        
+        // Skip empty lines
+        if (!trimmedLine) continue;
+        
+        // Try to detect if this is a new education entry
+        if (isNewEducationEntry(trimmedLine, i, educationLines)) {
+          // Save previous education if it has meaningful data
+          if (currentEdu.institution || currentEdu.degree) {
             educations.push(currentEdu);
-            currentEdu = { id: Date.now().toString() };
           }
-          currentEdu.institution = line.replace(/Institution|University|School|:/gi, '').trim();
-        } else if (line.includes('Degree') || line.includes('Qualification')) {
-          currentEdu.degree = line.replace(/Degree|Qualification|:/gi, '').trim();
-        } else if (line.includes('Year') || line.includes('Date')) {
-          currentEdu.year = line.replace(/Year|Date|:/gi, '').trim();
-        } else if (currentEdu.description) {
-          currentEdu.description += ' ' + line.trim();
-        } else {
-          currentEdu.description = line.trim();
+          currentEdu = { id: Date.now().toString() + Math.random() };
+        }
+        
+        // Check if this line contains institution information
+        if (isInstitutionLine(trimmedLine)) {
+          currentEdu.institution = extractInstitution(trimmedLine);
+        }
+        // Check if this line contains degree information
+        else if (isDegreeLine(trimmedLine)) {
+          currentEdu.degree = extractDegree(trimmedLine);
+        }
+        // Check if this line contains year/date information
+        else if (isYearLine(trimmedLine)) {
+          currentEdu.year = extractYear(trimmedLine);
+        }
+        // Otherwise, treat as description
+        else {
+          if (currentEdu.description) {
+            currentEdu.description += ' ' + trimmedLine;
+          } else {
+            currentEdu.description = trimmedLine;
+          }
         }
       }
       
-      if (currentEdu.institution) {
+      // Add the last education if it has meaningful data
+      if (currentEdu.institution || currentEdu.degree) {
         educations.push(currentEdu);
       }
       
@@ -269,23 +330,32 @@ const ResumeBuilderPage = () => {
       console.log('Parsed education:', educations);
     }
 
-    // Parse skills section
-    if (sections.skills) {
+    // Parse skills section with improved extraction
+    if (sections?.skills) {
       const skillsText = sections.skills.toLowerCase();
       const commonSkills = [
         'javascript', 'html', 'css', 'react', 'angular', 'vue', 'node.js', 'python', 'java', 'c++', 'c#',
         'php', 'ruby', 'go', 'swift', 'kotlin', 'typescript', 'sql', 'mongodb', 'mysql', 'postgresql',
         'aws', 'azure', 'docker', 'kubernetes', 'git', 'agile', 'scrum', 'leadership', 'communication',
-        'project management', 'ui/ux', 'figma', 'adobe', 'photoshop', 'illustrator'
+        'project management', 'ui/ux', 'figma', 'adobe', 'photoshop', 'illustrator', 'wordpress', 'drupal',
+        'jira', 'confluence', 'slack', 'teams', 'zoom', 'skype', 'excel', 'powerpoint', 'word', 'outlook'
       ];
       
       const extractedSkills = commonSkills.filter(skill => skillsText.includes(skill));
-      updatedData.skills = extractedSkills;
-      console.log('Parsed skills:', extractedSkills);
+      
+      // Also extract skills from the text that might not be in the common list
+      const skillLines = sections.skills.split('\n').filter((line: string) => line.trim());
+      const additionalSkills = skillLines
+        .map((line: string) => line.trim())
+        .filter((line: string) => line.length > 0 && line.length < 50)
+        .slice(0, 10); // Limit to 10 additional skills
+      
+      updatedData.skills = [...new Set([...extractedSkills, ...additionalSkills])];
+      console.log('Parsed skills:', updatedData.skills);
     }
 
     // Parse languages section
-    if (sections.languages) {
+    if (sections?.languages) {
       const languagesText = sections.languages.toLowerCase();
       const commonLanguages = [
         'english', 'spanish', 'french', 'german', 'italian', 'portuguese', 'russian', 'chinese', 'japanese',
@@ -293,12 +363,20 @@ const ResumeBuilderPage = () => {
       ];
       
       const extractedLanguages = commonLanguages.filter(lang => languagesText.includes(lang));
-      updatedData.languages = extractedLanguages;
-      console.log('Parsed languages:', extractedLanguages);
+      
+      // Also extract languages from the text
+      const languageLines = sections.languages.split('\n').filter((line: string) => line.trim());
+      const additionalLanguages = languageLines
+        .map((line: string) => line.trim())
+        .filter((line: string) => line.length > 0 && line.length < 30)
+        .slice(0, 5); // Limit to 5 additional languages
+      
+      updatedData.languages = [...new Set([...extractedLanguages, ...additionalLanguages])];
+      console.log('Parsed languages:', updatedData.languages);
     }
 
     // Parse activities section
-    if (sections.activities) {
+    if (sections?.activities) {
       const activitiesLines = sections.activities.split('\n').filter((line: string) => line.trim());
       const activities = activitiesLines.map((line: string, index: number) => ({
         id: (Date.now() + index).toString(),
@@ -310,28 +388,34 @@ const ResumeBuilderPage = () => {
     }
 
     // Parse volunteering section
-    if (sections.volunteering) {
+    if (sections?.volunteering) {
       const volunteeringLines = sections.volunteering.split('\n').filter((line: string) => line.trim());
       const volunteering = [];
-      let currentVol: any = { id: Date.now().toString() };
+      let currentVol: any = { id: Date.now().toString() + Math.random() };
 
       for (const line of volunteeringLines) {
-        if (line.includes('Organization') || line.includes('NGO')) {
-          if (currentVol.organization) {
+        const trimmedLine = line.trim();
+        
+        if (!trimmedLine) continue;
+        
+        if (isOrganizationLine(trimmedLine)) {
+          if (currentVol.organization && currentVol.role) {
             volunteering.push(currentVol);
-            currentVol = { id: Date.now().toString() };
+            currentVol = { id: Date.now().toString() + Math.random() };
           }
-          currentVol.organization = line.replace(/Organization|NGO|:/gi, '').trim();
-        } else if (line.includes('Role') || line.includes('Position')) {
-          currentVol.role = line.replace(/Role|Position|:/gi, '').trim();
-        } else if (currentVol.description) {
-          currentVol.description += ' ' + line.trim();
+          currentVol.organization = extractOrganization(trimmedLine);
+        } else if (isRoleLine(trimmedLine)) {
+          currentVol.role = extractRole(trimmedLine);
         } else {
-          currentVol.description = line.trim();
+          if (currentVol.description) {
+            currentVol.description += ' ' + trimmedLine;
+          } else {
+            currentVol.description = trimmedLine;
+          }
         }
       }
       
-      if (currentVol.organization) {
+      if (currentVol.organization && currentVol.role) {
         volunteering.push(currentVol);
       }
       
@@ -341,6 +425,184 @@ const ResumeBuilderPage = () => {
 
     console.log('Final updated resume data:', updatedData);
     setResumeData(updatedData);
+  };
+
+  // Helper methods for parsing different sections
+  const isCompanyLine = (line: string): boolean => {
+    const lower = line.toLowerCase();
+    return !lower.includes('university') && !lower.includes('college') && !lower.includes('school') &&
+           (lower.includes('inc') || lower.includes('corp') || lower.includes('ltd') || 
+            lower.includes('company') || lower.includes('llc') || lower.includes('group') ||
+            lower.includes('technologies') || lower.includes('solutions') || lower.includes('systems') ||
+            /^[A-Z][a-zA-Z\s&.,]+(?:Inc|Corp|Ltd|LLC|Company|Group|Technologies|Solutions|Systems)$/i.test(line));
+  };
+
+  const extractCompanyName = (line: string): string => {
+    return line.replace(/Company|Employer|Inc|Corp|Ltd|LLC|Group|Technologies|Solutions|Systems|:/gi, '').trim();
+  };
+
+  const isPositionLine = (line: string): boolean => {
+    const lower = line.toLowerCase();
+    return lower.includes('developer') || lower.includes('engineer') || lower.includes('manager') ||
+           lower.includes('analyst') || lower.includes('specialist') || lower.includes('coordinator') ||
+           lower.includes('assistant') || lower.includes('director') || lower.includes('lead') ||
+           lower.includes('senior') || lower.includes('junior') || lower.includes('position') ||
+           lower.includes('title') || lower.includes('role') || lower.includes('consultant') ||
+           lower.includes('architect') || lower.includes('designer') || lower.includes('programmer') ||
+           lower.includes('administrator') || lower.includes('supervisor') || lower.includes('executive');
+  };
+
+  const extractPosition = (line: string): string => {
+    return line.replace(/Position|Title|Role|:/gi, '').trim();
+  };
+
+  const isDateLine = (line: string): boolean => {
+    return /\d{4}/.test(line) && (line.includes('20') || line.includes('19') || 
+           line.includes('present') || line.includes('current') || line.includes('to'));
+  };
+
+  const extractDuration = (line: string): string => {
+    return line.replace(/Duration|Date|Period|:/gi, '').trim();
+  };
+
+  const isInstitutionLine = (line: string): boolean => {
+    const lower = line.toLowerCase();
+    return lower.includes('university') || lower.includes('college') || lower.includes('school') ||
+           lower.includes('institute') || lower.includes('academy') || lower.includes('institution') ||
+           lower.includes('polytechnic') || lower.includes('university of') || lower.includes('college of') ||
+           /^[A-Z][a-zA-Z\s&.,]+(?:University|College|School|Institute|Academy|Polytechnic)$/i.test(line);
+  };
+
+  const extractInstitution = (line: string): string => {
+    return line.replace(/Institution|University|School|College|Institute|Academy|Polytechnic|:/gi, '').trim();
+  };
+
+  const isDegreeLine = (line: string): boolean => {
+    const lower = line.toLowerCase();
+    return lower.includes('bachelor') || lower.includes('master') || lower.includes('phd') ||
+           lower.includes('degree') || lower.includes('diploma') || lower.includes('certificate') ||
+           lower.includes('b.tech') || lower.includes('m.tech') || lower.includes('b.sc') ||
+           lower.includes('m.sc') || lower.includes('mba') || lower.includes('ba') || lower.includes('ma') ||
+           lower.includes('b.e') || lower.includes('m.e') || lower.includes('b.com') || lower.includes('m.com') ||
+           lower.includes('b.a') || lower.includes('m.a') || lower.includes('b.s') || lower.includes('m.s') ||
+           lower.includes('associate') || lower.includes('high school') || lower.includes('secondary');
+  };
+
+  const extractDegree = (line: string): string => {
+    return line.replace(/Degree|Qualification|Diploma|Certificate|:/gi, '').trim();
+  };
+
+  const isYearLine = (line: string): boolean => {
+    return /\d{4}/.test(line) && (line.includes('20') || line.includes('19') || 
+           line.includes('graduated') || line.includes('completed'));
+  };
+
+  const extractYear = (line: string): string => {
+    return line.replace(/Year|Date|Graduated|Completed|:/gi, '').trim();
+  };
+
+  const isOrganizationLine = (line: string): boolean => {
+    const lower = line.toLowerCase();
+    return lower.includes('organization') || lower.includes('ngo') || lower.includes('foundation') ||
+           lower.includes('charity') || lower.includes('association') || lower.includes('society');
+  };
+
+  const extractOrganization = (line: string): string => {
+    return line.replace(/Organization|NGO|Foundation|Charity|Association|Society|:/gi, '').trim();
+  };
+
+  const isRoleLine = (line: string): boolean => {
+    const lower = line.toLowerCase();
+    return lower.includes('volunteer') || lower.includes('member') || lower.includes('coordinator') ||
+           lower.includes('assistant') || lower.includes('helper') || lower.includes('role') ||
+           lower.includes('position') || lower.includes('title');
+  };
+
+  const extractRole = (line: string): string => {
+    return line.replace(/Role|Position|Title|:/gi, '').trim();
+  };
+
+  // Helper function to extract sections from full text
+  const extractSectionFromText = (text: string, sectionName: string): string | null => {
+    const lines = text.split('\n');
+    const sectionKeywords = {
+      experience: ['experience', 'work experience', 'employment', 'work history', 'professional experience'],
+      education: ['education', 'academic', 'qualifications', 'degrees', 'academic background']
+    };
+    
+    const keywords = sectionKeywords[sectionName as keyof typeof sectionKeywords];
+    if (!keywords) return null;
+    
+    let startIndex = -1;
+    let endIndex = lines.length;
+    
+    // Find the start of the section
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].toLowerCase();
+      if (keywords.some(keyword => line.includes(keyword))) {
+        startIndex = i;
+        break;
+      }
+    }
+    
+    if (startIndex === -1) return null;
+    
+    // Find the end of the section (next major section)
+    for (let i = startIndex + 1; i < lines.length; i++) {
+      const line = lines[i].toLowerCase();
+      // Check if this line starts a new major section
+      if (line.includes('skills') || line.includes('projects') || line.includes('certificates') ||
+          line.includes('activities') || line.includes('volunteering') || line.includes('awards') ||
+          line.includes('publications') || line.includes('languages')) {
+        endIndex = i;
+        break;
+      }
+    }
+    
+    return lines.slice(startIndex + 1, endIndex).join('\n');
+  };
+
+  // Helper functions for detecting new entries
+  const isNewExperienceEntry = (line: string, index: number, allLines: string[]): boolean => {
+    const lower = line.toLowerCase();
+    
+    // Check if this line looks like a company name (starts with capital letters, contains business keywords)
+    const isCompanyName = /^[A-Z][a-zA-Z\s&.,]+(?:Inc|Corp|Ltd|LLC|Company|Group|Technologies|Solutions|Systems)$/i.test(line);
+    
+    // Check if this line contains date patterns (indicating a new job entry)
+    const hasDatePattern = /\d{4}/.test(line) && (line.includes('20') || line.includes('19'));
+    
+    // Check if this line is significantly shorter than the previous line (likely a header)
+    const prevLine = index > 0 ? allLines[index - 1] : '';
+    const isShorterThanPrev = Boolean(prevLine && line.length < prevLine.length * 0.7);
+    
+    // Check if this line contains job-related keywords
+    const hasJobKeywords = lower.includes('developer') || lower.includes('engineer') || 
+                          lower.includes('manager') || lower.includes('analyst') ||
+                          lower.includes('specialist') || lower.includes('coordinator');
+    
+    return isCompanyName || (hasDatePattern && hasJobKeywords) || (isShorterThanPrev && hasJobKeywords);
+  };
+
+  const isNewEducationEntry = (line: string, index: number, allLines: string[]): boolean => {
+    const lower = line.toLowerCase();
+    
+    // Check if this line looks like an institution name
+    const isInstitutionName = /^[A-Z][a-zA-Z\s&.,]+(?:University|College|School|Institute|Academy)$/i.test(line);
+    
+    // Check if this line contains degree patterns
+    const hasDegreePattern = lower.includes('bachelor') || lower.includes('master') || 
+                            lower.includes('phd') || lower.includes('degree') ||
+                            lower.includes('diploma') || lower.includes('certificate');
+    
+    // Check if this line contains date patterns (graduation year)
+    const hasDatePattern = /\d{4}/.test(line) && (line.includes('20') || line.includes('19'));
+    
+    // Check if this line is significantly shorter than the previous line (likely a header)
+    const prevLine = index > 0 ? allLines[index - 1] : '';
+    const isShorterThanPrev = Boolean(prevLine && line.length < prevLine.length * 0.7);
+    
+    return isInstitutionName || (hasDegreePattern && hasDatePattern) || (isShorterThanPrev && hasDegreePattern);
   };
 
   const updateResumeData = (section: keyof ResumeData, data: any) => {
