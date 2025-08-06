@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, FileText, Sparkles, ArrowLeft, CheckCircle, AlertCircle, User } from 'lucide-react';
@@ -74,9 +72,7 @@ const UseTemplatePage = () => {
   };
 
   return (
-    <>
-      <Header />
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         {/* Upload Section */}
         <section className="w-full px-4 py-12">
           {/* Back Button */}
@@ -246,7 +242,6 @@ const UseTemplatePage = () => {
             </div>
           </div>
         </section>
-      </main>
 
       {/* Resume Upload Modal */}
       <ResumeUploadModal
@@ -256,9 +251,7 @@ const UseTemplatePage = () => {
         onCustomizeWithAI={handleCustomizeWithAI}
         fileName={uploadedFile?.name || ''}
       />
-      
-      <Footer />
-    </>
+    </div>
   );
 };
 

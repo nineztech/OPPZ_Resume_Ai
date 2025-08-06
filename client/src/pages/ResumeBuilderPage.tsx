@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import { fileExtractionService } from '@/services/fileExtractionService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
+// import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   ArrowLeft, 
@@ -755,7 +753,6 @@ const ResumeBuilderPage = () => {
           }
         `}
       </style>
-      <Header />
       <div className="min-h-screen bg-gray-50 mt-14">
         {/* Top Bar */}
         <div className="bg-white border-b border-gray-200 px-6 py-3">
@@ -1068,8 +1065,6 @@ const ResumeBuilderPage = () => {
         }}
         color={selectedColor}
       />
-      
-      <Footer />
     </>
   );
 };

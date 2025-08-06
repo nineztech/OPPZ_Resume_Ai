@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +41,8 @@ const TemplatesPage = () => {
       setLoading(false);
     }
   }, []);
+
+
 
   const filteredTemplates = templates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -215,9 +215,7 @@ const TemplatesPage = () => {
   };
 
   return (
-    <>
-      <Header />
-      <main className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
         {/* Hero Section */}
         <section className="bg-white border-b">
           <div className="container mx-auto px-4 py-12">
@@ -396,7 +394,6 @@ const TemplatesPage = () => {
             </Button>
           </div>
         </section>
-      </main>
       
       {/* Template Preview Modal */}
       <TemplatePreviewModal
@@ -411,9 +408,7 @@ const TemplatesPage = () => {
         }}
         onUseTemplate={handleUseTemplate}
       />
-      
-      <Footer />
-    </>
+    </div>
   );
 };
 

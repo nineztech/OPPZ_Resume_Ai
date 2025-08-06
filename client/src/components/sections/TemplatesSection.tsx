@@ -3,13 +3,19 @@ import { useInView } from 'react-intersection-observer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, Download } from 'lucide-react';
-import { Link } from 'react-router-dom';
+    import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { tokenUtils } from '@/lib/utils';
+import LoginPromptModal from '@/components/modals/LoginPromptModal';
 
 const TemplatesSection = () => {
   const [ref, inView] = useInView({
     triggerOnce: true,
     threshold: 0.1,
   });
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const navigate = useNavigate();
+  const user = tokenUtils.getUser();
 
   const templates = [
     {
@@ -138,11 +144,34 @@ const TemplatesSection = () => {
                   {/* Hover Overlay */}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 px-4">
-                      <Button size="sm" className="bg-white text-gray-900 hover:bg-gray-100 text-xs sm:text-sm">
+                      <Button 
+                        size="sm" 
+                        className="bg-white text-gray-900 hover:bg-gray-100 text-xs sm:text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!user) {
+                            setShowLoginPrompt(true);
+                          } else {
+                            // Handle preview logic here
+                            console.log('Preview template:', template.name);
+                          }
+                        }}
+                      >
                         <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         Preview
                       </Button>
-                      <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-xs sm:text-sm">
+                      <Button 
+                        size="sm" 
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-xs sm:text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!user) {
+                            setShowLoginPrompt(true);
+                          } else {
+                            navigate('/resume/templates');
+                          }
+                        }}
+                      >
                         <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         Use Template
                       </Button>
@@ -182,6 +211,12 @@ const TemplatesSection = () => {
           </Link>
         </motion.div>
       </div>
+      
+      {/* Login Prompt Modal */}
+      <LoginPromptModal
+        isOpen={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+      />
     </section>
   );
 };

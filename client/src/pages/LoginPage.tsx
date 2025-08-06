@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { tokenUtils } from '@/lib/utils';
 
 const loginSchema = z.object({
@@ -24,6 +24,8 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -63,8 +65,9 @@ const LoginPage = () => {
           description: "Welcome back!",
         } as any);
         
-        // Redirect to home page or dashboard
-        window.location.href = '/';
+        // Redirect to the page they were trying to access, or home
+        const from = location.state?.from || '/';
+        navigate(from);
       } else {
         toast({
           title: "Login failed",

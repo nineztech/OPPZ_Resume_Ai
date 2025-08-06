@@ -9,12 +9,18 @@ import {
   Users 
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { tokenUtils } from '@/lib/utils';
+import LoginPromptModal from '@/components/modals/LoginPromptModal';
 
 const FeaturesSection = () => {
   const [ref, inView] = useInView({
     triggerOnce: true,
     threshold: 0.1,
   });
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const user = tokenUtils.getUser();
 
   const features = [
     {
@@ -149,16 +155,45 @@ const FeaturesSection = () => {
               Join thousands of professionals who have already created standout CVs with our platform
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center px-4">
-              <button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 transform hover:scale-105">
+              <Button 
+                size="lg"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 transform hover:scale-105"
+                onClick={() => {
+                  if (!user) {
+                    setShowLoginPrompt(true);
+                  } else {
+                    // Handle start creating logic here
+                    console.log('Start creating CV');
+                  }
+                }}
+              >
                 Start Creating Now
-              </button>
-              <button className="border-2 border-gray-300 hover:border-blue-600 text-gray-700 px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base transition-all duration-300">
+              </Button>
+              <Button 
+                variant="outline"
+                size="lg"
+                className="border-2 border-gray-300 hover:border-blue-600 text-gray-700 px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base transition-all duration-300"
+                onClick={() => {
+                  if (!user) {
+                    setShowLoginPrompt(true);
+                  } else {
+                    // Handle view templates logic here
+                    console.log('View templates');
+                  }
+                }}
+              >
                 View Templates
-              </button>
+              </Button>
             </div>
           </div>
         </motion.div>
       </div>
+      
+      {/* Login Prompt Modal */}
+      <LoginPromptModal
+        isOpen={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+      />
     </section>
   );
 };
