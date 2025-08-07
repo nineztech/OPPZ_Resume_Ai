@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pdfplumber
+python-docx
+spacy
+pyresparser
+nltk
+pdfminer.six
+pytesseract
+Pillow
+opencv-python
+PyMuPDF
+easyocr
+pytesseract
+pdf2image
