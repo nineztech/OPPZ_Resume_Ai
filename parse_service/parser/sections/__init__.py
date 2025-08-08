@@ -6,7 +6,8 @@ from .education_parser import parse_education_section
 from .experience_parser import parse_experience_section
 from .activities_parser import parse_activities_section
 from .projects_parser import parse_projects_section
-from .volunteering_parser import parse_volunteering_section
+from .reference_parser import parse_reference_section
+
 from .certificates_parser import parse_certificates_section
 from .section_detection import is_section_header, is_section_header_flexible
 
@@ -19,7 +20,8 @@ __all__ = [
     'parse_experience_section',
     'parse_activities_section',
     'parse_projects_section',
-    'parse_volunteering_section',
+    'parse_reference_section',
+
     'parse_certificates_section',
     'is_section_header',
     'is_section_header_flexible'

@@ -4,8 +4,10 @@ SECTION_HEADERS = {
     "experience": ["experience", "work history", "professional experience", "employment", "work experience"],
     "skills": ["skills", "technical skills", "key skills", "competencies", "expertise"],
     "education": ["education", "academic background", "qualifications", "academic", "degrees"],
-    "activities": ["activities", "projects", "personal projects", "academic projects", "project", "key projects", "portfolio"],
-    "volunteering": ["volunteering", "volunteer work", "community service", "volunteer"],
+    "projects": ["projects", "project", "personal projects", "technical projects", "portfolio", "academic projects"],
+    "activities": ["activities", "volunteer work", "community service", "clubs", "organizations"],
+    "reference": ["reference", "references", "referees", "professional references", "personal references", "character references"],
+
     "certificates": ["certificates", "certifications", "achievements", "awards"],
 }
 
@@ -51,8 +53,9 @@ def is_section_header_flexible(line):
         'experience', 'work', 'employment', 'professional', 'career',
         'skills', 'technical', 'competencies', 'expertise', 'capabilities',
         'education', 'academic', 'qualifications', 'degrees', 'background',
-        'projects', 'activities', 'personal projects', 'portfolio',
-        'volunteering', 'volunteer', 'community', 'service',
+        'projects', 'project', 'portfolio',
+        'activities', 'community', 'service',
+        'reference', 'references', 'referees',
         'certificates', 'certifications', 'achievements', 'awards', 'honors'
     ]
     

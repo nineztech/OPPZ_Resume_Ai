@@ -3,9 +3,10 @@ from .summary_parser import parse_summary_section
 from .skills_parser import parse_skills_section
 from .education_parser import parse_education_section
 from .experience_parser import parse_experience_section
-from .activities_parser import parse_activities_section, is_project_content
+from .activities_parser import parse_activities_section
 from .projects_parser import parse_projects_section
-from .volunteering_parser import parse_volunteering_section
+from .reference_parser import parse_reference_section
+
 from .certificates_parser import parse_certificates_section
 from .section_detection import is_section_header_flexible
 
@@ -41,19 +42,27 @@ def is_section_header(line: str) -> tuple[bool, str]:
         "education": [
             "education", "academic", "academic background", "qualifications"
         ],
-        # Projects/Activities sections
+        # Projects sections
+        "projects": [
+            "projects", "project", "personal projects", "technical projects",
+            "portfolio", "academic projects"
+        ],
+        # Activities sections
         "activities": [
-            "projects", "key projects", "portfolio", "activities",
-            "personal projects", "academic projects"
+            "activities", "volunteer work", "community service", "clubs", "organizations"
         ],
-        # Volunteering sections
-        "volunteering": [
-            "volunteering", "volunteer", "volunteer work"
-        ],
+
         # Certificates/Awards sections
         "certificates": [
             "achievements", "awards", "certificates", "certifications",
-            "honors", "recognition"
+            "honors", "recognition", "certificate", "certification",
+            "awards & certifications", "certificates & awards", "achievements & awards"
+        ],
+        
+        # Reference sections
+        "reference": [
+            "reference", "references", "referees", "professional references",
+            "personal references", "character references"
         ]
     }
     
@@ -159,45 +168,14 @@ def split_into_sections(text: str) -> dict:
         "objective": "",  # Will be empty if not found
         "experience": parse_experience_section(main_sections.get("experience", "")),
         "education": parse_education_section(main_sections.get("education", "")),
+        "projects": parse_projects_section(main_sections.get("projects", "")),
         "skills": [],
         "languages": [],
         "activities": parse_activities_section(main_sections.get("activities", "")),
-        "projects": parse_projects_section(main_sections.get("activities", "")),  # Parse same content as projects
-        "volunteering": parse_volunteering_section(main_sections.get("volunteering", "")),
+        "reference": parse_reference_section(main_sections.get("reference", "")),
+
         "certificates": parse_certificates_section(main_sections.get("certificates", ""))
     }
-    
-    # Post-process: Check if summary content is actually project content
-    summary_content = structured_sections["summary"]
-    if summary_content and is_project_content(summary_content):
-        print("DEBUG: Summary content detected as project content, moving to activities")
-        # Move project content from summary to activities
-        structured_sections["activities"] = parse_activities_section(summary_content)
-        structured_sections["summary"] = ""  # Clear summary if it was actually projects
-    
-    # Also check if basic_details contains project content (common when no section headers are used)
-    basic_details_content = main_sections.get("basic_details", "")
-    if basic_details_content and is_project_content(basic_details_content):
-        print("DEBUG: Basic details content detected as project content, moving to activities")
-        # Extract contact info first
-        contact_info = extract_contact_info(basic_details_content)
-        structured_sections["basicDetails"] = contact_info
-        
-        # Parse remaining content as activities
-        remaining_content = basic_details_content
-        # Remove contact info lines from remaining content
-        lines = basic_details_content.split('\n')
-        contact_lines = []
-        for line in lines:
-            if any(keyword in line.lower() for keyword in ['@', '+', 'phone', 'email', 'address', 'location']):
-                contact_lines.append(line)
-        
-        # Remove contact lines from remaining content
-        for line in contact_lines:
-            remaining_content = remaining_content.replace(line, '')
-        
-        if remaining_content.strip():
-            structured_sections["activities"] = parse_activities_section(remaining_content.strip())
     
     # Parse skills section
     skills_text = main_sections.get("skills", "")

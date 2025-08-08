@@ -1,191 +1,152 @@
 import re
 
 def parse_projects_section(text):
-    """Parse projects section into structured data"""
     projects = []
-    
-    if not text:
-        return projects
-    
-    lines = text.split('\n')
-    current_project = {
-        "id": "",
-        "projectName": "",
-        "duration": "",
-        "link": "",
-        "description": ""
-    }
-    
+    lines = text.split("\n")
+
+    buffer = []
+    current_project_index = 1
+
     for line in lines:
         line_stripped = line.strip()
         if not line_stripped:
             continue
-        
-        # Check if this looks like a new project entry
-        if is_new_project_entry(line_stripped):
-            if current_project["projectName"]:
-                current_project["id"] = str(len(projects) + 1)
-                projects.append(current_project.copy())
-            current_project = {
-                "id": "",
-                "projectName": "",
-                "duration": "",
-                "link": "",
-                "description": ""
-            }
-            current_project["projectName"] = line_stripped
+
+        # Check if this line starts a new project
+        if is_project_title(line_stripped):
+            # Process previous project if buffer has content
+            if buffer:
+                parsed = parse_project_block("\n".join(buffer), current_project_index)
+                if parsed:
+                    projects.append(parsed)
+                    current_project_index += 1
+                buffer = []
+            # Start new project
+            buffer.append(line_stripped)
         else:
-            # Check if line contains a link
-            if is_link_line(line_stripped):
-                current_project["link"] = extract_link(line_stripped)
-            # Check if line contains duration/date patterns
-            elif is_duration_line(line_stripped):
-                current_project["duration"] = line_stripped
-            # Otherwise, treat as description
-            else:
-                if current_project["description"]:
-                    current_project["description"] += " " + line_stripped
-                else:
-                    current_project["description"] = line_stripped
-    
-    # Add the last project
-    if current_project["projectName"]:
-        current_project["id"] = str(len(projects) + 1)
-        projects.append(current_project)
-    
-    # If no projects were found but we have text, try to parse it as projects
-    if not projects and text.strip():
-        # Split by double newlines (common project separator)
-        project_parts = text.split('\n\n')
-        for i, part in enumerate(project_parts):
-            if part.strip():
-                lines = part.strip().split('\n')
-                if lines:
-                    # First line is usually the project name
-                    project_name = lines[0].strip()
-                    # Rest is description
-                    description = ' '.join(lines[1:]).strip() if len(lines) > 1 else ""
-                    
-                    # Clean up project name (remove extra spaces, etc.)
-                    project_name = ' '.join(project_name.split())
-                    
-                    # Extract link from description if present
-                    link = ""
-                    if description:
-                        link_match = re.search(r'https?://[^\s]+', description)
-                        if link_match:
-                            link = link_match.group()
-                            # Remove link from description
-                            description = re.sub(r'https?://[^\s]+', '', description).strip()
-                    
-                    projects.append({
-                        "id": str(i + 1),
-                        "projectName": project_name,
-                        "duration": "",
-                        "link": link,
-                        "description": description
-                    })
-    
-    # If still no projects, try splitting by project names with parentheses
-    if not projects and text.strip():
-        # Look for project names that start with capital letters and contain parentheses
-        project_pattern = r'([A-Z][a-zA-Z\s]+)\s*\([^)]+\)'
-        matches = re.findall(project_pattern, text)
-        
-        if matches:
-            for i, project_name in enumerate(matches):
-                # Find the text after this project name
-                start_idx = text.find(project_name)
-                if start_idx != -1:
-                    # Find the next project or end of text
-                    next_project_match = re.search(project_pattern, text[start_idx + len(project_name):])
-                    if next_project_match:
-                        end_idx = start_idx + len(project_name) + next_project_match.start()
-                    else:
-                        end_idx = len(text)
-                    
-                    description = text[start_idx + len(project_name):end_idx].strip()
-                    # Clean up description
-                    description = re.sub(r'^\s*\([^)]+\)\s*', '', description)
-                    
-                    # Extract link from description if present
-                    link = ""
-                    if description:
-                        link_match = re.search(r'https?://[^\s]+', description)
-                        if link_match:
-                            link = link_match.group()
-                            # Remove link from description
-                            description = re.sub(r'https?://[^\s]+', '', description).strip()
-                    
-                    projects.append({
-                        "id": str(i + 1),
-                        "projectName": project_name.strip(),
-                        "duration": "",
-                        "link": link,
-                        "description": description
-                    })
-    
+            # Add to current project buffer
+            buffer.append(line_stripped)
+
+    # Process the last project
+    if buffer:
+        parsed = parse_project_block("\n".join(buffer), current_project_index)
+        if parsed:
+            projects.append(parsed)
+
     return projects
 
-def is_new_project_entry(line):
-    line_lower = line.lower()
+def is_project_title(line):
+    # Check for numbered/bulleted project titles
+    if re.match(r'^[-*•\d.]+\s+', line):
+        return True
     
-    # Check for project keywords - but be more specific
-    project_keywords = ['developed', 'built', 'created', 'implemented', 'designed']
+    # Check for project titles with technologies in parentheses
+    # Pattern: ProjectName (Tech1, Tech2, Tech3)
+    if re.match(r'^[A-Z][A-Za-z0-9\s\-]+\([^)]+\)$', line):
+        return True
     
-    # Check for specific project names (common in resumes)
-    specific_projects = ['cropify', 'globevista', 'shopease', 'ecommerce', 'portfolio', 'blog', 'app', 'website']
+    # Check for project titles that might have technologies in parentheses
+    # Pattern: ProjectName (Tech1, Tech2, Tech3) - rest of description
+    if re.match(r'^[A-Z][A-Za-z0-9\s\-]+\([^)]+\)', line):
+        return True
     
-    # Check if line contains project keywords or specific project names
-    has_project_keyword = any(keyword in line_lower for keyword in project_keywords)
-    has_specific_project = any(project in line_lower for project in specific_projects)
+    # Check for title case project names (common format)
+    if line.istitle() and len(line.split()) <= 8:
+        return True
     
-    # Check if line starts with capital letters and is short (likely a project title)
-    is_capitalized_short = line.strip() and line.strip()[0].isupper() and len(line.strip()) < 50
+    # Check for project names that start with capital letter and contain typical project name patterns
+    if re.match(r'^[A-Z][A-Za-z0-9\s\-:()]+$', line):
+        # Additional check to avoid treating descriptions as titles
+        if len(line) < 50 and not any(word.lower() in ['technologies', 'description', 'source', 'code', 'link'] for word in line.split()):
+            return True
     
-    # Check if line contains technology keywords (indicating a project)
-    tech_keywords = ['react', 'node', 'python', 'java', 'javascript', 'django', 'express', 'mongodb']
-    has_tech_keyword = any(tech in line_lower for tech in tech_keywords)
+    # Check for project names that might be in all caps
+    if line.isupper() and len(line) < 30 and len(line.split()) <= 4:
+        return True
     
-    # Check for summary keywords that would indicate this is NOT a project
-    summary_keywords = ['professional', 'experienced', 'passionate', 'dedicated', 'motivated', 'seeking']
-    has_summary_keywords = any(keyword in line_lower for keyword in summary_keywords)
+    # Check for lines that start with dash/bullet and contain project-like content
+    # This handles the format: "- Project Name – Description"
+    if re.match(r'^[-*•]\s+[A-Z]', line):
+        return True
     
-    # If line has summary keywords, it's likely not a project entry
-    if has_summary_keywords:
-        return False
-    
-    # Check for strong project indicators
-    strong_project_indicators = (
-        has_project_keyword and has_tech_keyword or
-        has_specific_project or
-        (is_capitalized_short and has_tech_keyword and not has_summary_keywords)
-    )
-    
-    return strong_project_indicators
+    return False
 
-def is_link_line(line):
-    """Check if line contains a URL link"""
-    return re.search(r'https?://[^\s]+', line) is not None
+def parse_project_block(block, index):
+    lines = block.strip().split("\n")
+    if not lines:
+        return None
+    
+    title_line = lines[0].strip()
+    
+    # Extract tech stack if present in parentheses
+    tech_stack = ""
+    tech_match = re.search(r'\(([^()]+)\)', title_line)
+    if tech_match:
+        tech_stack = tech_match.group(1).strip()
+        # Remove the parentheses part from title
+        title_line = re.sub(r'\s*\([^()]+\)\s*', '', title_line).strip()
 
-def extract_link(line):
-    """Extract URL link from line"""
-    link_match = re.search(r'https?://[^\s]+', line)
-    if link_match:
-        return link_match.group()
-    return ""
+    # Check if the title line contains an en dash (–) or regular dash (-) separator
+    # This indicates title and description are on the same line
+    title = title_line
+    description = ""
+    
+    # Look for en dash (–) or regular dash (-) as separator
+    dash_patterns = [
+        r'^(.+?)\s*[–—]\s*(.+)$',  # en dash or em dash
+        r'^(.+?)\s*-\s*(.+)$',      # regular dash
+    ]
+    
+    for pattern in dash_patterns:
+        match = re.search(pattern, title_line)
+        if match:
+            title = match.group(1).strip()
+            description = match.group(2).strip()
+            break
+    
+    # If no dash separator found, check if there are additional lines for description
+    if not description:
+        # Build description from remaining lines, excluding SourceCode links
+        desc_lines = []
+        for line in lines[1:]:
+            line = line.strip()
+            # Skip lines that are just "SourceCode" or similar
+            if line.lower() in ['sourcecode', 'source code', 'github', 'link']:
+                continue
+            # Skip date lines and technology lines
+            if not extract_start_end_dates(line)[0] and "technolog" not in line.lower():
+                desc_lines.append(line)
 
-def is_duration_line(line):
-    """Check if line contains duration/date patterns"""
-    # Check for year patterns (2024, 2023, etc.)
-    has_year = re.search(r'\d{4}', line) is not None
-    
-    # Check for month patterns
-    months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
-    has_month = any(month in line.lower() for month in months)
-    
-    # Check for date keywords
-    date_keywords = ['present', 'current', 'to', '-', '–', 'duration', 'period']
-    has_date_keyword = any(keyword in line.lower() for keyword in date_keywords)
-    
-    return has_year or (has_month and has_date_keyword) 
+        description = " ".join(desc_lines).strip()
+        
+        # Clean up the description - remove any remaining SourceCode references
+        description = re.sub(r'\s*SourceCode\s*', '', description, flags=re.IGNORECASE)
+        description = re.sub(r'\s*Source Code\s*', '', description, flags=re.IGNORECASE)
+
+    # Extract dates from any of the lines
+    start_date, end_date = "", ""
+    for line in lines:
+        s, e = extract_start_end_dates(line)
+        if s or e:
+            start_date, end_date = s, e
+            break
+
+    return {
+        "id": str(index),
+        "title": title,
+        "start_date": start_date,
+        "end_date": end_date,
+        "tech_stack": tech_stack,
+        "description": description
+    }
+
+def extract_start_end_dates(text):
+    # Normalize separators
+    text = text.lower().replace("–", "-").replace("—", "-").replace(" to ", "-")
+    # Examples: Jan 2022 - Dec 2022, 2020 - Present, March 2021 - July 2023
+    match = re.search(r'([a-z]{3,9}\s*\d{4}|\d{4})\s*[-]\s*(present|[a-z]{3,9}\s*\d{4}|\d{4})', text, re.IGNORECASE)
+    if match:
+        start, end = match.groups()
+        return start.title().strip(), end.title().strip()
+    return "", ""
+

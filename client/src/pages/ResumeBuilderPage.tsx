@@ -71,12 +71,7 @@ interface ResumeData {
     title: string;
     description: string;
   }>;
-  volunteering: Array<{
-    id: string;
-    organization: string;
-    role: string;
-    description: string;
-  }>;
+
 }
 
 const ResumeBuilderPage = () => {
@@ -102,8 +97,7 @@ const ResumeBuilderPage = () => {
     education: [],
     skills: [],
     languages: [],
-    activities: [],
-    volunteering: []
+            activities: []
   });
 
   const templateId = location.state?.templateId || 'modern-professional';
@@ -149,7 +143,7 @@ const ResumeBuilderPage = () => {
         skills: defaultData.skills?.technical || [],
         languages: defaultData.additionalInfo?.languages || [],
         activities: [],
-        volunteering: []
+
       });
     }
   }, [location.state]);
@@ -385,41 +379,7 @@ const ResumeBuilderPage = () => {
       console.log('Parsed activities:', activities);
     }
 
-    // Parse volunteering section
-    if (sections?.volunteering) {
-      const volunteeringLines = sections.volunteering.split('\n').filter((line: string) => line.trim());
-      const volunteering = [];
-      let currentVol: any = { id: Date.now().toString() + Math.random() };
 
-      for (const line of volunteeringLines) {
-        const trimmedLine = line.trim();
-        
-        if (!trimmedLine) continue;
-        
-        if (isOrganizationLine(trimmedLine)) {
-          if (currentVol.organization && currentVol.role) {
-            volunteering.push(currentVol);
-            currentVol = { id: Date.now().toString() + Math.random() };
-          }
-          currentVol.organization = extractOrganization(trimmedLine);
-        } else if (isRoleLine(trimmedLine)) {
-          currentVol.role = extractRole(trimmedLine);
-        } else {
-          if (currentVol.description) {
-            currentVol.description += ' ' + trimmedLine;
-          } else {
-            currentVol.description = trimmedLine;
-          }
-        }
-      }
-      
-      if (currentVol.organization && currentVol.role) {
-        volunteering.push(currentVol);
-      }
-      
-      updatedData.volunteering = volunteering;
-      console.log('Parsed volunteering:', volunteering);
-    }
 
     console.log('Final updated resume data:', updatedData);
     setResumeData(updatedData);
@@ -550,7 +510,7 @@ const ResumeBuilderPage = () => {
       const line = lines[i].toLowerCase();
       // Check if this line starts a new major section
       if (line.includes('skills') || line.includes('projects') || line.includes('certificates') ||
-          line.includes('activities') || line.includes('volunteering') || line.includes('awards') ||
+          line.includes('activities') || line.includes('awards') ||
           line.includes('publications') || line.includes('languages')) {
         endIndex = i;
         break;
@@ -725,7 +685,7 @@ const ResumeBuilderPage = () => {
     { id: 'education', label: 'Education', icon: GraduationCap },
     { id: 'experience', label: 'Experience', icon: Briefcase },
     { id: 'activities', label: 'Activities', icon: Activity },
-    { id: 'volunteering', label: 'Volunteering', icon: Heart }
+
   ];
 
   return (
@@ -937,12 +897,7 @@ const ResumeBuilderPage = () => {
                               />
                             )}
 
-                            {section.id === 'volunteering' && (
-                              <VolunteeringSection
-                                volunteering={resumeData.volunteering}
-                                onChange={(volunteering) => updateResumeData('volunteering', volunteering)}
-                              />
-                            )}
+
 
                             {section.id === 'summary' && (
                               <SummarySection
@@ -1005,12 +960,7 @@ const ResumeBuilderPage = () => {
                   />
                 )}
 
-                {activeSection === 'volunteering' && (
-                  <VolunteeringSection
-                    volunteering={resumeData.volunteering}
-                    onChange={(volunteering) => updateResumeData('volunteering', volunteering)}
-                  />
-                )}
+
 
                 {activeSection === 'summary' && (
                   <SummarySection
@@ -1443,79 +1393,7 @@ const ActivitiesSection = ({ activities, onChange }: { activities: any[]; onChan
   );
 };
 
-// Volunteering Section Component
-const VolunteeringSection = ({ volunteering, onChange }: { volunteering: any[]; onChange: (volunteering: any[]) => void }) => {
-  const addVolunteering = () => {
-    onChange([...volunteering, {
-      id: Date.now().toString(),
-      organization: '',
-      role: '',
-      description: ''
-    }]);
-  };
 
-  const updateVolunteering = (id: string, field: string, value: string) => {
-    onChange(volunteering.map(vol => 
-      vol.id === id ? { ...vol, [field]: value } : vol
-    ));
-  };
-
-  const removeVolunteering = (id: string) => {
-    onChange(volunteering.filter(vol => vol.id !== id));
-  };
-
-  return (
-    <div className="space-y-4">
-      {volunteering.map((vol) => (
-        <Card key={vol.id} className="p-4">
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Organization</Label>
-                <Input
-                  value={vol.organization}
-                  onChange={(e) => updateVolunteering(vol.id, 'organization', e.target.value)}
-                  placeholder="Organization name"
-                />
-              </div>
-              <div>
-                <Label>Role</Label>
-                <Input
-                  value={vol.role}
-                  onChange={(e) => updateVolunteering(vol.id, 'role', e.target.value)}
-                  placeholder="Your role"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Description</Label>
-              <Textarea
-                value={vol.description}
-                onChange={(e) => updateVolunteering(vol.id, 'description', e.target.value)}
-                placeholder="Describe your volunteer work"
-                rows={3}
-              />
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => removeVolunteering(vol.id)}
-              className="text-red-600 hover:text-red-700"
-            >
-              Remove Volunteering
-            </Button>
-          </div>
-        </Card>
-      ))}
-
-      <Button variant="outline" onClick={addVolunteering}>
-        Add Volunteering
-      </Button>
-    </div>
-  );
-};
 
 // Summary Section Component
 const SummarySection = ({ summary, objective, onChange }: { 
