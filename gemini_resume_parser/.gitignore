@@ -251,7 +251,10 @@ cache/
 *.backup
 *.old
 
-
+# # Test files
+# test_*.py
+# *_test.py
+# tests/
 
 # Documentation build
 docs/build/
