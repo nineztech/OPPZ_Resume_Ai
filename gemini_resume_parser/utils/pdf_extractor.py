@@ -1,10 +1,11 @@
 import os
 import pdfplumber
+import docx2txt
 from typing import Optional, Union
 from pathlib import Path
 
 class DocumentExtractor:
-    """Utility class for extracting text from various document formats"""
+    """Utility class for extracting text from various document formats (PDF, DOCX, TXT)"""
     
     @staticmethod
     def extract_text_from_pdf(file_path: Union[str, Path]) -> str:
@@ -45,16 +46,31 @@ class DocumentExtractor:
     @staticmethod
     def extract_text_from_docx(file_path: Union[str, Path]) -> str:
         """
-        Extract text from DOCX file (placeholder for future implementation)
+        Extract text from DOCX file using docx2txt
         
         Args:
             file_path: Path to the DOCX file
             
         Returns:
             Extracted text as string
+            
+        Raises:
+            FileNotFoundError: If file doesn't exist
+            ValueError: If file is not a valid DOCX or extraction fails
         """
-        # TODO: Implement DOCX extraction using python-docx or similar
-        raise NotImplementedError("DOCX extraction not yet implemented")
+        file_path = Path(file_path)
+        
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
+        
+        if file_path.suffix.lower() != '.docx':
+            raise ValueError(f"File must be a DOCX: {file_path}")
+        
+        try:
+            text = docx2txt.process(str(file_path))
+            return text.strip()
+        except Exception as e:
+            raise ValueError(f"Failed to extract text from DOCX: {str(e)}")
     
     @staticmethod
     def extract_text_from_txt(file_path: Union[str, Path]) -> str:
@@ -121,3 +137,4 @@ class DocumentExtractor:
         supported_formats = ['.pdf', '.docx', '.txt']
         
         return extension in supported_formats
+

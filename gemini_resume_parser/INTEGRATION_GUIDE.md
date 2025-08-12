@@ -269,3 +269,4 @@ If you encounter issues:
 2. Review the example code
 3. Test with the provided test script
 4. Check your Gemini API key and quotas
+

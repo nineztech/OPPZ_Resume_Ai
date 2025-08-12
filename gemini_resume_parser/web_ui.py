@@ -249,8 +249,8 @@ HTML_TEMPLATE = """
                 .replace(/(".*?":)/g, '<span style="color: #24292e; font-weight: bold;">$1</span>')
                 .replace(/: "(.*?)"/g, ': <span style="color: #032f62;">"$1"</span>')
                 .replace(/: (true|false|null)/g, ': <span style="color: #6f42c1;">$1</span>')
-                .replace(/: (\d+)/g, ': <span style="color: #005cc5;">$1</span>')
-                .replace(/([{}[\],])/g, '<span style="color: #24292e;">$1</span>');
+                .replace(/: (\\d+)/g, ': <span style="color: #005cc5;">$1</span>')
+                .replace(/([{}[\\],])/g, '<span style="color: #24292e;">$1</span>');
         }
 
         function showError(message) {

@@ -262,3 +262,4 @@ For issues and questions:
 - PDF, DOCX, and TXT support
 - Command-line interface
 - Configuration management
+

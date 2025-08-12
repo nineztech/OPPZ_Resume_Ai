@@ -33,6 +33,7 @@
     "react-hook-form": "^7.61.1",
     "react-intersection-observer": "^9.16.0",
     "react-router-dom": "^7.7.1",
+    "react-select-country-list": "^2.2.3",
     "tailwind-merge": "^3.3.1",
     "zod": "^4.0.14"
   },
@@ -42,6 +43,7 @@
     "@types/pdfjs-dist": "^2.10.377",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "@types/react-select-country-list": "^2.2.3",
     "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.30.1",
