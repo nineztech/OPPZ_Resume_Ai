@@ -75,7 +75,7 @@ class GeminiParserService {
   private baseUrl: string;
 
   constructor() {
-    // Use the Gemini parser backend URL
+    // Use the parse service backend URL
     this.baseUrl = 'http://localhost:5000';
   }
 
@@ -117,8 +117,21 @@ class GeminiParserService {
 
       const result = await response.json();
       
+      console.log('Raw server response:', result);
+      console.log('Response type:', typeof result);
+      console.log('Response keys:', Object.keys(result || {}));
+      
+      // Validate response structure
+      if (!result || typeof result !== 'object') {
+        throw new Error('Invalid response format from server');
+      }
+      
       if (!result.success) {
         throw new Error(result.error || 'Failed to parse resume');
+      }
+
+      if (!result.data) {
+        throw new Error('No data received from server');
       }
 
       console.log('Gemini parsing successful:', result.data);
@@ -130,9 +143,13 @@ class GeminiParserService {
       // Provide user-friendly error messages
       if (error instanceof Error) {
         if (error.message.includes('Failed to fetch')) {
-          throw new Error('Cannot connect to AI parser. Please ensure the backend is running.');
+          throw new Error('Cannot connect to AI parser. Please ensure the backend is running on port 8000.');
         } else if (error.message.includes('Server error: 500')) {
           throw new Error('AI parsing failed. Please check your API key and try again.');
+        } else if (error.message.includes('Invalid response format')) {
+          throw new Error('Server returned invalid response format. Please try again.');
+        } else if (error.message.includes('No data received')) {
+          throw new Error('Server did not return any data. Please try again.');
         } else {
           throw error;
         }

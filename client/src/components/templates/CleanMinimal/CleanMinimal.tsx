@@ -1,0 +1,355 @@
+import React from 'react';
+
+interface TemplateData {
+  personalInfo: {
+    name: string;
+    title: string;
+    address: string;
+    email: string;
+    website: string;
+    phone?: string;
+  };
+  summary: string;
+  skills: {
+    technical: string[];
+    professional?: string[];
+  };
+  experience: Array<{
+    title: string;
+    company: string;
+    dates: string;
+    achievements: string[];
+    description?: string; // Added for fallback
+  }>;
+  education: Array<{
+    degree: string;
+    institution: string;
+    dates: string;
+    details: string[];
+  }>;
+  additionalInfo: {
+    languages?: string[];
+    certifications?: string[];
+    awards?: string[];
+  };
+  customSections?: Array<{
+    id: string;
+    title: string;
+    type: 'text' | 'list' | 'timeline' | 'grid' | 'mixed';
+    position: number;
+    content: {
+      text?: string;
+      items?: Array<{
+        id: string;
+        title?: string;
+        subtitle?: string;
+        description?: string;
+        startDate?: string;
+        endDate?: string;
+        location?: string;
+        link?: string;
+        bullets?: string[];
+        tags?: string[];
+      }>;
+      columns?: Array<{
+        title: string;
+        items: string[];
+      }>;
+    };
+    styling?: {
+      showBullets?: boolean;
+      showDates?: boolean;
+      showLocation?: boolean;
+      showLinks?: boolean;
+      showTags?: boolean;
+      layout?: 'vertical' | 'horizontal' | 'grid';
+    };
+  }>;
+}
+
+interface CleanMinimalProps {
+  data?: TemplateData;
+  color?: string;
+}
+
+const cleanMinimalTemplateData: TemplateData = {
+  personalInfo: {
+    name: 'Nikhil Dundu',
+    title: 'Supply Chain Analyst',
+    address: 'AZ USA',
+    email: 'ndundu1804@gmail.com',
+    website: 'https://www.linkedin.com/in/nikhild180495/',
+    phone: '+1 623-388-1239'
+  },
+  summary: 'Results-driven Supply Chain Analyst with 5 years of experience. India & USA optimizing end-to-end supply chain operations for heavy equipment, telecom, and defense electronics manufacturers. Proven record of reducing inventory 15 – 25 %, cutting logistics costs 12 – 18 %, and accelerating on-time delivery through data-driven planning. Lean Six Sigma methods, and advanced analytics (Power BI, Tableau, SQL, SAP, ERP, WMS). Adept at Agile & Waterfall project environments, cross-functional leadership, and translating complex data into actionable insights that drive margin and service-level improvements.',
+  skills: {
+    technical: [
+      'Analytics & Reporting: Power BI, Tableau, Advanced Excel (Pivot, Power Query, Solver, VBA)',
+      'Database & Languages: SQL Server, MS Access, Python, R, MATLAB',
+      'ERP / SCM Systems: SAP (MM, WM, PP, QM, CO), Oracle NetSuite, Looker',
+      'Process Ideologies: SDLC, Agile/Scrum, Waterfall, Lean Six Sigma, 5S',
+      'Planning & Optimization: Demand Forecasting, S&OP, JIT, ROP, Inventory Optimization, Scorecards',
+      'Project & Collaboration: Jira, Confluence, MS Project, SharePoint, Git',
+      'Soft Skills: Stakeholder Communication, Cross-functional Leadership, Process Improvement, Data Storytelling'
+    ],
+    professional: []
+  },
+  experience: [
+    {
+      title: 'Supply Chain Analyst — Systel Inc. (Remote — Austin, TX, USA)',
+      company: '',
+      dates: 'Apr 2023 – Present',
+      achievements: [
+        'Implemented JIT and ROP inventory models for rugged-server line; reducing excess stock by 15% while maintaining a 98% service level.',
+        'Designed and launched Power BI dashboards with Row-Level Security, enabling 50+ users to access real-time inventory and demand KPIs.',
+        'Automated manual reporting workflows, cutting weekly report preparation time from 6 hours to under 30 minutes.',
+        'Collaborated with cross-functional teams to align demand planning and procurement, improving planning accuracy and visibility.',
+        'Led data consolidation and reporting standardization using Excel and SQL, streamlining data-driven decision-making processes.'
+      ]
+    },
+    {
+      title: 'Supply Chain Analyst — Sterlite Technologies Ltd. (Chennai, India)',
+      company: '',
+      dates: 'Apr 2020 – Apr 2023',
+      achievements: [
+        'Managed end-to-end order fulfillment for fiber optic cables (400+ demand); deployed SAP MM MRP parameters and safety-stock modeling, cutting stockouts 22 %.',
+        'Designed integrated Power BI-Tableau supply-chain control tower integrating SAP, WMS, and freight APIs; provided real-time OTD, capacity, and cost dashboards used by COO.',
+        'Partnered with procurement to institute Supplier Scorecards (quality, OTD, cost variance), improved top-tier supplier OTD from 85 % to 97 % within 9 months.',
+        'Led data consolidation DMAIC project on extrusion line changeovers; reduced setup time 18 % and saved ₹11 M annually.',
+        'Forecasted demand using ARIMA & Prophet models in Python, improving 6-month forecast accuracy from 72 % to 88 %.',
+        'Automated daily WMS reconciliations via SQL & VBA, eliminating 600+ manual hours per year.'
+      ]
+    },
+    {
+      title: 'Supply Chain Analyst — Caterpillar (Chennai, India)',
+      company: '',
+      dates: 'Jun 2018 – Mar 2020',
+      achievements: [
+        'Co-developed inventory segmentation (ABC/XYZ) and Goal-Seek/Solver-based reorder policies, reducing working capital by 10 (1.5 % of finished-goods inventory).',
+        'Enhanced SAP SD order-to-cash workflow; cut order cycle time 20 % and improved order fillrate 10 pp.',
+        'Piloted barcode/RFID tracking for engine components; delivered real-time visibility and cut data entry errors 15 %.',
+        'Supported implementation of Power BI KPI suite for plant leadership, enabling weekly variance root-cause reviews and driving 5 % productivity gain.',
+        'Facilitated supplier negotiations that lowered raw-material cost 12 % and instituted consignment stock for high-turn items.'
+      ]
+    }
+  ],
+  education: [
+    {
+      degree: 'Master of Science, Industrial Engineering (GPA: 3.73) Tempe, Arizona',
+      institution: 'Arizona State University',
+      dates: 'Aug 2023 - May 2025',
+      details: []
+    },
+    {
+      degree: 'Bachelor of Technology, Mechanical Engineering (GPA: 3.65) Chennai, India',
+      institution: 'SRM University',
+      dates: 'Jun 2013 - Jul 2017',
+      details: []
+    }
+  ],
+  additionalInfo: {
+    languages: [],
+    certifications: [],
+    awards: []
+  }
+};
+
+const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
+  // Use the passed data prop if available, otherwise fall back to default data
+  const templateData = data || cleanMinimalTemplateData;
+  
+  return (
+    <div className="max-w-4xl mx-auto p-6 bg-white" style={{ 
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '11px',
+      lineHeight: '1.3'
+    }}>
+      {/* Header */}
+      <div className="text-center mb-4">
+        <h1 className="text-2xl font-bold mb-1" style={{ 
+          fontSize: '22px',
+          fontWeight: 'bold',
+          letterSpacing: '1px'
+        }}>
+          {templateData.personalInfo?.name || 'Your Name'}
+        </h1>
+        <div className="text-lg font-semibold mb-2" style={{ fontSize: '14px', fontWeight: '600' }}>
+          {templateData.personalInfo?.title || 'Your Title'}
+        </div>
+        <div className="text-sm" style={{ fontSize: '11px' }}>
+          {templateData.personalInfo?.address || 'Your Address'} | {templateData.personalInfo?.phone || 'Your Phone'} | {templateData.personalInfo?.email || 'your.email@example.com'} | {templateData.personalInfo?.website || 'your-website.com'}
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="mb-4">
+        <h2 className="text-center font-bold mb-2 uppercase" style={{ 
+          fontSize: '13px',
+          fontWeight: 'bold',
+          letterSpacing: '0.5px'
+        }}>
+          SUMMARY
+        </h2>
+        <p className="text-justify leading-relaxed" style={{ 
+          fontSize: '11px',
+          lineHeight: '1.4',
+          textAlign: 'justify'
+        }}>
+          {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
+        </p>
+      </div>
+
+      {/* Technical Skills */}
+      <div className="mb-4">
+        <h2 className="text-center font-bold mb-2 uppercase" style={{ 
+          fontSize: '13px',
+          fontWeight: 'bold',
+          letterSpacing: '0.5px'
+        }}>
+          TECHNICAL SKILLS
+        </h2>
+        <div className="space-y-1">
+          {templateData.skills?.technical && typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
+            // Handle nested skills structure with categories - display as "Category: skills"
+            Object.entries(templateData.skills.technical).map(([category, skills]) => (
+              <div key={category} className="text-sm" style={{ 
+                fontSize: '11px',
+                lineHeight: '1.3'
+              }}>
+                <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {Array.isArray(skills) ? skills.join(', ') : ''}
+              </div>
+            ))
+          ) : Array.isArray(templateData.skills?.technical) && templateData.skills.technical.length > 0 ? (
+            // Handle flat skills array (fallback)
+            <div className="text-sm" style={{ 
+              fontSize: '11px',
+              lineHeight: '1.3'
+            }}>
+              {templateData.skills.technical.join(', ')}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500" style={{ 
+              fontSize: '11px',
+              lineHeight: '1.3',
+              fontStyle: 'italic'
+            }}>
+              No technical skills added yet
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Professional Experience */}
+      <div className="mb-4">
+        <h2 className="text-center font-bold mb-3 uppercase" style={{ 
+          fontSize: '13px',
+          fontWeight: 'bold',
+          letterSpacing: '0.5px'
+        }}>
+          PROFESSIONAL EXPERIENCE
+        </h2>
+        <div className="space-y-3">
+          {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
+            templateData.experience.map((exp, index) => (
+              <div key={index}>
+                <div className="flex justify-between items-start mb-1">
+                  <h3 className="font-bold" style={{ 
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    flex: '1'
+                  }}>
+                    {exp.title}
+                  </h3>
+                  <div className="font-bold text-right" style={{ 
+                    fontSize: '11px',
+                    fontWeight: 'bold'
+                  }}>
+                    {exp.dates}
+                  </div>
+                </div>
+                <div className="space-y-0 ml-0">
+                  {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
+                    exp.achievements.map((achievement, idx) => (
+                      <div key={idx} className="flex items-start" style={{ fontSize: '11px' }}>
+                        <span className="mr-2">•</span>
+                        <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{achievement}</span>
+                      </div>
+                    ))
+                  ) : exp.description ? (
+                    // Fallback to description if no achievements array
+                    <div className="flex items-start" style={{ fontSize: '11px' }}>
+                      <span className="mr-2">•</span>
+                      <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{exp.description}</span>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500" style={{ 
+                      fontSize: '11px',
+                      lineHeight: '1.3',
+                      fontStyle: 'italic'
+                    }}>
+                      No achievements listed
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-gray-500" style={{ 
+              fontSize: '11px',
+              lineHeight: '1.3',
+              fontStyle: 'italic'
+            }}>
+              No experience added yet
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Education */}
+      <div>
+        <h2 className="text-center font-bold mb-3 uppercase" style={{ 
+          fontSize: '13px',
+          fontWeight: 'bold',
+          letterSpacing: '0.5px'
+        }}>
+          EDUCATION
+        </h2>
+        <div className="space-y-2">
+          {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
+            templateData.education.map((edu, index) => (
+              <div key={index} className="flex justify-between items-start">
+                <div>
+                  <div className="font-bold" style={{ 
+                    fontSize: '11px',
+                    fontWeight: 'bold'
+                  }}>
+                    {edu.institution}
+                  </div>
+                  <div style={{ fontSize: '11px' }}>
+                    {edu.degree}
+                  </div>
+                </div>
+                <div className="font-bold" style={{ 
+                  fontSize: '11px',
+                  fontWeight: 'bold'
+                }}>
+                  {edu.dates}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-gray-500" style={{ 
+              fontSize: '11px',
+              lineHeight: '1.3',
+              fontStyle: 'italic'
+            }}>
+              No education added yet
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ResumePDF;

@@ -2,55 +2,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, Download, Eye, Heart, Share2, X, Palette } from 'lucide-react';
-import { templates, getTemplateById } from '@/data/templates';
+import { templates, getTemplateById, type Template } from '@/data/templates';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
-
-interface Template {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  image: string;
-  rating: number;
-  downloads: number;
-  isPopular?: boolean;
-  isNew?: boolean;
-  features: string[];
-  colors: string[];
-  formats: string[];
-  templateData: {
-    personalInfo: {
-      name: string;
-      title: string;
-      address: string;
-      email: string;
-      website: string;
-      phone?: string;
-    };
-    summary: string;
-    skills: {
-      technical: string[];
-      professional?: string[];
-    };
-    experience: Array<{
-      title: string;
-      company: string;
-      dates: string;
-      achievements: string[];
-    }>;
-    education: Array<{
-      degree: string;
-      institution: string;
-      dates: string;
-      details: string[];
-    }>;
-    additionalInfo: {
-      languages?: string[];
-      certifications?: string[];
-      awards?: string[];
-    };
-  };
-}
 
 interface TemplatePreviewModalProps {
   template: Template | null;
@@ -172,7 +125,6 @@ const TemplatePreviewModal = ({ template, isOpen, onClose, onDownload, onUseTemp
                       <div className="transform scale-75 origin-top-left w-full">
                         <TemplateRenderer 
                           templateId={template.id} 
-                          data={template.templateData} 
                           color={selectedColor}
                         />
                       </div>

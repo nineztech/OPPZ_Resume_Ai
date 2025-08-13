@@ -87,27 +87,3 @@ export const getTemplateById = (id: string): Template | undefined => {
 export const getTemplatesByCategory = (category: string): Template[] => {
   return templates.filter(template => template.category === category);
 };
-
-// Function to get template data from the appropriate template folder
-export const getTemplateData = async (templateId: string) => {
-  switch (templateId) {
-    case 'modern-professional':
-      const { modernProfessionalTemplateData } = await import('../components/templates/ModernProffessional/data');
-      return modernProfessionalTemplateData;
-    case 'clean-minimal':
-      const { cleanMinimalTemplateData } = await import('../components/templates/CleanMinimal/data');
-      return cleanMinimalTemplateData;
-    case 'creative-designer':
-      const { creativeDesignerTemplateData } = await import('../components/templates/CreativeDesigner/data');
-      return creativeDesignerTemplateData;
-    case 'executive-classic':
-      const { executiveClassicTemplateData } = await import('../components/templates/ExecutiveClassic/data');
-      return executiveClassicTemplateData;
-    case 'business-professional':
-      const { businessProfessionalTemplateData } = await import('../components/templates/BussinessProfessional/data');
-      return businessProfessionalTemplateData;
-    default:
-      const { modernProfessionalTemplateData: defaultData } = await import('../components/templates/ModernProffessional/data');
-      return defaultData;
-  }
-};

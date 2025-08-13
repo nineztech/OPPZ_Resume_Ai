@@ -1,9 +1,9 @@
 import React from 'react';
-import ModernProfessional from './ModernProfessional';
-import CleanMinimal from './CleanMinimal';
-import CreativeDesigner from './CreativeDesigner';
-import ExecutiveClassic from './ExecutiveClassic';
-import BusinessProfessional from './BusinessProfessional';
+import ModernProfessional from './ModernProffessional/ModernProfessional';
+import CleanMinimal from './CleanMinimal/CleanMinimal';
+import CreativeDesigner from './CreativeDesigner/CreativeDesigner';
+import ExecutiveClassic from './ExecutiveClassic/ExecutiveClassic';
+import BusinessProfessional from './BussinessProfessional/BusinessProfessional';
 
 interface TemplateData {
   personalInfo: {
@@ -73,7 +73,7 @@ interface TemplateData {
 
 interface TemplateRendererProps {
   templateId: string;
-  data: TemplateData;
+  data?: TemplateData;
   color?: string;
 }
 

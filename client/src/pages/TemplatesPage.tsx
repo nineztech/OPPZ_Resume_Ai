@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Search, Filter, Star, Download, Eye, FileText } from 'lucide-react';
 import TemplatePreviewModal from '@/components/modals/TemplatePreviewModal';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
-import { templates as templateData, getTemplateById } from '@/data/templates';
+import { templates as templateData, getTemplateById, getTemplateData } from '@/data/templates';
 import type { Template } from '@/data/templates';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -56,8 +56,11 @@ const TemplatesPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleDownloadTemplate = async (template: Template, selectedColor?: string) => {
+  const generateResumePreview = async (template: Template, selectedColor?: string) => {
     try {
+      // Get the template data
+      const templateDataObj = await getTemplateData(template.id);
+      
       // Create a temporary container for the resume
       const tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
@@ -74,13 +77,13 @@ const TemplatesPage = () => {
         <div style="font-family: Arial, sans-serif; font-size: 12px; color: #333; line-height: 1.4;">
           <div style="margin-bottom: 20px; border-bottom: 2px solid ${selectedColor || template.colors[0]}; padding-bottom: 10px;">
             <h1 style="font-size: 28px; font-weight: bold; color: ${selectedColor || template.colors[0]}; margin: 0 0 5px 0;">
-              ${template.templateData.personalInfo.name}
+              ${templateDataObj.personalInfo.name}
             </h1>
             <h2 style="font-size: 18px; font-weight: 600; color: #666; margin: 0 0 10px 0;">
-              ${template.templateData.personalInfo.title}
+              ${templateDataObj.personalInfo.title}
             </h2>
             <div style="font-size: 11px; color: #888;">
-              ${template.templateData.personalInfo.address} | ${template.templateData.personalInfo.email} | ${template.templateData.personalInfo.website}
+              ${templateDataObj.personalInfo.address} | ${templateDataObj.personalInfo.email} | ${templateDataObj.personalInfo.website}
             </div>
           </div>
           
@@ -89,7 +92,7 @@ const TemplatesPage = () => {
               Professional Summary
             </h3>
             <p style="font-size: 11px; color: #333; margin: 0; text-align: justify;">
-              ${template.templateData.summary}
+              ${templateDataObj.summary}
             </p>
           </div>
           
@@ -98,7 +101,7 @@ const TemplatesPage = () => {
               Skills
             </h3>
             <div style="font-size: 11px; color: #333;">
-              ${template.templateData.skills.technical.join(', ')}
+              ${templateDataObj.skills.technical.join(', ')}
             </div>
           </div>
           
@@ -106,7 +109,7 @@ const TemplatesPage = () => {
             <h3 style="font-size: 14px; font-weight: bold; color: ${selectedColor || template.colors[0]}; margin: 0 0 10px 0; text-transform: uppercase;">
               Experience
             </h3>
-            ${template.templateData.experience.map(exp => `
+            ${templateDataObj.experience.map((exp: any) => `
               <div style="margin-bottom: 15px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                   <h4 style="font-size: 12px; font-weight: bold; color: #333; margin: 0;">
@@ -120,7 +123,7 @@ const TemplatesPage = () => {
                   ${exp.company}
                 </p>
                 <ul style="font-size: 10px; color: #333; margin: 0; padding-left: 15px;">
-                  ${exp.achievements.map(achievement => `<li style="margin-bottom: 3px;">${achievement}</li>`).join('')}
+                  ${exp.achievements.map((achievement: any) => `<li style="margin-bottom: 3px;">${achievement}</li>`).join('')}
                 </ul>
               </div>
             `).join('')}
@@ -130,7 +133,7 @@ const TemplatesPage = () => {
             <h3 style="font-size: 14px; font-weight: bold; color: ${selectedColor || template.colors[0]}; margin: 0 0 10px 0; text-transform: uppercase;">
               Education
             </h3>
-            ${template.templateData.education.map(edu => `
+            ${templateDataObj.education.map((edu: any) => `
               <div style="margin-bottom: 15px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                   <h4 style="font-size: 12px; font-weight: bold; color: #333; margin: 0;">
@@ -144,7 +147,7 @@ const TemplatesPage = () => {
                   ${edu.institution}
                 </p>
                 <ul style="font-size: 10px; color: #333; margin: 0; padding-left: 15px;">
-                  ${edu.details.map(detail => `<li style="margin-bottom: 3px;">${detail}</li>`).join('')}
+                  ${edu.details.map((detail: any) => `<li style="margin-bottom: 3px;">${detail}</li>`).join('')}
                 </ul>
               </div>
             `).join('')}
@@ -297,7 +300,6 @@ const TemplatesPage = () => {
                           <div className="w-full h-full transform scale-75 origin-center">
                             <TemplateRenderer 
                               templateId={template.id} 
-                              data={template.templateData} 
                               color={template.colors[0]}
                             />
                           </div>
@@ -362,7 +364,7 @@ const TemplatesPage = () => {
                         size="sm" 
                         variant="outline"
                         className="border-gray-300 hover:bg-gray-50 text-xs sm:text-sm"
-                        onClick={() => handleDownloadTemplate(template)}
+                        onClick={() => generateResumePreview(template)}
                       >
                         <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                       </Button>
@@ -403,7 +405,7 @@ const TemplatesPage = () => {
         onDownload={(templateId, selectedColor) => {
           const template = templateData.find(t => t.id === templateId);
           if (template) {
-            handleDownloadTemplate(template, selectedColor);
+            generateResumePreview(template, selectedColor);
           }
         }}
         onUseTemplate={handleUseTemplate}

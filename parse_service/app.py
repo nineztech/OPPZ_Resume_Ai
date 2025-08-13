@@ -22,9 +22,15 @@ async def parse(file: UploadFile = File(...)):
     try:
         contents = await file.read()
         parsed = parse_resume(contents, file.filename)
-        return JSONResponse(content=parsed)
+        return JSONResponse(content={
+            "success": True,
+            "data": parsed
+        })
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return JSONResponse(content={
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
 
 @app.post("/parse-sections")
 async def parse_sections(file: UploadFile = File(...)):

@@ -1,46 +1,16 @@
 import React from 'react';
-
-interface TemplateData {
-  personalInfo: {
-    name: string;
-    title: string;
-    address: string;
-    email: string;
-    website: string;
-    phone?: string;
-  };
-  summary: string;
-  skills: {
-    technical: string[];
-    professional?: string[];
-  };
-  experience: Array<{
-    title: string;
-    company: string;
-    dates: string;
-    achievements: string[];
-  }>;
-  education: Array<{
-    degree: string;
-    institution: string;
-    dates: string;
-    details: string[];
-  }>;
-  additionalInfo: {
-    languages?: string[];
-    certifications?: string[];
-    awards?: string[];
-  };
-}
+import { creativeDesignerTemplateData } from './data';
+import type { TemplateData } from './data';
 
 interface CreativeDesignerProps {
-  data: TemplateData;
+  data?: TemplateData;
   color?: string;
 }
 
-const accent = '#2c5aa0'; // Professional blue instead of pink
-
-const CreativeDesigner: React.FC<CreativeDesignerProps> = ({ data, color = accent }) => {
+const CreativeDesigner: React.FC<CreativeDesignerProps> = ({ 
+  data = creativeDesignerTemplateData, 
+  color = '#ec4899' 
+}) => {
   return (
     <div
       className="bg-white max-w-4xl mx-auto px-8 py-10"
@@ -128,9 +98,9 @@ const CreativeDesigner: React.FC<CreativeDesignerProps> = ({ data, color = accen
         >
           Skills & Expertise
         </h3>
-        {data.skills.professional && (
+        {data.skills.professional && Array.isArray(data.skills.professional) && data.skills.professional.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-2">
-            {data.skills.professional.map((skill, idx) => (
+            {(Array.isArray(data.skills.professional) ? data.skills.professional : []).map((skill, idx) => (
               <span
                 key={idx}
                 className="inline-block px-3 py-1 rounded-full"
@@ -148,24 +118,26 @@ const CreativeDesigner: React.FC<CreativeDesignerProps> = ({ data, color = accen
             ))}
           </div>
         )}
-        <div className="flex flex-wrap gap-2">
-          {data.skills.technical.map((skill, idx) => (
-            <span
-              key={idx}
-              className="inline-block px-3 py-1 rounded-full"
-              style={{
-                background: '#f3f6fd',
-                border: `1.2px solid ${color}`,
-                color,
-                fontWeight: 500,
-                fontSize: '10px',
-                marginBottom: '3px',
-              }}
-            >
-              {skill}
-            </span>
-          ))}
-        </div>
+        {Array.isArray(data.skills.technical) && data.skills.technical.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {(Array.isArray(data.skills.technical) ? data.skills.technical : []).map((skill, idx) => (
+              <span
+                key={idx}
+                className="inline-block px-3 py-1 rounded-full"
+                style={{
+                  background: '#f3f6fd',
+                  border: `1.2px solid ${color}`,
+                  color,
+                  fontWeight: 500,
+                  fontSize: '10px',
+                  marginBottom: '3px',
+                }}
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Experience */}

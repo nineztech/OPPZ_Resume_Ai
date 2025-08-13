@@ -1,44 +1,16 @@
 import React from 'react';
-
-interface TemplateData {
-  personalInfo: {
-    name: string;
-    title: string;
-    address: string;
-    email: string;
-    website: string;
-    phone?: string;
-  };
-  summary: string;
-  skills: {
-    technical: string[];
-    professional?: string[];
-  };
-  experience: Array<{
-    title: string;
-    company: string;
-    dates: string;
-    achievements: string[];
-  }>;
-  education: Array<{
-    degree: string;
-    institution: string;
-    dates: string;
-    details: string[];
-  }>;
-  additionalInfo: {
-    languages?: string[];
-    certifications?: string[];
-    awards?: string[];
-  };
-}
+import { executiveClassicTemplateData } from './data';
+import type { TemplateData } from './data';
 
 interface ExecutiveClassicProps {
-  data: TemplateData;
+  data?: TemplateData;
   color?: string;
 }
 
-const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({ data, color = '#1e293b' }) => {
+const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({ 
+  data = executiveClassicTemplateData, 
+  color = '#1e293b' 
+}) => {
   return (
     <div className="bg-white p-8 max-w-4xl mx-auto" style={{ 
       fontFamily: 'Georgia, "Times New Roman", serif',
@@ -93,7 +65,7 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({ data, color = '#1e2
 
       {/* Core Competencies */}
       <div className="mb-10">
-        <h3 className="text-lg font-bold mb-4 uppercase tracking-wide border-b-2 pb-2" style={{ 
+        <h3 className="text-lg font-bold mb-6 uppercase tracking-wide border-b-2 pb-2" style={{ 
           color, 
           borderColor: color,
           fontSize: '14px',
@@ -102,22 +74,24 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({ data, color = '#1e2
         }}>
           Core Competencies
         </h3>
-        <div className="grid grid-cols-3 gap-6">
-          {data.skills.technical.map((skill, index) => (
-            <div key={index} className="text-center">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center text-white font-bold" style={{ 
-                backgroundColor: color,
-                fontSize: '12px'
-              }}>
-                {index + 1}
+        {Array.isArray(data.skills.technical) && data.skills.technical.length > 0 && (
+          <div className="grid grid-cols-3 gap-6">
+            {(Array.isArray(data.skills.technical) ? data.skills.technical : []).map((skill, index) => (
+              <div key={index} className="text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center text-white font-bold" style={{ 
+                  backgroundColor: color,
+                  fontSize: '12px'
+                }}>
+                  {index + 1}
+                </div>
+                <span className="text-gray-700 font-medium text-sm" style={{
+                  fontSize: '10px',
+                  fontWeight: '500'
+                }}>{skill}</span>
               </div>
-              <span className="text-gray-700 font-medium text-sm" style={{
-                fontSize: '10px',
-                fontWeight: '500'
-              }}>{skill}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Professional Experience with Executive Layout */}

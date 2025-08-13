@@ -1,44 +1,16 @@
 import React from 'react';
-
-interface TemplateData {
-  personalInfo: {
-    name: string;
-    title: string;
-    address: string;
-    email: string;
-    website: string;
-    phone?: string;
-  };
-  summary: string;
-  skills: {
-    technical: string[];
-    professional?: string[];
-  };
-  experience: Array<{
-    title: string;
-    company: string;
-    dates: string;
-    achievements: string[];
-  }>;
-  education: Array<{
-    degree: string;
-    institution: string;
-    dates: string;
-    details: string[];
-  }>;
-  additionalInfo: {
-    languages?: string[];
-    certifications?: string[];
-    awards?: string[];
-  };
-}
+import { businessProfessionalTemplateData } from './data';
+import type { TemplateData } from './data';
 
 interface BusinessProfessionalProps {
-  data: TemplateData;
+  data?: TemplateData;
   color?: string;
 }
 
-const BusinessProfessional: React.FC<BusinessProfessionalProps> = ({ data, color = '#1e40af' }) => {
+const BusinessProfessional: React.FC<BusinessProfessionalProps> = ({ 
+  data = businessProfessionalTemplateData, 
+  color = '#1e40af' 
+}) => {
   return (
     <div
       className="max-w-4xl mx-auto px-8 py-10 bg-white"

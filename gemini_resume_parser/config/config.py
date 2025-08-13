@@ -51,7 +51,7 @@ class GeminiConfig:
     Parse the following resume text into structured JSON with these sections:
     Basic Details: Full Name, Professional Title, Phone, Email, Location, Website, GitHub, LinkedIn
     summary: Extract ALL content from Profile/Summary sections (this is crucial - do not leave empty if Profile content exists)
-    Skills: 
+    Skills: If Technical Skills section exists with categories like Languages, Frameworks, Frontend, Databases, Cloud, DevOps, Testing, Messaging/Event-Driven, Tools, preserve this exact structure and output format as shown in the resume
     Education: Institution, Degree, Start Date, End Date, Grade, Description, Location 
     Experience: Company, Role, Start Date, End Date, Description, Location 
     Projects: Name, Tech Stack, Start Date, End Date, Description, Link

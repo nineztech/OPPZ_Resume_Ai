@@ -1,71 +1,16 @@
 import React from 'react';
-
-interface TemplateData {
-  personalInfo: {
-    name: string;
-    title: string;
-    address: string;
-    email: string;
-    website: string;
-    phone?: string;
-  };
-  summary: string;
-  skills: {
-    technical: string[];
-    professional?: string[];
-  };
-  experience: Array<{
-    title: string;
-    company: string;
-    dates: string;
-    achievements: string[];
-  }>;
-  education: Array<{
-    degree: string;
-    institution: string;
-    dates: string;
-    details: string[];
-  }>;
-  additionalInfo: {
-    languages?: string[];
-    certifications?: string[];
-    awards?: string[];
-  };
-  customSections?: Array<{
-    id: string;
-    title: string;
-    type: 'text' | 'list' | 'timeline' | 'grid' | 'mixed';
-    content: {
-      text?: string;
-      items?: Array<{
-        id: string;
-        title?: string;
-        subtitle?: string;
-        startDate?: string;
-        endDate?: string;
-        description?: string;
-        bullets?: string[];
-        location?: string;
-        link?: string;
-        tags?: string[];
-      }>;
-    };
-    styling?: {
-      showDates?: boolean;
-      showBullets?: boolean;
-      showLocation?: boolean;
-      showLinks?: boolean;
-      showTags?: boolean;
-    };
-  }>;
-}
+import { modernProfessionalTemplateData } from './data';
+import type { TemplateData } from './data';
 
 interface ModernProfessionalProps {
-  data: TemplateData;
+  data?: TemplateData;
   color?: string;
 }
 
-const ModernProfessional: React.FC<ModernProfessionalProps> = ({ data, color = '#2563eb' }) => {
+const ModernProfessional: React.FC<ModernProfessionalProps> = ({ 
+  data = modernProfessionalTemplateData, 
+  color = '#2563eb' 
+}) => {
   return (
     <div
       className="max-w-4xl mx-auto px-8 py-10 bg-white"

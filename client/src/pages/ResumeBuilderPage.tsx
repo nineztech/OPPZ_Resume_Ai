@@ -73,7 +73,7 @@ interface ResumeData {
     grade: string;
     location: string;
   }>;
-  skills: string[];
+  skills: any; // Can be string[] for flat skills or object for categorized skills
   languages: Array<{
     name: string;
     proficiency: string;
@@ -168,7 +168,17 @@ const ResumeBuilderPage = () => {
     objective: '',
     experience: [],
     education: [],
-    skills: [],
+    skills: {
+      "Languages": [],
+      "Frameworks": [],
+      "Frontend": [],
+      "Databases": [],
+      "Cloud": [],
+      "DevOps": [],
+      "Testing": [],
+      "Messaging/Event-Driven": [],
+      "Tools": []
+    },
     languages: [],
     activities: [],
     projects: [],
@@ -754,7 +764,30 @@ const ResumeBuilderPage = () => {
                     title: exp.position,
                     company: exp.company,
                     dates: exp.duration,
-                    achievements: [exp.description]
+                    achievements: (() => {
+                      // Parse description into bullet points by splitting on full stops
+                      if (exp.description) {
+                        // Check if description already contains bullet points
+                        if (exp.description.includes('•') || exp.description.includes('*') || exp.description.includes('-')) {
+                          // Split by bullet characters and filter out empty strings
+                          const bullets = exp.description
+                            .split(/[•*\-]/)
+                            .map(bullet => bullet.trim())
+                            .filter(bullet => bullet.length > 0);
+                          return bullets.length > 0 ? bullets : [exp.description];
+                        } else {
+                          // Split by full stops and filter out empty strings, remove trailing dots
+                          const bullets = exp.description
+                            .split('.')
+                            .map(bullet => bullet.trim())
+                            .filter(bullet => bullet.length > 0)
+                            .map(bullet => bullet.replace(/\.$/, '')); // Remove trailing dots
+                          return bullets.length > 0 ? bullets : [exp.description];
+                        }
+                      }
+                      return [];
+                    })(),
+                    description: exp.description // Keep original description as fallback
                   })),
                   education: resumeData.education.map(edu => ({
                     degree: edu.degree,
@@ -936,12 +969,35 @@ const ResumeBuilderPage = () => {
             technical: resumeData.skills,
             professional: resumeData.languages.map(lang => lang.name)
           },
-          experience: resumeData.experience.map(exp => ({
-            title: exp.position,
-            company: exp.company,
-            dates: exp.duration,
-            achievements: [exp.description]
-          })),
+                  experience: resumeData.experience.map(exp => ({
+          title: exp.position,
+          company: exp.company,
+          dates: exp.duration,
+          achievements: (() => {
+            // Parse description into bullet points by splitting on full stops
+            if (exp.description) {
+              // Check if description already contains bullet points
+              if (exp.description.includes('•') || exp.description.includes('*') || exp.description.includes('-')) {
+                // Split by bullet characters and filter out empty strings
+                const bullets = exp.description
+                  .split(/[•*\-]/)
+                  .map(bullet => bullet.trim())
+                  .filter(bullet => bullet.length > 0);
+                return bullets.length > 0 ? bullets : [exp.description];
+              } else {
+                // Split by full stops and filter out empty strings, remove trailing dots
+                const bullets = exp.description
+                  .split('.')
+                  .map(bullet => bullet.trim())
+                  .filter(bullet => bullet.length > 0)
+                  .map(bullet => bullet.replace(/\.$/, '')); // Remove trailing dots
+                return bullets.length > 0 ? bullets : [exp.description];
+              }
+            }
+            return [];
+          })(),
+          description: exp.description // Keep original description as fallback
+        })),
           education: resumeData.education.map(edu => ({
             degree: edu.degree,
             institution: edu.institution,
@@ -1054,60 +1110,130 @@ const BasicDetailsSection = ({ data, onChange }: { data: any; onChange: (data: a
 };
 
 // Skills Section Component
-const SkillsSection = ({ skills, languages, onChange }: { skills: string[]; languages: Array<{ name: string; proficiency: string }>; onChange: (skills: string[], languages: Array<{ name: string; proficiency: string }>) => void }) => {
-  const addSkill = () => {
-    onChange([...skills, ''], languages);
+const SkillsSection = ({ skills, languages, onChange }: { skills: any; languages: Array<{ name: string; proficiency: string }>; onChange: (skills: any, languages: Array<{ name: string; proficiency: string }>) => void }) => {
+  // Handle both flat array and categorized skills structure
+  const isCategorizedSkills = skills && typeof skills === 'object' && !Array.isArray(skills);
+  const safeLanguages = Array.isArray(languages) ? languages : [];
+
+  // Initialize categorized skills if not present
+  const defaultCategories = {
+    "Languages": [],
+    "Frameworks": [],
+    "Frontend": [],
+    "Databases": [],
+    "Cloud": [],
+    "DevOps": [],
+    "Testing": [],
+    "Messaging/Event-Driven": [],
+    "Tools": []
   };
 
-  const updateSkill = (index: number, value: string) => {
-    const newSkills = [...skills];
-    newSkills[index] = value;
-    onChange(newSkills, languages);
+  const currentSkills = isCategorizedSkills ? skills : defaultCategories;
+
+  const addSkillToCategory = (category: string) => {
+    const newSkills = { ...currentSkills };
+    if (!newSkills[category]) {
+      newSkills[category] = [];
+    }
+    newSkills[category] = [...newSkills[category], ''];
+    onChange(newSkills, safeLanguages);
   };
 
-  const removeSkill = (index: number) => {
-    const newSkills = skills.filter((_, i) => i !== index);
-    onChange(newSkills, languages);
+  const updateSkillInCategory = (category: string, index: number, value: string) => {
+    const newSkills = { ...currentSkills };
+    if (newSkills[category]) {
+      newSkills[category] = [...newSkills[category]];
+      newSkills[category][index] = value;
+      onChange(newSkills, safeLanguages);
+    }
+  };
+
+  const removeSkillFromCategory = (category: string, index: number) => {
+    const newSkills = { ...currentSkills };
+    if (newSkills[category]) {
+      newSkills[category] = newSkills[category].filter((_: any, i: number) => i !== index);
+      onChange(newSkills, safeLanguages);
+    }
+  };
+
+  const addCategory = () => {
+    const newCategory = prompt('Enter new category name:');
+    if (newCategory && newCategory.trim()) {
+      const newSkills = { ...currentSkills, [newCategory.trim()]: [] };
+      onChange(newSkills, safeLanguages);
+    }
+  };
+
+  const removeCategory = (category: string) => {
+    const newSkills = { ...currentSkills };
+    delete newSkills[category];
+    onChange(newSkills, safeLanguages);
   };
 
   const addLanguage = () => {
-    onChange(skills, [...languages, { name: '', proficiency: '' }]);
+    onChange(currentSkills, [...safeLanguages, { name: '', proficiency: '' }]);
   };
 
   const updateLanguage = (index: number, field: string, value: string) => {
-    const newLanguages = [...languages];
+    const newLanguages = [...safeLanguages];
     newLanguages[index] = { ...newLanguages[index], [field]: value };
-    onChange(skills, newLanguages);
+    onChange(currentSkills, newLanguages);
   };
 
   const removeLanguage = (index: number) => {
-    const newLanguages = languages.filter((_, i) => i !== index);
-    onChange(skills, newLanguages);
+    const newLanguages = safeLanguages.filter((_, i) => i !== index);
+    onChange(currentSkills, newLanguages);
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <Label className="text-base font-medium">Skills</Label>
-        <div className="space-y-2 mt-2">
-          {skills.map((skill, index) => (
-            <div key={index} className="flex gap-2">
-              <Input
-                value={skill}
-                onChange={(e) => updateSkill(index, e.target.value)}
-                placeholder="Enter skill"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => removeSkill(index)}
-              >
-                Remove
-              </Button>
+        <Label className="text-base font-medium">Skills by Category</Label>
+        <div className="space-y-4 mt-2">
+          {Object.entries(currentSkills).map(([category, skills]) => (
+            <div key={category} className="border rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-sm font-medium">{category}</Label>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addSkillToCategory(category)}
+                  >
+                    Add Skill
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeCategory(category)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    Remove Category
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {Array.isArray(skills) && skills.map((skill: string, index: number) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      value={skill}
+                      onChange={(e) => updateSkillInCategory(category, index, e.target.value)}
+                      placeholder="Enter skill"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeSkillFromCategory(category, index)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
-          <Button variant="outline" onClick={addSkill}>
-            Add Skill
+          <Button variant="outline" onClick={addCategory}>
+            Add New Category
           </Button>
         </div>
       </div>
@@ -1117,7 +1243,7 @@ const SkillsSection = ({ skills, languages, onChange }: { skills: string[]; lang
       <div>
         <Label className="text-base font-medium">Languages</Label>
         <div className="space-y-2 mt-2">
-          {languages.map((language, index) => (
+          {safeLanguages.map((language, index) => (
             <div key={index} className="flex gap-2">
               <Input
                 value={language.name}
@@ -1154,9 +1280,12 @@ const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove }: {
   onUpdate: (id: string, field: string, value: string) => void;
   onRemove: (id: string) => void;
 }) => {
+  // Ensure experience is always an array
+  const safeExperience = Array.isArray(experience) ? experience : [];
+
   return (
     <div className="space-y-4">
-      {experience.map((exp) => (
+      {safeExperience.map((exp) => (
         <Card key={exp.id} className="p-4">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -1232,9 +1361,12 @@ const EducationSection = ({ education, onAdd, onUpdate, onRemove }: {
   onUpdate: (id: string, field: string, value: string) => void;
   onRemove: (id: string) => void;
 }) => {
+  // Ensure education is always an array
+  const safeEducation = Array.isArray(education) ? education : [];
+
   return (
     <div className="space-y-4">
-      {education.map((edu) => (
+      {safeEducation.map((edu) => (
         <Card key={edu.id} className="p-4">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -1319,9 +1451,12 @@ const ActivitiesSection = ({ activities, onAdd, onUpdate, onRemove }: {
   onUpdate: (id: string, field: string, value: string) => void;
   onRemove: (id: string) => void;
 }) => {
+  // Ensure activities is always an array
+  const safeActivities = Array.isArray(activities) ? activities : [];
+
   return (
     <div className="space-y-4">
-      {activities.map((activity) => (
+      {safeActivities.map((activity) => (
         <Card key={activity.id} className="p-4">
           <div className="space-y-4">
             <div>
