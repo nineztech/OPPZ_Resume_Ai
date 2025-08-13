@@ -24,6 +24,14 @@ export interface TemplateData {
     dates: string;
     details: string[];
   }>;
+  projects?: Array<{
+    Name: string;
+    Description: string;
+    Tech_Stack: string;
+    Start_Date?: string;
+    End_Date?: string;
+    Link?: string;
+  }>;
   additionalInfo: {
     languages?: string[];
     certifications?: string[];

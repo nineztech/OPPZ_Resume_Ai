@@ -27,6 +27,14 @@ interface TemplateData {
     dates: string;
     details: string[];
   }>;
+  projects?: Array<{
+    Name: string;
+    Description: string;
+    Tech_Stack: string;
+    Start_Date?: string;
+    End_Date?: string;
+    Link?: string;
+  }>;
   additionalInfo: {
     languages?: string[];
     certifications?: string[];
@@ -211,14 +219,29 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         <div className="space-y-1">
           {templateData.skills?.technical && typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
             // Handle nested skills structure with categories - display as "Category: skills"
-            Object.entries(templateData.skills.technical).map(([category, skills]) => (
-              <div key={category} className="text-sm" style={{ 
-                fontSize: '11px',
-                lineHeight: '1.3'
-              }}>
-                <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {Array.isArray(skills) ? skills.join(', ') : ''}
-              </div>
-            ))
+            Object.entries(templateData.skills.technical).map(([category, skills]) => {
+              // Clean up malformed skills data by removing extra characters and fixing spacing
+              let cleanSkills: string | string[] = skills as string | string[];
+              if (typeof skills === 'string') {
+                // Fix malformed skills like "A, W, S, , (, I, d, e, n, t, i, t, y, , a, n, d, , A, c, c, e, s, s, , M, a, n, a, g, e, m, e, n, t, ,, , E, C, 2, ,, , S, 3, ,, , V, P, C, ,, , C, l, o, u, d, T, r, a, i, l, ,, , C, l, o, u, d, W, a, t, c, h, ,, , S, e, c, u, r, i, t, y, , H, u, b, ), ,, , C, l, o, u, d, , S, e, c, u, r, i, t, y, , P, o, s, t, u, r, e, , M, a, n, a, g, e, m, e, n, t, , (, C, S, P, M, )"
+                cleanSkills = skills
+                  .replace(/,\s*,/g, ',') // Remove double commas
+                  .replace(/,\s*\(/g, ' (') // Fix spacing before parentheses
+                  .replace(/\)\s*,/g, ') ') // Fix spacing after parentheses
+                  .replace(/,\s*\)/g, ')') // Remove commas before closing parentheses
+                  .replace(/\s+/g, ' ') // Normalize multiple spaces
+                  .trim();
+              }
+              
+              return (
+                <div key={category} className="text-sm" style={{ 
+                  fontSize: '11px',
+                  lineHeight: '1.3'
+                }}>
+                  <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {Array.isArray(cleanSkills) ? cleanSkills.join(', ') : cleanSkills}
+                </div>
+              );
+            })
           ) : Array.isArray(templateData.skills?.technical) && templateData.skills.technical.length > 0 ? (
             // Handle flat skills array (fallback)
             <div className="text-sm" style={{ 
@@ -305,8 +328,66 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         </div>
       </div>
 
-      {/* Education */}
+     
+
+      {/* Projects */}
       <div>
+        <h2 className="text-center font-bold mb-3 uppercase" style={{ 
+          fontSize: '13px',
+          fontWeight: 'bold',
+          letterSpacing: '0.5px'
+        }}>
+          PROJECTS
+        </h2>
+        <div className="space-y-3">
+          {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
+            templateData.projects.map((project, index) => (
+              <div key={index}>
+                <div className="flex justify-between items-start mb-1">
+                  <h3 className="font-bold" style={{ 
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    flex: '1'
+                  }}>
+                    {project.Name}
+                  </h3>
+                  <div className="text-sm text-right" style={{ 
+                    fontSize: '10px'
+                  }}>
+                    {project.Tech_Stack}
+                  </div>
+                </div>
+                <div className="space-y-0 ml-0">
+                  {project.Description ? (
+                    <div className="flex items-start" style={{ fontSize: '11px' }}>
+                      <span className="mr-2">•</span>
+                      <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{project.Description}</span>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500" style={{ 
+                      fontSize: '11px',
+                      lineHeight: '1.3',
+                      fontStyle: 'italic'
+                    }}>
+                      No project description available
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-gray-500" style={{ 
+              fontSize: '11px',
+              lineHeight: '1.3',
+              fontStyle: 'italic'
+            }}>
+              No projects added yet
+            </div>
+          )}
+        </div>
+      </div>
+             {/* Education */}
+      <div className="mb-4">
         <h2 className="text-center font-bold mb-3 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
@@ -334,7 +415,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                   fontWeight: 'bold'
                 }}>
                   {edu.dates}
-                </div>
+                  </div>
               </div>
             ))
           ) : (

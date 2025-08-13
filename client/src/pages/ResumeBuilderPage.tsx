@@ -795,6 +795,14 @@ const ResumeBuilderPage = () => {
                     dates: edu.year,
                     details: [edu.description]
                   })),
+                  projects: resumeData.projects.map(project => ({
+                    Name: project.name,
+                    Description: project.description,
+                    Tech_Stack: project.techStack,
+                    Start_Date: project.startDate,
+                    End_Date: project.endDate,
+                    Link: project.link
+                  })),
                   additionalInfo: {
                     languages: resumeData.languages.map(lang => lang.name)
                   },
@@ -1003,6 +1011,14 @@ const ResumeBuilderPage = () => {
             institution: edu.institution,
             dates: edu.year,
             details: [edu.description]
+          })),
+          projects: resumeData.projects.map(project => ({
+            Name: project.name,
+            Description: project.description,
+            Tech_Stack: project.techStack,
+            Start_Date: project.startDate,
+            End_Date: project.endDate,
+            Link: project.link
           })),
           additionalInfo: {
             languages: resumeData.languages.map(lang => lang.name)
