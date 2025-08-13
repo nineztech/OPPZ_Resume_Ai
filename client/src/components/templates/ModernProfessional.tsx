@@ -31,6 +31,33 @@ interface TemplateData {
     certifications?: string[];
     awards?: string[];
   };
+  customSections?: Array<{
+    id: string;
+    title: string;
+    type: 'text' | 'list' | 'timeline' | 'grid' | 'mixed';
+    content: {
+      text?: string;
+      items?: Array<{
+        id: string;
+        title?: string;
+        subtitle?: string;
+        startDate?: string;
+        endDate?: string;
+        description?: string;
+        bullets?: string[];
+        location?: string;
+        link?: string;
+        tags?: string[];
+      }>;
+    };
+    styling?: {
+      showDates?: boolean;
+      showBullets?: boolean;
+      showLocation?: boolean;
+      showLinks?: boolean;
+      showTags?: boolean;
+    };
+  }>;
 }
 
 interface ModernProfessionalProps {
@@ -288,6 +315,102 @@ const ModernProfessional: React.FC<ModernProfessionalProps> = ({ data, color = '
           </div>
         </section>
       )}
+
+      {/* Custom Sections */}
+      {data.customSections && data.customSections.map((section) => (
+        <section key={section.id} className="mb-8">
+          <h3 className="text-xs font-bold uppercase tracking-wide mb-2" style={{ 
+            color,
+            fontSize: '12px',
+            fontWeight: '700',
+            letterSpacing: '0.3px'
+          }}>{section.title}</h3>
+          
+          {section.type === 'text' && section.content.text && (
+            <p style={{ 
+              color: '#3B3B3B', 
+              fontSize: '11px', 
+              marginBottom: 0,
+              lineHeight: '1.5',
+              textAlign: 'justify'
+            }}>{section.content.text}</p>
+          )}
+
+          {(section.type === 'list' || section.type === 'timeline' || section.type === 'grid' || section.type === 'mixed') && section.content.items && (
+            <div className="flex flex-col gap-4">
+              {section.content.items.map((item) => (
+                <div key={item.id}>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <div>
+                      {item.title && (
+                        <h4 className="font-semibold" style={{ 
+                          fontSize: '12px', 
+                          marginBottom: 0,
+                          fontWeight: '600'
+                        }}>{item.title}</h4>
+                      )}
+                      {item.subtitle && (
+                        <div className="text-gray-500" style={{ 
+                          fontSize: '11px', 
+                          marginBottom: 0,
+                          fontWeight: '500'
+                        }}>{item.subtitle}</div>
+                      )}
+                    </div>
+                    {(section.styling?.showDates && (item.startDate || item.endDate)) && (
+                      <span className="text-xs text-gray-600 font-medium" style={{ 
+                        fontSize: '10px'
+                      }}>
+                        {item.startDate && item.endDate ? `${item.startDate} - ${item.endDate}` : item.startDate || item.endDate}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {item.description && (
+                    <p style={{ 
+                      color: '#373737', 
+                      fontSize: '10px', 
+                      marginTop: '6px',
+                      lineHeight: '1.4'
+                    }}>{item.description}</p>
+                  )}
+
+                  {section.styling?.showBullets && item.bullets && item.bullets.length > 0 && (
+                    <ul className="list-disc pl-5 gap-1" style={{ 
+                      color: '#373737', 
+                      fontSize: '10px', 
+                      marginTop: '6px',
+                      lineHeight: '1.4'
+                    }}>
+                      {item.bullets.map((bullet, idx) => (
+                        <li key={idx}>{bullet}</li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {section.styling?.showLocation && item.location && (
+                      <span className="text-xs text-gray-500" style={{ fontSize: '9px' }}>
+                        📍 {item.location}
+                      </span>
+                    )}
+                    {section.styling?.showLinks && item.link && (
+                      <span className="text-xs text-blue-600" style={{ fontSize: '9px' }}>
+                        🔗 {item.link}
+                      </span>
+                    )}
+                    {section.styling?.showTags && item.tags && item.tags.map((tag, idx) => (
+                      <span key={idx} className="text-xs bg-gray-100 px-2 py-1 rounded" style={{ fontSize: '9px' }}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ))}
     </div>
   );
 };

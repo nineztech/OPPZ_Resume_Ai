@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, FileText, Sparkles, ArrowLeft, CheckCircle, AlertCircle, User } from 'lucide-react';
 import ResumeUploadModal from '@/components/modals/ResumeUploadModal';
-import { fileExtractionService } from '@/services/fileExtractionService';
+import { geminiParserService } from '@/services/geminiParserService';
 import { getTemplateById } from '@/data/templates';
 
 const UseTemplatePage = () => {
@@ -22,19 +22,25 @@ const UseTemplatePage = () => {
     setUploadedFile(file);
     setIsUploading(true);
     try {
-      console.log("Starting extraction...");
-      const data = await fileExtractionService.extractTextFromFile(file);
-      console.log("Extraction finished", data);
-      setExtractedData(data);
+      console.log("Starting Gemini parsing...");
+      const geminiData = await geminiParserService.parseResume(file);
+      console.log("Gemini parsing finished", geminiData);
+      
+      // Convert Gemini data to the format expected by ResumeBuilderPage
+      const convertedData = geminiParserService.convertToResumeData(geminiData);
+      console.log("Converted data for ResumeBuilderPage:", convertedData);
+      setExtractedData(convertedData);
       setIsUploading(false);
       setIsModalOpen(true); // <-- This should open the modal
     } catch (err) {
       setIsUploading(false);
-      alert('Failed to extract data');
+      console.error('Gemini parsing error:', err);
+      alert('Failed to parse resume with AI. Please try again.');
     }
   };
 
   const handleContinueWithRaw = () => {
+    console.log("Navigating to ResumeBuilderPage with raw data:", extractedData);
     navigate('/resume/builder', { 
       state: { 
         templateId, 
@@ -46,6 +52,7 @@ const UseTemplatePage = () => {
   };
 
   const handleCustomizeWithAI = () => {
+    console.log("Navigating to ResumeBuilderPage with AI data:", extractedData);
     navigate('/resume/builder', { 
       state: { 
         templateId, 
@@ -107,10 +114,10 @@ const UseTemplatePage = () => {
                   <Upload className="w-8 h-8 text-blue-600" />
                 </div>
                 <CardTitle className="text-2xl font-semibold text-gray-900">
-                  Upload Your Resume
+                  Upload Your Resume for AI Parsing
                 </CardTitle>
                 <CardDescription className="text-lg text-gray-600">
-                  Click anywhere in this box to browse files
+                  Our AI will intelligently parse and organize your resume content
                 </CardDescription>
               </CardHeader>
               
@@ -162,7 +169,7 @@ const UseTemplatePage = () => {
                     <div className="bg-gray-200 rounded-full h-2">
                       <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: '60%' }}></div>
                     </div>
-                    <p className="text-sm text-gray-600 mt-2">Processing your resume...</p>
+                    <p className="text-sm text-gray-600 mt-2">AI is parsing your resume...</p>
                   </div>
                 )}
 
@@ -214,9 +221,9 @@ const UseTemplatePage = () => {
                 <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
                   <FileText className="w-6 h-6 text-blue-600" />
                 </div>
-                <h3 className="font-semibold text-lg mb-2">Extract Content</h3>
+                <h3 className="font-semibold text-lg mb-2">AI Content Parsing</h3>
                 <p className="text-gray-600 text-sm">
-                  We'll automatically extract and organize your resume content
+                  Our AI intelligently parses and organizes your resume content
                 </p>
               </Card>
 

@@ -40,6 +40,39 @@ interface ResumePreviewModalProps {
       certifications?: string[];
       awards?: string[];
     };
+    customSections?: Array<{
+      id: string;
+      title: string;
+      type: 'text' | 'list' | 'timeline' | 'grid' | 'mixed';
+      position: number;
+      content: {
+        text?: string;
+        items?: Array<{
+          id: string;
+          title?: string;
+          subtitle?: string;
+          description?: string;
+          startDate?: string;
+          endDate?: string;
+          location?: string;
+          link?: string;
+          bullets?: string[];
+          tags?: string[];
+        }>;
+        columns?: Array<{
+          title: string;
+          items: string[];
+        }>;
+      };
+      styling?: {
+        showBullets?: boolean;
+        showDates?: boolean;
+        showLocation?: boolean;
+        showLinks?: boolean;
+        showTags?: boolean;
+        layout?: 'vertical' | 'horizontal' | 'grid';
+      };
+    }>;
   };
   color?: string;
 }

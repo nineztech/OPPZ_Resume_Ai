@@ -9,6 +9,7 @@ import json
 import tempfile
 from pathlib import Path
 from flask import Flask, render_template_string, request, jsonify, send_file
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import logging
 
@@ -23,6 +24,9 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
+
+# Enable CORS for all routes
+CORS(app, origins=['http://localhost:3000', 'http://localhost:5173'], supports_credentials=True)
 
 # HTML template for the web interface
 HTML_TEMPLATE = """

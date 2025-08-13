@@ -31,6 +31,39 @@ interface TemplateData {
     certifications?: string[];
     awards?: string[];
   };
+  customSections?: Array<{
+    id: string;
+    title: string;
+    type: 'text' | 'list' | 'timeline' | 'grid' | 'mixed';
+    position: number;
+    content: {
+      text?: string;
+      items?: Array<{
+        id: string;
+        title?: string;
+        subtitle?: string;
+        description?: string;
+        startDate?: string;
+        endDate?: string;
+        location?: string;
+        link?: string;
+        bullets?: string[];
+        tags?: string[];
+      }>;
+      columns?: Array<{
+        title: string;
+        items: string[];
+      }>;
+    };
+    styling?: {
+      showBullets?: boolean;
+      showDates?: boolean;
+      showLocation?: boolean;
+      showLinks?: boolean;
+      showTags?: boolean;
+      layout?: 'vertical' | 'horizontal' | 'grid';
+    };
+  }>;
 }
 
 interface CleanMinimalProps {
@@ -332,6 +365,94 @@ const CleanMinimal: React.FC<CleanMinimalProps> = ({ data, color = '#2563eb' }) 
           )}
         </div>
       </div>
+
+      {/* Custom Sections */}
+      {data.customSections && data.customSections.map((section) => (
+        <div key={section.id} className="mb-6">
+          <h3 className="text-sm font-bold mb-3 tracking-wide" style={{ 
+            color: color,
+            fontSize: '11px',
+            fontWeight: '700',
+            letterSpacing: '0.3px'
+          }}>
+            {section.title.toUpperCase()}
+          </h3>
+          
+          {section.type === 'text' && section.content.text && (
+            <p className="text-gray-800 leading-relaxed text-justify" style={{ 
+              fontSize: '10px',
+              lineHeight: '1.5'
+            }}>{section.content.text}</p>
+          )}
+
+          {(section.type === 'list' || section.type === 'timeline' || section.type === 'grid' || section.type === 'mixed') && section.content.items && (
+            <div className="space-y-4">
+              {section.content.items.map((item) => (
+                <div key={item.id}>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <div>
+                      {item.title && (
+                        <h4 className="font-bold text-gray-900" style={{ 
+                          fontSize: '10px',
+                          fontWeight: '600'
+                        }}>{item.title}</h4>
+                      )}
+                      {item.subtitle && (
+                        <div className="text-gray-700" style={{ 
+                          fontSize: '9px'
+                        }}>{item.subtitle}</div>
+                      )}
+                    </div>
+                    {(section.styling?.showDates && (item.startDate || item.endDate)) && (
+                      <span className="text-gray-600 font-medium" style={{ 
+                        fontSize: '9px'
+                      }}>
+                        {item.startDate && item.endDate ? `${item.startDate} - ${item.endDate}` : item.startDate || item.endDate}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {item.description && (
+                    <p className="text-gray-800" style={{ 
+                      fontSize: '9px',
+                      lineHeight: '1.3'
+                    }}>{item.description}</p>
+                  )}
+
+                  {section.styling?.showBullets && item.bullets && item.bullets.length > 0 && (
+                    <ul className="list-disc pl-5 mt-1 space-y-1">
+                      {item.bullets.map((bullet, idx) => (
+                        <li key={idx} className="text-gray-800" style={{ 
+                          fontSize: '9px',
+                          lineHeight: '1.3'
+                        }}>{bullet}</li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {section.styling?.showLocation && item.location && (
+                      <span className="text-xs text-gray-500" style={{ fontSize: '8px' }}>
+                        📍 {item.location}
+                      </span>
+                    )}
+                    {section.styling?.showLinks && item.link && (
+                      <span className="text-xs text-blue-600" style={{ fontSize: '8px' }}>
+                        🔗 {item.link}
+                      </span>
+                    )}
+                    {section.styling?.showTags && item.tags && item.tags.map((tag, idx) => (
+                      <span key={idx} className="text-xs bg-gray-100 px-2 py-1 rounded" style={{ fontSize: '8px' }}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fileExtractionService } from '@/services/fileExtractionService';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -29,12 +29,16 @@ import {
   FileText,
   ChevronDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Code,
+  Users,
+  Plus
 } from 'lucide-react';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 import { templates as templateData, getTemplateById } from '@/data/templates';
 import type { Template } from '@/data/templates';
 import ResumePreviewModal from '@/components/modals/ResumePreviewModal';
+import AddCustomSectionModal from '@/components/modals/AddCustomSectionModal';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -46,6 +50,8 @@ interface ResumeData {
     email: string;
     location: string;
     website: string;
+    github: string;
+    linkedin: string;
     profilePicture?: string;
   };
   summary: string;
@@ -56,6 +62,7 @@ interface ResumeData {
     position: string;
     duration: string;
     description: string;
+    location: string;
   }>;
   education: Array<{
     id: string;
@@ -63,15 +70,78 @@ interface ResumeData {
     degree: string;
     year: string;
     description: string;
+    grade: string;
+    location: string;
   }>;
   skills: string[];
-  languages: string[];
+  languages: Array<{
+    name: string;
+    proficiency: string;
+  }>;
   activities: Array<{
     id: string;
     title: string;
     description: string;
   }>;
-
+  projects: Array<{
+    id: string;
+    name: string;
+    techStack: string;
+    startDate: string;
+    endDate: string;
+    description: string;
+    link: string;
+  }>;
+  certifications: Array<{
+    id: string;
+    certificateName: string;
+    link: string;
+    startDate: string;
+    endDate: string;
+    instituteName: string;
+  }>;
+  references: Array<{
+    id: string;
+    name: string;
+    title: string;
+    company: string;
+    phone: string;
+    email: string;
+    relationship: string;
+  }>;
+  customSections: Array<{
+    id: string;
+    title: string;
+    type: 'text' | 'list' | 'timeline' | 'grid' | 'mixed';
+    position: number;
+    content: {
+      text?: string;
+      items?: Array<{
+        id: string;
+        title?: string;
+        subtitle?: string;
+        description?: string;
+        startDate?: string;
+        endDate?: string;
+        location?: string;
+        link?: string;
+        bullets?: string[];
+        tags?: string[];
+      }>;
+      columns?: Array<{
+        title: string;
+        items: string[];
+      }>;
+    };
+    styling?: {
+      showBullets?: boolean;
+      showDates?: boolean;
+      showLocation?: boolean;
+      showLinks?: boolean;
+      showTags?: boolean;
+      layout?: 'vertical' | 'horizontal' | 'grid';
+    };
+  }>;
 }
 
 const ResumeBuilderPage = () => {
@@ -81,6 +151,7 @@ const ResumeBuilderPage = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [templateScrollIndex, setTemplateScrollIndex] = useState(0);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isCustomSectionModalOpen, setIsCustomSectionModalOpen] = useState(false);
   const resumeRef = useRef<HTMLDivElement>(null);
   const [resumeData, setResumeData] = useState<ResumeData>({
     basicDetails: {
@@ -89,7 +160,9 @@ const ResumeBuilderPage = () => {
       phone: '',
       email: '',
       location: '',
-      website: ''
+      website: '',
+      github: '',
+      linkedin: ''
     },
     summary: '',
     objective: '',
@@ -97,8 +170,17 @@ const ResumeBuilderPage = () => {
     education: [],
     skills: [],
     languages: [],
-            activities: []
+    activities: [],
+    projects: [],
+    certifications: [],
+    references: [],
+    customSections: []
   });
+
+  // Debug log when resumeData changes
+  useEffect(() => {
+    console.log('ResumeBuilderPage - resumeData updated:', resumeData);
+  }, [resumeData]);
 
   const templateId = location.state?.templateId || 'modern-professional';
   const selectedColor = location.state?.selectedColor || 'blue';
@@ -110,8 +192,40 @@ const ResumeBuilderPage = () => {
   }, [templateId]);
 
   useEffect(() => {
-    if (location.state?.extractedData && location.state?.mode === 'raw') {
-      parseExtractedText(location.state.extractedData);
+    console.log('ResumeBuilderPage useEffect - location.state:', location.state);
+    
+    if (location.state?.extractedData && (location.state?.mode === 'raw' || location.state?.mode === 'ai')) {
+      // Handle Gemini parsed data directly
+      const extractedData = location.state.extractedData;
+      console.log('Setting resume data from Gemini parser:', extractedData);
+      
+      // Ensure all required fields are present with proper defaults
+      const processedData = {
+        basicDetails: {
+          fullName: extractedData.basicDetails?.fullName || '',
+          title: extractedData.basicDetails?.title || '',
+          phone: extractedData.basicDetails?.phone || '',
+          email: extractedData.basicDetails?.email || '',
+          location: extractedData.basicDetails?.location || '',
+          website: extractedData.basicDetails?.website || '',
+          github: extractedData.basicDetails?.github || '',
+          linkedin: extractedData.basicDetails?.linkedin || ''
+        },
+        summary: extractedData.summary || '',
+        objective: extractedData.objective || '',
+        experience: extractedData.experience || [],
+        education: extractedData.education || [],
+        skills: extractedData.skills || [],
+        languages: extractedData.languages || [],
+        activities: extractedData.activities || [],
+        projects: extractedData.projects || [],
+        certifications: extractedData.certifications || [],
+        references: extractedData.references || [],
+        customSections: extractedData.customSections || []
+      };
+      
+      console.log('Processed resume data:', processedData);
+      setResumeData(processedData);
     } else if (location.state?.defaultData && location.state?.mode === 'default') {
       // Use default template data
       const defaultData = location.state.defaultData;
@@ -122,7 +236,9 @@ const ResumeBuilderPage = () => {
           phone: defaultData.personalInfo.phone || '',
           email: defaultData.personalInfo.email || '',
           location: defaultData.personalInfo.address || '',
-          website: defaultData.personalInfo.website || ''
+          website: defaultData.personalInfo.website || '',
+          github: defaultData.personalInfo.github || '',
+          linkedin: defaultData.personalInfo.linkedin || ''
         },
         summary: defaultData.summary || '',
         objective: '',
@@ -131,437 +247,36 @@ const ResumeBuilderPage = () => {
           company: exp.company || '',
           position: exp.title || '',
           duration: exp.dates || '',
-          description: exp.achievements?.join('\n') || ''
+          description: exp.achievements?.join('\n') || '',
+          location: exp.location || ''
         })) || [],
         education: defaultData.education?.map((edu: any) => ({
           id: Date.now().toString() + Math.random(),
           institution: edu.institution || '',
           degree: edu.degree || '',
           year: edu.dates || '',
-          description: edu.details?.join('\n') || ''
+          description: edu.details?.join('\n') || '',
+          grade: edu.grade || '',
+          location: edu.location || ''
         })) || [],
         skills: defaultData.skills?.technical || [],
         languages: defaultData.additionalInfo?.languages || [],
         activities: [],
-
+        projects: [],
+        certifications: [],
+        references: [],
+        customSections: []
       });
     }
   }, [location.state]);
 
-  const extractTextFromFile = async (file: File) => {
-    try {
-      console.log('Starting text extraction from file:', file.name, file.type);
-      const extractedData = await fileExtractionService.extractTextFromFile(file);
-      console.log('Extracted data:', extractedData);
-      parseExtractedText(extractedData);
-    } catch (error) {
-      console.error('Error extracting text:', error);
-    }
-  };
-
-  const parseExtractedText = (extractedData: any) => {
-    console.log('Parsing extracted text:', extractedData);
-    // Parse extracted text and update resume data
-    const { text, sections, contact } = extractedData;
-    const contactInfo = contact || fileExtractionService.extractContactInfo(text);
-    console.log('Extracted contact info:', contactInfo);
-    
-    const updatedData = { ...resumeData };
-    
-    // Update basic details from extracted contact info
-    if (contactInfo?.name) {
-      updatedData.basicDetails.fullName = contactInfo.name;
-    }
-    if (contactInfo?.title) {
-      updatedData.basicDetails.title = contactInfo.title;
-    }
-    if (contactInfo?.email) {
-      updatedData.basicDetails.email = contactInfo.email;
-    }
-    if (contactInfo?.phone) {
-      updatedData.basicDetails.phone = contactInfo.phone;
-    }
-    if (contactInfo?.location) {
-      updatedData.basicDetails.location = contactInfo.location;
-    }
-
-    console.log('Updated basic details:', updatedData.basicDetails);
-
-    // Update summary section
-    if (sections?.summary) {
-      updatedData.summary = sections.summary;
-    } else if (sections?.profile) {
-      updatedData.summary = sections.profile;
-    } else if (sections?.about) {
-      updatedData.summary = sections.about;
-    }
-
-    // Try to extract additional information from the full text if sections are missing
-    if (!sections?.experience && text) {
-      const experienceSection = extractSectionFromText(text, 'experience');
-      if (experienceSection) {
-        sections.experience = experienceSection;
-      }
-    }
-
-    if (!sections?.education && text) {
-      const educationSection = extractSectionFromText(text, 'education');
-      if (educationSection) {
-        sections.education = educationSection;
-      }
-    }
-
-    // Update objective section
-    if (sections?.objective) {
-      updatedData.objective = sections.objective;
-    }
-
-    // Parse experience section with improved logic
-    if (sections?.experience) {
-      console.log('Parsing experience section:', sections.experience);
-      const experienceLines = sections.experience.split('\n').filter((line: string) => line.trim());
-      const experiences = [];
-      let currentExp: any = { id: Date.now().toString() + Math.random() };
-
-      for (let i = 0; i < experienceLines.length; i++) {
-        const trimmedLine = experienceLines[i].trim();
-        
-        // Skip empty lines
-        if (!trimmedLine) continue;
-        
-        // Try to detect if this is a new experience entry
-        if (isNewExperienceEntry(trimmedLine, i, experienceLines)) {
-          // Save previous experience if it has meaningful data
-          if (currentExp.company || currentExp.position) {
-            experiences.push(currentExp);
-          }
-          currentExp = { id: Date.now().toString() + Math.random() };
-        }
-        
-        // Check if this line contains company information
-        if (isCompanyLine(trimmedLine)) {
-          currentExp.company = extractCompanyName(trimmedLine);
-        }
-        // Check if this line contains position/title information
-        else if (isPositionLine(trimmedLine)) {
-          currentExp.position = extractPosition(trimmedLine);
-        }
-        // Check if this line contains date/duration information
-        else if (isDateLine(trimmedLine)) {
-          currentExp.duration = extractDuration(trimmedLine);
-        }
-        // Otherwise, treat as description
-        else {
-          if (currentExp.description) {
-            currentExp.description += ' ' + trimmedLine;
-          } else {
-            currentExp.description = trimmedLine;
-          }
-        }
-      }
-      
-      // Add the last experience if it has meaningful data
-      if (currentExp.company || currentExp.position) {
-        experiences.push(currentExp);
-      }
-      
-      updatedData.experience = experiences;
-      console.log('Parsed experiences:', experiences);
-    }
-
-    // Parse education section with improved logic
-    if (sections?.education) {
-      console.log('Parsing education section:', sections.education);
-      const educationLines = sections.education.split('\n').filter((line: string) => line.trim());
-      const educations = [];
-      let currentEdu: any = { id: Date.now().toString() + Math.random() };
-
-      for (let i = 0; i < educationLines.length; i++) {
-        const trimmedLine = educationLines[i].trim();
-        
-        // Skip empty lines
-        if (!trimmedLine) continue;
-        
-        // Try to detect if this is a new education entry
-        if (isNewEducationEntry(trimmedLine, i, educationLines)) {
-          // Save previous education if it has meaningful data
-          if (currentEdu.institution || currentEdu.degree) {
-            educations.push(currentEdu);
-          }
-          currentEdu = { id: Date.now().toString() + Math.random() };
-        }
-        
-        // Check if this line contains institution information
-        if (isInstitutionLine(trimmedLine)) {
-          currentEdu.institution = extractInstitution(trimmedLine);
-        }
-        // Check if this line contains degree information
-        else if (isDegreeLine(trimmedLine)) {
-          currentEdu.degree = extractDegree(trimmedLine);
-        }
-        // Check if this line contains year/date information
-        else if (isYearLine(trimmedLine)) {
-          currentEdu.year = extractYear(trimmedLine);
-        }
-        // Otherwise, treat as description
-        else {
-          if (currentEdu.description) {
-            currentEdu.description += ' ' + trimmedLine;
-          } else {
-            currentEdu.description = trimmedLine;
-          }
-        }
-      }
-      
-      // Add the last education if it has meaningful data
-      if (currentEdu.institution || currentEdu.degree) {
-        educations.push(currentEdu);
-      }
-      
-      updatedData.education = educations;
-      console.log('Parsed education:', educations);
-    }
-
-    // Parse skills section with improved extraction
-    if (sections?.skills) {
-      const skillsText = sections.skills.toLowerCase();
-      const commonSkills = [
-        'javascript', 'html', 'css', 'react', 'angular', 'vue', 'node.js', 'python', 'java', 'c++', 'c#',
-        'php', 'ruby', 'go', 'swift', 'kotlin', 'typescript', 'sql', 'mongodb', 'mysql', 'postgresql',
-        'aws', 'azure', 'docker', 'kubernetes', 'git', 'agile', 'scrum', 'leadership', 'communication',
-        'project management', 'ui/ux', 'figma', 'adobe', 'photoshop', 'illustrator', 'wordpress', 'drupal',
-        'jira', 'confluence', 'slack', 'teams', 'zoom', 'skype', 'excel', 'powerpoint', 'word', 'outlook'
-      ];
-      
-      const extractedSkills = commonSkills.filter(skill => skillsText.includes(skill));
-      
-      // Also extract skills from the text that might not be in the common list
-      const skillLines = sections.skills.split('\n').filter((line: string) => line.trim());
-      const additionalSkills = skillLines
-        .map((line: string) => line.trim())
-        .filter((line: string) => line.length > 0 && line.length < 50)
-        .slice(0, 10); // Limit to 10 additional skills
-      
-      updatedData.skills = [...new Set([...extractedSkills, ...additionalSkills])];
-      console.log('Parsed skills:', updatedData.skills);
-    }
-
-    // Parse languages section
-    if (sections?.languages) {
-      const languagesText = sections.languages.toLowerCase();
-      const commonLanguages = [
-        'english', 'spanish', 'french', 'german', 'italian', 'portuguese', 'russian', 'chinese', 'japanese',
-        'korean', 'arabic', 'hindi', 'urdu', 'bengali', 'tamil', 'telugu', 'marathi', 'gujarati'
-      ];
-      
-      const extractedLanguages = commonLanguages.filter(lang => languagesText.includes(lang));
-      
-      // Also extract languages from the text
-      const languageLines = sections.languages.split('\n').filter((line: string) => line.trim());
-      const additionalLanguages = languageLines
-        .map((line: string) => line.trim())
-        .filter((line: string) => line.length > 0 && line.length < 30)
-        .slice(0, 5); // Limit to 5 additional languages
-      
-      updatedData.languages = [...new Set([...extractedLanguages, ...additionalLanguages])];
-      console.log('Parsed languages:', updatedData.languages);
-    }
-
-    // Parse activities section
-    if (sections?.activities) {
-      const activitiesLines = sections.activities.split('\n').filter((line: string) => line.trim());
-      const activities = activitiesLines.map((line: string, index: number) => ({
-        id: (Date.now() + index).toString(),
-        title: line.trim(),
-        description: ''
-      }));
-      updatedData.activities = activities;
-      console.log('Parsed activities:', activities);
-    }
 
 
 
-    console.log('Final updated resume data:', updatedData);
-    setResumeData(updatedData);
-  };
 
-  // Helper methods for parsing different sections
-  const isCompanyLine = (line: string): boolean => {
-    const lower = line.toLowerCase();
-    return !lower.includes('university') && !lower.includes('college') && !lower.includes('school') &&
-           (lower.includes('inc') || lower.includes('corp') || lower.includes('ltd') || 
-            lower.includes('company') || lower.includes('llc') || lower.includes('group') ||
-            lower.includes('technologies') || lower.includes('solutions') || lower.includes('systems') ||
-            /^[A-Z][a-zA-Z\s&.,]+(?:Inc|Corp|Ltd|LLC|Company|Group|Technologies|Solutions|Systems)$/i.test(line));
-  };
 
-  const extractCompanyName = (line: string): string => {
-    return line.replace(/Company|Employer|Inc|Corp|Ltd|LLC|Group|Technologies|Solutions|Systems|:/gi, '').trim();
-  };
 
-  const isPositionLine = (line: string): boolean => {
-    const lower = line.toLowerCase();
-    return lower.includes('developer') || lower.includes('engineer') || lower.includes('manager') ||
-           lower.includes('analyst') || lower.includes('specialist') || lower.includes('coordinator') ||
-           lower.includes('assistant') || lower.includes('director') || lower.includes('lead') ||
-           lower.includes('senior') || lower.includes('junior') || lower.includes('position') ||
-           lower.includes('title') || lower.includes('role') || lower.includes('consultant') ||
-           lower.includes('architect') || lower.includes('designer') || lower.includes('programmer') ||
-           lower.includes('administrator') || lower.includes('supervisor') || lower.includes('executive');
-  };
 
-  const extractPosition = (line: string): string => {
-    return line.replace(/Position|Title|Role|:/gi, '').trim();
-  };
-
-  const isDateLine = (line: string): boolean => {
-    return /\d{4}/.test(line) && (line.includes('20') || line.includes('19') || 
-           line.includes('present') || line.includes('current') || line.includes('to'));
-  };
-
-  const extractDuration = (line: string): string => {
-    return line.replace(/Duration|Date|Period|:/gi, '').trim();
-  };
-
-  const isInstitutionLine = (line: string): boolean => {
-    const lower = line.toLowerCase();
-    return lower.includes('university') || lower.includes('college') || lower.includes('school') ||
-           lower.includes('institute') || lower.includes('academy') || lower.includes('institution') ||
-           lower.includes('polytechnic') || lower.includes('university of') || lower.includes('college of') ||
-           /^[A-Z][a-zA-Z\s&.,]+(?:University|College|School|Institute|Academy|Polytechnic)$/i.test(line);
-  };
-
-  const extractInstitution = (line: string): string => {
-    return line.replace(/Institution|University|School|College|Institute|Academy|Polytechnic|:/gi, '').trim();
-  };
-
-  const isDegreeLine = (line: string): boolean => {
-    const lower = line.toLowerCase();
-    return lower.includes('bachelor') || lower.includes('master') || lower.includes('phd') ||
-           lower.includes('degree') || lower.includes('diploma') || lower.includes('certificate') ||
-           lower.includes('b.tech') || lower.includes('m.tech') || lower.includes('b.sc') ||
-           lower.includes('m.sc') || lower.includes('mba') || lower.includes('ba') || lower.includes('ma') ||
-           lower.includes('b.e') || lower.includes('m.e') || lower.includes('b.com') || lower.includes('m.com') ||
-           lower.includes('b.a') || lower.includes('m.a') || lower.includes('b.s') || lower.includes('m.s') ||
-           lower.includes('associate') || lower.includes('high school') || lower.includes('secondary');
-  };
-
-  const extractDegree = (line: string): string => {
-    return line.replace(/Degree|Qualification|Diploma|Certificate|:/gi, '').trim();
-  };
-
-  const isYearLine = (line: string): boolean => {
-    return /\d{4}/.test(line) && (line.includes('20') || line.includes('19') || 
-           line.includes('graduated') || line.includes('completed'));
-  };
-
-  const extractYear = (line: string): string => {
-    return line.replace(/Year|Date|Graduated|Completed|:/gi, '').trim();
-  };
-
-  const isOrganizationLine = (line: string): boolean => {
-    const lower = line.toLowerCase();
-    return lower.includes('organization') || lower.includes('ngo') || lower.includes('foundation') ||
-           lower.includes('charity') || lower.includes('association') || lower.includes('society');
-  };
-
-  const extractOrganization = (line: string): string => {
-    return line.replace(/Organization|NGO|Foundation|Charity|Association|Society|:/gi, '').trim();
-  };
-
-  const isRoleLine = (line: string): boolean => {
-    const lower = line.toLowerCase();
-    return lower.includes('volunteer') || lower.includes('member') || lower.includes('coordinator') ||
-           lower.includes('assistant') || lower.includes('helper') || lower.includes('role') ||
-           lower.includes('position') || lower.includes('title');
-  };
-
-  const extractRole = (line: string): string => {
-    return line.replace(/Role|Position|Title|:/gi, '').trim();
-  };
-
-  // Helper function to extract sections from full text
-  const extractSectionFromText = (text: string, sectionName: string): string | null => {
-    const lines = text.split('\n');
-    const sectionKeywords = {
-      experience: ['experience', 'work experience', 'employment', 'work history', 'professional experience'],
-      education: ['education', 'academic', 'qualifications', 'degrees', 'academic background']
-    };
-    
-    const keywords = sectionKeywords[sectionName as keyof typeof sectionKeywords];
-    if (!keywords) return null;
-    
-    let startIndex = -1;
-    let endIndex = lines.length;
-    
-    // Find the start of the section
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].toLowerCase();
-      if (keywords.some(keyword => line.includes(keyword))) {
-        startIndex = i;
-        break;
-      }
-    }
-    
-    if (startIndex === -1) return null;
-    
-    // Find the end of the section (next major section)
-    for (let i = startIndex + 1; i < lines.length; i++) {
-      const line = lines[i].toLowerCase();
-      // Check if this line starts a new major section
-      if (line.includes('skills') || line.includes('projects') || line.includes('certificates') ||
-          line.includes('activities') || line.includes('awards') ||
-          line.includes('publications') || line.includes('languages')) {
-        endIndex = i;
-        break;
-      }
-    }
-    
-    return lines.slice(startIndex + 1, endIndex).join('\n');
-  };
-
-  // Helper functions for detecting new entries
-  const isNewExperienceEntry = (line: string, index: number, allLines: string[]): boolean => {
-    const lower = line.toLowerCase();
-    
-    // Check if this line looks like a company name (starts with capital letters, contains business keywords)
-    const isCompanyName = /^[A-Z][a-zA-Z\s&.,]+(?:Inc|Corp|Ltd|LLC|Company|Group|Technologies|Solutions|Systems)$/i.test(line);
-    
-    // Check if this line contains date patterns (indicating a new job entry)
-    const hasDatePattern = /\d{4}/.test(line) && (line.includes('20') || line.includes('19'));
-    
-    // Check if this line is significantly shorter than the previous line (likely a header)
-    const prevLine = index > 0 ? allLines[index - 1] : '';
-    const isShorterThanPrev = Boolean(prevLine && line.length < prevLine.length * 0.7);
-    
-    // Check if this line contains job-related keywords
-    const hasJobKeywords = lower.includes('developer') || lower.includes('engineer') || 
-                          lower.includes('manager') || lower.includes('analyst') ||
-                          lower.includes('specialist') || lower.includes('coordinator');
-    
-    return isCompanyName || (hasDatePattern && hasJobKeywords) || (isShorterThanPrev && hasJobKeywords);
-  };
-
-  const isNewEducationEntry = (line: string, index: number, allLines: string[]): boolean => {
-    const lower = line.toLowerCase();
-    
-    // Check if this line looks like an institution name
-    const isInstitutionName = /^[A-Z][a-zA-Z\s&.,]+(?:University|College|School|Institute|Academy)$/i.test(line);
-    
-    // Check if this line contains degree patterns
-    const hasDegreePattern = lower.includes('bachelor') || lower.includes('master') || 
-                            lower.includes('phd') || lower.includes('degree') ||
-                            lower.includes('diploma') || lower.includes('certificate');
-    
-    // Check if this line contains date patterns (graduation year)
-    const hasDatePattern = /\d{4}/.test(line) && (line.includes('20') || line.includes('19'));
-    
-    // Check if this line is significantly shorter than the previous line (likely a header)
-    const prevLine = index > 0 ? allLines[index - 1] : '';
-    const isShorterThanPrev = Boolean(prevLine && line.length < prevLine.length * 0.7);
-    
-    return isInstitutionName || (hasDegreePattern && hasDatePattern) || (isShorterThanPrev && hasDegreePattern);
-  };
 
   const updateResumeData = (section: keyof ResumeData, data: any) => {
     setResumeData(prev => ({
@@ -576,7 +291,8 @@ const ResumeBuilderPage = () => {
       company: '',
       position: '',
       duration: '',
-      description: ''
+      description: '',
+      location: ''
     };
     setResumeData(prev => ({
       ...prev,
@@ -598,6 +314,214 @@ const ResumeBuilderPage = () => {
       ...prev,
       experience: prev.experience.filter(exp => exp.id !== id)
     }));
+  };
+
+  const addEducation = () => {
+    const newEducation = {
+      id: Date.now().toString(),
+      institution: '',
+      degree: '',
+      year: '',
+      description: '',
+      grade: '',
+      location: ''
+    };
+    setResumeData(prev => ({
+      ...prev,
+      education: [...prev.education, newEducation]
+    }));
+  };
+
+  const updateEducation = (id: string, field: string, value: string) => {
+    setResumeData(prev => ({
+      ...prev,
+      education: prev.education.map(edu => 
+        edu.id === id ? { ...edu, [field]: value } : edu
+      )
+    }));
+  };
+
+  const removeEducation = (id: string) => {
+    setResumeData(prev => ({
+      ...prev,
+      education: prev.education.filter(edu => edu.id !== id)
+    }));
+  };
+
+  const addActivity = () => {
+    const newActivity = {
+      id: Date.now().toString(),
+      title: '',
+      description: ''
+    };
+    setResumeData(prev => ({
+      ...prev,
+      activities: [...prev.activities, newActivity]
+    }));
+  };
+
+  const updateActivity = (id: string, field: string, value: string) => {
+    setResumeData(prev => ({
+      ...prev,
+      activities: prev.activities.map(activity => 
+        activity.id === id ? { ...activity, [field]: value } : activity
+      )
+    }));
+  };
+
+  const removeActivity = (id: string) => {
+    setResumeData(prev => ({
+      ...prev,
+      activities: prev.activities.filter(activity => activity.id !== id)
+    }));
+  };
+
+  const addProject = () => {
+    const newProject = {
+      id: Date.now().toString(),
+      name: '',
+      techStack: '',
+      startDate: '',
+      endDate: '',
+      description: '',
+      link: ''
+    };
+    setResumeData(prev => ({
+      ...prev,
+      projects: [...prev.projects, newProject]
+    }));
+  };
+
+  const updateProject = (id: string, field: string, value: string) => {
+    setResumeData(prev => ({
+      ...prev,
+      projects: prev.projects.map(project => 
+        project.id === id ? { ...project, [field]: value } : project
+      )
+    }));
+  };
+
+  const removeProject = (id: string) => {
+    setResumeData(prev => ({
+      ...prev,
+      projects: prev.projects.filter(project => project.id !== id)
+    }));
+  };
+
+  const addCertification = () => {
+    const newCertification = {
+      id: Date.now().toString(),
+      certificateName: '',
+      link: '',
+      startDate: '',
+      endDate: '',
+      instituteName: ''
+    };
+    setResumeData(prev => ({
+      ...prev,
+      certifications: [...prev.certifications, newCertification]
+    }));
+  };
+
+  const updateCertification = (id: string, field: string, value: string) => {
+    setResumeData(prev => ({
+      ...prev,
+      certifications: prev.certifications.map(cert => 
+        cert.id === id ? { ...cert, [field]: value } : cert
+      )
+    }));
+  };
+
+  const removeCertification = (id: string) => {
+    setResumeData(prev => ({
+      ...prev,
+      certifications: prev.certifications.filter(cert => cert.id !== id)
+    }));
+  };
+
+  const addReference = () => {
+    const newReference = {
+      id: Date.now().toString(),
+      name: '',
+      title: '',
+      company: '',
+      phone: '',
+      email: '',
+      relationship: ''
+    };
+    setResumeData(prev => ({
+      ...prev,
+      references: [...prev.references, newReference]
+    }));
+  };
+
+  const updateReference = (id: string, field: string, value: string) => {
+    setResumeData(prev => ({
+      ...prev,
+      references: prev.references.map(ref => 
+        ref.id === id ? { ...ref, [field]: value } : ref
+      )
+    }));
+  };
+
+  const removeReference = (id: string) => {
+    setResumeData(prev => ({
+      ...prev,
+      references: prev.references.filter(ref => ref.id !== id)
+    }));
+  };
+
+  // Custom Section Management
+  const addCustomSection = (sectionData: any) => {
+    const newSection = {
+      id: Date.now().toString() + Math.random(),
+      title: sectionData.title,
+      type: sectionData.type,
+      position: resumeData.customSections.length,
+      content: sectionData.content,
+      styling: sectionData.styling
+    };
+    setResumeData(prev => ({
+      ...prev,
+      customSections: [...prev.customSections, newSection]
+    }));
+    setIsCustomSectionModalOpen(false);
+  };
+
+  const updateCustomSection = (id: string, field: string, value: any) => {
+    setResumeData(prev => ({
+      ...prev,
+      customSections: prev.customSections.map(section => 
+        section.id === id ? { ...section, [field]: value } : section
+      )
+    }));
+  };
+
+  const removeCustomSection = (id: string) => {
+    setResumeData(prev => ({
+      ...prev,
+      customSections: prev.customSections.filter(section => section.id !== id)
+    }));
+  };
+
+  const moveCustomSection = (id: string, direction: 'up' | 'down') => {
+    setResumeData(prev => {
+      const sections = [...prev.customSections];
+      const currentIndex = sections.findIndex(section => section.id === id);
+      
+      if (direction === 'up' && currentIndex > 0) {
+        [sections[currentIndex], sections[currentIndex - 1]] = [sections[currentIndex - 1], sections[currentIndex]];
+      } else if (direction === 'down' && currentIndex < sections.length - 1) {
+        [sections[currentIndex], sections[currentIndex + 1]] = [sections[currentIndex + 1], sections[currentIndex]];
+      }
+      
+      // Update positions
+      sections.forEach((section, index) => {
+        section.position = index;
+      });
+      
+      return { ...prev, customSections: sections };
+    });
   };
 
   const handleTemplateChange = (template: Template) => {
@@ -685,8 +609,28 @@ const ResumeBuilderPage = () => {
     { id: 'education', label: 'Education', icon: GraduationCap },
     { id: 'experience', label: 'Experience', icon: Briefcase },
     { id: 'activities', label: 'Activities', icon: Activity },
-
+    { id: 'projects', label: 'Projects', icon: Code },
+    { id: 'certifications', label: 'Certifications', icon: Award },
+    { id: 'references', label: 'References', icon: Users }
   ];
+
+  // Add custom sections to the sections array
+  const allSections = [
+    ...sections,
+    ...resumeData.customSections.map(section => ({
+      id: `custom-${section.id}`,
+      label: section.title,
+      icon: FileText,
+      isCustom: true,
+      customData: section
+    }))
+  ] as Array<{
+    id: string;
+    label: string;
+    icon: any;
+    isCustom?: boolean;
+    customData?: any;
+  }>;
 
   return (
     <>
@@ -804,7 +748,7 @@ const ResumeBuilderPage = () => {
                   summary: resumeData.summary,
                   skills: {
                     technical: resumeData.skills,
-                    professional: resumeData.languages
+                    professional: resumeData.languages.map(lang => lang.name)
                   },
                   experience: resumeData.experience.map(exp => ({
                     title: exp.position,
@@ -819,8 +763,9 @@ const ResumeBuilderPage = () => {
                     details: [edu.description]
                   })),
                   additionalInfo: {
-                    languages: resumeData.languages
-                  }
+                    languages: resumeData.languages.map(lang => lang.name)
+                  },
+                  customSections: resumeData.customSections
                 }}
                 color={selectedColor}
               />
@@ -832,9 +777,19 @@ const ResumeBuilderPage = () => {
             <div className="p-6">
               {/* Navigation */}
               <div className="mb-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Edit Resume</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Edit Resume</h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsCustomSectionModalOpen(true)}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Section
+                  </Button>
+                </div>
                 <div className="space-y-1">
-                  {sections.map((section) => {
+                  {allSections.map((section) => {
                     const Icon = section.icon;
                     return (
                       <div key={section.id}>
@@ -886,18 +841,47 @@ const ResumeBuilderPage = () => {
                             {section.id === 'education' && (
                               <EducationSection
                                 education={resumeData.education}
-                                onChange={(education) => updateResumeData('education', education)}
+                                onAdd={addEducation}
+                                onUpdate={updateEducation}
+                                onRemove={removeEducation}
                               />
                             )}
 
                             {section.id === 'activities' && (
                               <ActivitiesSection
                                 activities={resumeData.activities}
-                                onChange={(activities) => updateResumeData('activities', activities)}
+                                onAdd={addActivity}
+                                onUpdate={updateActivity}
+                                onRemove={removeActivity}
                               />
                             )}
 
+                            {section.id === 'projects' && (
+                              <ProjectsSection
+                                projects={resumeData.projects}
+                                onAdd={addProject}
+                                onUpdate={updateProject}
+                                onRemove={removeProject}
+                              />
+                            )}
 
+                            {section.id === 'certifications' && (
+                              <CertificationsSection
+                                certifications={resumeData.certifications}
+                                onAdd={addCertification}
+                                onUpdate={updateCertification}
+                                onRemove={removeCertification}
+                              />
+                            )}
+
+                            {section.id === 'references' && (
+                              <ReferencesSection
+                                references={resumeData.references}
+                                onAdd={addReference}
+                                onUpdate={updateReference}
+                                onRemove={removeReference}
+                              />
+                            )}
 
                             {section.id === 'summary' && (
                               <SummarySection
@@ -909,6 +893,18 @@ const ResumeBuilderPage = () => {
                                 }}
                               />
                             )}
+
+                            {/* Custom Section Handling */}
+                            {section.isCustom && section.customData && (
+                              <CustomSectionEditor
+                                section={section.customData}
+                                onUpdate={(field, value) => updateCustomSection(section.customData.id, field, value)}
+                                onRemove={() => removeCustomSection(section.customData.id)}
+                                onMoveUp={() => moveCustomSection(section.customData.id, 'up')}
+                                onMoveDown={() => moveCustomSection(section.customData.id, 'down')}
+                                totalSections={resumeData.customSections.length}
+                              />
+                            )}
                           </div>
                         )}
                       </div>
@@ -916,63 +912,6 @@ const ResumeBuilderPage = () => {
                   })}
                 </div>
               </div>
-
-              {/* Content Area - Remove this section since content now appears in dropdowns */}
-              {/* <div className="bg-white rounded-lg border border-gray-200 p-6">
-                {activeSection === 'basic-details' && (
-                  <BasicDetailsSection
-                    data={resumeData.basicDetails}
-                    onChange={(data) => updateResumeData('basicDetails', data)}
-                  />
-                )}
-
-                {activeSection === 'skills' && (
-                  <SkillsSection
-                    skills={resumeData.skills}
-                    languages={resumeData.languages}
-                    onChange={(skills, languages) => {
-                      updateResumeData('skills', skills);
-                      updateResumeData('languages', languages);
-                    }}
-                  />
-                )}
-
-                {activeSection === 'experience' && (
-                  <ExperienceSection
-                    experience={resumeData.experience}
-                    onAdd={addExperience}
-                    onUpdate={updateExperience}
-                    onRemove={removeExperience}
-                  />
-                )}
-
-                {activeSection === 'education' && (
-                  <EducationSection
-                    education={resumeData.education}
-                    onChange={(education) => updateResumeData('education', education)}
-                  />
-                )}
-
-                {activeSection === 'activities' && (
-                  <ActivitiesSection
-                    activities={resumeData.activities}
-                    onChange={(activities) => updateResumeData('activities', activities)}
-                  />
-                )}
-
-
-
-                {activeSection === 'summary' && (
-                  <SummarySection
-                    summary={resumeData.summary}
-                    objective={resumeData.objective}
-                    onChange={(summary, objective) => {
-                      updateResumeData('summary', summary);
-                      updateResumeData('objective', objective);
-                    }}
-                  />
-                )}
-              </div> */}
             </div>
           </div>
         </div>
@@ -995,7 +934,7 @@ const ResumeBuilderPage = () => {
           summary: resumeData.summary,
           skills: {
             technical: resumeData.skills,
-            professional: resumeData.languages
+            professional: resumeData.languages.map(lang => lang.name)
           },
           experience: resumeData.experience.map(exp => ({
             title: exp.position,
@@ -1010,10 +949,18 @@ const ResumeBuilderPage = () => {
             details: [edu.description]
           })),
           additionalInfo: {
-            languages: resumeData.languages
-          }
+            languages: resumeData.languages.map(lang => lang.name)
+          },
+          customSections: resumeData.customSections
         }}
         color={selectedColor}
+      />
+
+      {/* Add Custom Section Modal */}
+      <AddCustomSectionModal 
+        isOpen={isCustomSectionModalOpen} 
+        onClose={() => setIsCustomSectionModalOpen(false)} 
+        onAdd={addCustomSection} 
       />
     </>
   );
@@ -1084,12 +1031,30 @@ const BasicDetailsSection = ({ data, onChange }: { data: any; onChange: (data: a
           placeholder="www.yourwebsite.com"
         />
       </div>
+      <div>
+        <Label htmlFor="github">GitHub</Label>
+        <Input
+          id="github"
+          value={data.github}
+          onChange={(e) => onChange({ ...data, github: e.target.value })}
+          placeholder="https://github.com/yourusername"
+        />
+      </div>
+      <div>
+        <Label htmlFor="linkedin">LinkedIn</Label>
+        <Input
+          id="linkedin"
+          value={data.linkedin}
+          onChange={(e) => onChange({ ...data, linkedin: e.target.value })}
+          placeholder="https://linkedin.com/in/yourusername"
+        />
+      </div>
     </div>
   );
 };
 
 // Skills Section Component
-const SkillsSection = ({ skills, languages, onChange }: { skills: string[]; languages: string[]; onChange: (skills: string[], languages: string[]) => void }) => {
+const SkillsSection = ({ skills, languages, onChange }: { skills: string[]; languages: Array<{ name: string; proficiency: string }>; onChange: (skills: string[], languages: Array<{ name: string; proficiency: string }>) => void }) => {
   const addSkill = () => {
     onChange([...skills, ''], languages);
   };
@@ -1106,12 +1071,12 @@ const SkillsSection = ({ skills, languages, onChange }: { skills: string[]; lang
   };
 
   const addLanguage = () => {
-    onChange(skills, [...languages, '']);
+    onChange(skills, [...languages, { name: '', proficiency: '' }]);
   };
 
-  const updateLanguage = (index: number, value: string) => {
+  const updateLanguage = (index: number, field: string, value: string) => {
     const newLanguages = [...languages];
-    newLanguages[index] = value;
+    newLanguages[index] = { ...newLanguages[index], [field]: value };
     onChange(skills, newLanguages);
   };
 
@@ -1155,9 +1120,14 @@ const SkillsSection = ({ skills, languages, onChange }: { skills: string[]; lang
           {languages.map((language, index) => (
             <div key={index} className="flex gap-2">
               <Input
-                value={language}
-                onChange={(e) => updateLanguage(index, e.target.value)}
+                value={language.name}
+                onChange={(e) => updateLanguage(index, 'name', e.target.value)}
                 placeholder="Enter language"
+              />
+              <Input
+                value={language.proficiency}
+                onChange={(e) => updateLanguage(index, 'proficiency', e.target.value)}
+                placeholder="e.g., Fluent"
               />
               <Button
                 variant="outline"
@@ -1227,6 +1197,15 @@ const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove }: {
               />
             </div>
 
+            <div>
+              <Label>Location</Label>
+              <Input
+                value={exp.location}
+                onChange={(e) => onUpdate(exp.id, 'location', e.target.value)}
+                placeholder="City, Country"
+              />
+            </div>
+
             <Button
               variant="outline"
               size="sm"
@@ -1247,27 +1226,12 @@ const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove }: {
 };
 
 // Education Section Component
-const EducationSection = ({ education, onChange }: { education: any[]; onChange: (education: any[]) => void }) => {
-  const addEducation = () => {
-    onChange([...education, {
-      id: Date.now().toString(),
-      institution: '',
-      degree: '',
-      year: '',
-      description: ''
-    }]);
-  };
-
-  const updateEducation = (id: string, field: string, value: string) => {
-    onChange(education.map(edu => 
-      edu.id === id ? { ...edu, [field]: value } : edu
-    ));
-  };
-
-  const removeEducation = (id: string) => {
-    onChange(education.filter(edu => edu.id !== id));
-  };
-
+const EducationSection = ({ education, onAdd, onUpdate, onRemove }: { 
+  education: any[]; 
+  onAdd: () => void; 
+  onUpdate: (id: string, field: string, value: string) => void;
+  onRemove: (id: string) => void;
+}) => {
   return (
     <div className="space-y-4">
       {education.map((edu) => (
@@ -1278,7 +1242,7 @@ const EducationSection = ({ education, onChange }: { education: any[]; onChange:
                 <Label>Institution</Label>
                 <Input
                   value={edu.institution}
-                  onChange={(e) => updateEducation(edu.id, 'institution', e.target.value)}
+                  onChange={(e) => onUpdate(edu.id, 'institution', e.target.value)}
                   placeholder="University name"
                 />
               </div>
@@ -1286,7 +1250,7 @@ const EducationSection = ({ education, onChange }: { education: any[]; onChange:
                 <Label>Degree</Label>
                 <Input
                   value={edu.degree}
-                  onChange={(e) => updateEducation(edu.id, 'degree', e.target.value)}
+                  onChange={(e) => onUpdate(edu.id, 'degree', e.target.value)}
                   placeholder="e.g., Bachelor of Science"
                 />
               </div>
@@ -1296,7 +1260,7 @@ const EducationSection = ({ education, onChange }: { education: any[]; onChange:
               <Label>Year</Label>
               <Input
                 value={edu.year}
-                onChange={(e) => updateEducation(edu.id, 'year', e.target.value)}
+                onChange={(e) => onUpdate(edu.id, 'year', e.target.value)}
                 placeholder="e.g., 2020"
               />
             </div>
@@ -1305,16 +1269,34 @@ const EducationSection = ({ education, onChange }: { education: any[]; onChange:
               <Label>Description</Label>
               <Textarea
                 value={edu.description}
-                onChange={(e) => updateEducation(edu.id, 'description', e.target.value)}
+                onChange={(e) => onUpdate(edu.id, 'description', e.target.value)}
                 placeholder="Additional details about your education"
                 rows={3}
+              />
+            </div>
+
+            <div>
+              <Label>Grade</Label>
+              <Input
+                value={edu.grade}
+                onChange={(e) => onUpdate(edu.id, 'grade', e.target.value)}
+                placeholder="e.g., A"
+              />
+            </div>
+
+            <div>
+              <Label>Location</Label>
+              <Input
+                value={edu.location}
+                onChange={(e) => onUpdate(edu.id, 'location', e.target.value)}
+                placeholder="City, Country"
               />
             </div>
 
             <Button
               variant="outline"
               size="sm"
-              onClick={() => removeEducation(edu.id)}
+              onClick={() => onRemove(edu.id)}
               className="text-red-600 hover:text-red-700"
             >
               Remove Education
@@ -1323,7 +1305,7 @@ const EducationSection = ({ education, onChange }: { education: any[]; onChange:
         </Card>
       ))}
 
-      <Button variant="outline" onClick={addEducation}>
+      <Button variant="outline" onClick={onAdd}>
         Add Education
       </Button>
     </div>
@@ -1331,25 +1313,12 @@ const EducationSection = ({ education, onChange }: { education: any[]; onChange:
 };
 
 // Activities Section Component
-const ActivitiesSection = ({ activities, onChange }: { activities: any[]; onChange: (activities: any[]) => void }) => {
-  const addActivity = () => {
-    onChange([...activities, {
-      id: Date.now().toString(),
-      title: '',
-      description: ''
-    }]);
-  };
-
-  const updateActivity = (id: string, field: string, value: string) => {
-    onChange(activities.map(activity => 
-      activity.id === id ? { ...activity, [field]: value } : activity
-    ));
-  };
-
-  const removeActivity = (id: string) => {
-    onChange(activities.filter(activity => activity.id !== id));
-  };
-
+const ActivitiesSection = ({ activities, onAdd, onUpdate, onRemove }: { 
+  activities: any[]; 
+  onAdd: () => void; 
+  onUpdate: (id: string, field: string, value: string) => void;
+  onRemove: (id: string) => void;
+}) => {
   return (
     <div className="space-y-4">
       {activities.map((activity) => (
@@ -1359,7 +1328,7 @@ const ActivitiesSection = ({ activities, onChange }: { activities: any[]; onChan
               <Label>Activity Title</Label>
               <Input
                 value={activity.title}
-                onChange={(e) => updateActivity(activity.id, 'title', e.target.value)}
+                onChange={(e) => onUpdate(activity.id, 'title', e.target.value)}
                 placeholder="Activity name"
               />
             </div>
@@ -1368,7 +1337,7 @@ const ActivitiesSection = ({ activities, onChange }: { activities: any[]; onChan
               <Label>Description</Label>
               <Textarea
                 value={activity.description}
-                onChange={(e) => updateActivity(activity.id, 'description', e.target.value)}
+                onChange={(e) => onUpdate(activity.id, 'description', e.target.value)}
                 placeholder="Describe the activity"
                 rows={3}
               />
@@ -1377,7 +1346,7 @@ const ActivitiesSection = ({ activities, onChange }: { activities: any[]; onChan
             <Button
               variant="outline"
               size="sm"
-              onClick={() => removeActivity(activity.id)}
+              onClick={() => onRemove(activity.id)}
               className="text-red-600 hover:text-red-700"
             >
               Remove Activity
@@ -1386,13 +1355,261 @@ const ActivitiesSection = ({ activities, onChange }: { activities: any[]; onChan
         </Card>
       ))}
 
-      <Button variant="outline" onClick={addActivity}>
+      <Button variant="outline" onClick={onAdd}>
         Add Activity
       </Button>
     </div>
   );
 };
 
+// Projects Section Component
+const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove }: { 
+  projects: any[]; 
+  onAdd: () => void; 
+  onUpdate: (id: string, field: string, value: string) => void;
+  onRemove: (id: string) => void;
+}) => {
+  return (
+    <div className="space-y-4">
+      {projects.map((project) => (
+        <Card key={project.id} className="p-4">
+          <div className="space-y-4">
+            <div>
+              <Label>Project Name</Label>
+              <Input
+                value={project.name}
+                onChange={(e) => onUpdate(project.id, 'name', e.target.value)}
+                placeholder="Project name"
+              />
+            </div>
+
+            <div>
+              <Label>Tech Stack</Label>
+              <Input
+                value={project.techStack}
+                onChange={(e) => onUpdate(project.id, 'techStack', e.target.value)}
+                placeholder="e.g., React, Node.js, MongoDB"
+              />
+            </div>
+
+                         <div className="grid grid-cols-2 gap-4">
+               <div>
+                 <Label>Start Date</Label>
+                 <Input
+                   value={project.startDate}
+                   onChange={(e) => onUpdate(project.id, 'startDate', e.target.value)}
+                   placeholder="e.g., Jan 2022"
+                 />
+               </div>
+               <div>
+                 <Label>End Date</Label>
+                 <Input
+                   value={project.endDate}
+                   onChange={(e) => onUpdate(project.id, 'endDate', e.target.value)}
+                   placeholder="e.g., Dec 2022"
+                 />
+               </div>
+             </div>
+
+            <div>
+              <Label>Description</Label>
+              <Textarea
+                value={project.description}
+                onChange={(e) => onUpdate(project.id, 'description', e.target.value)}
+                placeholder="Describe the project"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label>Link</Label>
+              <Input
+                value={project.link}
+                onChange={(e) => onUpdate(project.id, 'link', e.target.value)}
+                placeholder="https://example.com/project"
+              />
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onRemove(project.id)}
+              className="text-red-600 hover:text-red-700"
+            >
+              Remove Project
+            </Button>
+          </div>
+        </Card>
+      ))}
+
+      <Button variant="outline" onClick={onAdd}>
+        Add Project
+      </Button>
+    </div>
+  );
+};
+
+// Certifications Section Component
+const CertificationsSection = ({ certifications, onAdd, onUpdate, onRemove }: { 
+  certifications: any[]; 
+  onAdd: () => void; 
+  onUpdate: (id: string, field: string, value: string) => void;
+  onRemove: (id: string) => void;
+}) => {
+  return (
+    <div className="space-y-4">
+      {certifications.map((cert) => (
+        <Card key={cert.id} className="p-4">
+          <div className="space-y-4">
+            <div>
+              <Label>Certificate Name</Label>
+              <Input
+                value={cert.certificateName}
+                onChange={(e) => onUpdate(cert.id, 'certificateName', e.target.value)}
+                placeholder="e.g., AWS Certified Developer"
+              />
+            </div>
+
+                         <div className="grid grid-cols-2 gap-4">
+               <div>
+                 <Label>Start Date</Label>
+                 <Input
+                   value={cert.startDate}
+                   onChange={(e) => onUpdate(cert.id, 'startDate', e.target.value)}
+                   placeholder="e.g., Jan 2023"
+                 />
+               </div>
+               <div>
+                 <Label>End Date</Label>
+                 <Input
+                   value={cert.endDate}
+                   onChange={(e) => onUpdate(cert.id, 'endDate', e.target.value)}
+                   placeholder="e.g., Present"
+                 />
+               </div>
+             </div>
+
+            <div>
+              <Label>Institute</Label>
+              <Input
+                value={cert.instituteName}
+                onChange={(e) => onUpdate(cert.id, 'instituteName', e.target.value)}
+                placeholder="e.g., Amazon Web Services"
+              />
+            </div>
+
+            <div>
+              <Label>Link</Label>
+              <Input
+                value={cert.link}
+                onChange={(e) => onUpdate(cert.id, 'link', e.target.value)}
+                placeholder="https://example.com/certificate"
+              />
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onRemove(cert.id)}
+              className="text-red-600 hover:text-red-700"
+            >
+              Remove Certification
+            </Button>
+          </div>
+        </Card>
+      ))}
+
+      <Button variant="outline" onClick={onAdd}>
+        Add Certification
+      </Button>
+    </div>
+  );
+};
+
+// References Section Component
+const ReferencesSection = ({ references, onAdd, onUpdate, onRemove }: { 
+  references: any[]; 
+  onAdd: () => void; 
+  onUpdate: (id: string, field: string, value: string) => void;
+  onRemove: (id: string) => void;
+}) => {
+  return (
+    <div className="space-y-4">
+      {references.map((ref) => (
+        <Card key={ref.id} className="p-4">
+          <div className="space-y-4">
+            <div>
+              <Label>Name</Label>
+              <Input
+                value={ref.name}
+                onChange={(e) => onUpdate(ref.id, 'name', e.target.value)}
+                placeholder="Reference name"
+              />
+            </div>
+
+            <div>
+              <Label>Title</Label>
+              <Input
+                value={ref.title}
+                onChange={(e) => onUpdate(ref.id, 'title', e.target.value)}
+                placeholder="e.g., CEO"
+              />
+            </div>
+
+            <div>
+              <Label>Company</Label>
+              <Input
+                value={ref.company}
+                onChange={(e) => onUpdate(ref.id, 'company', e.target.value)}
+                placeholder="Company name"
+              />
+            </div>
+
+            <div>
+              <Label>Phone</Label>
+              <Input
+                value={ref.phone}
+                onChange={(e) => onUpdate(ref.id, 'phone', e.target.value)}
+                placeholder="+1 234 567 8900"
+              />
+            </div>
+
+            <div>
+              <Label>Email</Label>
+              <Input
+                value={ref.email}
+                onChange={(e) => onUpdate(ref.id, 'email', e.target.value)}
+                placeholder="reference@example.com"
+              />
+            </div>
+
+            <div>
+              <Label>Relationship</Label>
+              <Input
+                value={ref.relationship}
+                onChange={(e) => onUpdate(ref.id, 'relationship', e.target.value)}
+                placeholder="e.g., Previous Employer"
+              />
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onRemove(ref.id)}
+              className="text-red-600 hover:text-red-700"
+            >
+              Remove Reference
+            </Button>
+          </div>
+        </Card>
+      ))}
+
+      <Button variant="outline" onClick={onAdd}>
+        Add Reference
+      </Button>
+    </div>
+  );
+};
 
 
 // Summary Section Component
@@ -1427,5 +1644,370 @@ const SummarySection = ({ summary, objective, onChange }: {
     </div>
   );
 };
+
+// Custom Section Editor Component
+const CustomSectionEditor = ({ 
+  section, 
+  onUpdate, 
+  onRemove, 
+  onMoveUp, 
+  onMoveDown, 
+  totalSections 
+}: { 
+  section: any; 
+  onUpdate: (field: string, value: any) => void; 
+  onRemove: () => void; 
+  onMoveUp: () => void; 
+  onMoveDown: () => void; 
+  totalSections: number;
+}) => {
+  const addItem = () => {
+    const newItem = {
+      id: Date.now().toString() + Math.random(),
+      title: '',
+      subtitle: '',
+      description: '',
+      startDate: '',
+      endDate: '',
+      location: '',
+      link: '',
+      bullets: [''],
+      tags: ['']
+    };
+    
+    const currentItems = section.content.items || [];
+    onUpdate('content', { ...section.content, items: [...currentItems, newItem] });
+  };
+
+  const updateItem = (itemId: string, field: string, value: any) => {
+    const updatedItems = (section.content.items || []).map((item: any) =>
+      item.id === itemId ? { ...item, [field]: value } : item
+    );
+    onUpdate('content', { ...section.content, items: updatedItems });
+  };
+
+  const removeItem = (itemId: string) => {
+    const updatedItems = (section.content.items || []).filter((item: any) => item.id !== itemId);
+    onUpdate('content', { ...section.content, items: updatedItems });
+  };
+
+  const addBullet = (itemId: string) => {
+    const item = (section.content.items || []).find((i: any) => i.id === itemId);
+    if (item) {
+      const updatedBullets = [...(item.bullets || []), ''];
+      updateItem(itemId, 'bullets', updatedBullets);
+    }
+  };
+
+  const updateBullet = (itemId: string, bulletIndex: number, value: string) => {
+    const item = (section.content.items || []).find((i: any) => i.id === itemId);
+    if (item) {
+      const updatedBullets = [...(item.bullets || [])];
+      updatedBullets[bulletIndex] = value;
+      updateItem(itemId, 'bullets', updatedBullets);
+    }
+  };
+
+  const removeBullet = (itemId: string, bulletIndex: number) => {
+    const item = (section.content.items || []).find((i: any) => i.id === itemId);
+    if (item) {
+      const updatedBullets = (item.bullets || []).filter((_: any, index: number) => index !== bulletIndex);
+      updateItem(itemId, 'bullets', updatedBullets);
+    }
+  };
+
+  const addTag = (itemId: string) => {
+    const item = (section.content.items || []).find((i: any) => i.id === itemId);
+    if (item) {
+      const updatedTags = [...(item.tags || []), ''];
+      updateItem(itemId, 'tags', updatedTags);
+    }
+  };
+
+  const updateTag = (itemId: string, tagIndex: number, value: string) => {
+    const item = (section.content.items || []).find((i: any) => i.id === itemId);
+    if (item) {
+      const updatedTags = [...(item.tags || [])];
+      updatedTags[tagIndex] = value;
+      updateItem(itemId, 'tags', updatedTags);
+    }
+  };
+
+  const removeTag = (itemId: string, tagIndex: number) => {
+    const item = (section.content.items || []).find((i: any) => i.id === itemId);
+    if (item) {
+      const updatedTags = (item.tags || []).filter((_: any, index: number) => index !== tagIndex);
+      updateItem(itemId, 'tags', updatedTags);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Section Title */}
+      <div>
+        <Label>Section Title</Label>
+        <Input
+          value={section.title}
+          onChange={(e) => onUpdate('title', e.target.value)}
+          placeholder="Enter section title"
+        />
+      </div>
+
+      {/* Section Type */}
+      <div>
+        <Label>Section Type</Label>
+        <select
+          value={section.type}
+          onChange={(e) => onUpdate('type', e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded-md"
+        >
+          <option value="text">Text Only</option>
+          <option value="list">List Items</option>
+          <option value="timeline">Timeline</option>
+          <option value="grid">Grid Layout</option>
+          <option value="mixed">Mixed Content</option>
+        </select>
+      </div>
+
+      {/* Styling Options */}
+      <div className="space-y-3">
+        <Label>Styling Options</Label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={section.styling?.showBullets || false}
+              onChange={(e) => onUpdate('styling', { ...section.styling, showBullets: e.target.checked })}
+              className="rounded"
+            />
+            <span className="text-sm">Show Bullets</span>
+          </label>
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={section.styling?.showDates || false}
+              onChange={(e) => onUpdate('styling', { ...section.styling, showDates: e.target.checked })}
+              className="rounded"
+            />
+            <span className="text-sm">Show Dates</span>
+          </label>
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={section.styling?.showLocation || false}
+              onChange={(e) => onUpdate('styling', { ...section.styling, showLocation: e.target.checked })}
+              className="rounded"
+            />
+            <span className="text-sm">Show Location</span>
+          </label>
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={section.styling?.showLinks || false}
+              onChange={(e) => onUpdate('styling', { ...section.styling, showLinks: e.target.checked })}
+              className="rounded"
+            />
+            <span className="text-sm">Show Links</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Text Content (for text type) */}
+      {section.type === 'text' && (
+        <div>
+          <Label>Content</Label>
+          <Textarea
+            value={section.content.text || ''}
+            onChange={(e) => onUpdate('content', { ...section.content, text: e.target.value })}
+            placeholder="Enter section content..."
+            rows={4}
+          />
+        </div>
+      )}
+
+      {/* Items Content (for list, timeline, grid, mixed types) */}
+      {(section.type === 'list' || section.type === 'timeline' || section.type === 'grid' || section.type === 'mixed') && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Items</Label>
+            <Button variant="outline" size="sm" onClick={addItem}>
+              Add Item
+            </Button>
+          </div>
+          
+          {(section.content.items || []).map((item: any, index: number) => (
+            <Card key={item.id} className="p-4">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Title</Label>
+                    <Input
+                      value={item.title || ''}
+                      onChange={(e) => updateItem(item.id, 'title', e.target.value)}
+                      placeholder="Item title"
+                    />
+                  </div>
+                  <div>
+                    <Label>Subtitle</Label>
+                    <Input
+                      value={item.subtitle || ''}
+                      onChange={(e) => updateItem(item.id, 'subtitle', e.target.value)}
+                      placeholder="Item subtitle"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Description</Label>
+                  <Textarea
+                    value={item.description || ''}
+                    onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                    placeholder="Item description"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Start Date</Label>
+                    <Input
+                      value={item.startDate || ''}
+                      onChange={(e) => updateItem(item.id, 'startDate', e.target.value)}
+                      placeholder="e.g., Jan 2020"
+                    />
+                  </div>
+                  <div>
+                    <Label>End Date</Label>
+                    <Input
+                      value={item.endDate || ''}
+                      onChange={(e) => updateItem(item.id, 'endDate', e.target.value)}
+                      placeholder="e.g., Present"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Location</Label>
+                    <Input
+                      value={item.location || ''}
+                      onChange={(e) => updateItem(item.id, 'location', e.target.value)}
+                      placeholder="City, Country"
+                    />
+                  </div>
+                  <div>
+                    <Label>Link</Label>
+                    <Input
+                      value={item.link || ''}
+                      onChange={(e) => updateItem(item.id, 'link', e.target.value)}
+                      placeholder="https://example.com"
+                    />
+                  </div>
+                </div>
+
+                {/* Bullets */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>Bullet Points</Label>
+                    <Button variant="outline" size="sm" onClick={() => addBullet(item.id)}>
+                      Add Bullet
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {(item.bullets || []).map((bullet: string, bulletIndex: number) => (
+                      <div key={bulletIndex} className="flex gap-2">
+                        <Input
+                          value={bullet}
+                          onChange={(e) => updateBullet(item.id, bulletIndex, e.target.value)}
+                          placeholder="Enter bullet point"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeBullet(item.id, bulletIndex)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>Tags</Label>
+                    <Button variant="outline" size="sm" onClick={() => addTag(item.id)}>
+                      Add Tag
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {(item.tags || []).map((tag: string, tagIndex: number) => (
+                      <div key={tagIndex} className="flex gap-2">
+                        <Input
+                          value={tag}
+                          onChange={(e) => updateTag(item.id, tagIndex, e.target.value)}
+                          placeholder="Enter tag"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeTag(item.id, tagIndex)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeItem(item.id)}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  Remove Item
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Section Controls */}
+      <div className="flex items-center justify-between pt-4 border-t">
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onMoveUp}
+            disabled={section.position === 0}
+          >
+            ↑ Move Up
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onMoveDown}
+            disabled={section.position === totalSections - 1}
+          >
+            ↓ Move Down
+          </Button>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRemove}
+          className="text-red-600 hover:text-red-700"
+        >
+          Remove Section
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+
 
 export default ResumeBuilderPage; 
