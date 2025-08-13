@@ -1,245 +1,450 @@
 import React from 'react';
-import { executiveClassicTemplateData } from './data';
-import type { TemplateData } from './data';
 
-interface ExecutiveClassicProps {
+interface TemplateData {
+  personalInfo: {
+    name: string;
+    title: string;
+    address: string;
+    email: string;
+    website: string;
+    phone?: string;
+  };
+  summary: string;
+  skills: {
+    technical: string[];
+    professional?: string[];
+  };
+  experience: Array<{
+    title: string;
+    company: string;
+    dates: string;
+    achievements: string[];
+    description?: string; // Added for fallback
+  }>;
+  education: Array<{
+    degree: string;
+    institution: string;
+    dates: string;
+    details: string[];
+  }>;
+  projects?: Array<{
+    Name: string;
+    Description: string;
+    Tech_Stack: string;
+    Start_Date?: string;
+    End_Date?: string;
+    Link?: string;
+  }>;
+  additionalInfo: {
+    languages?: string[];
+    certifications?: string[];
+    awards?: string[];
+  };
+  customSections?: Array<{
+    id: string;
+    title: string;
+    type: 'text' | 'list' | 'timeline' | 'grid' | 'mixed';
+    position: number;
+    content: {
+      text?: string;
+      items?: Array<{
+        id: string;
+        title?: string;
+        subtitle?: string;
+        description?: string;
+        startDate?: string;
+        endDate?: string;
+        location?: string;
+        link?: string;
+        bullets?: string[];
+        tags?: string[];
+      }>;
+      columns?: Array<{
+        title: string;
+        items: string[];
+      }>;
+    };
+    styling?: {
+      showBullets?: boolean;
+      showDates?: boolean;
+      showLocation?: boolean;
+      showLinks?: boolean;
+      showTags?: boolean;
+      layout?: 'vertical' | 'horizontal' | 'grid';
+    };
+  }>;
+}
+
+interface CleanMinimalProps {
   data?: TemplateData;
   color?: string;
 }
 
-const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({ 
-  data = executiveClassicTemplateData, 
-  color = '#1e293b' 
-}) => {
+const cleanMinimalTemplateData: TemplateData = {
+  personalInfo: {
+    name: 'Nikhil Dundu',
+    title: 'Supply Chain Analyst',
+    address: 'AZ USA',
+    email: 'ndundu1804@gmail.com',
+    website: 'https://www.linkedin.com/in/nikhild180495/',
+    phone: '+1 623-388-1239'
+  },
+  summary: 'Results-driven Supply Chain Analyst with 5 years of experience. India & USA optimizing end-to-end supply chain operations for heavy equipment, telecom, and defense electronics manufacturers. Proven record of reducing inventory 15 – 25 %, cutting logistics costs 12 – 18 %, and accelerating on-time delivery through data-driven planning. Lean Six Sigma methods, and advanced analytics (Power BI, Tableau, SQL, SAP, ERP, WMS). Adept at Agile & Waterfall project environments, cross-functional leadership, and translating complex data into actionable insights that drive margin and service-level improvements.',
+  skills: {
+    technical: [
+      'Analytics & Reporting: Power BI, Tableau, Advanced Excel (Pivot, Power Query, Solver, VBA)',
+      'Database & Languages: SQL Server, MS Access, Python, R, MATLAB',
+      'ERP / SCM Systems: SAP (MM, WM, PP, QM, CO), Oracle NetSuite, Looker',
+      'Process Ideologies: SDLC, Agile/Scrum, Waterfall, Lean Six Sigma, 5S',
+      'Planning & Optimization: Demand Forecasting, S&OP, JIT, ROP, Inventory Optimization, Scorecards',
+      'Project & Collaboration: Jira, Confluence, MS Project, SharePoint, Git',
+      'Soft Skills: Stakeholder Communication, Cross-functional Leadership, Process Improvement, Data Storytelling'
+    ],
+    professional: []
+  },
+  experience: [
+    {
+      title: 'Supply Chain Analyst — Systel Inc. (Remote — Austin, TX, USA)',
+      company: '',
+      dates: 'Apr 2023 – Present',
+      achievements: [
+        'Implemented JIT and ROP inventory models for rugged-server line; reducing excess stock by 15% while maintaining a 98% service level.',
+        'Designed and launched Power BI dashboards with Row-Level Security, enabling 50+ users to access real-time inventory and demand KPIs.',
+        'Automated manual reporting workflows, cutting weekly report preparation time from 6 hours to under 30 minutes.',
+        'Collaborated with cross-functional teams to align demand planning and procurement, improving planning accuracy and visibility.',
+        'Led data consolidation and reporting standardization using Excel and SQL, streamlining data-driven decision-making processes.'
+      ]
+    },
+    {
+      title: 'Supply Chain Analyst — Sterlite Technologies Ltd. (Chennai, India)',
+      company: '',
+      dates: 'Apr 2020 – Apr 2023',
+      achievements: [
+        'Managed end-to-end order fulfillment for fiber optic cables (400+ demand); deployed SAP MM MRP parameters and safety-stock modeling, cutting stockouts 22 %.',
+        'Designed integrated Power BI-Tableau supply-chain control tower integrating SAP, WMS, and freight APIs; provided real-time OTD, capacity, and cost dashboards used by COO.',
+        'Partnered with procurement to institute Supplier Scorecards (quality, OTD, cost variance), improved top-tier supplier OTD from 85 % to 97 % within 9 months.',
+        'Led data consolidation DMAIC project on extrusion line changeovers; reduced setup time 18 % and saved ₹11 M annually.',
+        'Forecasted demand using ARIMA & Prophet models in Python, improving 6-month forecast accuracy from 72 % to 88 %.',
+        'Automated daily WMS reconciliations via SQL & VBA, eliminating 600+ manual hours per year.'
+      ]
+    },
+    {
+      title: 'Supply Chain Analyst — Caterpillar (Chennai, India)',
+      company: '',
+      dates: 'Jun 2018 – Mar 2020',
+      achievements: [
+        'Co-developed inventory segmentation (ABC/XYZ) and Goal-Seek/Solver-based reorder policies, reducing working capital by 10 (1.5 % of finished-goods inventory).',
+        'Enhanced SAP SD order-to-cash workflow; cut order cycle time 20 % and improved order fillrate 10 pp.',
+        'Piloted barcode/RFID tracking for engine components; delivered real-time visibility and cut data entry errors 15 %.',
+        'Supported implementation of Power BI KPI suite for plant leadership, enabling weekly variance root-cause reviews and driving 5 % productivity gain.',
+        'Facilitated supplier negotiations that lowered raw-material cost 12 % and instituted consignment stock for high-turn items.'
+      ]
+    }
+  ],
+  education: [
+    {
+      degree: 'Master of Science, Industrial Engineering (GPA: 3.73) Tempe, Arizona',
+      institution: 'Arizona State University',
+      dates: 'Aug 2023 - May 2025',
+      details: []
+    },
+    {
+      degree: 'Bachelor of Technology, Mechanical Engineering (GPA: 3.65) Chennai, India',
+      institution: 'SRM University',
+      dates: 'Jun 2013 - Jul 2017',
+      details: []
+    }
+  ],
+  additionalInfo: {
+    languages: [],
+    certifications: [],
+    awards: []
+  }
+};
+
+const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
+  // Use the passed data prop if available, otherwise fall back to default data
+  const templateData = data || cleanMinimalTemplateData;
+  
   return (
-    <div className="bg-white p-8 max-w-4xl mx-auto" style={{ 
-      fontFamily: 'Georgia, "Times New Roman", serif',
-      color: '#333333',
-      fontSize: '12px',
-      lineHeight: '1.4'
+    <div className="max-w-4xl mx-auto pt-0 px-0 pb-6 bg-white" style={{ 
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '11px',
+      lineHeight: '1.3'
     }}>
-      {/* Header with Executive Style */}
-      <div className="mb-10 text-center border-b-2 pb-6" style={{ borderColor: color }}>
-        <h1 className="text-4xl font-bold mb-3 uppercase tracking-widest" style={{ 
-          color,
-          fontWeight: '700',
-          letterSpacing: '0.5px',
-          fontSize: '32px'
+      {/* Header */}
+      <div className="text-center mb-4">
+        <h1 className="text-2xl font-bold mb-1" style={{ 
+          fontSize: '22px',
+          fontWeight: 'bold',
+          letterSpacing: '1px'
         }}>
-          {data.personalInfo.name}
+          {templateData.personalInfo?.name || 'Your Name'}
         </h1>
-        <h2 className="text-xl font-semibold mb-4 text-gray-700 uppercase tracking-wide" style={{
-          fontWeight: '600',
-          fontSize: '18px'
-        }}>
-          {data.personalInfo.title}
-        </h2>
-        <div className="flex justify-center items-center space-x-6 text-sm text-gray-600" style={{ fontSize: '11px' }}>
-          <span>{data.personalInfo.address}</span>
-          <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-          <span>{data.personalInfo.email}</span>
-          <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-          <span>{data.personalInfo.website}</span>
+        <div className="text-lg font-semibold mb-2" style={{ fontSize: '14px', fontWeight: '600' }}>
+          {templateData.personalInfo?.title || 'Your Title'}
+        </div>
+        <div className="text-sm" style={{ fontSize: '11px' }}>
+          {templateData.personalInfo?.address || 'Your Address'} | {templateData.personalInfo?.phone || 'Your Phone'} | {templateData.personalInfo?.email || 'your.email@example.com'} | {templateData.personalInfo?.website || 'your-website.com'}
         </div>
       </div>
 
-      {/* Executive Summary */}
-      <div className="mb-10">
-        <h3 className="text-lg font-bold mb-4 uppercase tracking-wide border-b-2 pb-2" style={{ 
-          color, 
-          borderColor: color,
-          fontSize: '14px',
-          fontWeight: '700',
-          letterSpacing: '0.3px'
+      {/* Summary */}
+      <div className="mb-3">
+        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+          fontSize: '13px',
+          fontWeight: 'bold',
+          letterSpacing: '0.5px',
+          paddingBottom: '0px'
         }}>
-          Executive Summary
-        </h3>
-        <p className="text-gray-700 leading-relaxed text-base" style={{
+          SUMMARY
+        </h2>
+        <p className="text-justify leading-relaxed" style={{ 
           fontSize: '11px',
-          lineHeight: '1.5',
+          lineHeight: '1.4',
           textAlign: 'justify'
         }}>
-          {data.summary}
+          {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
         </p>
       </div>
 
-      {/* Core Competencies */}
-      <div className="mb-10">
-        <h3 className="text-lg font-bold mb-6 uppercase tracking-wide border-b-2 pb-2" style={{ 
-          color, 
-          borderColor: color,
-          fontSize: '14px',
-          fontWeight: '700',
-          letterSpacing: '0.3px'
+      {/* Technical Skills */}
+      <div className="mb-3">
+        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+          fontSize: '13px',
+          fontWeight: 'bold',
+          letterSpacing: '0.5px',
+          paddingBottom: '0px'
         }}>
-          Core Competencies
-        </h3>
-        {Array.isArray(data.skills.technical) && data.skills.technical.length > 0 && (
-          <div className="grid grid-cols-3 gap-6">
-            {(Array.isArray(data.skills.technical) ? data.skills.technical : []).map((skill, index) => (
-              <div key={index} className="text-center">
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center text-white font-bold" style={{ 
-                  backgroundColor: color,
-                  fontSize: '12px'
+          TECHNICAL SKILLS
+        </h2>
+        <div className="space-y-1">
+          {templateData.skills?.technical && typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
+            // Handle nested skills structure with categories - display as "Category: skills"
+            Object.entries(templateData.skills.technical).map(([category, skills]) => {
+              // Clean up malformed skills data by removing extra characters and fixing spacing
+              let cleanSkills: string | string[] = skills as string | string[];
+              if (typeof skills === 'string') {
+                // Fix malformed skills like "A, W, S, , (, I, d, e, n, t, i, t, y, , a, n, d, , A, c, c, e, s, s, , M, a, n, a, g, e, m, e, n, t, ,, , E, C, 2, ,, , S, 3, ,, , V, P, C, ,, , C, l, o, u, d, T, r, a, i, l, ,, , C, l, o, u, d, W, a, t, c, h, ,, , S, e, c, u, r, i, t, y, , H, u, b, ), ,, , C, l, o, u, d, , S, e, c, u, r, i, t, y, , P, o, s, t, u, r, e, , M, a, n, a, g, e, m, e, n, t, , (, C, S, P, M, )"
+                cleanSkills = skills
+                  .replace(/,\s*,/g, ',') // Remove double commas
+                  .replace(/,\s*\(/g, ' (') // Fix spacing before parentheses
+                  .replace(/\)\s*,/g, ') ') // Fix spacing after parentheses
+                  .replace(/,\s*\)/g, ')') // Remove commas before closing parentheses
+                  .replace(/\s+/g, ' ') // Normalize multiple spaces
+                  .trim();
+              }
+              
+              return (
+                <div key={category} className="text-sm" style={{ 
+                  fontSize: '11px',
+                  lineHeight: '1.3'
                 }}>
-                  {index + 1}
+                  <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {Array.isArray(cleanSkills) ? cleanSkills.join(', ') : cleanSkills}
                 </div>
-                <span className="text-gray-700 font-medium text-sm" style={{
-                  fontSize: '10px',
-                  fontWeight: '500'
-                }}>{skill}</span>
-              </div>
-            ))}
-          </div>
-        )}
+              );
+            })
+          ) : Array.isArray(templateData.skills?.technical) && templateData.skills.technical.length > 0 ? (
+            // Handle flat skills array (fallback)
+            <div className="text-sm" style={{ 
+              fontSize: '11px',
+              lineHeight: '1.3'
+            }}>
+              {templateData.skills.technical.join(', ')}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500" style={{ 
+              fontSize: '11px',
+              lineHeight: '1.3',
+              fontStyle: 'italic'
+            }}>
+              No technical skills added yet
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Professional Experience with Executive Layout */}
-      <div className="mb-10">
-        <h3 className="text-lg font-bold mb-6 uppercase tracking-wide border-b-2 pb-2" style={{ 
-          color, 
-          borderColor: color,
-          fontSize: '14px',
-          fontWeight: '700',
-          letterSpacing: '0.3px'
+      {/* Professional Experience */}
+      <div className="mb-3">
+        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+          fontSize: '13px',
+          fontWeight: 'bold',
+          letterSpacing: '0.5px',
+          paddingBottom: '0px'
         }}>
-          Professional Experience
-        </h3>
-        <div className="space-y-8">
-          {data.experience.map((exp, index) => (
-            <div key={index} className="relative">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <h4 className="text-xl font-bold text-gray-900 mb-1" style={{
-                    fontSize: '13px',
-                    fontWeight: '600'
+          PROFESSIONAL EXPERIENCE
+        </h2>
+        <div className="space-y-1">
+          {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
+            templateData.experience.map((exp, index) => (
+              <div key={index}>
+                <div className="flex justify-between items-start mb-1">
+                  <h3 className="font-bold" style={{ 
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    flex: '1'
                   }}>
                     {exp.title}
-                  </h4>
-                  <p className="text-lg font-semibold text-gray-700 mb-2" style={{
+                  </h3>
+                  <div className="font-bold text-right" style={{ 
                     fontSize: '11px',
-                    fontWeight: '500'
-                  }}>{exp.company}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-sm font-medium text-gray-600 bg-gray-100 px-4 py-2 rounded-full" style={{
-                    fontSize: '10px'
+                    fontWeight: 'bold'
                   }}>
                     {exp.dates}
-                  </span>
+                  </div>
+                </div>
+                <div className="space-y-0 ml-0">
+                  {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
+                    exp.achievements.map((achievement, idx) => (
+                      <div key={idx} className="flex items-start" style={{ fontSize: '11px' }}>
+                        <span className="mr-2">•</span>
+                        <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{achievement}</span>
+                      </div>
+                    ))
+                  ) : exp.description ? (
+                    // Fallback to description if no achievements array
+                    <div className="flex items-start" style={{ fontSize: '11px' }}>
+                      <span className="mr-2">•</span>
+                      <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{exp.description}</span>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500" style={{ 
+                      fontSize: '11px',
+                      lineHeight: '1.3',
+                      fontStyle: 'italic'
+                    }}>
+                      No achievements listed
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="pl-6 border-l-4" style={{ borderColor: color }}>
-                <ul className="space-y-3">
-                  {exp.achievements.map((achievement, idx) => (
-                    <li key={idx} className="text-gray-700 text-base leading-relaxed" style={{
-                      fontSize: '10px',
-                      lineHeight: '1.4'
-                    }}>
-                      {achievement}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            ))
+          ) : (
+            <div className="text-sm text-gray-500" style={{ 
+              fontSize: '11px',
+              lineHeight: '1.3',
+              fontStyle: 'italic'
+            }}>
+              No experience added yet
             </div>
-          ))}
+          )}
         </div>
       </div>
 
-      {/* Education with Executive Style */}
-      <div className="mb-10">
-        <h3 className="text-lg font-bold mb-6 uppercase tracking-wide border-b-2 pb-2" style={{ 
-          color, 
-          borderColor: color,
-          fontSize: '14px',
-          fontWeight: '700',
-          letterSpacing: '0.3px'
+     
+
+      {/* Projects */}
+      <div className="mb-3">
+        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+          fontSize: '13px',
+          fontWeight: 'bold',
+          letterSpacing: '0.5px',
+          paddingBottom: '0px'
         }}>
-          Education & Credentials
-        </h3>
-        <div className="space-y-6">
-          {data.education.map((edu, index) => (
-            <div key={index} className="bg-gray-50 p-6 rounded-lg">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h4 className="text-lg font-bold text-gray-900" style={{
-                    fontSize: '13px',
-                    fontWeight: '600'
-                  }}>
-                    {edu.degree}
-                  </h4>
-                  <p className="text-gray-700 font-medium" style={{
-                    fontSize: '11px',
-                    fontWeight: '500'
-                  }}>{edu.institution}</p>
+          PROJECTS
+        </h2>
+        <div className="space-y-1">
+          {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
+            templateData.projects.map((project, index) => (
+              <div key={index}>
+                                 <div className="mb-1">
+                   <div className="flex justify-between items-center">
+                     <div className="flex items-center gap-2">
+                       <h3 className="font-bold" style={{ 
+                         fontSize: '11px',
+                         fontWeight: 'bold'
+                       }}>
+                         {project.Name}
+                       </h3>
+                       <span className="text-sm" style={{ 
+                         fontSize: '10px',
+                         color: '#666'
+                       }}>
+                         {project.Tech_Stack}
+                       </span>
+                     </div>
+                                           {(project.Start_Date || project.End_Date) && (
+                        <div className="font-bold" style={{ 
+                          fontSize: '11px',
+                          fontWeight: 'bold'
+                        }}>
+                          {project.Start_Date && project.End_Date 
+                            ? `${project.Start_Date} - ${project.End_Date}`
+                            : project.Start_Date || project.End_Date
+                          }
+                        </div>
+                      )}
+                   </div>
+                 </div>
+                <div className="space-y-0 ml-0">
+                  {project.Description ? (
+                    <div className="flex items-start" style={{ fontSize: '11px' }}>
+                      <span className="mr-2">•</span>
+                      <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{project.Description}</span>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500" style={{ 
+                      fontSize: '11px',
+                      lineHeight: '1.3',
+                      fontStyle: 'italic'
+                    }}>
+                      No project description available
+                    </div>
+                  )}
                 </div>
-                <span className="text-sm font-medium text-gray-600" style={{
-                  fontSize: '10px'
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-gray-500" style={{ 
+              fontSize: '11px',
+              lineHeight: '1.3',
+              fontStyle: 'italic'
+            }}>
+              No projects added yet
+            </div>
+          )}
+        </div>
+      </div>
+             {/* Education */}
+      <div className="mb-3">
+        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+          fontSize: '13px',
+          fontWeight: 'bold',
+          letterSpacing: '0.5px',
+          paddingBottom: '0px'
+        }}>
+          EDUCATION
+        </h2>
+        <div className="space-y-2">
+          {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
+            templateData.education.map((edu, index) => (
+              <div key={index} className="flex justify-between items-start">
+                <div>
+                  <div className="font-bold" style={{ 
+                    fontSize: '11px',
+                    fontWeight: 'bold'
+                  }}>
+                    {edu.institution}
+                  </div>
+                  <div style={{ fontSize: '11px' }}>
+                    {edu.degree}
+                  </div>
+                </div>
+                <div className="font-bold" style={{ 
+                  fontSize: '11px',
+                  fontWeight: 'bold'
                 }}>
                   {edu.dates}
-                </span>
+                  </div>
               </div>
-              <ul className="space-y-2">
-                {edu.details.map((detail, idx) => (
-                  <li key={idx} className="text-gray-700 text-sm" style={{
-                    fontSize: '10px',
-                    lineHeight: '1.4'
-                  }}>
-                    • {detail}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Additional Information with Executive Layout */}
-      <div>
-        <h3 className="text-lg font-bold mb-6 uppercase tracking-wide border-b-2 pb-2" style={{ 
-          color, 
-          borderColor: color,
-          fontSize: '14px',
-          fontWeight: '700',
-          letterSpacing: '0.3px'
-        }}>
-          Additional Information
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {data.additionalInfo.languages && (
-            <div>
-              <h4 className="font-bold text-gray-900 mb-3 uppercase tracking-wide text-sm" style={{
-                fontSize: '12px',
-                fontWeight: '700',
-                letterSpacing: '0.3px'
-              }}>Languages</h4>
-              <p className="text-gray-700" style={{
-                fontSize: '10px'
-              }}>{data.additionalInfo.languages.join(', ')}</p>
-            </div>
-          )}
-          {data.additionalInfo.certifications && (
-            <div>
-              <h4 className="font-bold text-gray-900 mb-3 uppercase tracking-wide text-sm" style={{
-                fontSize: '12px',
-                fontWeight: '700',
-                letterSpacing: '0.3px'
-              }}>Certifications</h4>
-              <p className="text-gray-700" style={{
-                fontSize: '10px'
-              }}>{data.additionalInfo.certifications.join(', ')}</p>
-            </div>
-          )}
-          {data.additionalInfo.awards && (
-            <div>
-              <h4 className="font-bold text-gray-900 mb-3 uppercase tracking-wide text-sm" style={{
-                fontSize: '12px',
-                fontWeight: '700',
-                letterSpacing: '0.3px'
-              }}>Awards & Recognition</h4>
-              <p className="text-gray-700" style={{
-                fontSize: '10px'
-              }}>{data.additionalInfo.awards.join(', ')}</p>
+            ))
+          ) : (
+            <div className="text-sm text-gray-500" style={{ 
+              fontSize: '11px',
+              lineHeight: '1.3',
+              fontStyle: 'italic'
+            }}>
+              No education added yet
             </div>
           )}
         </div>
@@ -248,4 +453,4 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
   );
 };
 
-export default ExecutiveClassic; 
+export default ResumePDF;
