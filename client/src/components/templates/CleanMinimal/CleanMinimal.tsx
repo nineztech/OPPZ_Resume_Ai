@@ -177,11 +177,12 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         <h1 className="text-2xl font-bold mb-1" style={{ 
           fontSize: '22px',
           fontWeight: 'bold',
-          letterSpacing: '1px'
+          letterSpacing: '1px',
+          color: color || '#1f2937'
         }}>
           {templateData.personalInfo?.name || 'Your Name'}
         </h1>
-        <div className="text-lg font-semibold mb-2" style={{ fontSize: '14px', fontWeight: '600' }}>
+        <div className="text-lg font-semibold mb-2" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
           {templateData.personalInfo?.title || 'Your Title'}
         </div>
         <div className="text-sm" style={{ fontSize: '11px' }}>
@@ -194,7 +195,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
-          letterSpacing: '0.5px'
+          letterSpacing: '0.5px',
+          color: color || '#1f2937'
         }}>
           SUMMARY
         </h2>
@@ -212,7 +214,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
-          letterSpacing: '0.5px'
+          letterSpacing: '0.5px',
+          color: color || '#1f2937'
         }}>
           TECHNICAL SKILLS
         </h2>
@@ -267,7 +270,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
-          letterSpacing: '0.5px'
+          letterSpacing: '0.5px',
+          color: color || '#1f2937'
         }}>
           PROFESSIONAL EXPERIENCE
         </h2>
@@ -335,7 +339,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
-          letterSpacing: '0.5px'
+          letterSpacing: '0.5px',
+          color: color || '#1f2937'
         }}>
           PROJECTS
         </h2>
@@ -406,7 +411,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
-          letterSpacing: '0.5px'
+          letterSpacing: '0.5px',
+          color: color || '#1f2937'
         }}>
           EDUCATION
         </h2>

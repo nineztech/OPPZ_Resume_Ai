@@ -177,11 +177,12 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         <h1 className="text-2xl font-bold mb-1" style={{ 
           fontSize: '22px',
           fontWeight: 'bold',
-          letterSpacing: '1px'
+          letterSpacing: '1px',
+          color: color || '#1f2937'
         }}>
           {templateData.personalInfo?.name || 'Your Name'}
         </h1>
-        <div className="text-lg font-semibold mb-2" style={{ fontSize: '14px', fontWeight: '600' }}>
+        <div className="text-lg font-semibold mb-2" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
           {templateData.personalInfo?.title || 'Your Title'}
         </div>
         <div className="text-sm" style={{ fontSize: '11px' }}>
@@ -191,11 +192,13 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
 
       {/* Summary */}
       <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase border-b-2 border-gray-300" style={{ 
+        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px'
+          paddingBottom: '0px',
+          color: color || '#1f2937',
+          borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
           SUMMARY
         </h2>
@@ -210,11 +213,13 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
 
       {/* Technical Skills */}
       <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase border-b-2 border-gray-300" style={{ 
+        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px'
+          paddingBottom: '0px',
+          color: color || '#1f2937',
+          borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
           TECHNICAL SKILLS
         </h2>
@@ -266,11 +271,13 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
 
       {/* Professional Experience */}
       <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase border-b-2 border-gray-300" style={{ 
+        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px'
+          paddingBottom: '0px',
+          color: color || '#1f2937',
+          borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
           PROFESSIONAL EXPERIENCE
         </h2>
@@ -335,11 +342,13 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
 
       {/* Projects */}
       <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase border-b-2 border-gray-300" style={{ 
+        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px'
+          paddingBottom: '0px',
+          color: color || '#1f2937',
+          borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
           PROJECTS
         </h2>
@@ -407,11 +416,13 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       </div>
              {/* Education */}
       <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase border-b-2 border-gray-300" style={{ 
+        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px'
+          paddingBottom: '0px',
+          color: color || '#1f2937',
+          borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
           EDUCATION
         </h2>

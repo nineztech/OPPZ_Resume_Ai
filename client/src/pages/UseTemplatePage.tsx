@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Upload, FileText, Sparkles, ArrowLeft, CheckCircle, AlertCircle, User } from 'lucide-react';
 import ResumeUploadModal from '@/components/modals/ResumeUploadModal';
 import { geminiParserService } from '@/services/geminiParserService';
-import { getTemplateById, getTemplateData } from '@/data/templates';
+import { getTemplateById } from '@/data/templates';
 
 const UseTemplatePage = () => {
   const navigate = useNavigate();
@@ -66,7 +66,7 @@ const UseTemplatePage = () => {
   const handleContinueWithoutResume = async () => {
     // Get default template data
     const template = getTemplateById(templateId || 'modern-professional');
-    const defaultData = await getTemplateData(templateId || 'modern-professional');
+    const defaultData = template?.templateData;
     
     navigate('/resume/builder', { 
       state: { 

@@ -116,25 +116,40 @@ const TemplatePreviewModal = ({ template, isOpen, onClose, onDownload, onUseTemp
 
         <div className="p-4 overflow-y-auto max-h-[calc(85vh-80px)]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Template Preview - 50% */}
+            {/* Template Preview - Improved UI */}
             <div className="space-y-3">
               <div className="relative">
-                <div className="aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden">
+                <div className="aspect-[210/297] bg-gradient-to-b from-gray-50 to-gray-100 rounded-lg overflow-hidden shadow-sm border border-gray-200">
                   {template && (
-                    <div className="w-full h-full bg-white p-4 overflow-auto">
-                      <div className="transform scale-75 origin-top-left w-full">
-                        <TemplateRenderer 
-                          templateId={template.id} 
-                          color={selectedColor}
-                        />
+                    <div className="w-full h-full bg-white relative">
+                      {/* Professional document frame */}
+                      <div className="absolute inset-2 bg-white rounded shadow-inner border border-gray-100 overflow-hidden">
+                        <div className="w-full h-full p-3 overflow-y-auto overflow-x-hidden scrollbar-hide">
+                          <div className="transform scale-[0.65] origin-top-left" style={{ width: '153.8%', height: '153.8%' }}>
+                            <TemplateRenderer 
+                              templateId={template.id} 
+                              color={selectedColor}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Subtle page shadow effect */}
+                      <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
+                        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
+                        <div className="absolute top-0 bottom-0 left-0 w-px bg-gradient-to-b from-transparent via-gray-200 to-transparent"></div>
+                        <div className="absolute top-0 bottom-0 right-0 w-px bg-gradient-to-b from-transparent via-gray-200 to-transparent"></div>
                       </div>
                     </div>
                   )}
                 </div>
                 
-                {/* Template Preview Label */}
-                <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                  Live Preview
+
+                
+                {/* Page indicator */}
+                <div className="absolute top-3 right-3 bg-white/90 text-gray-600 text-xs px-2 py-1 rounded-md backdrop-blur-sm font-medium border border-gray-200">
+                  Page 1 of 1
                 </div>
               </div>
             </div>

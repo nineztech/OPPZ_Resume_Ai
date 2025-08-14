@@ -2,11 +2,16 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Eye, Download } from 'lucide-react';
-    import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { tokenUtils } from '@/lib/utils';
 import LoginPromptModal from '@/components/modals/LoginPromptModal';
+import TemplatePreviewModal from '@/components/modals/TemplatePreviewModal';
+import { templates as templateData } from '@/data/templates';
+import TemplateRenderer from '@/components/templates/TemplateRenderer';
+import type { Template } from '@/data/templates';
 
 const TemplatesSection = () => {
   const [ref, inView] = useInView({
@@ -14,53 +19,17 @@ const TemplatesSection = () => {
     threshold: 0.1,
   });
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
   const user = tokenUtils.getUser();
 
-  const templates = [
-    {
-      name: "Professional Classic",
-      category: "Business",
-      image: "/api/placeholder/400/500",
-      description: "Clean and traditional design perfect for corporate roles",
-      popular: true
-    },
-    {
-      name: "Modern Creative",
-      category: "Design",
-      image: "/api/placeholder/400/500",
-      description: "Bold and innovative layout for creative professionals",
-      popular: false
-    },
-    {
-      name: "Minimalist",
-      category: "Tech",
-      image: "/api/placeholder/400/500",
-      description: "Simple and clean design for tech and startup roles",
-      popular: true
-    },
-    {
-      name: "Executive",
-      category: "Leadership",
-      image: "/api/placeholder/400/500",
-      description: "Sophisticated design for senior management positions",
-      popular: false
-    },
-    {
-      name: "Creative Portfolio",
-      category: "Creative",
-      image: "/api/placeholder/400/500",
-      description: "Showcase your work with this portfolio-style template",
-      popular: false
-    },
-    {
-      name: "Academic",
-      category: "Education",
-      image: "/api/placeholder/400/500",
-      description: "Perfect for academic and research positions",
-      popular: false
-    }
-  ];
+  const templates = templateData.slice(0, 6); // Show first 6 templates
+
+  const handlePreviewTemplate = (template: Template) => {
+    setSelectedTemplate(template);
+    setIsModalOpen(true);
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -118,77 +87,89 @@ const TemplatesSection = () => {
               variants={cardVariants}
               className="group relative"
             >
-              <Card className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 h-full">
-                {/* Template Image */}
-                <div className="relative h-48 sm:h-64 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                  <div className="w-24 h-32 sm:w-32 sm:h-40 bg-white rounded-lg shadow-md transform rotate-3">
-                    <div className="p-3 sm:p-4 space-y-1 sm:space-y-2">
-                      <div className="h-2 sm:h-3 bg-gray-200 rounded"></div>
-                      <div className="h-2 sm:h-3 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-2 sm:h-3 bg-gray-200 rounded w-1/2"></div>
-                    </div>
-                  </div>
-                  
-                  {/* Popular Badge */}
-                  {template.popular && (
-                    <div className="absolute top-3 sm:top-4 left-3 sm:left-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold">
-                      Popular
-                    </div>
-                  )}
+                             <div className="group relative bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300 h-full">
+                 {/* Template Preview */}
+                 <div className="relative bg-gradient-to-b from-gray-50 to-white p-6 group">
+                   {/* Badges */}
+                   <div className="absolute top-4 left-4 flex gap-2 z-10">
+                     {template.isPopular && (
+                       <Badge className="bg-orange-100 text-orange-700 text-xs font-medium px-2 py-1 rounded-md border-0">
+                         Popular
+                       </Badge>
+                     )}
+                     {template.isNew && (
+                       <Badge className="bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded-md border-0">
+                         New
+                       </Badge>
+                     )}
+                   </div>
 
-                  {/* Category Badge */}
-                  <div className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white/90 backdrop-blur-sm text-gray-700 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
-                    {template.category}
-                  </div>
-
-                  {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 px-4">
-                      <Button 
-                        size="sm" 
-                        className="bg-white text-gray-900 hover:bg-gray-100 text-xs sm:text-sm"
+                   {/* Hover Preview Button */}
+                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
+                                           <Button 
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!user) {
                             setShowLoginPrompt(true);
                           } else {
-                            // Handle preview logic here
-                            console.log('Preview template:', template.name);
+                            handlePreviewTemplate(template);
                           }
                         }}
+                        className="bg-white text-gray-900 hover:bg-gray-100 font-medium px-6 py-3 rounded-lg shadow-lg"
                       >
-                        <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        <Eye className="w-4 h-4 mr-2" />
                         Preview
                       </Button>
-                      <Button 
-                        size="sm" 
-                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-xs sm:text-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!user) {
-                            setShowLoginPrompt(true);
-                          } else {
-                            navigate('/resume/templates');
-                          }
-                        }}
-                      >
-                        <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                        Use Template
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                   </div>
 
-                {/* Template Info */}
-                <CardContent className="p-4 sm:p-6">
-                  <CardTitle className="text-base sm:text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
-                    {template.name}
-                  </CardTitle>
-                  <CardDescription className="text-gray-600 text-xs sm:text-sm leading-relaxed">
-                    {template.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
+                   {/* Resume Preview - Fixed styling */}
+                   <div className="aspect-[3/4] bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden flex items-center justify-center">
+                     <div 
+                       className="transform origin-center" 
+                       style={{ 
+                         transform: 'scale(0.4)',
+                         width: '250%', 
+                         height: '250%',
+                         display: 'flex',
+                         alignItems: 'center',
+                         justifyContent: 'center'
+                       }}
+                     >
+                       <div style={{ width: '210mm', height: '297mm' }}>
+                         <TemplateRenderer 
+                           templateId={template.id} 
+                           color={template.colors[0]}
+                         />
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+
+                                 {/* Template Info */}
+                 <div className="p-6">
+                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                     {template.name}
+                   </h3>
+                   <p className="text-gray-600 text-sm leading-relaxed mb-6">
+                     {template.description}
+                   </p>
+
+                   {/* Use Template Button */}
+                   <Button 
+                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       if (!user) {
+                         setShowLoginPrompt(true);
+                       } else {
+                         navigate('/resume/templates');
+                       }
+                     }}
+                   >
+                     Use Template
+                   </Button>
+                 </div>
+               </div>
             </motion.div>
           ))}
         </motion.div>
@@ -212,12 +193,29 @@ const TemplatesSection = () => {
         </motion.div>
       </div>
       
-      {/* Login Prompt Modal */}
-      <LoginPromptModal
-        isOpen={showLoginPrompt}
-        onClose={() => setShowLoginPrompt(false)}
-      />
-    </section>
+             {/* Login Prompt Modal */}
+       <LoginPromptModal
+         isOpen={showLoginPrompt}
+         onClose={() => setShowLoginPrompt(false)}
+       />
+       
+       {/* Template Preview Modal */}
+       <TemplatePreviewModal
+         template={selectedTemplate}
+         isOpen={isModalOpen}
+         onClose={() => setIsModalOpen(false)}
+         onDownload={(templateId, selectedColor) => {
+           const template = templateData.find(t => t.id === templateId);
+           if (template) {
+             console.log('Download template:', template.name);
+             // Handle download logic here
+           }
+         }}
+         onUseTemplate={(templateId, selectedColor) => {
+           navigate('/resume/templates');
+         }}
+       />
+     </section>
   );
 };
 

@@ -84,15 +84,17 @@ const Header = ({ onShowLogin, user: propUser }: HeaderProps) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <motion.div 
-            className="flex items-center"
-            whileHover={{ scale: 1.05 }}
-          >
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">R</span>
-            </div>
-            <span className="ml-2 text-lg font-bold text-gray-900 transition-colors duration-300">OPPZ ResumeAI</span>
-          </motion.div>
+          <Link to="/">
+            <motion.div 
+              className="flex items-center"
+              whileHover={{ scale: 1.05 }}
+            >
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">R</span>
+              </div>
+              <span className="ml-2 text-lg font-bold text-gray-900 transition-colors duration-300">OPPZ ResumeAI</span>
+            </motion.div>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-8">
