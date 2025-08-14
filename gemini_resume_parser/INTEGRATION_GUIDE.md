@@ -271,3 +271,4 @@ If you encounter issues:
 4. Check your Gemini API key and quotas
 
 
+
