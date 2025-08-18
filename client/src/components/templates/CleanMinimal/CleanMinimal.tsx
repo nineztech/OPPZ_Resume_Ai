@@ -190,8 +190,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       </div>
 
       {/* Summary */}
-      <div className="mb-4">
-        <h2 className="text-center font-bold mb-2 uppercase" style={{ 
+      <div className="mb-3">
+        <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px'
@@ -208,8 +208,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       </div>
 
       {/* Technical Skills */}
-      <div className="mb-4">
-        <h2 className="text-center font-bold mb-2 uppercase" style={{ 
+      <div className="mb-3">
+        <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px'
@@ -263,15 +263,15 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       </div>
 
       {/* Professional Experience */}
-      <div className="mb-4">
-        <h2 className="text-center font-bold mb-3 uppercase" style={{ 
+      <div className="mb-3">
+        <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px'
         }}>
           PROFESSIONAL EXPERIENCE
         </h2>
-        <div className="space-y-3">
+        <div className="space-y-1">
           {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
             templateData.experience.map((exp, index) => (
               <div key={index}>
@@ -331,32 +331,47 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
      
 
       {/* Projects */}
-      <div>
-        <h2 className="text-center font-bold mb-3 uppercase" style={{ 
+      <div className="mb-3">
+        <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px'
         }}>
           PROJECTS
         </h2>
-        <div className="space-y-3">
+        <div className="space-y-1">
           {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
             templateData.projects.map((project, index) => (
               <div key={index}>
-                <div className="flex justify-between items-start mb-1">
-                  <h3 className="font-bold" style={{ 
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    flex: '1'
-                  }}>
-                    {project.Name}
-                  </h3>
-                  <div className="text-sm text-right" style={{ 
-                    fontSize: '10px'
-                  }}>
-                    {project.Tech_Stack}
-                  </div>
-                </div>
+                                 <div className="mb-1">
+                   <div className="flex justify-between items-center">
+                     <div className="flex items-center gap-2">
+                       <h3 className="font-bold" style={{ 
+                         fontSize: '11px',
+                         fontWeight: 'bold'
+                       }}>
+                         {project.Name}
+                       </h3>
+                       <span className="text-sm" style={{ 
+                         fontSize: '10px',
+                         color: '#666'
+                       }}>
+                         {project.Tech_Stack}
+                       </span>
+                     </div>
+                                           {(project.Start_Date || project.End_Date) && (
+                        <div className="font-bold" style={{ 
+                          fontSize: '11px',
+                          fontWeight: 'bold'
+                        }}>
+                          {project.Start_Date && project.End_Date 
+                            ? `${project.Start_Date} - ${project.End_Date}`
+                            : project.Start_Date || project.End_Date
+                          }
+                        </div>
+                      )}
+                   </div>
+                 </div>
                 <div className="space-y-0 ml-0">
                   {project.Description ? (
                     <div className="flex items-start" style={{ fontSize: '11px' }}>
@@ -387,8 +402,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         </div>
       </div>
              {/* Education */}
-      <div className="mb-4">
-        <h2 className="text-center font-bold mb-3 uppercase" style={{ 
+      <div className="mb-3">
+        <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px'
