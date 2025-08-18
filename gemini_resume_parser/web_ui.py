@@ -1509,6 +1509,10 @@ def standard_ats_analysis():
             logger.info(f"Running standard ATS analysis for: {filename}")
             results = ats_service.analyze_resume(resume_text)
             
+            # Add extracted text to results if not already present
+            if 'extracted_text' not in results:
+                results['extracted_text'] = resume_text
+            
             # Clean up temporary file
             os.unlink(filepath)
             
@@ -1569,6 +1573,10 @@ def jd_specific_ats_analysis():
             # Run JD-specific ATS analysis
             logger.info(f"Running JD-specific ATS analysis for: {filename}")
             results = ats_service.analyze_resume_for_jd(resume_text, job_description)
+            
+            # Add extracted text to results if not already present
+            if 'extracted_text' not in results:
+                results['extracted_text'] = resume_text
             
             # Clean up temporary file
             os.unlink(filepath)
