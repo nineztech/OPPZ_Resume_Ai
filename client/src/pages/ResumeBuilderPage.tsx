@@ -204,7 +204,7 @@ const ResumeBuilderPage = () => {
   useEffect(() => {
     console.log('ResumeBuilderPage useEffect - location.state:', location.state);
     
-    if (location.state?.extractedData && (location.state?.mode === 'raw' || location.state?.mode === 'ai')) {
+    if (location.state?.extractedData && (location.state?.mode === 'raw' || location.state?.mode === 'ai' || location.state?.mode === 'ai-enhanced')) {
       // Handle Gemini parsed data directly
       const extractedData = location.state.extractedData;
       console.log('Setting resume data from Gemini parser:', extractedData);
@@ -233,6 +233,38 @@ const ResumeBuilderPage = () => {
         references: extractedData.references || [],
         customSections: extractedData.customSections || []
       };
+      
+      // Apply AI suggestions if in 'ai-enhanced' mode
+      if (location.state?.mode === 'ai-enhanced' && location.state?.aiSuggestions) {
+        const aiSuggestions = location.state.aiSuggestions;
+        console.log('Applying AI suggestions:', aiSuggestions);
+        
+        // Apply AI-enhanced skills
+        if (aiSuggestions.skillsAnalysis?.skillsToAdd?.length > 0) {
+          const currentSkills = Array.isArray(processedData.skills) ? processedData.skills : [];
+          const enhancedSkills = [...currentSkills, ...aiSuggestions.skillsAnalysis.skillsToAdd];
+          processedData.skills = [...new Set(enhancedSkills)]; // Remove duplicates
+        }
+        
+        // Apply AI-enhanced summary if suggested
+        if (aiSuggestions.sectionRecommendations?.summary?.suggested) {
+          processedData.summary = aiSuggestions.sectionRecommendations.summary.suggested;
+        }
+        
+        // Enhance experience descriptions with AI suggestions
+        if (aiSuggestions.experienceAnalysis?.experienceEnhancements?.length > 0 && processedData.experience.length > 0) {
+          processedData.experience = processedData.experience.map((exp, index) => {
+            const enhancement = aiSuggestions.experienceAnalysis?.experienceEnhancements?.[index];
+            if (enhancement && exp.description) {
+              return {
+                ...exp,
+                description: `${exp.description}\n\n• ${enhancement}`
+              };
+            }
+            return exp;
+          });
+        }
+      }
       
       console.log('Processed resume data:', processedData);
       setResumeData(processedData);

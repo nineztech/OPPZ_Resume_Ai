@@ -2,18 +2,24 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, FileText, Sparkles, ArrowLeft, CheckCircle, AlertCircle, User } from 'lucide-react';
+import { Upload, FileText, Sparkles, ArrowLeft, CheckCircle, User } from 'lucide-react';
 import ResumeUploadModal from '@/components/modals/ResumeUploadModal';
+import AICustomizationModal from '@/components/modals/AICustomizationModal';
+import AISuggestionsModal from '@/components/modals/AISuggestionsModal';
 import { geminiParserService } from '@/services/geminiParserService';
 import { getTemplateById } from '@/data/templates';
+import type { AIProcessingResult } from '@/services/geminiParserService';
 
 const UseTemplatePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isSuggestionsModalOpen, setIsSuggestionsModalOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [extractedData, setExtractedData] = useState<any>(null);
+  const [aiResults, setAIResults] = useState<AIProcessingResult | null>(null);
 
   const templateId = searchParams.get('templateId');
   const selectedColor = searchParams.get('color');
@@ -76,6 +82,50 @@ const UseTemplatePage = () => {
         defaultData // pass default template data
       } 
     });
+  };
+
+  const handleAICustomization = (data: { 
+    sector: string; 
+    country: string; 
+    designation: string; 
+    aiResults?: AIProcessingResult;
+    resumeFile?: File;
+  }) => {
+    if (data.aiResults) {
+      // Show AI suggestions modal
+      setAIResults(data.aiResults);
+      setIsAIModalOpen(false);
+      setIsSuggestionsModalOpen(true);
+    } else {
+      // Continue without AI analysis (just job description)
+      setIsAIModalOpen(false);
+      navigate("/resume/builder", { 
+        state: { 
+          templateId, 
+          selectedColor,
+          mode: 'ai-basic',
+          aiParams: { sector: data.sector, country: data.country, designation: data.designation }
+        } 
+      });
+    }
+  };
+
+  const handleApplyAISuggestions = () => {
+    if (aiResults) {
+      // Navigate to resume builder with AI suggestions and parsed data
+      setIsSuggestionsModalOpen(false);
+      navigate("/resume/builder", { 
+        state: { 
+          templateId, 
+          selectedColor,
+          mode: 'ai-enhanced',
+          extractedData: aiResults.resumeData,
+          aiSuggestions: aiResults.suggestions,
+          jobDescription: aiResults.jobDescription,
+          aiParams: aiResults.parameters
+        } 
+      });
+    }
   };
 
   return (
@@ -201,17 +251,27 @@ const UseTemplatePage = () => {
                 </div>
               </div>
               
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={handleContinueWithoutResume}
-                className="mt-4 bg-white hover:bg-gray-50 border-gray-300 text-gray-700 hover:text-gray-900"
-              >
-                <User className="w-5 h-5 mr-2" />
-                Continue without resume
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleContinueWithoutResume}
+                  className="bg-white hover:bg-gray-50 border-gray-300 text-gray-700 hover:text-gray-900"
+                >
+                  <User className="w-5 h-5 mr-2" />
+                  Continue without resume
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={() => setIsAIModalOpen(true)}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                >
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  AI-Powered Resume
+                </Button>
+              </div>
               <p className="text-sm text-gray-500 mt-2">
-                Start with a blank template and fill in your details manually
+                Start with a blank template or get AI-powered resume suggestions
               </p>
             </div>
 
@@ -258,6 +318,24 @@ const UseTemplatePage = () => {
         onCustomizeWithAI={handleCustomizeWithAI}
         fileName={uploadedFile?.name || ''}
       />
+
+      {/* AI Customization Modal */}
+      <AICustomizationModal
+        isOpen={isAIModalOpen}
+        onClose={() => setIsAIModalOpen(false)}
+        onContinue={handleAICustomization}
+      />
+
+      {/* AI Suggestions Modal */}
+      {aiResults && aiResults.suggestions && aiResults.jobDescription && (
+        <AISuggestionsModal
+          isOpen={isSuggestionsModalOpen}
+          onClose={() => setIsSuggestionsModalOpen(false)}
+          suggestions={aiResults.suggestions}
+          jobDescription={aiResults.jobDescription}
+          onApplyChanges={handleApplyAISuggestions}
+        />
+      )}
     </div>
   );
 };
