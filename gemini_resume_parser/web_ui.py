@@ -664,7 +664,15 @@ HTML_TEMPLATE = """
         });
 
         function showResults(data, file) {
-            document.getElementById('fileInfo').innerHTML = `
+            // Create file info element if it doesn't exist
+            let fileInfoElement = document.getElementById('fileInfo');
+            if (!fileInfoElement) {
+                fileInfoElement = document.createElement('div');
+                fileInfoElement.id = 'fileInfo';
+                fileInfoElement.className = 'file-info';
+            }
+            
+            fileInfoElement.innerHTML = `
                 <strong>File:</strong> ${file.name}<br>
                 <strong>Size:</strong> ${(file.size / 1024).toFixed(2)} KB<br>
                 <strong>Type:</strong> ${file.type || 'Unknown'}
@@ -889,24 +897,36 @@ HTML_TEMPLATE = """
             detailedHtml += '</div>';
             
             // Add the detailed results to the page
-            document.getElementById('results').innerHTML = `
-                <h3>Parsing Results</h3>
-                <div class="file-info" id="fileInfo"></div>
-                ${detailedHtml}
-                <div style="margin-top: 30px;">
-                    <h4>Complete Parsed Data (JSON)</h4>
-                    <div class="json-output" id="jsonOutput"></div>
-                </div>
-            `;
-            
-            // Format JSON with proper indentation and syntax highlighting
-            const formattedJson = JSON.stringify(data, null, 2);
-            document.getElementById('jsonOutput').innerHTML = formatJSON(formattedJson);
-            document.getElementById('results').classList.add('show');
+            const resultsElement = document.getElementById('results');
+            if (resultsElement) {
+                resultsElement.innerHTML = `
+                    <h3>Parsing Results</h3>
+                    <div class="file-info" id="fileInfo"></div>
+                    ${detailedHtml}
+                    <div style="margin-top: 30px;">
+                        <h4>Complete Parsed Data (JSON)</h4>
+                        <div class="json-output" id="jsonOutput"></div>
+                    </div>
+                `;
+                
+                // Format JSON with proper indentation and syntax highlighting
+                const formattedJson = JSON.stringify(data, null, 2);
+                const jsonOutputElement = document.getElementById('jsonOutput');
+                if (jsonOutputElement) {
+                    jsonOutputElement.innerHTML = formatJSON(formattedJson);
+                }
+                resultsElement.classList.add('show');
+            }
         }
 
         function showStandardAtsResults(data) {
             const resultsDiv = document.getElementById('standardAtsResults');
+            
+            // Check if results div exists
+            if (!resultsDiv) {
+                console.error('standardAtsResults element not found');
+                return;
+            }
             
             // Validate data structure
             if (!data || typeof data !== 'object') {
@@ -934,7 +954,7 @@ HTML_TEMPLATE = """
                 html += '<div class="category-scores">';
                 try {
                     Object.entries(data.category_scores).forEach(([key, score]) => {
-                        const categoryName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        const categoryName = key.replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase());
                         html += `
                             <div class="category-card">
                                 <div class="category-score">${score}</div>
@@ -1001,6 +1021,12 @@ HTML_TEMPLATE = """
         function showJdAtsResults(data) {
             const resultsDiv = document.getElementById('jdAtsResults');
             
+            // Check if results div exists
+            if (!resultsDiv) {
+                console.error('jdAtsResults element not found');
+                return;
+            }
+            
             // Validate data structure
             if (!data || typeof data !== 'object') {
                 resultsDiv.innerHTML = `
@@ -1039,7 +1065,7 @@ HTML_TEMPLATE = """
                 html += '<div class="category-scores">';
                 try {
                     Object.entries(data.category_scores).forEach(([key, score]) => {
-                        const categoryName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        const categoryName = key.replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase());
                         html += `
                             <div class="category-card">
                                 <div class="category-score">${score}</div>
@@ -1132,9 +1158,14 @@ HTML_TEMPLATE = """
         }
 
         function showError(message) {
-            document.getElementById('errorMessage').innerHTML = `
-                <div class="error">${message}</div>
-            `;
+            const errorElement = document.getElementById('errorMessage');
+            if (errorElement) {
+                errorElement.innerHTML = `
+                    <div class="error">${message}</div>
+                `;
+            } else {
+                console.error('Error message element not found:', message);
+            }
         }
     </script>
 </body>
