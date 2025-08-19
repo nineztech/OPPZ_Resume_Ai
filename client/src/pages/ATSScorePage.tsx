@@ -14,11 +14,14 @@ const ATSScorePage: React.FC = () => {
   const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState('');
+  const [jobDescriptionFile, setJobDescriptionFile] = useState<File | null>(null);
+  const [jdInputType, setJdInputType] = useState<'text' | 'file'>('text');
   const [analysisType, setAnalysisType] = useState<'standard' | 'job-specific'>('standard');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [standardResults, setStandardResults] = useState<ATSAnalysisResult | null>(null);
   const [jobResults, setJobResults] = useState<JDSpecificATSResult | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [jdDragActive, setJdDragActive] = useState(false);
   const { toast } = useToast();
 
   const handleFileChange = useCallback((files: FileList | null) => {
@@ -50,6 +53,34 @@ const ATSScorePage: React.FC = () => {
     setJobResults(null);
   }, [toast]);
 
+  const handleJdFileChange = useCallback((files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+    
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(pdf|docx|txt)$/i)) {
+      toast({
+        title: 'Invalid File Type',
+        description: 'Please upload a PDF, DOCX, or TXT file for job description.',
+        variant: 'destructive'
+      } as any);
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      toast({
+        title: 'File Too Large',
+        description: 'Please upload a job description file smaller than 10MB.',
+        variant: 'destructive'
+      } as any);
+      return;
+    }
+
+    setJobDescriptionFile(file);
+    setJobResults(null);
+  }, [toast]);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
@@ -64,6 +95,22 @@ const ATSScorePage: React.FC = () => {
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
+  }, []);
+
+  const handleJdDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setJdDragActive(false);
+    handleJdFileChange(e.dataTransfer.files);
+  }, [handleJdFileChange]);
+
+  const handleJdDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setJdDragActive(true);
+  }, []);
+
+  const handleJdDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setJdDragActive(false);
   }, []);
 
   const extractFileContent = async (file: File): Promise<string | undefined> => {
@@ -85,13 +132,24 @@ const ATSScorePage: React.FC = () => {
       return;
     }
 
-    if (analysisType === 'job-specific' && !jobDescription.trim()) {
-      toast({
-        title: 'Job Description Required',
-        description: 'Please provide a job description for job-specific analysis.',
-        variant: 'destructive'
-      } as any);
-      return;
+    if (analysisType === 'job-specific') {
+      if (jdInputType === 'text' && !jobDescription.trim()) {
+        toast({
+          title: 'Job Description Required',
+          description: 'Please provide a job description for job-specific analysis.',
+          variant: 'destructive'
+        } as any);
+        return;
+      }
+      
+      if (jdInputType === 'file' && !jobDescriptionFile) {
+        toast({
+          title: 'Job Description File Required',
+          description: 'Please upload a job description file for job-specific analysis.',
+          variant: 'destructive'
+        } as any);
+        return;
+      }
     }
 
     setIsAnalyzing(true);
@@ -123,7 +181,13 @@ const ATSScorePage: React.FC = () => {
           throw new Error(response.error || 'Analysis failed');
         }
       } else {
-        const response = await atsService.analyzeResumeForJob(selectedFile, jobDescription);
+        let response;
+        if (jdInputType === 'text') {
+          response = await atsService.analyzeResumeForJob(selectedFile, jobDescription);
+        } else {
+          response = await atsService.analyzeResumeForJobFile(selectedFile, jobDescriptionFile!);
+        }
+        
         if (response.success && response.data) {
           setJobResults(response.data);
           
@@ -134,7 +198,9 @@ const ATSScorePage: React.FC = () => {
               analysisType: 'job-specific',
               fileName: selectedFile.name,
               fileContent: response.data.extracted_text || fileContent,
-              originalFile: selectedFile
+              originalFile: selectedFile,
+              jdInputType: jdInputType,
+              jdFileName: jdInputType === 'file' ? jobDescriptionFile?.name : undefined
             }
           });
         } else {
@@ -563,13 +629,84 @@ const ATSScorePage: React.FC = () => {
               <CardHeader>
                 <CardTitle>Job Description</CardTitle>
               </CardHeader>
-              <CardContent>
-                <Textarea
-                  placeholder="Paste the job description here to analyze how well your resume matches the specific role..."
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  className="min-h-[150px]"
-                />
+              <CardContent className="space-y-4">
+                {/* Input Type Selection */}
+                <div className="flex space-x-4">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="jdInputType"
+                      value="text"
+                      checked={jdInputType === 'text'}
+                      onChange={(e) => {
+                        setJdInputType('text');
+                        setJobDescriptionFile(null);
+                      }}
+                      className="text-blue-600"
+                    />
+                    <span>Paste job description text</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="jdInputType"
+                      value="file"
+                      checked={jdInputType === 'file'}
+                      onChange={(e) => {
+                        setJdInputType('file');
+                        setJobDescription('');
+                      }}
+                      className="text-blue-600"
+                    />
+                    <span>Upload job description file</span>
+                  </label>
+                </div>
+
+                {/* Text Input */}
+                {jdInputType === 'text' && (
+                  <Textarea
+                    placeholder="Paste the job description here to analyze how well your resume matches the specific role..."
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    className="min-h-[150px]"
+                  />
+                )}
+
+                {/* File Input */}
+                {jdInputType === 'file' && (
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      jdDragActive 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onDrop={handleJdDrop}
+                    onDragOver={handleJdDragOver}
+                    onDragLeave={handleJdDragLeave}
+                  >
+                    <FileText className="w-8 h-8 text-gray-400 mx-auto mb-3" />
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-700">
+                        {jobDescriptionFile ? jobDescriptionFile.name : 'Drop job description file here or click to browse'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Supports PDF, DOCX, and TXT files (max 10MB)
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.txt"
+                      onChange={(e) => handleJdFileChange(e.target.files)}
+                      className="hidden"
+                      id="jd-upload"
+                    />
+                    <label htmlFor="jd-upload">
+                      <Button variant="outline" size="sm" className="mt-3" asChild>
+                        <span className="cursor-pointer">Choose File</span>
+                      </Button>
+                    </label>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -584,7 +721,12 @@ const ATSScorePage: React.FC = () => {
         >
           <Button
             onClick={analyzeResume}
-            disabled={!selectedFile || isAnalyzing || (analysisType === 'job-specific' && !jobDescription.trim())}
+            disabled={
+              !selectedFile || 
+              isAnalyzing || 
+              (analysisType === 'job-specific' && jdInputType === 'text' && !jobDescription.trim()) ||
+              (analysisType === 'job-specific' && jdInputType === 'file' && !jobDescriptionFile)
+            }
             size="lg"
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
           >

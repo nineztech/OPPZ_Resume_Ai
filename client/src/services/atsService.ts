@@ -136,6 +136,38 @@ class ATSService {
   }
 
   /**
+   * Analyze resume against job description file
+   * @param resumeFile - Resume file (PDF, DOCX, or TXT)
+   * @param jobDescriptionFile - Job description file (PDF, DOCX, or TXT)
+   * @returns Promise with job-specific ATS analysis results
+   */
+  async analyzeResumeForJobFile(resumeFile: File, jobDescriptionFile: File): Promise<ATSResponse<JDSpecificATSResult>> {
+    try {
+      const formData = new FormData();
+      formData.append('resume', resumeFile);
+      formData.append('job_description_file', jobDescriptionFile);
+
+      const response = await fetch(`${this.baseUrl}/ats/jd-specific`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Job-specific ATS analysis with file failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  /**
    * Parse resume using Gemini API
    * @param file - Resume file (PDF, DOCX, or TXT)
    * @returns Promise with parsed resume data

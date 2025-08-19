@@ -486,18 +486,41 @@ HTML_TEMPLATE = """
                 <p style="color: #666; margin-bottom: 20px;">Analyze how well your resume matches a specific job description with detailed feedback</p>
                 <form id="jdAtsForm" enctype="multipart/form-data">
                     <div class="file-input">
+                        <label for="jdAtsFile"><strong>Upload Resume:</strong></label>
                         <input type="file" id="jdAtsFile" name="resume" accept=".pdf,.docx,.txt" required>
                     </div>
-                    <div>
-                        <label for="jobDescription"><strong>Job Description:</strong></label>
+                    
+                    <!-- Job Description Input Options -->
+                    <div style="margin: 20px 0;">
+                        <label><strong>Job Description:</strong></label>
+                        <div style="margin: 10px 0;">
+                            <input type="radio" id="jdTextOption" name="jdInputType" value="text" checked onchange="toggleJDInput()">
+                            <label for="jdTextOption" style="margin-left: 5px;">Paste job description text</label>
+                        </div>
+                        <div style="margin: 10px 0;">
+                            <input type="radio" id="jdFileOption" name="jdInputType" value="file" onchange="toggleJDInput()">
+                            <label for="jdFileOption" style="margin-left: 5px;">Upload job description file (PDF, DOCX, TXT)</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Text Input -->
+                    <div id="jdTextInput">
                         <textarea 
                             id="jobDescription" 
                             name="jobDescription" 
                             class="job-description-input"
                             placeholder="Paste the job description here to get targeted analysis and improvement suggestions..."
-                            required
                         ></textarea>
                     </div>
+                    
+                    <!-- File Input -->
+                    <div id="jdFileInput" style="display: none;">
+                        <div class="file-input">
+                            <input type="file" id="jobDescriptionFile" name="job_description_file" accept=".pdf,.docx,.txt">
+                            <p style="color: #666; font-size: 14px; margin-top: 5px;">Upload a PDF, DOCX, or TXT file containing the job description</p>
+                        </div>
+                    </div>
+                    
                     <button type="submit" class="btn" id="jdAtsBtn">Run JD-Specific ATS Analysis</button>
                 </form>
             </div>
@@ -563,6 +586,25 @@ HTML_TEMPLATE = """
             
             // Add active class to clicked tab
             event.target.classList.add('active');
+        }
+
+        function toggleJDInput() {
+            const textOption = document.getElementById('jdTextOption');
+            const fileOption = document.getElementById('jdFileOption');
+            const textInput = document.getElementById('jdTextInput');
+            const fileInput = document.getElementById('jdFileInput');
+            
+            if (textOption.checked) {
+                textInput.style.display = 'block';
+                fileInput.style.display = 'none';
+                // Clear file input when switching to text
+                document.getElementById('jobDescriptionFile').value = '';
+            } else if (fileOption.checked) {
+                textInput.style.display = 'none';
+                fileInput.style.display = 'block';
+                // Clear text input when switching to file
+                document.getElementById('jobDescription').value = '';
+            }
         }
 
         // Resume Parsing
@@ -656,16 +698,27 @@ HTML_TEMPLATE = """
             
             const fileInput = document.getElementById('jdAtsFile');
             const file = fileInput.files[0];
+            const textOption = document.getElementById('jdTextOption');
             const jobDescription = document.getElementById('jobDescription').value;
+            const jdFileInput = document.getElementById('jobDescriptionFile');
+            const jdFile = jdFileInput.files[0];
             
             if (!file) {
-                showError('Please select a file to upload.');
+                showError('Please select a resume file to upload.');
                 return;
             }
 
-            if (!jobDescription.trim()) {
-                showError('Please enter a job description.');
-                return;
+            // Validate job description input based on selected option
+            if (textOption.checked) {
+                if (!jobDescription.trim()) {
+                    showError('Please enter a job description.');
+                    return;
+                }
+            } else {
+                if (!jdFile) {
+                    showError('Please select a job description file to upload.');
+                    return;
+                }
             }
 
             // Show loading
@@ -676,7 +729,12 @@ HTML_TEMPLATE = """
 
             const formData = new FormData();
             formData.append('resume', file);
-            formData.append('job_description', jobDescription);
+            
+            if (textOption.checked) {
+                formData.append('job_description', jobDescription);
+            } else {
+                formData.append('job_description_file', jdFile);
+            }
 
             try {
                 const response = await fetch('/ats/jd-specific', {
@@ -1540,46 +1598,85 @@ def jd_specific_ats_analysis():
     try:
         # Check if file was uploaded
         if 'resume' not in request.files:
-            return jsonify({'success': False, 'error': 'No file uploaded'})
-        
-        # Check if job description was provided
-        if 'job_description' not in request.form:
-            return jsonify({'success': False, 'error': 'Job description is required'})
+            return jsonify({'success': False, 'error': 'No resume file uploaded'})
         
         file = request.files['resume']
-        job_description = request.form['job_description']
         
         if file.filename == '':
-            return jsonify({'success': False, 'error': 'No file selected'})
+            return jsonify({'success': False, 'error': 'No resume file selected'})
         
-        if not job_description.strip():
-            return jsonify({'success': False, 'error': 'Job description cannot be empty'})
+        # Get job description - either from text input or PDF file
+        job_description_text = request.form.get('job_description', '').strip()
+        jd_file = request.files.get('job_description_file')
         
-        # Save file temporarily
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+        # Validate that we have either text job description or JD file
+        if not job_description_text and not jd_file:
+            return jsonify({'success': False, 'error': 'Job description is required (either text or PDF file)'})
+        
+        if job_description_text and jd_file:
+            return jsonify({'success': False, 'error': 'Please provide either job description text OR PDF file, not both'})
+        
+        # Save resume file temporarily
+        resume_filename = secure_filename(file.filename)
+        resume_filepath = os.path.join(app.config['UPLOAD_FOLDER'], resume_filename)
+        file.save(resume_filepath)
+        
+        jd_filepath = None
         
         try:
-            # Extract text from file
-            resume_text = DocumentExtractor.extract_text(filepath)
+            # Extract text from resume file
+            resume_text = DocumentExtractor.extract_text(resume_filepath)
             
             if not resume_text.strip():
-                raise ValueError("No text extracted from file")
+                raise ValueError("No text extracted from resume file")
+            
+            # Get job description text
+            if job_description_text:
+                # Use provided text job description
+                job_description = job_description_text
+                logger.info(f"Using text job description for JD-specific ATS analysis")
+            else:
+                # Extract text from JD PDF file
+                if jd_file.filename == '':
+                    raise ValueError("No job description file selected")
+                
+                # Validate JD file type
+                jd_filename = secure_filename(jd_file.filename)
+                if not jd_filename.lower().endswith(('.pdf', '.docx', '.txt')):
+                    raise ValueError("Job description file must be PDF, DOCX, or TXT format")
+                
+                # Save JD file temporarily
+                jd_filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"jd_{jd_filename}")
+                jd_file.save(jd_filepath)
+                
+                # Extract text from JD file
+                job_description = DocumentExtractor.extract_text(jd_filepath)
+                
+                if not job_description.strip():
+                    raise ValueError("No text extracted from job description file")
+                
+                logger.info(f"Extracted job description from file: {jd_filename}")
             
             # Initialize ATS service
             ats_service = JDSpecificATSService(api_key=os.getenv('GEMINI_API_KEY'))
             
             # Run JD-specific ATS analysis
-            logger.info(f"Running JD-specific ATS analysis for: {filename}")
+            logger.info(f"Running JD-specific ATS analysis for: {resume_filename}")
             results = ats_service.analyze_resume_for_jd(resume_text, job_description)
             
             # Add extracted text to results if not already present
             if 'extracted_text' not in results:
                 results['extracted_text'] = resume_text
             
-            # Clean up temporary file
-            os.unlink(filepath)
+            # Add job description source info
+            results['job_description_source'] = 'file' if jd_file else 'text'
+            if jd_file:
+                results['job_description_filename'] = jd_file.filename
+            
+            # Clean up temporary files
+            os.unlink(resume_filepath)
+            if jd_filepath and os.path.exists(jd_filepath):
+                os.unlink(jd_filepath)
             
             return jsonify({
                 'success': True,
@@ -1587,9 +1684,11 @@ def jd_specific_ats_analysis():
             })
             
         except Exception as e:
-            # Clean up temporary file on error
-            if os.path.exists(filepath):
-                os.unlink(filepath)
+            # Clean up temporary files on error
+            if os.path.exists(resume_filepath):
+                os.unlink(resume_filepath)
+            if jd_filepath and os.path.exists(jd_filepath):
+                os.unlink(jd_filepath)
             raise e
             
     except Exception as e:
