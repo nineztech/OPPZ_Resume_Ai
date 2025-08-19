@@ -317,6 +317,7 @@ const UseTemplatePage = () => {
         onContinueWithRaw={handleContinueWithRaw}
         onCustomizeWithAI={handleCustomizeWithAI}
         fileName={uploadedFile?.name || ''}
+        uploadedFile={uploadedFile} // Pass the uploaded file
       />
 
       {/* AI Customization Modal */}

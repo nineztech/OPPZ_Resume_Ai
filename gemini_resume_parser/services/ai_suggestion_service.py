@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class AISuggestionService:
     """AI service for generating job descriptions and resume suggestions"""
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-1.5-flash"):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-2.5-flash"):
         """
         Initialize the AI Suggestion Service
         
@@ -20,7 +20,7 @@ class AISuggestionService:
         self.parser = GeminiResumeParser(api_key=api_key, model_name=model_name)
         self.model = self.parser.model
     
-    def generate_job_description(self, sector: str, country: str, designation: str) -> str:
+    def generate_job_description(self, sector: str, country: str, designation: str) -> Dict[str, Any]:
         """
         Generate a job description based on sector, country, and designation
         
@@ -30,30 +30,52 @@ class AISuggestionService:
             designation: Job title/role (e.g., "Software Engineer", "Data Analyst")
             
         Returns:
-            Generated job description as string
+            Generated job description as structured dictionary
         """
         prompt = f"""
         Generate a comprehensive job description for a {designation} position in the {sector} sector in {country}.
         
-        The job description should include:
-        1. Job title and company overview
-        2. Key responsibilities and duties
-        3. Required qualifications and skills
-        4. Preferred qualifications
-        5. Experience requirements
-        6. Education requirements
-        7. Key competencies and soft skills
-        8. Benefits and work environment (if applicable)
+        Please provide the job description in the following JSON format:
+        {{
+            "jobTitle": "Exact job title",
+            "experienceLevel": "Entry/Mid/Senior level",
+            "salaryRange": "Typical salary range for this position in {country}",
+            "jobSummary": "Comprehensive job summary (2-3 paragraphs)",
+            "keyResponsibilities": [
+                "Key responsibility 1",
+                "Key responsibility 2",
+                "Key responsibility 3",
+                "Key responsibility 4",
+                "Key responsibility 5"
+            ],
+            "requiredSkills": {{
+                "technical": ["Technical skill 1", "Technical skill 2"],
+                "soft": ["Soft skill 1", "Soft skill 2"],
+                "programming": ["Programming language 1", "Programming language 2"],
+                "tools": ["Tool 1", "Tool 2"]
+            }},
+            "educationalRequirements": [
+                "Bachelor's degree in relevant field",
+                "Additional certifications preferred"
+            ],
+            "benefits": [
+                "Competitive salary",
+                "Health insurance",
+                "Professional development"
+            ]
+        }}
         
         Make it realistic and detailed, suitable for a professional job posting.
         Focus on the specific sector and consider the country's job market standards.
         
-        Format the response as a well-structured job description with clear sections.
+        Return ONLY the JSON output — no explanations.
         """
         
         try:
             response = self.model.generate_content(prompt)
-            return response.text.strip()
+            # Parse the JSON response
+            cleaned_response = self.parser._clean_gemini_response(response.text)
+            return json.loads(cleaned_response)
         except Exception as e:
             logger.error(f"Failed to generate job description: {str(e)}")
             raise
@@ -84,28 +106,36 @@ class AISuggestionService:
         
         Please provide a comprehensive analysis in the following JSON format:
         {{
-            "overall_match_score": int,  // Score from 0-100
-            "strengths": [
-                "List of resume strengths that match the job requirements"
-            ],
-            "weaknesses": [
-                "List of areas where resume falls short of job requirements"
-            ],
-            "missing_skills": [
-                "Skills mentioned in job description but missing from resume"
-            ],
+            "overallScore": int,  // Score from 0-100
+            "atsCompatibility": {{
+                "score": int,  // Score from 0-100
+                "strengths": [
+                    "List of resume strengths that match the job requirements"
+                ],
+                "improvements": [
+                    "List of areas where resume falls short of job requirements"
+                ]
+            }},
+            "skillsAnalysis": {{
+                "matchingSkills": [
+                    "Skills from resume that match job requirements"
+                ],
+                "missingSkills": [
+                    "Skills mentioned in job description but missing from resume"
+                ]
+            }},
+            "experienceAnalysis": {{
+                "relevantExperience": "Analysis of how well experience matches job requirements",
+                "experienceGaps": "Areas where experience could be enhanced"
+            }},
             "suggestions": [
                 "Specific actionable suggestions to improve the resume"
             ],
-            "keyword_analysis": {{
-                "matched_keywords": ["keywords from resume that match job description"],
-                "missing_keywords": ["important keywords from job description not in resume"]
+            "keywordAnalysis": {{
+                "matchedKeywords": ["keywords from resume that match job description"],
+                "missingKeywords": ["important keywords from job description not in resume"]
             }},
-            "experience_gap_analysis": {{
-                "relevant_experience": "Analysis of how well experience matches job requirements",
-                "experience_gaps": "Areas where experience could be enhanced"
-            }},
-            "improvement_priority": [
+            "improvementPriority": [
                 "Ordered list of most important improvements to make"
             ]
         }}
@@ -136,9 +166,10 @@ class AISuggestionService:
         formatted_parts = []
         
         # Basic information
-        if 'basic_info' in resume_data:
-            basic = resume_data['basic_info']
-            formatted_parts.append(f"Name: {basic.get('name', 'N/A')}")
+        if 'basic_details' in resume_data:
+            basic = resume_data['basic_details']
+            formatted_parts.append(f"Name: {basic.get('fullName', basic.get('name', 'N/A'))}")
+            formatted_parts.append(f"Professional Title: {basic.get('professionalTitle', basic.get('title', 'N/A'))}")
             formatted_parts.append(f"Email: {basic.get('email', 'N/A')}")
             formatted_parts.append(f"Phone: {basic.get('phone', 'N/A')}")
             formatted_parts.append(f"Location: {basic.get('location', 'N/A')}")
@@ -161,37 +192,41 @@ class AISuggestionService:
                 formatted_parts.append(f"\nSkills:\n{'; '.join(skill_text)}")
         
         # Work experience
-        if 'work_experience' in resume_data:
+        if 'experience' in resume_data:
             formatted_parts.append("\nWork Experience:")
-            for job in resume_data['work_experience']:
-                formatted_parts.append(f"\n{job.get('title', 'N/A')} at {job.get('company', 'N/A')}")
-                formatted_parts.append(f"Duration: {job.get('duration', 'N/A')}")
+            for job in resume_data['experience']:
+                formatted_parts.append(f"\n{job.get('role', job.get('title', 'N/A'))} at {job.get('company', 'N/A')}")
+                formatted_parts.append(f"Duration: {job.get('startDate', 'N/A')} - {job.get('endDate', 'N/A')}")
                 formatted_parts.append(f"Location: {job.get('location', 'N/A')}")
-                if 'responsibilities' in job:
-                    for resp in job['responsibilities']:
-                        formatted_parts.append(f"• {resp}")
+                if 'description' in job:
+                    formatted_parts.append(f"Description: {job.get('description', 'N/A')}")
         
         # Education
         if 'education' in resume_data:
             formatted_parts.append("\nEducation:")
             for edu in resume_data['education']:
                 formatted_parts.append(f"\n{edu.get('degree', 'N/A')} from {edu.get('institution', 'N/A')}")
-                formatted_parts.append(f"Duration: {edu.get('duration', 'N/A')}")
-                formatted_parts.append(f"GPA: {edu.get('gpa', 'N/A')}")
+                formatted_parts.append(f"Duration: {edu.get('startDate', 'N/A')} - {edu.get('endDate', 'N/A')}")
+                formatted_parts.append(f"Grade: {edu.get('grade', 'N/A')}")
+                if 'description' in edu:
+                    formatted_parts.append(f"Description: {edu.get('description', 'N/A')}")
         
         # Certifications
         if 'certifications' in resume_data:
             formatted_parts.append("\nCertifications:")
             for cert in resume_data['certifications']:
-                formatted_parts.append(f"• {cert}")
+                if isinstance(cert, dict):
+                    formatted_parts.append(f"• {cert.get('certificateName', 'N/A')} from {cert.get('institueName', 'N/A')}")
+                else:
+                    formatted_parts.append(f"• {cert}")
         
         # Projects
         if 'projects' in resume_data:
             formatted_parts.append("\nProjects:")
             for project in resume_data['projects']:
-                formatted_parts.append(f"\n{project.get('title', 'N/A')}")
+                formatted_parts.append(f"\n{project.get('name', project.get('title', 'N/A'))}")
                 formatted_parts.append(f"Description: {project.get('description', 'N/A')}")
-                if 'technologies' in project:
-                    formatted_parts.append(f"Technologies: {', '.join(project['technologies'])}")
+                if 'techStack' in project:
+                    formatted_parts.append(f"Tech Stack: {project.get('techStack', 'N/A')}")
         
         return "\n".join(formatted_parts)
