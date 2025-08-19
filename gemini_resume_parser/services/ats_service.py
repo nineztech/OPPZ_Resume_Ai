@@ -50,118 +50,147 @@ class StandardATSService(ATSService):
             raise
     
     def _get_standard_ats_prompt(self, resume_text: str) -> str:
-        return f"""
-        You are an expert Applicant Tracking System (ATS) analyzer.  
-        Evaluate the following resume against **global ATS best practices** (USA standards) without using any specific job description.  
-        Your goal is to score the resume for **ATS compatibility** and provide detailed feedback for each category.
+     return f"""
+You are an **Applicant Tracking System (ATS) evaluation engine**.  
+Your task is to **strictly evaluate resumes against ATS best practices (USA/global standards)**.  
+Do NOT evaluate against any specific job description.  
 
-        ### **Evaluation Criteria & Scoring**
-        Provide a **score from 0–100** based on the following weighted criteria:
+---
+### **Critical ATS Requirements to Check**
+1. **Name Completeness**: Resume MUST have both first name AND last name clearly visible
+   - If only first name is present → Flag as critical issue
+   - If only last name is present → Flag as critical issue  
+   - If neither is clearly identifiable → Flag as critical issue
+   - Check for common name patterns: "John Smith", "J. Smith", "John S.", etc.
 
-        1. **Formatting & Readability (25%)**
-           - Uses ATS-friendly fonts (Arial, Calibri, Times New Roman, etc.)
-           - Avoids tables, images, graphics, columns, and text boxes
-           - Standard headings (e.g., "Work Experience", "Education", "Skills")
-           - PDF or DOCX file support for ATS parsing
+2. **Contact Information**: Must have at least email OR phone number
+   - If both missing → Flag as critical issue
+   - If only one present → Flag as medium issue
 
-        2. **Keyword Coverage (General) (25%)**
-           - Includes common professional action verbs (*managed, developed, analyzed, implemented*)
-           - Covers both hard skills and soft skills relevant to most industries
-           - Balanced keyword usage without keyword stuffing
+---
+### **Scoring Rules**
+- Provide a **score between 0–100**.  
+- Use the following **weight distribution** (must total 100):  
+  1. Formatting & Readability – 20  
+  2. Keyword Coverage (General) – 20  
+  3. Section Completeness – 25  
+  4. Achievements & Metrics – 15  
+  5. Spelling, Grammar & Consistency – 10  
+  6. Parse Accuracy – 10  
+- **Deduct 15-20 points** if name completeness issues are found
+- **Deduct 10-15 points** if contact information is incomplete
+- Ensure **category scores add up proportionally** to the overall score.
 
-        3. **Section Completeness (20%)**
-           - Contact Information present and ATS-readable (name, email, phone, LinkedIn)
-           - Profile/Summary section included
-           - Skills section with bullet points
-           - Work Experience in reverse chronological order
-           - Education section
-           - Certifications/Achievements (optional but boosts score)
+---
+### **Output Rules**
+- Respond in **valid JSON only**.  
+- No text outside JSON.  
+- Always include `"overall_score"`, `"category_scores"`, `"detailed_feedback"`, `"extracted_text"`, `"strengths"`, `"weaknesses"`, and `"recommendations"`.  
+- Each section must have **positives**, **negatives**, and **suggestions** (non-empty arrays).  
+- Be concise but detailed in feedback (no vague answers).  
+- **SPECIFICALLY check and mention name completeness issues** in weaknesses and recommendations.
 
-        4. **Achievements & Metrics (15%)**
-           - Uses quantified results (percentages, numbers, revenue, savings, etc.)
-           - Action-oriented bullet points
+---
+### **Output JSON Format**
+{{
+  "overall_score": int,
+  "category_scores": {{
+    "formatting_readability": int,
+    "keyword_coverage_general": int,
+    "section_completeness": int,
+    "achievements_metrics": int,
+    "spelling_grammar": int,
+    "parse_accuracy": int
+  }},
+  "detailed_feedback": {{
+    "formatting_readability": {{
+      "score": int,
+      "title": "Readability",
+      "description": "Ensure resume screeners can read key sections of your resume",
+      "positives": ["string"],
+      "negatives": ["string"],
+      "suggestions": ["string"]
+    }},
+    "keyword_coverage_general": {{
+      "score": int,
+      "title": "Keywords & ATS",
+      "description": "Include relevant keywords for Applicant Tracking Systems",
+      "positives": ["string"],
+      "negatives": ["string"],
+      "suggestions": ["string"]
+    }},
+    "section_completeness": {{
+      "score": int,
+      "title": "Section Completeness",
+      "description": "Ensure all essential resume sections are present and well-structured",
+      "positives": ["string"],
+      "negatives": ["string"],
+      "suggestions": ["string"]
+    }},
+    "achievements_metrics": {{
+      "score": int,
+      "title": "Quantify Impact",
+      "description": "Use numbers and metrics to demonstrate your achievements",
+      "positives": ["string"],
+      "negatives": ["string"],
+      "suggestions": ["string"]
+    }},
+    "spelling_grammar": {{
+      "score": int,
+      "title": "Language Quality",
+      "description": "Maintain professional language standards throughout your resume",
+      "positives": ["string"],
+      "negatives": ["string"],
+      "suggestions": ["string"]
+    }},
+    "parse_accuracy": {{
+      "score": int,
+      "title": "ATS Parsing",
+      "description": "Ensure your resume can be accurately parsed by ATS systems",
+      "positives": ["string"],
+      "negatives": ["string"],
+      "suggestions": ["string"]
+    }}
+  }},
+  "extracted_text": "string",
+  "strengths": ["string"],
+  "weaknesses": ["string"],
+  "recommendations": ["string"]
+}}
 
-        5. **Spelling, Grammar & Consistency (10%)**
-           - No typos, consistent tense, proper punctuation
+---
+### Resume Text:
+{resume_text}
 
-        6. **Parse Accuracy (5%)**
-           - Can be converted to plain text without losing structure
+**CRITICAL NAME VALIDATION CHECKLIST**:
+1. **First Name Detection**: Look for common first names (John, Jane, Michael, Sarah, David, Emma, James, Olivia, Robert, Ava, William, Isabella, etc.)
+2. **Last Name Detection**: Look for common last names (Smith, Johnson, Williams, Brown, Jones, Garcia, Miller, Davis, etc.)
+3. **Name Pattern Analysis**: Check for formats like "John Smith", "J. Smith", "John S.", "Smith, John", "JOHN SMITH"
+4. **Contact Validation**: Verify email (contains @ symbol) and phone (contains digits)
 
-        ---
+**MANDATORY WEAKNESSES TO ADD** (if found):
+- If NO first name found: "Critical: First name is missing from resume - ATS systems require complete identification for candidate tracking and database management"
+- If NO last name found: "Critical: Last name is missing from resume - ATS systems need full name for proper candidate identification and search functionality"  
+- If NO complete name found: "Critical: Complete name (first and last) is missing from resume - ATS systems cannot properly categorize or search for candidates without full names"
+- If NO email found: "Critical: Email address is missing from resume - Recruiters need email for direct communication and interview scheduling"
+- If NO phone found: "Critical: Phone number is missing from resume - Phone contact is essential for urgent communication and interview coordination"
 
-        ### **Output Format (JSON only)**
-        Respond **only** in this JSON format:
-        {{
-          "overall_score": int,
-          "category_scores": {{
-            "formatting_readability": int,
-            "keyword_coverage_general": int,
-            "section_completeness": int,
-            "achievements_metrics": int,
-            "spelling_grammar": int,
-            "parse_accuracy": int
-          }},
-          "detailed_feedback": {{
-            "formatting_readability": {{
-              "score": int,
-              "title": "Readability",
-              "description": "Ensure resume screeners can read key sections of your resume",
-              "positives": [ "string", ... ],
-              "negatives": [ "string", ... ],
-              "suggestions": [ "string", ... ]
-            }},
-            "keyword_coverage_general": {{
-              "score": int,
-              "title": "Keywords & ATS",
-              "description": "Include relevant keywords for Applicant Tracking Systems",
-              "positives": [ "string", ... ],
-              "negatives": [ "string", ... ],
-              "suggestions": [ "string", ... ]
-            }},
-            "section_completeness": {{
-              "score": int,
-              "title": "Section Completeness",
-              "description": "Ensure all essential resume sections are present and well-structured",
-              "positives": [ "string", ... ],
-              "negatives": [ "string", ... ],
-              "suggestions": [ "string", ... ]
-            }},
-            "achievements_metrics": {{
-              "score": int,
-              "title": "Quantify Impact",
-              "description": "Use numbers and metrics to demonstrate your achievements",
-              "positives": [ "string", ... ],
-              "negatives": [ "string", ... ],
-              "suggestions": [ "string", ... ]
-            }},
-            "spelling_grammar": {{
-              "score": int,
-              "title": "Language Quality",
-              "description": "Maintain professional language standards throughout your resume",
-              "positives": [ "string", ... ],
-              "negatives": [ "string", ... ],
-              "suggestions": [ "string", ... ]
-            }},
-            "parse_accuracy": {{
-              "score": int,
-              "title": "ATS Parsing",
-              "description": "Ensure your resume can be accurately parsed by ATS systems",
-              "positives": [ "string", ... ],
-              "negatives": [ "string", ... ],
-              "suggestions": [ "string", ... ]
-            }}
-          }},
-          "extracted_text": "string",
-          "strengths": [ "string", "string", ... ],
-          "weaknesses": [ "string", "string", ... ],
-          "recommendations": [ "string", "string", ... ]
-        }}
+**MANDATORY RECOMMENDATIONS TO ADD** (if issues found):
+- For missing first name: "Add your first name prominently at the top of your resume header, ensuring it's clearly visible and matches your official documents"
+- For missing last name: "Include your last name alongside your first name in the resume header, using standard formatting like 'John Smith' or 'SMITH, John'"
+- For missing complete name: "Place your complete name (first and last) at the very top of your resume in a large, bold font (16-18pt) to ensure ATS systems can easily identify you"
+- For missing contact: "Add your professional email address and phone number in the header section below your name, using standard formats like 'john.smith@email.com' and '(555) 123-4567'"
 
-        Resume text to analyze:
-        {resume_text}
-        
-        Return ONLY the JSON output — no explanations.
-        """
+**DETAILED IMPROVEMENT REQUIREMENTS**:
+For each weakness identified, provide specific, actionable improvement steps that candidates can immediately implement. Focus on:
+1. **What exactly needs to be changed** (be specific about content, placement, formatting)
+2. **Where to make the change** (specific section, position on page)
+3. **How to implement it** (formatting suggestions, examples)
+4. **Why it matters** (ATS impact, recruiter perspective)
+
+Return ONLY valid JSON. Do not include explanations, notes, or extra text.
+"""
+
 
 class JDSpecificATSService(ATSService):
     """Job Description specific ATS analysis service"""
@@ -188,10 +217,21 @@ class JDSpecificATSService(ATSService):
         You are an expert ATS (Applicant Tracking System) and recruitment AI.  
         Evaluate the following resume **against a specific job description** to determine **job-fit compatibility** and ATS readiness.
 
+        ### **Critical ATS Requirements to Check FIRST**
+        1. **Name Completeness**: Resume MUST have both first name AND last name clearly visible
+           - If only first name is present → Flag as critical issue and deduct 15-20 points
+           - If only last name is present → Flag as critical issue and deduct 15-20 points  
+           - If neither is clearly identifiable → Flag as critical issue and deduct 20-25 points
+           - Check for common name patterns: "John Smith", "J. Smith", "John S.", etc.
+
+        2. **Contact Information**: Must have at least email OR phone number
+           - If both missing → Flag as critical issue and deduct 10-15 points
+           - If only one present → Flag as medium issue and deduct 5-10 points
+
         ### **Evaluation Criteria & Scoring**
         Provide a **score from 0–100** based on the following weighted criteria:
 
-        1. **Keyword Match & Skills Alignment (40%)**
+        1. **Keyword Match & Skills Alignment (35%)**
            - Match between resume skills and required skills in JD
            - Relevant certifications and tools from JD appear in resume
            - Synonyms and variations of JD keywords are also considered
@@ -214,6 +254,9 @@ class JDSpecificATSService(ATSService):
 
         6. **Soft Skills Match (5%)**
            - Presence of leadership, communication, teamwork, problem-solving if mentioned in JD
+
+        7. **Basic ATS Compliance (5%)**
+           - Name completeness and contact information
 
         ---
 
@@ -292,6 +335,39 @@ class JDSpecificATSService(ATSService):
         
         **Job Description:**
         {job_description}
+        
+        **CRITICAL NAME VALIDATION CHECKLIST**:
+        1. **First Name Detection**: Look for common first names (John, Jane, Michael, Sarah, David, Emma, James, Olivia, Robert, Ava, William, Isabella, etc.)
+        2. **Last Name Detection**: Look for common last names (Smith, Johnson, Williams, Brown, Jones, Garcia, Miller, Davis, etc.)
+        3. **Name Pattern Analysis**: Check for formats like "John Smith", "J. Smith", "John S.", "Smith, John", "JOHN SMITH"
+        4. **Contact Validation**: Verify email (contains @ symbol) and phone (contains digits)
+
+        **MANDATORY WEAKNESSES TO ADD** (if issues found):
+        - If NO first name found: "Critical: First name is missing from resume - ATS systems require complete identification for candidate tracking and database management"
+        - If NO last name found: "Critical: Last name is missing from resume - ATS systems need full name for proper candidate identification and search functionality"  
+        - If NO complete name found: "Critical: Complete name (first and last) is missing from resume - ATS systems cannot properly categorize or search for candidates without full names"
+        - If NO email found: "Critical: Email address is missing from resume - Recruiters need email for direct communication and interview scheduling"
+        - If NO phone found: "Critical: Phone number is missing from resume - Phone contact is essential for urgent communication and interview coordination"
+
+        **MANDATORY RECOMMENDATIONS TO ADD** (if issues found):
+        - For missing first name: "Add your first name prominently at the top of your resume header, ensuring it's clearly visible and matches your official documents"
+        - For missing last name: "Include your last name alongside your first name in the resume header, using standard formatting like 'John Smith' or 'SMITH, John'"
+        - For missing complete name: "Place your complete name (first and last) at the very top of your resume in a large, bold font (16-18pt) to ensure ATS systems can easily identify you"
+        - For missing contact: "Add your professional email address and phone number in the header section below your name, using standard formats like 'john.smith@email.com' and '(555) 123-4567'"
+        
+        **DETAILED IMPROVEMENT REQUIREMENTS**:
+        For each weakness identified, provide specific, actionable improvement steps that candidates can immediately implement. Focus on:
+        1. **What exactly needs to be changed** (be specific about content, placement, formatting)
+        2. **Where to make the change** (specific section, position on page)
+        3. **How to implement it** (formatting suggestions, examples)
+        4. **Why it matters** (ATS impact, recruiter perspective, job match relevance)
+        
+        **JOB-SPECIFIC IMPROVEMENT GUIDANCE**:
+        When providing recommendations, always consider the specific job requirements and suggest:
+        - How to incorporate missing keywords from the job description
+        - Which experiences to highlight or rephrase to better match the role
+        - What skills to emphasize based on the job requirements
+        - How to quantify achievements in ways relevant to the target position
         
         Return ONLY the JSON output — no explanations.
         """
