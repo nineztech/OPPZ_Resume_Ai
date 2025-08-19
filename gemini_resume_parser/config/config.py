@@ -22,6 +22,15 @@ class GeminiConfig:
     Map them into the following JSON structure exactly, with empty strings ("") only if information is truly missing. 
     If a section is found under a different name, normalize it to the correct field in the output.
     Languages are not technical languages like python, java etc, It is language used for communication like English etc
+    
+    **CRITICAL: Name Extraction Rules**
+    - ALWAYS extract the FULL NAME (first name + last name) from the resume header/top section
+    - Look for names in formats like: "John Smith", "J. Smith", "John S.", "Smith, John", "JOHN SMITH"
+    - If you find only a first name (e.g., "John"), look for the last name elsewhere in the document
+    - If you find only a last name (e.g., "Smith"), look for the first name elsewhere in the document
+    - The name field should contain the COMPLETE name as it appears on the resume
+    - Check the very top of the resume, header section, or first few lines for the name
+    
     IMPORTANT: The "summary" field should contain content from sections labeled as:
     - "PROFILE" (most common)
     - "Summary" 
@@ -37,7 +46,7 @@ class GeminiConfig:
     If you find any of these sections, extract ALL the text content and place it in the "summary" field.
 
     Sections and possible variations to detect:
-    basic_details: ["Basic Details", "Personal Information", "Contact Info", "Contacts", "Profile Info"]
+    basic_details: ["Basic Details", "Personal Information", "Contact Info", "Contacts", "Profile Info", "Header", "Name", "Contact Information"]
     summary: ["Summary", "PROFILE", "Professional Summary", "Profile", "About Me", "Career Objective", "Objective", "Career Highlights", "Professional Profile", "Bio", "Introduction"]
     skills: ["Skills", "Technical Skills", "Core Competencies", "Key Skills", "Expertise", "Strengths", "Technologies", "Tech Stack"]
     education: ["Education", "Academic Background", "Educational Qualifications", "Studies", "Academics"]
@@ -49,7 +58,7 @@ class GeminiConfig:
     other: ["Hobbies", "Interests", "Volunteer Work", "Extra-Curricular Activities", "Achievements", "Awards", "Publications", "Miscellaneous"]
 
     Parse the following resume text into structured JSON with these sections:
-    Basic Details: Full Name, Professional Title, Phone, Email, Location, Website, GitHub, LinkedIn
+    Basic Details: Full Name (MUST include first AND last name), Professional Title, Phone, Email, Location, Website, GitHub, LinkedIn
     summary: Extract ALL content from Profile/Summary sections (this is crucial - do not leave empty if Profile content exists)
     Skills: If Technical Skills section exists with categories like Languages, Frameworks, Frontend, Databases, Cloud, DevOps, Testing, Messaging/Event-Driven, Tools, preserve this exact structure and output format as shown in the resume
     Education: Institution, Degree, Start Date, End Date, Grade, Description, Location 
@@ -61,6 +70,8 @@ class GeminiConfig:
     Other Relevant Information
     
     Resume text: {resume_text}
+    
+    **IMPORTANT**: Ensure the name field contains the complete name (first + last) as it appears on the resume. If you cannot find a complete name, indicate this clearly.
     
     Output in pure JSON format only. Return ONLY the JSON output — no explanations.
     """
