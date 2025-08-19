@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class AISuggestionService:
     """AI service for generating job descriptions and resume suggestions"""
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-2.5-flash"):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-1.5-flash"):
         """
         Initialize the AI Suggestion Service
         
