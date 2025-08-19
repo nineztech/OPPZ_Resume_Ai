@@ -47,6 +47,11 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Helper function to safely get arrays from suggestions
+  const getSafeArray = (array: any[] | undefined): any[] => {
+    return Array.isArray(array) ? array : [];
+  };
+
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({
       ...prev,
@@ -115,13 +120,13 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                 <p className="text-sm text-gray-600 mt-1">ATS Compatible</p>
               </div>
             </div>
-            <Button
+            {/* <Button
               onClick={onApplyChanges}
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
               <Star className="w-4 h-4 mr-2" />
               Apply to Resume
-            </Button>
+            </Button> */}
           </div>
         </div>
 
@@ -157,12 +162,12 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-green-700">
                       <CheckCircle className="w-5 h-5" />
-                      Strengths ({suggestions.atsCompatibility?.strengths?.length || 0})
+                      Strengths ({getSafeArray(suggestions.atsCompatibility?.strengths).length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-1">
-                      {(suggestions.atsCompatibility?.strengths || []).slice(0, 3).map((strength, index) => (
+                      {getSafeArray(suggestions.atsCompatibility?.strengths).slice(0, 3).map((strength, index) => (
                         <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                           <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                           {strength}
@@ -176,12 +181,12 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-amber-700">
                       <AlertTriangle className="w-5 h-5" />
-                      Areas to Improve ({suggestions.atsCompatibility?.improvements?.length || 0})
+                      Areas to Improve ({getSafeArray(suggestions.atsCompatibility?.improvements).length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-1">
-                      {(suggestions.atsCompatibility?.improvements || []).slice(0, 3).map((improvement, index) => (
+                      {getSafeArray(suggestions.atsCompatibility?.improvements).slice(0, 3).map((improvement, index) => (
                         <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                           <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
                           {improvement}
@@ -201,7 +206,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-3">
-                    {(suggestions.industrySpecificTips || []).slice(0, 4).map((tip, index) => (
+                    {getSafeArray(suggestions.industrySpecificTips).slice(0, 4).map((tip, index) => (
                       <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
                         <ArrowRight className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                         <span className="text-sm text-gray-700">{tip}</span>
@@ -223,7 +228,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-2">
-                      {(suggestions.skillsAnalysis?.matchingSkills || []).map((skill, index) => (
+                      {getSafeArray(suggestions.skillsAnalysis?.matchingSkills).map((skill, index) => (
                         <Badge key={index} variant="secondary" className="bg-green-100 text-green-800">
                           <CheckCircle className="w-3 h-3 mr-1" />
                           {skill}
@@ -240,7 +245,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-2">
-                      {(suggestions.skillsAnalysis?.missingSkills || []).map((skill, index) => (
+                      {getSafeArray(suggestions.skillsAnalysis?.missingSkills).map((skill, index) => (
                         <Badge key={index} variant="destructive" className="bg-red-100 text-red-800">
                           <AlertTriangle className="w-3 h-3 mr-1" />
                           {skill}
@@ -260,7 +265,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">Skills to Add</h4>
                       <div className="space-y-1">
-                        {(suggestions.skillsAnalysis?.skillsToAdd || []).map((skill, index) => (
+                        {getSafeArray(suggestions.skillsAnalysis?.skillsToAdd).map((skill, index) => (
                           <div key={index} className="text-sm text-gray-700 flex items-center gap-2">
                             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                             {skill}
@@ -271,7 +276,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">Skills to Highlight</h4>
                       <div className="space-y-1">
-                        {(suggestions.skillsAnalysis?.skillsToHighlight || []).map((skill, index) => (
+                        {getSafeArray(suggestions.skillsAnalysis?.skillsToHighlight).map((skill, index) => (
                           <div key={index} className="text-sm text-gray-700 flex items-center gap-2">
                             <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
                             {skill}
@@ -293,7 +298,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2">
-                    {(suggestions.experienceAnalysis?.relevantExperience || []).map((exp, index) => (
+                    {getSafeArray(suggestions.experienceAnalysis?.relevantExperience).map((exp, index) => (
                       <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                         {exp}
@@ -312,7 +317,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">Experience Gaps</h4>
                       <ul className="space-y-1">
-                        {(suggestions.experienceAnalysis?.experienceGaps || []).map((gap, index) => (
+                        {getSafeArray(suggestions.experienceAnalysis?.experienceGaps).map((gap, index) => (
                           <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                             <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
                             {gap}
@@ -323,7 +328,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">Enhancement Suggestions</h4>
                       <ul className="space-y-1">
-                        {(suggestions.experienceAnalysis?.experienceEnhancements || []).map((enhancement, index) => (
+                        {getSafeArray(suggestions.experienceAnalysis?.experienceEnhancements).map((enhancement, index) => (
                           <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                             <Lightbulb className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                             {enhancement}
@@ -348,7 +353,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">Present Keywords</h4>
                       <div className="flex flex-wrap gap-1">
-                        {(suggestions.keywordOptimization?.presentKeywords || []).map((keyword, index) => (
+                        {getSafeArray(suggestions.keywordOptimization?.presentKeywords).map((keyword, index) => (
                           <Badge key={index} variant="secondary" className="text-xs">
                             {keyword}
                           </Badge>
@@ -358,7 +363,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">Missing Keywords</h4>
                       <div className="flex flex-wrap gap-1">
-                        {(suggestions.keywordOptimization?.missingKeywords || []).map((keyword, index) => (
+                        {getSafeArray(suggestions.keywordOptimization?.missingKeywords).map((keyword, index) => (
                           <Badge key={index} variant="outline" className="text-xs border-red-300 text-red-700">
                             {keyword}
                           </Badge>
@@ -369,7 +374,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                   <div className="mt-4">
                     <h4 className="font-medium text-gray-900 mb-2">Keyword Density Tips</h4>
                     <ul className="space-y-1">
-                      {(suggestions.keywordOptimization?.keywordDensityTips || []).map((tip, index) => (
+                      {getSafeArray(suggestions.keywordOptimization?.keywordDensityTips).map((tip, index) => (
                         <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                           <Lightbulb className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                           {tip}
@@ -389,7 +394,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">Structure</h4>
                       <ul className="space-y-1">
-                        {(suggestions.formatRecommendations?.structure || []).map((item, index) => (
+                        {getSafeArray(suggestions.formatRecommendations?.structure).map((item, index) => (
                           <li key={index} className="text-sm text-gray-700">• {item}</li>
                         ))}
                       </ul>
@@ -397,7 +402,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">Design</h4>
                       <ul className="space-y-1">
-                        {(suggestions.formatRecommendations?.design || []).map((item, index) => (
+                        {getSafeArray(suggestions.formatRecommendations?.design).map((item, index) => (
                           <li key={index} className="text-sm text-gray-700">• {item}</li>
                         ))}
                       </ul>
@@ -405,7 +410,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">ATS Optimization</h4>
                       <ul className="space-y-1">
-                        {(suggestions.formatRecommendations?.atsOptimization || []).map((item, index) => (
+                        {getSafeArray(suggestions.formatRecommendations?.atsOptimization).map((item, index) => (
                           <li key={index} className="text-sm text-gray-700">• {item}</li>
                         ))}
                       </ul>
@@ -429,7 +434,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2">
-                      {(suggestions.actionPlan?.immediate || []).map((action, index) => (
+                      {getSafeArray(suggestions.actionPlan?.immediate).map((action, index) => (
                         <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                           <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
                           {action}
@@ -449,7 +454,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2">
-                      {(suggestions.actionPlan?.shortTerm || []).map((action, index) => (
+                      {getSafeArray(suggestions.actionPlan?.shortTerm).map((action, index) => (
                         <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                           <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
                           {action}
@@ -469,7 +474,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2">
-                      {(suggestions.actionPlan?.longTerm || []).map((action, index) => (
+                      {getSafeArray(suggestions.actionPlan?.longTerm).map((action, index) => (
                         <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                           <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
                           {action}
@@ -493,7 +498,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">Key Strengths</h4>
                       <ul className="space-y-1">
-                        {(suggestions.confidenceBoost?.strengths || []).map((strength, index) => (
+                        {getSafeArray(suggestions.confidenceBoost?.strengths).map((strength, index) => (
                           <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                             <Star className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
                             {strength}
@@ -504,7 +509,7 @@ const AISuggestionsModal: React.FC<AISuggestionsModalProps> = ({
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">Unique Value</h4>
                       <ul className="space-y-1">
-                        {(suggestions.confidenceBoost?.uniqueValue || []).map((value, index) => (
+                        {getSafeArray(suggestions.confidenceBoost?.uniqueValue).map((value, index) => (
                           <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                             <Sparkles className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                             {value}

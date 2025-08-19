@@ -10,6 +10,7 @@ interface ResumeUploadModalProps {
   onContinueWithRaw: () => void;
   onCustomizeWithAI: () => void;
   fileName: string;
+  uploadedFile: File | null; // Add this prop
 }
 
 const ResumeUploadModal: React.FC<ResumeUploadModalProps> = ({
@@ -17,7 +18,8 @@ const ResumeUploadModal: React.FC<ResumeUploadModalProps> = ({
   onClose,
   onContinueWithRaw,
   onCustomizeWithAI,
-  fileName
+  fileName,
+  uploadedFile // Add this prop
 }) => {
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
@@ -142,6 +144,7 @@ const ResumeUploadModal: React.FC<ResumeUploadModalProps> = ({
         isOpen={isAIModalOpen}
         onClose={handleAIClose}
         onContinue={handleAIContinue}
+        preUploadedFile={uploadedFile} // Pass the uploaded file
       />
     </>
   );

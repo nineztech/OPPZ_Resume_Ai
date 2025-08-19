@@ -253,7 +253,7 @@ const ResumeBuilderPage = () => {
         
         // Enhance experience descriptions with AI suggestions
         if (aiSuggestions.experienceAnalysis?.experienceEnhancements?.length > 0 && processedData.experience.length > 0) {
-          processedData.experience = processedData.experience.map((exp, index) => {
+          processedData.experience = processedData.experience.map((exp: any, index: number) => {
             const enhancement = aiSuggestions.experienceAnalysis?.experienceEnhancements?.[index];
             if (enhancement && exp.description) {
               return {
@@ -827,14 +827,8 @@ const ResumeBuilderPage = () => {
                     dates: edu.year,
                     details: [edu.description]
                   })),
-                  projects: resumeData.projects.map(project => ({
-                    Name: project.name,
-                    Description: project.description,
-                    Tech_Stack: project.techStack,
-                    Start_Date: project.startDate,
-                    End_Date: project.endDate,
-                    Link: project.link
-                  })),
+                  // Note: projects are not part of the standard TemplateData interface
+                  // They will be handled by the template renderer if supported
                   additionalInfo: {
                     languages: resumeData.languages.map(lang => lang.name)
                   },
@@ -1044,14 +1038,8 @@ const ResumeBuilderPage = () => {
             dates: edu.year,
             details: [edu.description]
           })),
-          projects: resumeData.projects.map(project => ({
-            Name: project.name,
-            Description: project.description,
-            Tech_Stack: project.techStack,
-            Start_Date: project.startDate,
-            End_Date: project.endDate,
-            Link: project.link
-          })),
+          // Note: projects are not part of the standard TemplateData interface
+          // They will be handled by the template renderer if supported
           additionalInfo: {
             languages: resumeData.languages.map(lang => lang.name)
           },
@@ -1068,7 +1056,7 @@ const ResumeBuilderPage = () => {
       />
     </>
   );
-};
+}
 
 // Basic Details Section Component
 const BasicDetailsSection = ({ data, onChange }: { data: any; onChange: (data: any) => void }) => {
