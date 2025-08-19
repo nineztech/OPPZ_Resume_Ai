@@ -53,7 +53,7 @@ class StandardATSService(ATSService):
         return f"""
         You are an expert Applicant Tracking System (ATS) analyzer.  
         Evaluate the following resume against **global ATS best practices** (USA standards) without using any specific job description.  
-        Your goal is to score the resume for **ATS compatibility** and suggest improvements.
+        Your goal is to score the resume for **ATS compatibility** and provide detailed feedback for each category.
 
         ### **Evaluation Criteria & Scoring**
         Provide a **score from 0–100** based on the following weighted criteria:
@@ -101,6 +101,57 @@ class StandardATSService(ATSService):
             "spelling_grammar": int,
             "parse_accuracy": int
           }},
+          "detailed_feedback": {{
+            "formatting_readability": {{
+              "score": int,
+              "title": "Readability",
+              "description": "Ensure resume screeners can read key sections of your resume",
+              "positives": [ "string", ... ],
+              "negatives": [ "string", ... ],
+              "suggestions": [ "string", ... ]
+            }},
+            "keyword_coverage_general": {{
+              "score": int,
+              "title": "Keywords & ATS",
+              "description": "Include relevant keywords for Applicant Tracking Systems",
+              "positives": [ "string", ... ],
+              "negatives": [ "string", ... ],
+              "suggestions": [ "string", ... ]
+            }},
+            "section_completeness": {{
+              "score": int,
+              "title": "Section Completeness",
+              "description": "Ensure all essential resume sections are present and well-structured",
+              "positives": [ "string", ... ],
+              "negatives": [ "string", ... ],
+              "suggestions": [ "string", ... ]
+            }},
+            "achievements_metrics": {{
+              "score": int,
+              "title": "Quantify Impact",
+              "description": "Use numbers and metrics to demonstrate your achievements",
+              "positives": [ "string", ... ],
+              "negatives": [ "string", ... ],
+              "suggestions": [ "string", ... ]
+            }},
+            "spelling_grammar": {{
+              "score": int,
+              "title": "Language Quality",
+              "description": "Maintain professional language standards throughout your resume",
+              "positives": [ "string", ... ],
+              "negatives": [ "string", ... ],
+              "suggestions": [ "string", ... ]
+            }},
+            "parse_accuracy": {{
+              "score": int,
+              "title": "ATS Parsing",
+              "description": "Ensure your resume can be accurately parsed by ATS systems",
+              "positives": [ "string", ... ],
+              "negatives": [ "string", ... ],
+              "suggestions": [ "string", ... ]
+            }}
+          }},
+          "extracted_text": "string",
           "strengths": [ "string", "string", ... ],
           "weaknesses": [ "string", "string", ... ],
           "recommendations": [ "string", "string", ... ]
@@ -180,6 +231,57 @@ class JDSpecificATSService(ATSService):
             "formatting_structure": int,
             "soft_skills_match": int
           }},
+          "detailed_feedback": {{
+            "keyword_match_skills": {{
+              "score": int,
+              "title": "Keywords & Skills Match",
+              "description": "How well your resume matches the required keywords and skills from the job description",
+              "positives": [ "string", ... ],
+              "negatives": [ "string", ... ],
+              "suggestions": [ "string", ... ]
+            }},
+            "experience_relevance": {{
+              "score": int,
+              "title": "Work Experience",
+              "description": "Relevance of your work experience to the target role",
+              "positives": [ "string", ... ],
+              "negatives": [ "string", ... ],
+              "suggestions": [ "string", ... ]
+            }},
+            "education_certifications": {{
+              "score": int,
+              "title": "Education",
+              "description": "Educational background alignment with job requirements",
+              "positives": [ "string", ... ],
+              "negatives": [ "string", ... ],
+              "suggestions": [ "string", ... ]
+            }},
+            "achievements_impact": {{
+              "score": int,
+              "title": "Quantify Impact",
+              "description": "Measurable achievements relevant to the target role",
+              "positives": [ "string", ... ],
+              "negatives": [ "string", ... ],
+              "suggestions": [ "string", ... ]
+            }},
+            "formatting_structure": {{
+              "score": int,
+              "title": "Readability",
+              "description": "Resume format and structure for ATS compatibility",
+              "positives": [ "string", ... ],
+              "negatives": [ "string", ... ],
+              "suggestions": [ "string", ... ]
+            }},
+            "soft_skills_match": {{
+              "score": int,
+              "title": "Soft Skills Alignment",
+              "description": "Soft skills alignment with job requirements",
+              "positives": [ "string", ... ],
+              "negatives": [ "string", ... ],
+              "suggestions": [ "string", ... ]
+            }}
+          }},
+          "extracted_text": "string",
           "strengths": [ "string", "string", ... ],
           "weaknesses": [ "string", "string", ... ],
           "recommendations": [ "string", "string", ... ]

@@ -11,6 +11,8 @@ import TemplatesPage from './pages/TemplatesPage';
 import UseTemplatePage from './pages/UseTemplatePage';
 import ResumeBuilderPage from './pages/ResumeBuilderPage';
 import FeaturesPage from './pages/FeaturesPage';
+import ATSScorePage from './pages/ATSScorePage';
+import ATSResultsPage from './pages/ATSResultsPage';
 
 function App() {
   return (
@@ -22,6 +24,24 @@ function App() {
             <Route path="/resume/login" element={<LoginPage />} />
             <Route path="/resume/signup" element={<SignupPage />} />
             <Route path="/resume/features" element={<Layout><FeaturesPage /></Layout>} />
+            <Route 
+              path="/resume/ats-score" 
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ATSScorePage />
+                  </Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/resume/ats-results" 
+              element={
+                <ProtectedRoute>
+                  <ATSResultsPage />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/resume/templates" 
               element={

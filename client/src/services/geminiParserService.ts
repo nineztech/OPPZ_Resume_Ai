@@ -71,6 +71,98 @@ export interface GeminiParsedData {
   [key: string]: any;
 }
 
+// AI Suggestions interfaces
+export interface AIJobDescription {
+  jobTitle?: string;
+  companyProfile?: string;
+  jobSummary?: string;
+  keyResponsibilities?: string[];
+  requiredSkills?: {
+    technical?: string[];
+    soft?: string[];
+    programming?: string[];
+    tools?: string[];
+  };
+  educationalRequirements?: string[];
+  experienceLevel?: string;
+  salaryRange?: string;
+  benefits?: string[];
+  growthOpportunities?: string[];
+  atsKeywords?: string[];
+  industryFocus?: string[];
+}
+
+export interface AISuggestions {
+  overallScore?: number;
+  atsCompatibility?: {
+    score?: number;
+    strengths?: string[];
+    improvements?: string[];
+  };
+  skillsAnalysis?: {
+    matchingSkills?: string[];
+    missingSkills?: string[];
+    skillsToHighlight?: string[];
+    skillsToAdd?: string[];
+  };
+  experienceAnalysis?: {
+    relevantExperience?: string[];
+    experienceGaps?: string[];
+    experienceEnhancements?: string[];
+  };
+  keywordOptimization?: {
+    presentKeywords?: string[];
+    missingKeywords?: string[];
+    keywordDensityTips?: string[];
+  };
+  sectionRecommendations?: {
+    summary?: {
+      current?: string;
+      suggested?: string;
+      improvements?: string[];
+    };
+    skills?: {
+      additions?: string[];
+      reorganization?: string[];
+    };
+    experience?: {
+      bulletPointImprovements?: string[];
+      quantificationSuggestions?: string[];
+    };
+    education?: {
+      relevantCertifications?: string[];
+      additionalCourses?: string[];
+    };
+  };
+  formatRecommendations?: {
+    structure?: string[];
+    design?: string[];
+    atsOptimization?: string[];
+  };
+  industrySpecificTips?: string[];
+  actionPlan?: {
+    immediate?: string[];
+    shortTerm?: string[];
+    longTerm?: string[];
+  };
+  confidenceBoost?: {
+    strengths?: string[];
+    uniqueValue?: string[];
+  };
+}
+
+export interface AIProcessingResult {
+  resumeData?: GeminiParsedData;
+  jobDescription?: AIJobDescription;
+  suggestions?: AISuggestions;
+  processedAt?: string;
+  parameters?: {
+    sector?: string;
+    country?: string;
+    designation?: string;
+  };
+}
+
 class GeminiParserService {
   private baseUrl: string;
 
@@ -305,6 +397,159 @@ class GeminiParserService {
     
     console.log('Final converted data for ResumeBuilderPage:', convertedData);
     return convertedData;
+  }
+
+  // AI Suggestions: Get comprehensive AI-powered resume suggestions
+  async getAISuggestions(file: File, sector: string, country: string, designation: string): Promise<AIProcessingResult> {
+    try {
+      // Validate inputs
+      if (!file || !sector.trim() || !country.trim() || !designation.trim()) {
+        throw new Error('All parameters (file, sector, country, designation) are required');
+      }
+
+      // Validate file
+      if (file.size > 16 * 1024 * 1024) {
+        throw new Error('File size exceeds 16MB limit');
+      }
+
+      const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+      const allowedExtensions = ['.pdf', '.docx', '.txt'];
+      const fileName = file.name.toLowerCase();
+      
+      if (!allowedTypes.includes(file.type) && !allowedExtensions.some(ext => fileName.endsWith(ext))) {
+        throw new Error('Unsupported file type. Please use PDF, DOCX, or TXT files.');
+      }
+
+      const formData = new FormData();
+      formData.append('resume', file);
+      formData.append('sector', sector);
+      formData.append('country', country);
+      formData.append('designation', designation);
+
+      console.log('Requesting AI suggestions for:', { fileName: file.name, sector, country, designation });
+
+      const response = await fetch(`${this.baseUrl}/ai/suggestions`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server error: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result || typeof result !== 'object') {
+        throw new Error('Invalid response format from server');
+      }
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to get AI suggestions');
+      }
+
+      if (!result.data) {
+        throw new Error('No data received from server');
+      }
+
+      console.log('AI suggestions generated successfully:', result.data);
+      return result.data;
+    } catch (error) {
+      console.error('Error getting AI suggestions:', error);
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch')) {
+          throw new Error('Cannot connect to AI service. Please ensure the backend is running on port 5000.');
+        } else if (error.message.includes('Server error: 500')) {
+          throw new Error('AI processing failed. Please check your API key and try again.');
+        } else {
+          throw error;
+        }
+      }
+      
+      throw new Error('An unexpected error occurred during AI processing');
+    }
+  }
+
+  // Standard ATS Analysis
+  async getStandardATSAnalysis(file: File): Promise<any> {
+    try {
+      if (!file) {
+        throw new Error('No file provided');
+      }
+
+      if (file.size > 16 * 1024 * 1024) {
+        throw new Error('File size exceeds 16MB limit');
+      }
+
+      const formData = new FormData();
+      formData.append('resume', file);
+
+      console.log('Requesting standard ATS analysis for:', file.name);
+
+      const response = await fetch(`${this.baseUrl}/ats/standard`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server error: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to get ATS analysis');
+      }
+
+      console.log('Standard ATS analysis completed:', result.data);
+      return result.data;
+    } catch (error) {
+      console.error('Error getting standard ATS analysis:', error);
+      throw error;
+    }
+  }
+
+  // JD-Specific ATS Analysis
+  async getJDSpecificATSAnalysis(file: File, jobDescription: string): Promise<any> {
+    try {
+      if (!file || !jobDescription.trim()) {
+        throw new Error('Both file and job description are required');
+      }
+
+      if (file.size > 16 * 1024 * 1024) {
+        throw new Error('File size exceeds 16MB limit');
+      }
+
+      const formData = new FormData();
+      formData.append('resume', file);
+      formData.append('job_description', jobDescription);
+
+      console.log('Requesting JD-specific ATS analysis for:', file.name);
+
+      const response = await fetch(`${this.baseUrl}/ats/jd-specific`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server error: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to get JD-specific ATS analysis');
+      }
+
+      console.log('JD-specific ATS analysis completed:', result.data);
+      return result.data;
+    } catch (error) {
+      console.error('Error getting JD-specific ATS analysis:', error);
+      throw error;
+    }
   }
 
   // Check if the backend is available

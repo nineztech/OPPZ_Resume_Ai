@@ -7,6 +7,7 @@ Run this to get a web interface for uploading and testing resumes with ATS analy
 import os
 import json
 import tempfile
+import datetime
 from pathlib import Path
 from flask import Flask, render_template_string, request, jsonify, send_file
 from flask_cors import CORS
@@ -16,6 +17,7 @@ import logging
 # Import the Gemini parser and ATS services
 from services.gemini_parser_service import GeminiResumeParser
 from services.ats_service import StandardATSService, JDSpecificATSService
+from services.ai_suggestion_service import AISuggestionService
 from utils.pdf_extractor import DocumentExtractor
 
 # Configure logging
@@ -430,6 +432,7 @@ HTML_TEMPLATE = """
             <button class="tab active" onclick="showTab('parsing')">Resume Parsing</button>
             <button class="tab" onclick="showTab('standard-ats')">Standard ATS</button>
             <button class="tab" onclick="showTab('jd-ats')">JD-Specific ATS</button>
+            <button class="tab" onclick="showTab('ai-suggestions')">AI Suggestions</button>
         </div>
 
         <!-- Resume Parsing Tab -->
@@ -505,6 +508,39 @@ HTML_TEMPLATE = """
             </div>
 
             <div class="ats-results" id="jdAtsResults"></div>
+        </div>
+
+        <!-- AI Suggestions Tab -->
+        <div id="ai-suggestions" class="tab-content">
+            <div class="upload-section">
+                <h3>AI-Powered Resume Suggestions</h3>
+                <p style="color: #666; margin-bottom: 20px;">Get personalized job descriptions and comprehensive resume improvement suggestions based on sector, country, and role</p>
+                <form id="aiSuggestionsForm" enctype="multipart/form-data">
+                    <div class="file-input">
+                        <input type="file" id="aiSuggestionsFile" name="resume" accept=".pdf,.docx,.txt" required>
+                    </div>
+                    <div style="margin: 20px 0;">
+                        <label for="sector"><strong>Sector/Industry:</strong></label>
+                        <input type="text" id="sector" name="sector" placeholder="e.g., Technology, Healthcare, Finance" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-top: 5px;">
+                    </div>
+                    <div style="margin: 20px 0;">
+                        <label for="country"><strong>Country:</strong></label>
+                        <input type="text" id="country" name="country" placeholder="e.g., USA, Canada, UK" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-top: 5px;">
+                    </div>
+                    <div style="margin: 20px 0;">
+                        <label for="designation"><strong>Designation/Role:</strong></label>
+                        <input type="text" id="designation" name="designation" placeholder="e.g., Data Analyst, Software Engineer, Marketing Manager" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-top: 5px;">
+                    </div>
+                    <button type="submit" class="btn" id="aiSuggestionsBtn">Generate AI Suggestions</button>
+                </form>
+            </div>
+
+            <div class="loading" id="aiSuggestionsLoading">
+                <div class="spinner"></div>
+                <p>Generating job description and analyzing resume... This may take a few moments.</p>
+            </div>
+
+            <div class="ats-results" id="aiSuggestionsResults"></div>
         </div>
 
         <div id="errorMessage"></div>
@@ -660,6 +696,59 @@ HTML_TEMPLATE = """
             } finally {
                 document.getElementById('jdAtsLoading').style.display = 'none';
                 document.getElementById('jdAtsBtn').disabled = false;
+            }
+        });
+
+        // AI Suggestions Analysis
+        document.getElementById('aiSuggestionsForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('aiSuggestionsFile');
+            const file = fileInput.files[0];
+            const sector = document.getElementById('sector').value;
+            const country = document.getElementById('country').value;
+            const designation = document.getElementById('designation').value;
+            
+            if (!file) {
+                showError('Please select a file to upload.');
+                return;
+            }
+
+            if (!sector.trim() || !country.trim() || !designation.trim()) {
+                showError('Please fill in all fields (Sector, Country, Designation).');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('aiSuggestionsLoading').style.display = 'block';
+            document.getElementById('aiSuggestionsResults').innerHTML = '';
+            document.getElementById('errorMessage').innerHTML = '';
+            document.getElementById('aiSuggestionsBtn').disabled = true;
+
+            const formData = new FormData();
+            formData.append('resume', file);
+            formData.append('sector', sector);
+            formData.append('country', country);
+            formData.append('designation', designation);
+
+            try {
+                const response = await fetch('/ai/suggestions', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAiSuggestionsResults(result.data);
+                } else {
+                    showError('AI Suggestions analysis failed: ' + result.error);
+                }
+            } catch (error) {
+                showError('Error: ' + error.message);
+            } finally {
+                document.getElementById('aiSuggestionsLoading').style.display = 'none';
+                document.getElementById('aiSuggestionsBtn').disabled = false;
             }
         });
 
@@ -1145,6 +1234,168 @@ HTML_TEMPLATE = """
             resultsDiv.innerHTML = html;
         }
 
+        function showAiSuggestionsResults(data) {
+            const resultsDiv = document.getElementById('aiSuggestionsResults');
+            
+            if (!resultsDiv) {
+                console.error('aiSuggestionsResults element not found');
+                return;
+            }
+            
+            if (!data || typeof data !== 'object') {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <h3>Error: Invalid Data Received</h3>
+                        <p>The AI suggestions analysis returned invalid data. Please try again.</p>
+                        <div class="json-output">${formatJSON(JSON.stringify(data, null, 2))}</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <h3>AI-Powered Resume Suggestions</h3>
+                
+                <div class="score-circle">
+                    <div class="score-text">${data.suggestions?.overallScore || 'N/A'}</div>
+                </div>
+                <h4 style="text-align: center; margin-bottom: 30px;">OVERALL SCORE</h4>
+            `;
+
+            // Job Description Summary
+            if (data.jobDescription) {
+                html += `
+                    <div class="detail-card">
+                        <h4>🎯 Generated Job Description</h4>
+                        <div style="margin-bottom: 15px;">
+                            <strong>Title:</strong> ${data.jobDescription.jobTitle || 'N/A'}<br>
+                            <strong>Experience Level:</strong> ${data.jobDescription.experienceLevel || 'N/A'}<br>
+                            <strong>Salary Range:</strong> ${data.jobDescription.salaryRange || 'N/A'}
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <strong>Job Summary:</strong><br>
+                            <p style="margin: 5px 0; line-height: 1.5;">${data.jobDescription.jobSummary || 'N/A'}</p>
+                        </div>
+                        ${data.jobDescription.keyResponsibilities && data.jobDescription.keyResponsibilities.length > 0 ? `
+                            <div style="margin-bottom: 15px;">
+                                <strong>Key Responsibilities:</strong>
+                                <ul style="margin: 5px 0; padding-left: 20px;">
+                                    ${data.jobDescription.keyResponsibilities.slice(0, 5).map(resp => `<li>${resp}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            // ATS Compatibility
+            if (data.suggestions?.atsCompatibility) {
+                html += `
+                    <div class="detail-card">
+                        <h4>📊 ATS Compatibility Analysis</h4>
+                        <div style="text-align: center; margin: 20px 0;">
+                            <div style="font-size: 36px; font-weight: bold; color: #007bff;">${data.suggestions.atsCompatibility.score}%</div>
+                            <div style="color: #6c757d;">ATS Compatibility Score</div>
+                        </div>
+                        ${data.suggestions.atsCompatibility.strengths && data.suggestions.atsCompatibility.strengths.length > 0 ? `
+                            <div style="margin-bottom: 15px;">
+                                <h5 style="color: #28a745;">✅ Strengths:</h5>
+                                <ul style="margin: 5px 0; padding-left: 20px; color: #155724;">
+                                    ${data.suggestions.atsCompatibility.strengths.slice(0, 3).map(strength => `<li>${strength}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        ${data.suggestions.atsCompatibility.improvements && data.suggestions.atsCompatibility.improvements.length > 0 ? `
+                            <div style="margin-bottom: 15px;">
+                                <h5 style="color: #dc3545;">❌ Areas to Improve:</h5>
+                                <ul style="margin: 5px 0; padding-left: 20px; color: #c62828;">
+                                    ${data.suggestions.atsCompatibility.improvements.slice(0, 3).map(improvement => `<li>${improvement}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            // Skills Analysis
+            if (data.suggestions?.skillsAnalysis) {
+                html += `
+                    <div class="detail-card">
+                        <h4>🛠️ Skills Analysis</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            ${data.suggestions.skillsAnalysis.matchingSkills && data.suggestions.skillsAnalysis.matchingSkills.length > 0 ? `
+                                <div>
+                                    <h5 style="color: #28a745;">✅ Matching Skills:</h5>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                                        ${data.suggestions.skillsAnalysis.matchingSkills.slice(0, 8).map(skill => `
+                                            <span style="background: #28a745; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">${skill}</span>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${data.suggestions.skillsAnalysis.missingSkills && data.suggestions.skillsAnalysis.missingSkills.length > 0 ? `
+                                <div>
+                                    <h5 style="color: #dc3545;">❌ Missing Skills:</h5>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                                        ${data.suggestions.skillsAnalysis.missingSkills.slice(0, 8).map(skill => `
+                                            <span style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">${skill}</span>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Action Plan
+            if (data.suggestions?.actionPlan) {
+                html += `
+                    <div class="detail-card">
+                        <h4>📋 Action Plan</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                            ${data.suggestions.actionPlan.immediate && data.suggestions.actionPlan.immediate.length > 0 ? `
+                                <div style="border-left: 4px solid #dc3545; padding-left: 15px;">
+                                    <h5 style="color: #dc3545; margin-bottom: 10px;">🚨 Immediate Actions:</h5>
+                                    <ul style="margin: 0; padding-left: 20px; color: #c62828;">
+                                        ${data.suggestions.actionPlan.immediate.slice(0, 3).map(action => `<li>${action}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            ${data.suggestions.actionPlan.shortTerm && data.suggestions.actionPlan.shortTerm.length > 0 ? `
+                                <div style="border-left: 4px solid #ffc107; padding-left: 15px;">
+                                    <h5 style="color: #856404; margin-bottom: 10px;">📅 Short-term Goals:</h5>
+                                    <ul style="margin: 0; padding-left: 20px; color: #856404;">
+                                        ${data.suggestions.actionPlan.shortTerm.slice(0, 3).map(action => `<li>${action}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            ${data.suggestions.actionPlan.longTerm && data.suggestions.actionPlan.longTerm.length > 0 ? `
+                                <div style="border-left: 4px solid #28a745; padding-left: 15px;">
+                                    <h5 style="color: #155724; margin-bottom: 10px;">🎯 Long-term Development:</h5>
+                                    <ul style="margin: 0; padding-left: 20px; color: #155724;">
+                                        ${data.suggestions.actionPlan.longTerm.slice(0, 3).map(action => `<li>${action}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Complete JSON output
+            html += `
+                <div style="margin-top: 30px;">
+                    <h4>Complete AI Analysis Data (JSON)</h4>
+                    <div class="json-output" style="max-height: 400px; overflow-y: auto;">
+                        ${formatJSON(JSON.stringify(data, null, 2))}
+                    </div>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+
         function formatJSON(jsonString) {
             return jsonString
                 .replace(/&/g, '&amp;')
@@ -1258,6 +1509,10 @@ def standard_ats_analysis():
             logger.info(f"Running standard ATS analysis for: {filename}")
             results = ats_service.analyze_resume(resume_text)
             
+            # Add extracted text to results if not already present
+            if 'extracted_text' not in results:
+                results['extracted_text'] = resume_text
+            
             # Clean up temporary file
             os.unlink(filepath)
             
@@ -1319,6 +1574,10 @@ def jd_specific_ats_analysis():
             logger.info(f"Running JD-specific ATS analysis for: {filename}")
             results = ats_service.analyze_resume_for_jd(resume_text, job_description)
             
+            # Add extracted text to results if not already present
+            if 'extracted_text' not in results:
+                results['extracted_text'] = resume_text
+            
             # Clean up temporary file
             os.unlink(filepath)
             
@@ -1335,6 +1594,82 @@ def jd_specific_ats_analysis():
             
     except Exception as e:
         logger.error(f"JD-specific ATS analysis failed: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/ai/suggestions', methods=['POST'])
+def ai_suggestions():
+    """AI-powered resume suggestions with job description generation"""
+    try:
+        # Check if file was uploaded
+        if 'resume' not in request.files:
+            return jsonify({'success': False, 'error': 'No file uploaded'})
+        
+        # Check if required parameters were provided
+        if 'sector' not in request.form or 'country' not in request.form or 'designation' not in request.form:
+            return jsonify({'success': False, 'error': 'Sector, country, and designation are required'})
+        
+        file = request.files['resume']
+        sector = request.form['sector']
+        country = request.form['country']
+        designation = request.form['designation']
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'})
+        
+        if not sector.strip() or not country.strip() or not designation.strip():
+            return jsonify({'success': False, 'error': 'Sector, country, and designation cannot be empty'})
+        
+        # Save file temporarily
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        try:
+            # Initialize AI service
+            ai_service = AISuggestionService()
+            
+            # Step 1: Parse the resume
+            logger.info(f"Parsing resume for AI suggestions: {filename}")
+            parser = GeminiResumeParser()
+            resume_data = parser.parse_resume_from_file(filepath)
+            
+            # Step 2: Generate job description
+            logger.info(f"Generating job description for {designation} in {sector} sector, {country}")
+            job_description = ai_service.generate_job_description(sector, country, designation)
+            
+            # Step 3: Get AI suggestions by comparing resume with job description
+            logger.info("Comparing resume with job description and generating suggestions")
+            suggestions = ai_service.compare_resume_with_jd(resume_data, job_description)
+            
+            # Clean up temporary file
+            os.unlink(filepath)
+            
+            return jsonify({
+                'success': True,
+                'data': {
+                    'resumeData': resume_data,
+                    'jobDescription': job_description,
+                    'suggestions': suggestions,
+                    'processedAt': str(datetime.datetime.now()),
+                    'parameters': {
+                        'sector': sector,
+                        'country': country,
+                        'designation': designation
+                    }
+                }
+            })
+            
+        except Exception as e:
+            # Clean up temporary file on error
+            if os.path.exists(filepath):
+                os.unlink(filepath)
+            raise e
+            
+    except Exception as e:
+        logger.error(f"AI suggestions analysis failed: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -1363,11 +1698,12 @@ if __name__ == '__main__':
     print("🚀 Starting Gemini Resume Parser & ATS Analysis Web UI...")
     print("📱 Open your browser and go to: http://localhost:5000")
     print("🔑 Make sure your GEMINI_API_KEY is set in environment variables")
-    print("📁 You can now upload and test resume files with ATS analysis!")
+    print("📁 You can now upload and test resume files with comprehensive AI analysis!")
     print("\nFeatures:")
     print("  • Resume Parsing with Gemini AI")
     print("  • Standard ATS Analysis (General optimization)")
     print("  • JD-Specific ATS Analysis (Job matching)")
+    print("  • AI-Powered Resume Suggestions (Job description generation + comparison)")
     print("\nPress Ctrl+C to stop the server")
     
     app.run(debug=True, host='0.0.0.0', port=5000)
