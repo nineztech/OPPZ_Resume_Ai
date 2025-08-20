@@ -1,4 +1,4 @@
-  import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,209 +45,89 @@ const UseTemplatePage = () => {
     }
   };
 
-  // const handleContinueWithRaw = () => {
-  //   console.log("Navigating to ResumeBuilderPage with raw data:", extractedData);
-  //   navigate('/resume/builder', { 
-  //     state: { 
-  //       templateId, 
-  //       selectedColor, 
-  //       mode: 'raw',
-  //       extractedData // pass extracted data, not file!
-  //     } 
-  //   });
-  // };
-
-  // const handleCustomizeWithAI = () => {
-  //   console.log("Navigating to ResumeBuilderPage with AI data:", extractedData);
-  //   navigate('/resume/builder', { 
-  //     state: { 
-  //       templateId, 
-  //       selectedColor, 
-  //       mode: 'ai',
-  //       extractedData // pass extracted data, not file!
-  //     } 
-  //   });
-  // };
-
-  // const handleContinueWithoutResume = async () => {
-  //   // Get default template data
-  //   const template = getTemplateById(templateId || 'modern-professional');
-  //   const defaultData = template?.templateData;
-    
-  //   navigate('/resume/builder', { 
-  //     state: { 
-  //       templateId, 
-  //       selectedColor, 
-  //       mode: 'default',
-  //       defaultData // pass default template data
-  //     } 
-  //   });
-  // };
-
-  // const handleAICustomization = (data: { 
-  //   sector: string; 
-  //   country: string; 
-  //   designation: string; 
-  //   aiResults?: AIProcessingResult;
-  //   resumeFile?: File;
-  // }) => {
-  //   if (data.aiResults) {
-  //     // Show AI suggestions modal
-  //     setAIResults(data.aiResults);
-  //     setIsAIModalOpen(false);
-  //     setIsSuggestionsModalOpen(true);
-  //   } else {
-  //     // Continue without AI analysis (just job description)
-  //     setIsAIModalOpen(false);
-  //     navigate("/resume/builder", { 
-  //       state: { 
-  //         templateId, 
-  //         selectedColor,
-  //         mode: 'ai-basic',
-  //         aiParams: { sector: data.sector, country: data.country, designation: data.designation }
-  //       } 
-  //     });
-  //   }
-  // };
-
-  // const handleApplyAISuggestions = () => {
-  //   if (aiResults) {
-  //     // Navigate to resume builder with AI suggestions and parsed data
-  //     setIsSuggestionsModalOpen(false);
-  //     navigate("/resume/builder", { 
-  //       state: { 
-  //         templateId, 
-  //         selectedColor,
-  //         mode: 'ai-enhanced',
-  //         extractedData: aiResults.resumeData,
-  //         aiSuggestions: aiResults.suggestions,
-  //         jobDescription: aiResults.jobDescription,
-  //         aiParams: aiResults.parameters
-  //       } 
-  //     });
-  //   }
-  // };
-// In UseTemplatePage.tsx - Update these navigation methods:
-
-const handleContinueWithRaw = () => {
-  console.log("Navigating to ResumeBuilderPage with raw data:", extractedData);
-  
-  // Include color in URL parameters
-  const params = new URLSearchParams();
-  params.set('templateId', templateId || 'modern-professional');
-  if (selectedColor) {
-    params.set('color', encodeURIComponent(selectedColor));
-  }
-  
-  navigate(`/resume/builder?${params.toString()}`, { 
-    state: { 
-      templateId, 
-      selectedColor, 
-      mode: 'raw',
-      extractedData
-    } 
-  });
-};
-
-const handleCustomizeWithAI = () => {
-  console.log("Navigating to ResumeBuilderPage with AI data:", extractedData);
-  
-  // Include color in URL parameters
-  const params = new URLSearchParams();
-  params.set('templateId', templateId || 'modern-professional');
-  if (selectedColor) {
-    params.set('color', encodeURIComponent(selectedColor));
-  }
-  
-  navigate(`/resume/builder?${params.toString()}`, { 
-    state: { 
-      templateId, 
-      selectedColor, 
-      mode: 'ai',
-      extractedData
-    } 
-  });
-};
-
-const handleContinueWithoutResume = async () => {
-  // Get default template data
-  const template = getTemplateById(templateId || 'modern-professional');
-  const defaultData = template?.templateData;
-  
-  // Include color in URL parameters
-  const params = new URLSearchParams();
-  params.set('templateId', templateId || 'modern-professional');
-  if (selectedColor) {
-    params.set('color', encodeURIComponent(selectedColor));
-  }
-  
-  navigate(`/resume/builder?${params.toString()}`, { 
-    state: { 
-      templateId, 
-      selectedColor, 
-      mode: 'default',
-      defaultData
-    } 
-  });
-};
-
-const handleAICustomization = (data: { 
-  sector: string; 
-  country: string; 
-  designation: string; 
-  aiResults?: AIProcessingResult;
-  resumeFile?: File;
-}) => {
-  // Include color in URL parameters
-  const params = new URLSearchParams();
-  params.set('templateId', templateId || 'modern-professional');
-  if (selectedColor) {
-    params.set('color', encodeURIComponent(selectedColor));
-  }
-  
-  if (data.aiResults) {
-    // Show AI suggestions modal
-    setAIResults(data.aiResults);
-    setIsAIModalOpen(false);
-    setIsSuggestionsModalOpen(true);
-  } else {
-    // Continue without AI analysis (just job description)
-    setIsAIModalOpen(false);
-    navigate(`/resume/builder?${params.toString()}`, { 
+  const handleContinueWithRaw = () => {
+    console.log("Navigating to ResumeBuilderPage with raw data:", extractedData);
+    navigate('/resume/builder', { 
       state: { 
         templateId, 
-        selectedColor,
-        mode: 'ai-basic',
-        aiParams: { sector: data.sector, country: data.country, designation: data.designation }
+        selectedColor, 
+        mode: 'raw',
+        extractedData // pass extracted data, not file!
       } 
     });
-  }
-};
+  };
 
-const handleApplyAISuggestions = () => {
-  if (aiResults) {
-    // Include color in URL parameters
-    const params = new URLSearchParams();
-    params.set('templateId', templateId || 'modern-professional');
-    if (selectedColor) {
-      params.set('color', encodeURIComponent(selectedColor));
+  const handleCustomizeWithAI = () => {
+    console.log("Navigating to ResumeBuilderPage with AI data:", extractedData);
+    navigate('/resume/builder', { 
+      state: { 
+        templateId, 
+        selectedColor, 
+        mode: 'ai',
+        extractedData // pass extracted data, not file!
+      } 
+    });
+  };
+
+  const handleContinueWithoutResume = async () => {
+    // Get default template data
+    const template = getTemplateById(templateId || 'modern-professional');
+    const defaultData = template?.templateData;
+    
+    navigate('/resume/builder', { 
+      state: { 
+        templateId, 
+        selectedColor, 
+        mode: 'default',
+        defaultData // pass default template data
+      } 
+    });
+  };
+
+  const handleAICustomization = (data: { 
+    sector: string; 
+    country: string; 
+    designation: string; 
+    aiResults?: AIProcessingResult;
+    resumeFile?: File;
+  }) => {
+    if (data.aiResults) {
+      // Show AI suggestions modal
+      setAIResults(data.aiResults);
+      setIsAIModalOpen(false);
+      setIsSuggestionsModalOpen(true);
+    } else {
+      // Continue without AI analysis (just job description)
+      setIsAIModalOpen(false);
+      navigate("/resume/builder", { 
+        state: { 
+          templateId, 
+          selectedColor,
+          mode: 'ai-basic',
+          aiParams: { sector: data.sector, country: data.country, designation: data.designation }
+        } 
+      });
     }
-    
-    // Navigate to resume builder with AI suggestions and parsed data
-    setIsSuggestionsModalOpen(false);
-    navigate(`/resume/builder?${params.toString()}`, { 
-      state: { 
-        templateId, 
-        selectedColor,
-        mode: 'ai-enhanced',
-        extractedData: aiResults.resumeData,
-        aiSuggestions: aiResults.suggestions,
-        jobDescription: aiResults.jobDescription,
-        aiParams: aiResults.parameters
-      } 
-    });
-  }
-};
+  };
+
+  const handleApplyAISuggestions = () => {
+    if (aiResults) {
+      // Navigate to resume builder with AI suggestions and parsed data
+      setIsSuggestionsModalOpen(false);
+      navigate("/resume/builder", { 
+        state: { 
+          templateId, 
+          selectedColor,
+          mode: 'ai-enhanced',
+          extractedData: aiResults.resumeData,
+          aiSuggestions: aiResults.suggestions,
+          jobDescription: aiResults.jobDescription,
+          aiParams: aiResults.parameters
+        } 
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         {/* Upload Section */}

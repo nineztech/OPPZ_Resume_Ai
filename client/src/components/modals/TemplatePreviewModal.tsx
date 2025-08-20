@@ -84,9 +84,7 @@ const TemplatePreviewModal = ({ template, isOpen, onClose, onDownload, onUseTemp
       templateId: template!.id,
       color: selectedColor
     });
-    // window.location.href = `/resume/templates/use-template?${params.toString()}`;
-      window.location.href = `/resume/builder?${params.toString()}`;
-
+    window.location.href = `/resume/templates/use-template?${params.toString()}`;
   };
 
   // Early return after all hooks
