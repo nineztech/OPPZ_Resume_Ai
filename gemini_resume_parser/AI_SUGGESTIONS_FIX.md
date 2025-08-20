@@ -115,3 +115,4 @@ If you continue to have issues:
 2. Run the test scripts to isolate problems
 3. Verify your Gemini API key is working
 4. Check the [Gemini API documentation](https://ai.google.dev/docs) for updates
+
