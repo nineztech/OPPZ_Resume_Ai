@@ -34,9 +34,23 @@ class AISuggestionService:
             Generated job description as structured dictionary
         """
         prompt = f"""
-        Generate a comprehensive job description for a {designation} position in the {sector} sector in {country}.
-        
-        Please provide the job description in the following JSON format:
+        You are an expert job market analyst and talent acquisition specialist.
+        Create the best featured combination Job Description (JD) for a "{designation}" role in the {sector} sector for {country}.
+
+        Requirements for market realism and consistency:
+        - Synthesize common demands from leading job portals in {country}, including LinkedIn Jobs, Indeed, Glassdoor, and Naukri.
+        - Reflect expectations typical of Fortune 500 and Fortune 3000 companies operating in {country}.
+        - Keep the language professional, ATS-friendly, and specific to the {sector} domain and {country} market norms.
+        - Use concise, clear phrasing and avoid marketing fluff.
+        - If {country} is USA, prefer US spelling and typical compensation phrasing.
+
+        Output rules:
+        - Return ONLY valid JSON matching EXACTLY the schema below. No markdown, no code fences, no explanations, no trailing commas.
+        - Use double quotes for all keys and string values.
+        - Ensure each array is non-empty and specific to the role and sector.
+        - "salaryRange" should be realistic for {country} and the expected experience level.
+
+        JSON schema to produce:
         {{
             "jobTitle": "Exact job title",
             "experienceLevel": "Entry/Mid/Senior level",
@@ -65,11 +79,6 @@ class AISuggestionService:
                 "Professional development"
             ]
         }}
-        
-        Make it realistic and detailed, suitable for a professional job posting.
-        Focus on the specific sector and consider the country's job market standards.
-        
-        Return ONLY the JSON output — no explanations.
         """
         
         try:
@@ -108,238 +117,235 @@ class AISuggestionService:
         resume_text = self._format_resume_for_comparison(resume_data)
         
         prompt = f"""
-        You are an expert resume consultant and career advisor. 
-        Compare the following resume with the job description and provide comprehensive, detailed analysis and suggestions.
-        
+        You are an expert resume consultant and career advisor.
+        Compare the following resume with the job description and provide comprehensive, detailed, and actionable analysis and suggestions.
+
+        Rules:
+        - Return ONLY valid JSON. No markdown, no code fences, no explanations, no comments, no trailing commas.
+        - Follow the schema exactly. Use integers where numbers are expected. Use ISO 8601 UTC for timestamps.
+        - Keep recommendations specific to the job description and resume content.
+
         RESUME DATA:
         {resume_text}
-        
+
         JOB DESCRIPTION:
         {job_description}
-        
-        Please provide a comprehensive analysis in the following JSON format:
+
+        Produce JSON matching EXACTLY this structure:
         {{
-            "overallScore": int,  // Score from 0-100
+            "overallScore": 0,
             "analysisTimestamp": "2024-01-15T10:30:00Z",
             "jobMatchAnalysis": {{
-                "alignmentScore": int,  // Score from 0-100
-                "matchingSectors": ["relevant sectors"],
-                "roleCompatibility": "High/Medium/Low",
-                "experienceLevelMatch": "description of experience level match"
+                "alignmentScore": 0,
+                "matchingSectors": [""],
+                "roleCompatibility": "",
+                "experienceLevelMatch": ""
             }},
             "atsCompatibility": {{
-                "score": int,  // Score from 0-100
-                "passRate": "High/Medium/Low",
-                "strengths": [
-                    "List of resume strengths that match the job requirements"
-                ],
-                "improvements": [
-                    "List of areas where resume falls short of job requirements"
-                ],
+                "score": 0,
+                "passRate": "",
+                "strengths": [""],
+                "improvements": [""],
                 "keywordDensity": {{
-                    "matchedKeywords": int,
-                    "totalRequiredKeywords": int,
-                    "matchPercentage": int,
-                    "criticalMissing": int
+                    "matchedKeywords": 0,
+                    "totalRequiredKeywords": 0,
+                    "matchPercentage": 0,
+                    "criticalMissing": 0
                 }},
                 "formatOptimization": {{
-                    "score": int,
-                    "issues": ["formatting issues"],
-                    "recommendations": ["formatting recommendations"]
+                    "score": 0,
+                    "issues": [""],
+                    "recommendations": [""]
                 }}
             }},
             "sectionAnalysis": {{
                 "contactInformation": {{
-                    "score": int,
-                    "status": "status description",
-                    "completeness": int,
-                    "strengths": ["contact info strengths"],
-                    "improvements": ["areas to improve"],
-                    "recommendations": ["specific recommendations"],
-                    "missingElements": ["missing contact elements"]
+                    "score": 0,
+                    "status": "",
+                    "completeness": 0,
+                    "strengths": [""],
+                    "improvements": [""],
+                    "recommendations": [""],
+                    "missingElements": [""]
                 }},
                 "professionalSummary": {{
-                    "score": int,
-                    "status": "status description", 
-                    "completeness": int,
-                    "strengths": ["summary strengths"],
-                    "improvements": ["areas to improve"],
-                    "recommendations": ["specific recommendations"],
-                    "suggestedRewrite": "suggested improved summary text",
-                    "keywordGaps": ["missing keywords"],
-                    "impactScore": int
+                    "score": 0,
+                    "status": "",
+                    "completeness": 0,
+                    "strengths": [""],
+                    "improvements": [""],
+                    "recommendations": [""],
+                    "suggestedRewrite": "",
+                    "keywordGaps": [""],
+                    "impactScore": 0
                 }},
                 "skillsSection": {{
-                    "score": int,
-                    "status": "status description",
-                    "completeness": int,
-                    "strengths": ["skills section strengths"],
-                    "improvements": ["areas to improve"],
-                    "recommendations": ["specific recommendations"],
-                    "missingCriticalSkills": ["critical missing skills"],
+                    "score": 0,
+                    "status": "",
+                    "completeness": 0,
+                    "strengths": [""],
+                    "improvements": [""],
+                    "recommendations": [""],
+                    "missingCriticalSkills": [""],
                     "skillGapAnalysis": {{
                         "technical": {{
-                            "score": int,
-                            "gaps": ["technical skill gaps"],
-                            "recommendations": "technical skill recommendations"
+                            "score": 0,
+                            "gaps": [""],
+                            "recommendations": ""
                         }},
                         "soft": {{
-                            "score": int,
-                            "gaps": ["soft skill gaps"],
-                            "recommendations": "soft skill recommendations"
+                            "score": 0,
+                            "gaps": [""],
+                            "recommendations": ""
                         }},
                         "leadership": {{
-                            "score": int,
-                            "gaps": ["leadership skill gaps"],
-                            "recommendations": "leadership skill recommendations"
+                            "score": 0,
+                            "gaps": [""],
+                            "recommendations": ""
                         }}
                     }},
                     "skillPrioritization": {{
-                        "critical": ["critical skills"],
-                        "important": ["important skills"],
-                        "niceToHave": ["nice to have skills"]
+                        "critical": [""],
+                        "important": [""],
+                        "niceToHave": [""]
                     }}
                 }},
                 "workExperience": {{
-                    "score": int,
-                    "status": "status description",
-                    "completeness": int,
-                    "strengths": ["experience strengths"],
-                    "improvements": ["areas to improve"],
-                    "recommendations": ["specific recommendations"],
+                    "score": 0,
+                    "status": "",
+                    "completeness": 0,
+                    "strengths": [""],
+                    "improvements": [""],
+                    "recommendations": [""],
                     "experienceRelevance": {{
-                        "highlyRelevant": int,
-                        "moderatelyRelevant": int,
-                        "lessRelevant": int,
-                        "totalPositions": int
+                        "highlyRelevant": 0,
+                        "moderatelyRelevant": 0,
+                        "lessRelevant": 0,
+                        "totalPositions": 0
                     }},
                     "achievementAnalysis": {{
-                        "quantified": int,
-                        "qualitative": int,
-                        "recommendation": "achievement improvement recommendation",
-                        "impactScore": int
+                        "quantified": 0,
+                        "qualitative": 0,
+                        "recommendation": "",
+                        "impactScore": 0
                     }},
                     "careerProgression": {{
-                        "score": int,
-                        "trend": "Positive/Neutral/Negative",
-                        "gaps": "career gap analysis",
-                        "recommendations": "career progression recommendations"
+                        "score": 0,
+                        "trend": "",
+                        "gaps": "",
+                        "recommendations": ""
                     }}
                 }},
                 "educationSection": {{
-                    "score": int,
-                    "status": "status description",
-                    "completeness": int,
-                    "strengths": ["education strengths"],
-                    "improvements": ["areas to improve"],
-                    "recommendations": ["specific recommendations"],
-                    "relevanceScore": int,
-                    "additionalSuggestions": ["additional education suggestions"]
+                    "score": 0,
+                    "status": "",
+                    "completeness": 0,
+                    "strengths": [""],
+                    "improvements": [""],
+                    "recommendations": [""],
+                    "relevanceScore": 0,
+                    "additionalSuggestions": [""]
                 }},
                 "certifications": {{
-                    "score": int,
-                    "status": "status description",
-                    "completeness": int,
-                    "strengths": ["certification strengths"],
-                    "improvements": ["areas to improve"],
-                    "recommendations": ["specific recommendations"],
-                    "suggestedCertifications": ["suggested new certifications"],
-                    "priorityLevel": "High/Medium/Low"
+                    "score": 0,
+                    "status": "",
+                    "completeness": 0,
+                    "strengths": [""],
+                    "improvements": [""],
+                    "recommendations": [""],
+                    "suggestedCertifications": [""],
+                    "priorityLevel": ""
                 }},
                 "projects": {{
-                    "score": int,
-                    "status": "status description",
-                    "completeness": int,
-                    "strengths": ["project section strengths"],
-                    "improvements": ["areas to improve"],
-                    "recommendations": ["specific recommendations"],
-                    "technicalDepth": int,
-                    "businessImpact": int
+                    "score": 0,
+                    "status": "",
+                    "completeness": 0,
+                    "strengths": [""],
+                    "improvements": [""],
+                    "recommendations": [""],
+                    "technicalDepth": 0,
+                    "businessImpact": 0
                 }}
             }},
             "keywordAnalysis": {{
-                "overallDensity": int,
-                "matchedKeywords": ["matched keywords"],
-                "missingKeywords": ["missing keywords"],
+                "overallDensity": 0,
+                "matchedKeywords": [""],
+                "missingKeywords": [""],
                 "keywordImportance": {{
-                    "critical": ["critical keywords"],
-                    "important": ["important keywords"],
-                    "niceToHave": ["nice to have keywords"]
+                    "critical": [""],
+                    "important": [""],
+                    "niceToHave": [""]
                 }},
                 "keywordPlacement": {{
                     "summary": {{
-                        "count": int,
-                        "density": "High/Medium/Low",
-                        "recommendations": "placement recommendations"
+                        "count": 0,
+                        "density": "",
+                        "recommendations": ""
                     }},
                     "skills": {{
-                        "count": int,
-                        "density": "High/Medium/Low", 
-                        "recommendations": "placement recommendations"
+                        "count": 0,
+                        "density": "",
+                        "recommendations": ""
                     }},
                     "experience": {{
-                        "count": int,
-                        "density": "High/Medium/Low",
-                        "recommendations": "placement recommendations"
+                        "count": 0,
+                        "density": "",
+                        "recommendations": ""
                     }}
                 }},
                 "semanticAnalysis": {{
-                    "contextualRelevance": int,
-                    "naturalIntegration": int,
-                    "recommendations": "semantic integration recommendations"
+                    "contextualRelevance": 0,
+                    "naturalIntegration": 0,
+                    "recommendations": ""
                 }}
             }},
             "improvementPriority": [
                 {{
-                    "priority": int,
-                    "section": "section name",
-                    "action": "specific action to take",
-                    "estimatedImpact": "High/Medium/Low",
-                    "timeToComplete": "time estimate",
-                    "difficultyLevel": "High/Medium/Low/Easy",
-                    "expectedScoreIncrease": int
+                    "priority": 0,
+                    "section": "",
+                    "action": "",
+                    "estimatedImpact": "",
+                    "timeToComplete": "",
+                    "difficultyLevel": "",
+                    "expectedScoreIncrease": 0
                 }}
             ],
             "competitiveAnalysis": {{
-                "marketPosition": "Above Average/Average/Below Average",
-                "percentileRanking": int,
-                "strengthsVsCompetition": ["competitive strengths"],
-                "areasToOutperform": ["areas to improve vs competition"],
-                "competitiveAdvantage": ["unique advantages"],
-                "marketDemandAlignment": int
+                "marketPosition": "",
+                "percentileRanking": 0,
+                "strengthsVsCompetition": [""],
+                "areasToOutperform": [""],
+                "competitiveAdvantage": [""],
+                "marketDemandAlignment": 0
             }},
             "resumeStrengths": {{
-                "topStrengths": ["top 3-4 resume strengths"],
-                "uniqueSellingPoints": ["unique selling points"],
-                "standoutQualities": ["standout qualities"]
+                "topStrengths": [""],
+                "uniqueSellingPoints": [""],
+                "standoutQualities": [""]
             }},
             "resumeWeaknesses": {{
-                "criticalIssues": ["critical issues to address"],
-                "minorIssues": ["minor issues"],
-                "riskFactors": ["potential risks"]
+                "criticalIssues": [""],
+                "minorIssues": [""],
+                "riskFactors": [""]
             }},
             "actionPlan": {{
-                "immediateActions": ["immediate actions to take"],
-                "shortTermGoals": ["short term goals"],
-                "longTermGoals": ["long term goals"]
+                "immediateActions": [""],
+                "shortTermGoals": [""],
+                "longTermGoals": [""]
             }},
             "industryBenchmarks": {{
-                "averageScore": int,
-                "topPerformerScore": int,
-                "yourPosition": "position description",
-                "improvementPotential": "High/Medium/Low",
-                "targetScore": int
+                "averageScore": 0,
+                "topPerformerScore": 0,
+                "yourPosition": "",
+                "improvementPotential": "",
+                "targetScore": 0
             }},
             "recommendedResources": {{
-                "skillDevelopment": ["skill development resources"],
-                "resumeTools": ["resume improvement tools"],
-                "careerAdvancement": ["career advancement resources"]
+                "skillDevelopment": [""],
+                "resumeTools": [""],
+                "careerAdvancement": [""]
             }}
         }}
-        
-        Be specific, actionable, and constructive in your feedback.
-        Focus on helping the candidate improve their chances of getting the job.
-        Provide detailed analysis for each section with concrete recommendations and metrics.
         """
         
         try:
