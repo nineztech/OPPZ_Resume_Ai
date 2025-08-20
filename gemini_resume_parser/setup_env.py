@@ -36,9 +36,9 @@ def create_env_file():
     # Get model preference
     print("\n🤖 Step 2: Gemini Model (Optional)")
     print("Available models: gemini-1.5-flash, gemini-1.5-pro, gemini-2.0-flash")
-    model = input("Enter model name (default: gemini-1.5-flash): ").strip()
+    model = input("Enter model name (default: gemini-2.5-flash): ").strip()
     if not model:
-        model = "gemini-1.5-flash"
+        model = "gemini-2.5-flash"
     
     # Get file size limit
     print("\n📁 Step 3: File Size Limit (Optional)")
