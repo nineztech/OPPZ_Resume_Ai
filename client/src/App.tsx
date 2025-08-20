@@ -9,10 +9,12 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import TemplatesPage from './pages/TemplatesPage';
 import UseTemplatePage from './pages/UseTemplatePage';
+import ResumeProcessingPage from './pages/ResumeProcessingPage';
 import ResumeBuilderPage from './pages/ResumeBuilderPage';
 import FeaturesPage from './pages/FeaturesPage';
 import ATSScorePage from './pages/ATSScorePage';
 import ATSResultsPage from './pages/ATSResultsPage';
+import AISuggestionsPage from './pages/AISuggestionsPage';
 
 function App() {
   return (
@@ -59,6 +61,24 @@ function App() {
                   <Layout>
                     <UseTemplatePage />
                   </Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/resume/processing" 
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ResumeProcessingPage />
+                  </Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/resume/ai-suggestions" 
+              element={
+                <ProtectedRoute>
+                  <AISuggestionsPage />
                 </ProtectedRoute>
               } 
             />
