@@ -1,5 +1,6 @@
 import json
 import logging
+import datetime
 from typing import Dict, Any, Optional
 from google.generativeai import GenerativeModel
 from .gemini_parser_service import GeminiResumeParser
@@ -108,7 +109,7 @@ class AISuggestionService:
         
         prompt = f"""
         You are an expert resume consultant and career advisor. 
-        Compare the following resume with the job description and provide detailed analysis and suggestions.
+        Compare the following resume with the job description and provide comprehensive, detailed analysis and suggestions.
         
         RESUME DATA:
         {resume_text}
@@ -119,41 +120,226 @@ class AISuggestionService:
         Please provide a comprehensive analysis in the following JSON format:
         {{
             "overallScore": int,  // Score from 0-100
+            "analysisTimestamp": "2024-01-15T10:30:00Z",
+            "jobMatchAnalysis": {{
+                "alignmentScore": int,  // Score from 0-100
+                "matchingSectors": ["relevant sectors"],
+                "roleCompatibility": "High/Medium/Low",
+                "experienceLevelMatch": "description of experience level match"
+            }},
             "atsCompatibility": {{
                 "score": int,  // Score from 0-100
+                "passRate": "High/Medium/Low",
                 "strengths": [
                     "List of resume strengths that match the job requirements"
                 ],
                 "improvements": [
                     "List of areas where resume falls short of job requirements"
-                ]
-            }},
-            "skillsAnalysis": {{
-                "matchingSkills": [
-                    "Skills from resume that match job requirements"
                 ],
-                "missingSkills": [
-                    "Skills mentioned in job description but missing from resume"
-                ]
+                "keywordDensity": {{
+                    "matchedKeywords": int,
+                    "totalRequiredKeywords": int,
+                    "matchPercentage": int,
+                    "criticalMissing": int
+                }},
+                "formatOptimization": {{
+                    "score": int,
+                    "issues": ["formatting issues"],
+                    "recommendations": ["formatting recommendations"]
+                }}
             }},
-            "experienceAnalysis": {{
-                "relevantExperience": "Analysis of how well experience matches job requirements",
-                "experienceGaps": "Areas where experience could be enhanced"
+            "sectionAnalysis": {{
+                "contactInformation": {{
+                    "score": int,
+                    "status": "status description",
+                    "completeness": int,
+                    "strengths": ["contact info strengths"],
+                    "improvements": ["areas to improve"],
+                    "recommendations": ["specific recommendations"],
+                    "missingElements": ["missing contact elements"]
+                }},
+                "professionalSummary": {{
+                    "score": int,
+                    "status": "status description", 
+                    "completeness": int,
+                    "strengths": ["summary strengths"],
+                    "improvements": ["areas to improve"],
+                    "recommendations": ["specific recommendations"],
+                    "suggestedRewrite": "suggested improved summary text",
+                    "keywordGaps": ["missing keywords"],
+                    "impactScore": int
+                }},
+                "skillsSection": {{
+                    "score": int,
+                    "status": "status description",
+                    "completeness": int,
+                    "strengths": ["skills section strengths"],
+                    "improvements": ["areas to improve"],
+                    "recommendations": ["specific recommendations"],
+                    "missingCriticalSkills": ["critical missing skills"],
+                    "skillGapAnalysis": {{
+                        "technical": {{
+                            "score": int,
+                            "gaps": ["technical skill gaps"],
+                            "recommendations": "technical skill recommendations"
+                        }},
+                        "soft": {{
+                            "score": int,
+                            "gaps": ["soft skill gaps"],
+                            "recommendations": "soft skill recommendations"
+                        }},
+                        "leadership": {{
+                            "score": int,
+                            "gaps": ["leadership skill gaps"],
+                            "recommendations": "leadership skill recommendations"
+                        }}
+                    }},
+                    "skillPrioritization": {{
+                        "critical": ["critical skills"],
+                        "important": ["important skills"],
+                        "niceToHave": ["nice to have skills"]
+                    }}
+                }},
+                "workExperience": {{
+                    "score": int,
+                    "status": "status description",
+                    "completeness": int,
+                    "strengths": ["experience strengths"],
+                    "improvements": ["areas to improve"],
+                    "recommendations": ["specific recommendations"],
+                    "experienceRelevance": {{
+                        "highlyRelevant": int,
+                        "moderatelyRelevant": int,
+                        "lessRelevant": int,
+                        "totalPositions": int
+                    }},
+                    "achievementAnalysis": {{
+                        "quantified": int,
+                        "qualitative": int,
+                        "recommendation": "achievement improvement recommendation",
+                        "impactScore": int
+                    }},
+                    "careerProgression": {{
+                        "score": int,
+                        "trend": "Positive/Neutral/Negative",
+                        "gaps": "career gap analysis",
+                        "recommendations": "career progression recommendations"
+                    }}
+                }},
+                "educationSection": {{
+                    "score": int,
+                    "status": "status description",
+                    "completeness": int,
+                    "strengths": ["education strengths"],
+                    "improvements": ["areas to improve"],
+                    "recommendations": ["specific recommendations"],
+                    "relevanceScore": int,
+                    "additionalSuggestions": ["additional education suggestions"]
+                }},
+                "certifications": {{
+                    "score": int,
+                    "status": "status description",
+                    "completeness": int,
+                    "strengths": ["certification strengths"],
+                    "improvements": ["areas to improve"],
+                    "recommendations": ["specific recommendations"],
+                    "suggestedCertifications": ["suggested new certifications"],
+                    "priorityLevel": "High/Medium/Low"
+                }},
+                "projects": {{
+                    "score": int,
+                    "status": "status description",
+                    "completeness": int,
+                    "strengths": ["project section strengths"],
+                    "improvements": ["areas to improve"],
+                    "recommendations": ["specific recommendations"],
+                    "technicalDepth": int,
+                    "businessImpact": int
+                }}
             }},
-            "suggestions": [
-                "Specific actionable suggestions to improve the resume"
-            ],
             "keywordAnalysis": {{
-                "matchedKeywords": ["keywords from resume that match job description"],
-                "missingKeywords": ["important keywords from job description not in resume"]
+                "overallDensity": int,
+                "matchedKeywords": ["matched keywords"],
+                "missingKeywords": ["missing keywords"],
+                "keywordImportance": {{
+                    "critical": ["critical keywords"],
+                    "important": ["important keywords"],
+                    "niceToHave": ["nice to have keywords"]
+                }},
+                "keywordPlacement": {{
+                    "summary": {{
+                        "count": int,
+                        "density": "High/Medium/Low",
+                        "recommendations": "placement recommendations"
+                    }},
+                    "skills": {{
+                        "count": int,
+                        "density": "High/Medium/Low", 
+                        "recommendations": "placement recommendations"
+                    }},
+                    "experience": {{
+                        "count": int,
+                        "density": "High/Medium/Low",
+                        "recommendations": "placement recommendations"
+                    }}
+                }},
+                "semanticAnalysis": {{
+                    "contextualRelevance": int,
+                    "naturalIntegration": int,
+                    "recommendations": "semantic integration recommendations"
+                }}
             }},
             "improvementPriority": [
-                "Ordered list of most important improvements to make"
-            ]
+                {{
+                    "priority": int,
+                    "section": "section name",
+                    "action": "specific action to take",
+                    "estimatedImpact": "High/Medium/Low",
+                    "timeToComplete": "time estimate",
+                    "difficultyLevel": "High/Medium/Low/Easy",
+                    "expectedScoreIncrease": int
+                }}
+            ],
+            "competitiveAnalysis": {{
+                "marketPosition": "Above Average/Average/Below Average",
+                "percentileRanking": int,
+                "strengthsVsCompetition": ["competitive strengths"],
+                "areasToOutperform": ["areas to improve vs competition"],
+                "competitiveAdvantage": ["unique advantages"],
+                "marketDemandAlignment": int
+            }},
+            "resumeStrengths": {{
+                "topStrengths": ["top 3-4 resume strengths"],
+                "uniqueSellingPoints": ["unique selling points"],
+                "standoutQualities": ["standout qualities"]
+            }},
+            "resumeWeaknesses": {{
+                "criticalIssues": ["critical issues to address"],
+                "minorIssues": ["minor issues"],
+                "riskFactors": ["potential risks"]
+            }},
+            "actionPlan": {{
+                "immediateActions": ["immediate actions to take"],
+                "shortTermGoals": ["short term goals"],
+                "longTermGoals": ["long term goals"]
+            }},
+            "industryBenchmarks": {{
+                "averageScore": int,
+                "topPerformerScore": int,
+                "yourPosition": "position description",
+                "improvementPotential": "High/Medium/Low",
+                "targetScore": int
+            }},
+            "recommendedResources": {{
+                "skillDevelopment": ["skill development resources"],
+                "resumeTools": ["resume improvement tools"],
+                "careerAdvancement": ["career advancement resources"]
+            }}
         }}
         
         Be specific, actionable, and constructive in your feedback.
         Focus on helping the candidate improve their chances of getting the job.
+        Provide detailed analysis for each section with concrete recommendations and metrics.
         """
         
         try:
@@ -296,8 +482,16 @@ class AISuggestionService:
                 
             return {
                 "overallScore": min(base_score, 85),  # Cap at 85 for fallback
+                "analysisTimestamp": datetime.datetime.now().isoformat() + "Z",
+                "jobMatchAnalysis": {
+                    "alignmentScore": min(base_score - 5, 80),
+                    "matchingSectors": ["General"],
+                    "roleCompatibility": "Medium",
+                    "experienceLevelMatch": "Experience level appears appropriate for the role"
+                },
                 "atsCompatibility": {
                     "score": min(base_score - 5, 80),
+                    "passRate": "Medium",
                     "strengths": [
                         "Resume contains structured information",
                         "Professional format detected" if has_experience else "Basic information available",
@@ -308,78 +502,330 @@ class AISuggestionService:
                         "Enhance quantifiable achievements in experience section",
                         "Optimize formatting for ATS compatibility",
                         "Add more relevant technical skills if applicable"
-                    ]
+                    ],
+                    "keywordDensity": {
+                        "matchedKeywords": len(skill_list[:10]) if skill_list else 3,
+                        "totalRequiredKeywords": 20,
+                        "matchPercentage": min(int(len(skill_list[:10]) / 20 * 100), 60) if skill_list else 15,
+                        "criticalMissing": 5
+                    },
+                    "formatOptimization": {
+                        "score": 75,
+                        "issues": ["Standard formatting recommendations apply"],
+                        "recommendations": ["Use standard section headings", "Maintain consistent formatting"]
+                    }
                 },
-                "skillsAnalysis": {
-                    "matchingSkills": skill_list[:5] if skill_list else ["General professional skills"],
-                    "missingSkills": [
-                        "Industry-specific technical skills",
-                        "Leadership and management skills",
-                        "Communication and collaboration skills",
-                        "Problem-solving abilities"
-                    ]
+                "sectionAnalysis": {
+                    "contactInformation": {
+                        "score": 90,
+                        "status": "Good",
+                        "completeness": 85,
+                        "strengths": ["Basic contact information present"],
+                        "improvements": ["Consider adding portfolio or professional website"],
+                        "recommendations": ["Ensure all contact information is current and professional"],
+                        "missingElements": ["Portfolio URL", "Professional website"]
+                    },
+                    "professionalSummary": {
+                        "score": 60,
+                        "status": "Needs Enhancement",
+                        "completeness": 50,
+                        "strengths": ["Professional summary section identified"],
+                        "improvements": ["Add quantifiable achievements", "Align with job requirements"],
+                        "recommendations": ["Create compelling summary with specific metrics", "Include relevant keywords"],
+                        "suggestedRewrite": "Consider rewriting to highlight key achievements and align with target role",
+                        "keywordGaps": ["Industry-specific terms", "Technical skills"],
+                        "impactScore": 45
+                    },
+                    "skillsSection": {
+                        "score": 70 if has_skills else 40,
+                        "status": "Basic Coverage" if has_skills else "Needs Development",
+                        "completeness": 60 if has_skills else 30,
+                        "strengths": ["Skills section present"] if has_skills else ["Potential for skills section"],
+                        "improvements": ["Add missing job-relevant skills", "Organize by relevance"],
+                        "recommendations": ["Include both technical and soft skills", "Add proficiency levels"],
+                        "missingCriticalSkills": ["Industry-specific technical skills", "Leadership skills"],
+                        "skillGapAnalysis": {
+                            "technical": {
+                                "score": 55 if has_skills else 30,
+                                "gaps": ["Modern technical skills", "Industry-specific tools"],
+                                "recommendations": "Focus on adding relevant technical competencies"
+                            },
+                            "soft": {
+                                "score": 45,
+                                "gaps": ["Leadership", "Communication", "Problem-solving"],
+                                "recommendations": "Emphasize soft skills relevant to the role"
+                            },
+                            "leadership": {
+                                "score": 35,
+                                "gaps": ["Team management", "Project leadership"],
+                                "recommendations": "Highlight any leadership experience or potential"
+                            }
+                        },
+                        "skillPrioritization": {
+                            "critical": skill_list[:3] if skill_list else ["Communication", "Problem-solving"],
+                            "important": skill_list[3:6] if len(skill_list) > 3 else ["Teamwork", "Adaptability"],
+                            "niceToHave": skill_list[6:] if len(skill_list) > 6 else ["Additional technical skills"]
+                        }
+                    },
+                    "workExperience": {
+                        "score": 75 if has_experience else 30,
+                        "status": "Good Foundation" if has_experience else "Needs Development",
+                        "completeness": 70 if has_experience else 20,
+                        "strengths": ["Work experience present"] if has_experience else ["Opportunity to add experience"],
+                        "improvements": ["Add quantifiable achievements", "Include specific technologies used"],
+                        "recommendations": ["Use action verbs", "Focus on results and impact"],
+                        "experienceRelevance": {
+                            "highlyRelevant": len(experience) if has_experience else 0,
+                            "moderatelyRelevant": 0,
+                            "lessRelevant": 0,
+                            "totalPositions": len(experience) if has_experience else 0
+                        },
+                        "achievementAnalysis": {
+                            "quantified": 1 if has_experience else 0,
+                            "qualitative": len(experience) * 2 if has_experience else 0,
+                            "recommendation": "Add specific metrics and quantifiable results",
+                            "impactScore": 50 if has_experience else 20
+                        },
+                        "careerProgression": {
+                            "score": 70 if has_experience else 40,
+                            "trend": "Positive" if has_experience else "Neutral",
+                            "gaps": "None identified" if has_experience else "Consider adding relevant experience",
+                            "recommendations": "Continue building relevant experience"
+                        }
+                    },
+                    "educationSection": {
+                        "score": 80,
+                        "status": "Good",
+                        "completeness": 85,
+                        "strengths": ["Educational background present"],
+                        "improvements": ["Consider adding relevant coursework"],
+                        "recommendations": ["Highlight relevant academic achievements"],
+                        "relevanceScore": 75,
+                        "additionalSuggestions": ["Add certifications if applicable"]
+                    },
+                    "certifications": {
+                        "score": 50,
+                        "status": "Basic",
+                        "completeness": 40,
+                        "strengths": ["Opportunity for professional development"],
+                        "improvements": ["Add relevant industry certifications"],
+                        "recommendations": ["Pursue certifications aligned with career goals"],
+                        "suggestedCertifications": ["Industry-standard certifications", "Professional development courses"],
+                        "priorityLevel": "Medium"
+                    },
+                    "projects": {
+                        "score": 60,
+                        "status": "Moderate",
+                        "completeness": 50,
+                        "strengths": ["Potential for project showcase"],
+                        "improvements": ["Add relevant project examples"],
+                        "recommendations": ["Include technical projects with outcomes"],
+                        "technicalDepth": 45,
+                        "businessImpact": 40
+                    }
                 },
-                "experienceAnalysis": {
-                    "relevantExperience": "Experience section available for review" if has_experience else "Consider adding relevant work experience",
-                    "experienceGaps": "Enhance experience descriptions with quantifiable achievements and specific technologies used"
-                },
-                "suggestions": [
-                    "Review the job description carefully and incorporate relevant keywords",
-                    "Quantify achievements with specific numbers and percentages",
-                    "Highlight technical skills that match the job requirements",
-                    "Ensure consistent formatting throughout the resume",
-                    "Add a professional summary that aligns with the job role",
-                    "Include relevant certifications or training if available"
-                ],
                 "keywordAnalysis": {
-                    "matchedKeywords": skill_list[:3] if skill_list else ["Professional"],
+                    "overallDensity": 60,
+                    "matchedKeywords": skill_list[:8] if skill_list else ["Professional", "Experience"],
                     "missingKeywords": [
                         "Industry-specific terms",
                         "Technical competencies",
                         "Soft skills mentioned in job description",
                         "Company-specific requirements"
-                    ]
+                    ],
+                    "keywordImportance": {
+                        "critical": skill_list[:3] if skill_list else ["Communication", "Problem-solving"],
+                        "important": skill_list[3:6] if len(skill_list) > 3 else ["Teamwork", "Leadership"],
+                        "niceToHave": skill_list[6:] if len(skill_list) > 6 else ["Additional skills"]
+                    },
+                    "keywordPlacement": {
+                        "summary": {
+                            "count": 2,
+                            "density": "Low",
+                            "recommendations": "Add more keywords to professional summary"
+                        },
+                        "skills": {
+                            "count": len(skill_list) if skill_list else 3,
+                            "density": "Medium" if skill_list else "Low",
+                            "recommendations": "Well distributed" if skill_list else "Add more relevant skills"
+                        },
+                        "experience": {
+                            "count": 4 if has_experience else 1,
+                            "density": "Medium" if has_experience else "Low",
+                            "recommendations": "Integrate more technical terms naturally"
+                        }
+                    },
+                    "semanticAnalysis": {
+                        "contextualRelevance": 65,
+                        "naturalIntegration": 60,
+                        "recommendations": "Improve natural keyword integration throughout resume"
+                    }
                 },
                 "improvementPriority": [
-                    "Incorporate job-specific keywords throughout the resume",
-                    "Add quantifiable achievements to work experience",
-                    "Enhance technical skills section with relevant technologies",
-                    "Optimize resume format for ATS scanning",
-                    "Create a compelling professional summary"
-                ]
+                    {
+                        "priority": 1,
+                        "section": "Professional Summary",
+                        "action": "Create compelling summary with quantifiable achievements",
+                        "estimatedImpact": "High",
+                        "timeToComplete": "30 minutes",
+                        "difficultyLevel": "Medium",
+                        "expectedScoreIncrease": 15
+                    },
+                    {
+                        "priority": 2,
+                        "section": "Skills Section",
+                        "action": "Add job-relevant skills and organize by importance",
+                        "estimatedImpact": "High",
+                        "timeToComplete": "20 minutes",
+                        "difficultyLevel": "Easy",
+                        "expectedScoreIncrease": 12
+                    },
+                    {
+                        "priority": 3,
+                        "section": "Work Experience",
+                        "action": "Add quantifiable metrics to job descriptions",
+                        "estimatedImpact": "Medium",
+                        "timeToComplete": "45 minutes",
+                        "difficultyLevel": "Medium",
+                        "expectedScoreIncrease": 10
+                    }
+                ],
+                "competitiveAnalysis": {
+                    "marketPosition": "Average",
+                    "percentileRanking": 50,
+                    "strengthsVsCompetition": [
+                        "Basic professional structure",
+                        "Relevant background" if has_experience else "Educational foundation"
+                    ],
+                    "areasToOutperform": [
+                        "Quantifiable achievements",
+                        "Industry-specific skills",
+                        "Professional presentation"
+                    ],
+                    "competitiveAdvantage": ["Potential for growth and development"],
+                    "marketDemandAlignment": 60
+                },
+                "resumeStrengths": {
+                    "topStrengths": [
+                        "Professional structure and format",
+                        "Basic information clearly presented",
+                        "Educational background" if not has_experience else "Work experience present"
+                    ],
+                    "uniqueSellingPoints": ["Opportunity for targeted customization"],
+                    "standoutQualities": ["Professional presentation"]
+                },
+                "resumeWeaknesses": {
+                    "criticalIssues": [
+                        "Lack of quantifiable achievements",
+                        "Missing job-specific keywords",
+                        "Generic professional summary"
+                    ],
+                    "minorIssues": [
+                        "Could improve section organization",
+                        "Missing some modern formatting elements"
+                    ],
+                    "riskFactors": [
+                        "May not stand out among other candidates",
+                        "Limited keyword optimization for ATS systems"
+                    ]
+                },
+                "actionPlan": {
+                    "immediateActions": [
+                        "Review job description and incorporate relevant keywords",
+                        "Quantify at least 3 major achievements",
+                        "Create compelling professional summary",
+                        "Organize skills by relevance to job"
+                    ],
+                    "shortTermGoals": [
+                        "Gather metrics from current/previous roles",
+                        "Research industry-specific keywords",
+                        "Optimize resume format for ATS systems",
+                        "Add relevant certifications or training"
+                    ],
+                    "longTermGoals": [
+                        "Build portfolio of relevant projects",
+                        "Pursue industry certifications",
+                        "Develop leadership experience",
+                        "Create strong online professional presence"
+                    ]
+                },
+                "industryBenchmarks": {
+                    "averageScore": 65,
+                    "topPerformerScore": 90,
+                    "yourPosition": "Below Average",
+                    "improvementPotential": "High",
+                    "targetScore": 80
+                },
+                "recommendedResources": {
+                    "skillDevelopment": [
+                        "Industry-specific online courses",
+                        "Professional certification programs",
+                        "Skill assessment and development platforms"
+                    ],
+                    "resumeTools": [
+                        "ATS-friendly resume templates",
+                        "Keyword optimization tools",
+                        "Achievement quantification frameworks"
+                    ],
+                    "careerAdvancement": [
+                        "Professional networking events",
+                        "Industry mentorship programs",
+                        "Career development workshops"
+                    ]
+                }
             }
         except Exception as fallback_error:
             logger.error(f"Error creating fallback response: {str(fallback_error)}")
             # Return minimal response if even fallback fails
             return {
                 "overallScore": 50,
+                "analysisTimestamp": datetime.datetime.now().isoformat() + "Z",
                 "atsCompatibility": {
                     "score": 45,
+                    "passRate": "Low",
                     "strengths": ["Resume file successfully processed"],
                     "improvements": ["Review and optimize resume content for the specific job role"]
                 },
-                "skillsAnalysis": {
-                    "matchingSkills": ["General professional skills"],
-                    "missingSkills": ["Job-specific skills and technologies"]
+                "sectionAnalysis": {
+                    "contactInformation": {
+                        "score": 70,
+                        "status": "Basic",
+                        "completeness": 60,
+                        "strengths": ["Contact information available"],
+                        "improvements": ["Optimize contact presentation"],
+                        "recommendations": ["Ensure professional contact details"]
+                    }
                 },
-                "experienceAnalysis": {
-                    "relevantExperience": "Experience information available for review",
-                    "experienceGaps": "Consider enhancing experience descriptions"
-                },
-                "suggestions": [
-                    "Review the job description and tailor resume accordingly",
-                    "Add specific achievements and quantifiable results",
-                    "Include relevant technical skills and certifications"
-                ],
                 "keywordAnalysis": {
-                    "matchedKeywords": ["Professional experience"],
-                    "missingKeywords": ["Job-specific keywords and terminology"]
+                    "overallDensity": 30,
+                    "matchedKeywords": ["General professional skills"],
+                    "missingKeywords": ["Job-specific skills and technologies"]
                 },
                 "improvementPriority": [
-                    "Tailor resume content to match job requirements",
-                    "Add measurable achievements and results",
-                    "Optimize for applicant tracking systems"
-                ]
+                    {
+                        "priority": 1,
+                        "section": "Overall Resume",
+                        "action": "Review and optimize resume content for the specific job role",
+                        "estimatedImpact": "High",
+                        "timeToComplete": "2 hours",
+                        "difficultyLevel": "Medium",
+                        "expectedScoreIncrease": 20
+                    }
+                ],
+                "actionPlan": {
+                    "immediateActions": [
+                        "Review the job description and tailor resume accordingly",
+                        "Add specific achievements and quantifiable results",
+                        "Include relevant technical skills and certifications"
+                    ],
+                    "shortTermGoals": [
+                        "Optimize resume for applicant tracking systems",
+                        "Enhance professional presentation"
+                    ],
+                    "longTermGoals": [
+                        "Build relevant experience and skills portfolio"
+                    ]
+                }
             }
     
     def _create_fallback_job_description(self, sector: str, country: str, designation: str) -> Dict[str, Any]:
