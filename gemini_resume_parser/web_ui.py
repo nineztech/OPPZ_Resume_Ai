@@ -2010,13 +2010,20 @@ def ai_suggestions():
             parser = GeminiResumeParser()
             resume_data = parser.parse_resume_from_file(filepath)
             
-            # Step 2: Generate job description
-            logger.info(f"Generating job description for {designation} in {sector} sector, {country}")
-            job_description = ai_service.generate_job_description(sector, country, designation)
+            # Step 2: Analyze resume experience level
+            experience_level = ai_service._analyze_experience_level(resume_data)
+            logger.info(f"Analyzed experience level from resume: {experience_level}")
             
-            # Step 3: Get AI suggestions by comparing resume with job description
+            # Step 3: Generate job description based on resume experience level
+            logger.info(f"Generating job description for {designation} in {sector} sector, {country} at {experience_level}")
+            job_description_dict = ai_service.generate_job_description(sector, country, designation, experience_level)
+            
+            # Convert job description dict to text format for comparison
+            job_description_text = json.dumps(job_description_dict, indent=2)
+            
+            # Step 4: Get AI suggestions by comparing resume with job description
             logger.info("Comparing resume with job description and generating suggestions")
-            suggestions = ai_service.compare_resume_with_jd(resume_data, job_description)
+            suggestions = ai_service.compare_resume_with_jd(resume_data, job_description_text)
             
             # Clean up temporary file
             os.unlink(filepath)
@@ -2025,7 +2032,7 @@ def ai_suggestions():
                 'success': True,
                 'data': {
                     'resumeData': resume_data,
-                    'jobDescription': job_description,
+                    'jobDescription': job_description_dict,
                     'suggestions': suggestions,
                     'processedAt': str(datetime.datetime.now()),
                     'parameters': {
