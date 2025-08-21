@@ -66,6 +66,15 @@ const AISuggestionsPage: React.FC = () => {
     return Array.isArray(array) ? array : [];
   };
 
+  // Helper function to safely render suggestion items (strings or objects)
+  const renderSuggestionItem = (item: any): string => {
+    if (typeof item === 'string') return item;
+    if (typeof item === 'object' && item !== null) {
+      return item.action || item.section || item.title || 'Improvement suggestion';
+    }
+    return 'Improvement suggestion';
+  };
+
   const getScoreColor = (score?: number) => {
     if (!score) return 'text-gray-600 bg-gray-100';
     if (score >= 80) return 'text-green-600 bg-green-100';
@@ -248,7 +257,9 @@ const AISuggestionsPage: React.FC = () => {
                       {getSafeArray((suggestions as any).improvementPriority || (suggestions as any).suggestions).slice(0, 4).map((tip, index) => (
                         <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
                           <ArrowRight className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-700">{tip}</span>
+                          <span className="text-sm text-gray-700">
+                            {renderSuggestionItem(tip)}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -424,7 +435,9 @@ const AISuggestionsPage: React.FC = () => {
                           <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
                             {index + 1}
                           </div>
-                          <span className="text-sm text-gray-700 flex-1">{action}</span>
+                          <span className="text-sm text-gray-700 flex-1">
+                            {renderSuggestionItem(action)}
+                          </span>
                         </div>
                       ))}
                     </div>
