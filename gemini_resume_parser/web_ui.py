@@ -1312,19 +1312,39 @@ HTML_TEMPLATE = """
             }
             
             let html = `
-                <h3>AI-Powered Resume Suggestions</h3>
+                <h3>🤖 AI-Powered Resume Analysis & Suggestions</h3>
                 
                 <div class="score-circle">
                     <div class="score-text">${data.suggestions?.overallScore || 'N/A'}</div>
                 </div>
-                <h4 style="text-align: center; margin-bottom: 30px;">OVERALL SCORE</h4>
+                <h4 style="text-align: center; margin-bottom: 30px;">OVERALL RESUME SCORE</h4>
             `;
+
+            // Job Match Analysis
+            if (data.suggestions?.jobMatchAnalysis) {
+                html += `
+                    <div class="detail-card">
+                        <h4>🎯 Job Match Analysis</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 24px; font-weight: bold; color: #007bff;">${data.suggestions.jobMatchAnalysis.alignmentScore || 'N/A'}%</div>
+                                <div style="color: #6c757d; font-size: 12px;">Alignment Score</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 16px; font-weight: bold; color: #28a745;">${data.suggestions.jobMatchAnalysis.roleCompatibility || 'N/A'}</div>
+                                <div style="color: #6c757d; font-size: 12px;">Role Compatibility</div>
+                            </div>
+                        </div>
+                        <p><strong>Experience Level Match:</strong> ${data.suggestions.jobMatchAnalysis.experienceLevelMatch || 'N/A'}</p>
+                    </div>
+                `;
+            }
 
             // Job Description Summary
             if (data.jobDescription) {
                 html += `
                     <div class="detail-card">
-                        <h4>🎯 Generated Job Description</h4>
+                        <h4>📋 Generated Job Description</h4>
                         <div style="margin-bottom: 15px;">
                             <strong>Title:</strong> ${data.jobDescription.jobTitle || 'N/A'}<br>
                             <strong>Experience Level:</strong> ${data.jobDescription.experienceLevel || 'N/A'}<br>
@@ -1332,7 +1352,7 @@ HTML_TEMPLATE = """
                         </div>
                         <div style="margin-bottom: 15px;">
                             <strong>Job Summary:</strong><br>
-                            <p style="margin: 5px 0; line-height: 1.5;">${data.jobDescription.jobSummary || 'N/A'}</p>
+                            <p style="margin: 5px 0; line-height: 1.5; font-style: italic;">${data.jobDescription.jobSummary || 'N/A'}</p>
                         </div>
                         ${data.jobDescription.keyResponsibilities && data.jobDescription.keyResponsibilities.length > 0 ? `
                             <div style="margin-bottom: 15px;">
@@ -1346,93 +1366,263 @@ HTML_TEMPLATE = """
                 `;
             }
 
-            // ATS Compatibility
+            // ATS Compatibility Enhanced
             if (data.suggestions?.atsCompatibility) {
                 html += `
                     <div class="detail-card">
-                        <h4>📊 ATS Compatibility Analysis</h4>
-                        <div style="text-align: center; margin: 20px 0;">
-                            <div style="font-size: 36px; font-weight: bold; color: #007bff;">${data.suggestions.atsCompatibility.score}%</div>
-                            <div style="color: #6c757d;">ATS Compatibility Score</div>
+                        <h4>🤖 ATS Compatibility Analysis</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 32px; font-weight: bold; color: #007bff;">${data.suggestions.atsCompatibility.score}%</div>
+                                <div style="color: #6c757d; font-size: 12px;">ATS Score</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 16px; font-weight: bold; color: #28a745;">${data.suggestions.atsCompatibility.passRate || 'N/A'}</div>
+                                <div style="color: #6c757d; font-size: 12px;">Pass Rate</div>
+                            </div>
+                            ${data.suggestions.atsCompatibility.keywordDensity ? `
+                                <div style="text-align: center;">
+                                    <div style="font-size: 20px; font-weight: bold; color: #ffc107;">${data.suggestions.atsCompatibility.keywordDensity.matchPercentage || 0}%</div>
+                                    <div style="color: #6c757d; font-size: 12px;">Keyword Match</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 16px; font-weight: bold; color: #dc3545;">${data.suggestions.atsCompatibility.keywordDensity.criticalMissing || 0}</div>
+                                    <div style="color: #6c757d; font-size: 12px;">Critical Missing</div>
+                                </div>
+                            ` : ''}
                         </div>
-                        ${data.suggestions.atsCompatibility.strengths && data.suggestions.atsCompatibility.strengths.length > 0 ? `
-                            <div style="margin-bottom: 15px;">
-                                <h5 style="color: #28a745;">✅ Strengths:</h5>
-                                <ul style="margin: 5px 0; padding-left: 20px; color: #155724;">
-                                    ${data.suggestions.atsCompatibility.strengths.slice(0, 3).map(strength => `<li>${strength}</li>`).join('')}
-                                </ul>
-                            </div>
-                        ` : ''}
-                        ${data.suggestions.atsCompatibility.improvements && data.suggestions.atsCompatibility.improvements.length > 0 ? `
-                            <div style="margin-bottom: 15px;">
-                                <h5 style="color: #dc3545;">❌ Areas to Improve:</h5>
-                                <ul style="margin: 5px 0; padding-left: 20px; color: #c62828;">
-                                    ${data.suggestions.atsCompatibility.improvements.slice(0, 3).map(improvement => `<li>${improvement}</li>`).join('')}
-                                </ul>
-                            </div>
-                        ` : ''}
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            ${data.suggestions.atsCompatibility.strengths && data.suggestions.atsCompatibility.strengths.length > 0 ? `
+                                <div>
+                                    <h5 style="color: #28a745;">✅ Strengths:</h5>
+                                    <ul style="margin: 5px 0; padding-left: 20px; color: #155724;">
+                                        ${data.suggestions.atsCompatibility.strengths.slice(0, 4).map(strength => `<li>${strength}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            ${data.suggestions.atsCompatibility.improvements && data.suggestions.atsCompatibility.improvements.length > 0 ? `
+                                <div>
+                                    <h5 style="color: #dc3545;">❌ Areas to Improve:</h5>
+                                    <ul style="margin: 5px 0; padding-left: 20px; color: #c62828;">
+                                        ${data.suggestions.atsCompatibility.improvements.slice(0, 4).map(improvement => `<li>${improvement}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
                     </div>
                 `;
             }
 
-            // Skills Analysis
-            if (data.suggestions?.skillsAnalysis) {
+            // Section-by-Section Analysis
+            if (data.suggestions?.sectionAnalysis) {
                 html += `
                     <div class="detail-card">
-                        <h4>🛠️ Skills Analysis</h4>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            ${data.suggestions.skillsAnalysis.matchingSkills && data.suggestions.skillsAnalysis.matchingSkills.length > 0 ? `
-                                <div>
-                                    <h5 style="color: #28a745;">✅ Matching Skills:</h5>
-                                    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
-                                        ${data.suggestions.skillsAnalysis.matchingSkills.slice(0, 8).map(skill => `
-                                            <span style="background: #28a745; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">${skill}</span>
+                        <h4>📊 Section-by-Section Analysis</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                `;
+
+                // Professional Summary
+                if (data.suggestions.sectionAnalysis.professionalSummary) {
+                    const summary = data.suggestions.sectionAnalysis.professionalSummary;
+                    html += `
+                        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
+                            <h6 style="margin-top: 0; color: #007bff;">📝 Professional Summary</h6>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-weight: bold;">${summary.status || 'N/A'}</span>
+                                <span style="background: ${summary.score >= 80 ? '#28a745' : summary.score >= 60 ? '#ffc107' : '#dc3545'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${summary.score || 0}/100</span>
+                            </div>
+                            ${summary.recommendations && summary.recommendations.length > 0 ? `
+                                <div style="margin-bottom: 10px;">
+                                    <strong style="font-size: 12px; color: #666;">Top Recommendations:</strong>
+                                    <ul style="margin: 5px 0; padding-left: 15px; font-size: 12px;">
+                                        ${summary.recommendations.slice(0, 2).map(rec => `<li>${rec}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            ${summary.suggestedRewrite ? `
+                                <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-size: 12px; font-style: italic;">
+                                    <strong>Suggestion:</strong> ${summary.suggestedRewrite}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+
+                // Skills Section
+                if (data.suggestions.sectionAnalysis.skillsSection) {
+                    const skills = data.suggestions.sectionAnalysis.skillsSection;
+                    html += `
+                        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
+                            <h6 style="margin-top: 0; color: #007bff;">🛠️ Skills Section</h6>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-weight: bold;">${skills.status || 'N/A'}</span>
+                                <span style="background: ${skills.score >= 80 ? '#28a745' : skills.score >= 60 ? '#ffc107' : '#dc3545'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${skills.score || 0}/100</span>
+                            </div>
+                            ${skills.missingCriticalSkills && skills.missingCriticalSkills.length > 0 ? `
+                                <div style="margin-bottom: 10px;">
+                                    <strong style="font-size: 12px; color: #dc3545;">Missing Critical Skills:</strong>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px;">
+                                        ${skills.missingCriticalSkills.slice(0, 5).map(skill => `
+                                            <span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px;">${skill}</span>
                                         `).join('')}
                                     </div>
                                 </div>
                             ` : ''}
-                            ${data.suggestions.skillsAnalysis.missingSkills && data.suggestions.skillsAnalysis.missingSkills.length > 0 ? `
-                                <div>
-                                    <h5 style="color: #dc3545;">❌ Missing Skills:</h5>
-                                    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
-                                        ${data.suggestions.skillsAnalysis.missingSkills.slice(0, 8).map(skill => `
-                                            <span style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">${skill}</span>
-                                        `).join('')}
+                            ${skills.skillGapAnalysis ? `
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; font-size: 11px;">
+                                    <div style="text-align: center;">
+                                        <div style="font-weight: bold; color: #007bff;">${skills.skillGapAnalysis.technical?.score || 0}</div>
+                                        <div style="color: #666;">Technical</div>
+                                    </div>
+                                    <div style="text-align: center;">
+                                        <div style="font-weight: bold; color: #28a745;">${skills.skillGapAnalysis.soft?.score || 0}</div>
+                                        <div style="color: #666;">Soft Skills</div>
+                                    </div>
+                                    <div style="text-align: center;">
+                                        <div style="font-weight: bold; color: #ffc107;">${skills.skillGapAnalysis.leadership?.score || 0}</div>
+                                        <div style="color: #666;">Leadership</div>
                                     </div>
                                 </div>
                             ` : ''}
                         </div>
-                    </div>
-                `;
+                    `;
+                }
+
+                // Work Experience
+                if (data.suggestions.sectionAnalysis.workExperience) {
+                    const experience = data.suggestions.sectionAnalysis.workExperience;
+                    html += `
+                        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
+                            <h6 style="margin-top: 0; color: #007bff;">💼 Work Experience</h6>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-weight: bold;">${experience.status || 'N/A'}</span>
+                                <span style="background: ${experience.score >= 80 ? '#28a745' : experience.score >= 60 ? '#ffc107' : '#dc3545'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${experience.score || 0}/100</span>
+                            </div>
+                            ${experience.achievementAnalysis ? `
+                                <div style="margin-bottom: 10px; font-size: 12px;">
+                                    <strong>Achievement Analysis:</strong>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px;">
+                                        <div>Quantified: <strong style="color: #28a745;">${experience.achievementAnalysis.quantified || 0}</strong></div>
+                                        <div>Qualitative: <strong style="color: #ffc107;">${experience.achievementAnalysis.qualitative || 0}</strong></div>
+                                    </div>
+                                    <div style="background: #f8f9fa; padding: 8px; border-radius: 5px; margin-top: 8px; font-style: italic;">
+                                        ${experience.achievementAnalysis.recommendation || 'Focus on adding quantifiable results'}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${experience.careerProgression ? `
+                                <div style="font-size: 12px;">
+                                    <strong>Career Trend:</strong> 
+                                    <span style="color: ${experience.careerProgression.trend === 'Positive' ? '#28a745' : experience.careerProgression.trend === 'Negative' ? '#dc3545' : '#ffc107'}; font-weight: bold;">
+                                        ${experience.careerProgression.trend || 'N/A'}
+                                    </span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+
+                // Education & Certifications
+                if (data.suggestions.sectionAnalysis.educationSection || data.suggestions.sectionAnalysis.certifications) {
+                    html += `
+                        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
+                            <h6 style="margin-top: 0; color: #007bff;">🎓 Education & Certifications</h6>
+                    `;
+                    
+                    if (data.suggestions.sectionAnalysis.educationSection) {
+                        const education = data.suggestions.sectionAnalysis.educationSection;
+                        html += `
+                            <div style="margin-bottom: 15px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                    <span style="font-size: 12px; font-weight: bold;">Education: ${education.status || 'N/A'}</span>
+                                    <span style="background: ${education.score >= 80 ? '#28a745' : education.score >= 60 ? '#ffc107' : '#dc3545'}; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px;">${education.score || 0}</span>
+                                </div>
+                                <div style="font-size: 11px; color: #666;">Relevance: ${education.relevanceScore || 0}%</div>
+                            </div>
+                        `;
+                    }
+                    
+                    if (data.suggestions.sectionAnalysis.certifications) {
+                        const certs = data.suggestions.sectionAnalysis.certifications;
+                        html += `
+                            <div style="margin-bottom: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                    <span style="font-size: 12px; font-weight: bold;">Certifications: ${certs.status || 'N/A'}</span>
+                                    <span style="background: ${certs.score >= 80 ? '#28a745' : certs.score >= 60 ? '#ffc107' : '#dc3545'}; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px;">${certs.score || 0}</span>
+                                </div>
+                                <div style="font-size: 11px; color: #666;">Priority: <strong>${certs.priorityLevel || 'N/A'}</strong></div>
+                                ${certs.suggestedCertifications && certs.suggestedCertifications.length > 0 ? `
+                                    <div style="font-size: 10px; color: #007bff; margin-top: 5px;">
+                                        Suggested: ${certs.suggestedCertifications.slice(0, 2).join(', ')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }
+                    
+                    html += `</div>`;
+                }
+
+                html += `</div></div>`;
             }
 
-            // Action Plan
+            // Improvement Priority
+            if (data.suggestions?.improvementPriority && data.suggestions.improvementPriority.length > 0) {
+                html += `
+                    <div class="detail-card">
+                        <h4>🎯 Priority Action Items</h4>
+                        <div style="display: grid; gap: 15px;">
+                `;
+                
+                data.suggestions.improvementPriority.slice(0, 5).forEach((item, index) => {
+                    html += `
+                        <div style="border-left: 4px solid ${index === 0 ? '#dc3545' : index === 1 ? '#ffc107' : '#28a745'}; padding-left: 15px; background: #f8f9fa; padding: 12px; border-radius: 0 8px 8px 0;">
+                            <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 5px;">
+                                <span style="font-weight: bold; color: #333;">Priority ${item.priority || index + 1}: ${item.section || 'N/A'}</span>
+                                <span style="background: ${item.estimatedImpact === 'High' ? '#dc3545' : item.estimatedImpact === 'Medium' ? '#ffc107' : '#28a745'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; margin-left: auto;">
+                                    ${item.estimatedImpact || 'N/A'} Impact
+                                </span>
+                            </div>
+                            <div style="font-size: 13px; margin-bottom: 8px; color: #555;">${item.action || 'N/A'}</div>
+                            <div style="display: flex; justify-content: between; font-size: 11px; color: #666;">
+                                <span>⏱️ ${item.timeToComplete || 'N/A'}</span>
+                                <span style="margin-left: 15px;">📈 +${item.expectedScoreIncrease || 0} points</span>
+                                <span style="margin-left: 15px;">🎚️ ${item.difficultyLevel || 'N/A'}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `</div></div>`;
+            }
+
+            // Enhanced Action Plan
             if (data.suggestions?.actionPlan) {
                 html += `
                     <div class="detail-card">
-                        <h4>📋 Action Plan</h4>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-                            ${data.suggestions.actionPlan.immediate && data.suggestions.actionPlan.immediate.length > 0 ? `
+                        <h4>📋 Comprehensive Action Plan</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                            ${data.suggestions.actionPlan.immediateActions && data.suggestions.actionPlan.immediateActions.length > 0 ? `
                                 <div style="border-left: 4px solid #dc3545; padding-left: 15px;">
-                                    <h5 style="color: #dc3545; margin-bottom: 10px;">🚨 Immediate Actions:</h5>
-                                    <ul style="margin: 0; padding-left: 20px; color: #c62828;">
-                                        ${data.suggestions.actionPlan.immediate.slice(0, 3).map(action => `<li>${action}</li>`).join('')}
+                                    <h5 style="color: #dc3545; margin-bottom: 10px;">🚨 Immediate Actions (Today)</h5>
+                                    <ul style="margin: 0; padding-left: 20px; color: #c62828; font-size: 13px;">
+                                        ${data.suggestions.actionPlan.immediateActions.slice(0, 4).map(action => `<li style="margin-bottom: 5px;">${action}</li>`).join('')}
                                     </ul>
                                 </div>
                             ` : ''}
-                            ${data.suggestions.actionPlan.shortTerm && data.suggestions.actionPlan.shortTerm.length > 0 ? `
+                            ${data.suggestions.actionPlan.shortTermGoals && data.suggestions.actionPlan.shortTermGoals.length > 0 ? `
                                 <div style="border-left: 4px solid #ffc107; padding-left: 15px;">
-                                    <h5 style="color: #856404; margin-bottom: 10px;">📅 Short-term Goals:</h5>
-                                    <ul style="margin: 0; padding-left: 20px; color: #856404;">
-                                        ${data.suggestions.actionPlan.shortTerm.slice(0, 3).map(action => `<li>${action}</li>`).join('')}
+                                    <h5 style="color: #856404; margin-bottom: 10px;">📅 Short-term Goals (This Week)</h5>
+                                    <ul style="margin: 0; padding-left: 20px; color: #856404; font-size: 13px;">
+                                        ${data.suggestions.actionPlan.shortTermGoals.slice(0, 4).map(action => `<li style="margin-bottom: 5px;">${action}</li>`).join('')}
                                     </ul>
                                 </div>
                             ` : ''}
-                            ${data.suggestions.actionPlan.longTerm && data.suggestions.actionPlan.longTerm.length > 0 ? `
+                            ${data.suggestions.actionPlan.longTermGoals && data.suggestions.actionPlan.longTermGoals.length > 0 ? `
                                 <div style="border-left: 4px solid #28a745; padding-left: 15px;">
-                                    <h5 style="color: #155724; margin-bottom: 10px;">🎯 Long-term Development:</h5>
-                                    <ul style="margin: 0; padding-left: 20px; color: #155724;">
-                                        ${data.suggestions.actionPlan.longTerm.slice(0, 3).map(action => `<li>${action}</li>`).join('')}
+                                    <h5 style="color: #155724; margin-bottom: 10px;">🎯 Long-term Development (This Month+)</h5>
+                                    <ul style="margin: 0; padding-left: 20px; color: #155724; font-size: 13px;">
+                                        ${data.suggestions.actionPlan.longTermGoals.slice(0, 4).map(action => `<li style="margin-bottom: 5px;">${action}</li>`).join('')}
                                     </ul>
                                 </div>
                             ` : ''}
@@ -1441,17 +1631,102 @@ HTML_TEMPLATE = """
                 `;
             }
 
-            // Complete JSON output
+            // Competitive Analysis
+            if (data.suggestions?.competitiveAnalysis) {
+                const competitive = data.suggestions.competitiveAnalysis;
+                html += `
+                    <div class="detail-card">
+                        <h4>🏆 Competitive Market Analysis</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                            <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                <div style="font-size: 24px; font-weight: bold; color: #007bff;">${competitive.percentileRanking || 'N/A'}</div>
+                                <div style="color: #6c757d; font-size: 12px;">Percentile Ranking</div>
+                                <div style="font-size: 14px; margin-top: 5px; font-weight: bold; color: ${competitive.marketPosition === 'Above Average' ? '#28a745' : competitive.marketPosition === 'Below Average' ? '#dc3545' : '#ffc107'};">
+                                    ${competitive.marketPosition || 'N/A'}
+                                </div>
+                            </div>
+                            <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                <div style="font-size: 20px; font-weight: bold; color: #28a745;">${competitive.marketDemandAlignment || 'N/A'}%</div>
+                                <div style="color: #6c757d; font-size: 12px;">Market Demand Alignment</div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            ${competitive.strengthsVsCompetition && competitive.strengthsVsCompetition.length > 0 ? `
+                                <div>
+                                    <h6 style="color: #28a745; margin-bottom: 10px;">✅ Competitive Strengths:</h6>
+                                    <ul style="margin: 0; padding-left: 20px; color: #155724; font-size: 13px;">
+                                        ${competitive.strengthsVsCompetition.map(strength => `<li>${strength}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            ${competitive.areasToOutperform && competitive.areasToOutperform.length > 0 ? `
+                                <div>
+                                    <h6 style="color: #dc3545; margin-bottom: 10px;">📈 Areas to Outperform Competition:</h6>
+                                    <ul style="margin: 0; padding-left: 20px; color: #c62828; font-size: 13px;">
+                                        ${competitive.areasToOutperform.map(area => `<li>${area}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Industry Benchmarks
+            if (data.suggestions?.industryBenchmarks) {
+                const benchmarks = data.suggestions.industryBenchmarks;
+                html += `
+                    <div class="detail-card">
+                        <h4>📊 Industry Benchmarks</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; text-align: center;">
+                            <div style="padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                                <div style="font-size: 18px; font-weight: bold; color: #6c757d;">${benchmarks.averageScore || 'N/A'}</div>
+                                <div style="font-size: 11px; color: #666;">Industry Average</div>
+                            </div>
+                            <div style="padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                                <div style="font-size: 18px; font-weight: bold; color: #28a745;">${benchmarks.topPerformerScore || 'N/A'}</div>
+                                <div style="font-size: 11px; color: #666;">Top Performers</div>
+                            </div>
+                            <div style="padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                                <div style="font-size: 18px; font-weight: bold; color: #007bff;">${benchmarks.targetScore || 'N/A'}</div>
+                                <div style="font-size: 11px; color: #666;">Your Target</div>
+                            </div>
+                            <div style="padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                                <div style="font-size: 14px; font-weight: bold; color: ${benchmarks.improvementPotential === 'High' ? '#28a745' : benchmarks.improvementPotential === 'Low' ? '#dc3545' : '#ffc107'};">
+                                    ${benchmarks.improvementPotential || 'N/A'}
+                                </div>
+                                <div style="font-size: 11px; color: #666;">Improvement Potential</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Complete JSON output (collapsible)
             html += `
                 <div style="margin-top: 30px;">
-                    <h4>Complete AI Analysis Data (JSON)</h4>
-                    <div class="json-output" style="max-height: 400px; overflow-y: auto;">
+                    <h4 style="cursor: pointer; display: flex; align-items: center;" onclick="toggleJsonOutput()">
+                        <span id="jsonToggle">▶️</span> Complete AI Analysis Data (JSON)
+                    </h4>
+                    <div id="jsonOutputContainer" class="json-output" style="max-height: 400px; overflow-y: auto; display: none;">
                         ${formatJSON(JSON.stringify(data, null, 2))}
                     </div>
                 </div>
             `;
 
             resultsDiv.innerHTML = html;
+        }
+
+        function toggleJsonOutput() {
+            const container = document.getElementById('jsonOutputContainer');
+            const toggle = document.getElementById('jsonToggle');
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                toggle.textContent = '🔽';
+            } else {
+                container.style.display = 'none';
+                toggle.textContent = '▶️';
+            }
         }
 
         function formatJSON(jsonString) {

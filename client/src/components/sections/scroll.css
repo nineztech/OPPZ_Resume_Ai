@@ -1,0 +1,35 @@
+@keyframes scrollLeft {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes scrollRight {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.scrollLeft {
+  animation: scrollLeft linear infinite;
+  animation-play-state: running;
+}
+
+.scrollLeft:hover {
+  animation-play-state: paused;
+}
+
+.scrollRight {
+  animation: scrollRight linear infinite;
+  animation-play-state: running;
+}
+
+.scrollRight:hover {
+  animation-play-state: paused;
+}
