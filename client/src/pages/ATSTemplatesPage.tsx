@@ -461,8 +461,8 @@ const ATSTemplatesPage = () => {
                   <CardContent>
                     {/* Template Preview */}
                     <div className="relative bg-gray-50 rounded-lg p-4 mb-4 group-hover:bg-gray-100 transition-colors">
-                      <div className="aspect-[3/4] bg-white rounded shadow-sm border border-gray-200 overflow-hidden flex items-center justify-center">
-                        <div className="transform scale-[0.7] origin-center w-[800px] h-[1200px]">
+                      <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden flex items-center justify-center h-80">
+                        <div className="transform scale-[0.4] origin-center w-[800px] h-[1400px]">
                           <TemplateRenderer
                             templateId={template.id}
                             data={template.templateData}
