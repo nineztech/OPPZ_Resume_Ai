@@ -2,32 +2,22 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-// import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   ArrowLeft, 
   Save, 
   Download, 
   Eye, 
-  Edit3, 
   User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Globe,
   Briefcase,
   GraduationCap,
   Award,
-  Languages,
   Activity,
-  Heart,
   FileText,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Code,
@@ -759,6 +749,14 @@ const ResumeBuilderPage = () => {
               >
                 <Eye className="w-4 h-4 mr-2" />
                 Preview
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate('/resume/ats-templates')}
+              >
+                <Award className="w-4 h-4 mr-2" />
+                Check ATS
               </Button>
               <Button variant="outline" size="sm">
                 <Save className="w-4 h-4 mr-2" />
@@ -2006,7 +2004,7 @@ const CustomSectionEditor = ({
             </Button>
           </div>
           
-          {(section.content.items || []).map((item: any, index: number) => (
+          {(section.content.items || []).map((item: any) => (
             <Card key={item.id} className="p-4">
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">

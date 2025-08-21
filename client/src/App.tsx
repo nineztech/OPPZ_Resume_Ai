@@ -14,6 +14,7 @@ import ResumeBuilderPage from './pages/ResumeBuilderPage';
 import FeaturesPage from './pages/FeaturesPage';
 import ATSScorePage from './pages/ATSScorePage';
 import ATSResultsPage from './pages/ATSResultsPage';
+import ATSTemplatesPage from './pages/ATSTemplatesPage';
 import AISuggestionsPage from './pages/AISuggestionsPage';
 
 function App() {
@@ -41,6 +42,16 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ATSResultsPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/resume/ats-templates" 
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ATSTemplatesPage />
+                  </Layout>
                 </ProtectedRoute>
               } 
             />
