@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
 import { Input } from '@/components/ui/input';
@@ -6,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Sparkles, Building2, Globe, User, X, Upload, Loader2, CheckCircle } from 'lucide-react';
 import countryList from 'react-select-country-list';
 import { geminiParserService, type AIProcessingResult } from '@/services/geminiParserService';
-import AISuggestionsModal from './AISuggestionsModal';
 
 interface AICustomizationModalProps {
   isOpen: boolean;
@@ -27,6 +27,7 @@ const AICustomizationModal: React.FC<AICustomizationModalProps> = ({
   onContinue,
   preUploadedFile // Add this prop
 }) => {
+  const navigate = useNavigate();
   const [sector, setSector] = useState('');
   const [country, setCountry] = useState('');
   const [designation, setDesignation] = useState('');
@@ -34,9 +35,6 @@ const AICustomizationModal: React.FC<AICustomizationModalProps> = ({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
-  const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
-  const [aiResults, setAiResults] = useState<AIProcessingResult | null>(null);
-  const [jobDescription, setJobDescription] = useState<any>(null);
 
   // Set the pre-uploaded file when the modal opens
   React.useEffect(() => {
@@ -93,17 +91,25 @@ const AICustomizationModal: React.FC<AICustomizationModalProps> = ({
         setProcessingStep('Preparing suggestions...');
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Store results and show suggestions modal
-        setAiResults(results);
-        setJobDescription({
+        // Navigate to AI suggestions page with results
+        const jobDescription = {
           jobTitle: `${params.designation} in ${params.sector}`,
           sector: params.sector,
           country: params.country
-        });
-        setShowSuggestionsModal(true);
+        };
         
-        // Don't close the current modal - let the suggestions modal handle the flow
-        // onClose();
+        onClose(); // Close the modal
+        navigate('/resume/ai-suggestions', {
+          state: {
+            suggestions: results.suggestions || {},
+            jobDescription,
+            sector: params.sector,
+            country: params.country,
+            designation: params.designation,
+            aiResults: results,
+            resumeFile: uploadedFile || undefined
+          }
+        });
       } catch (error) {
         console.error('AI processing error:', error);
         alert('Failed to process resume with AI. Please try again.');
@@ -289,29 +295,6 @@ const AICustomizationModal: React.FC<AICustomizationModalProps> = ({
           </div>
         </div>
       </div>
-
-      {/* AI Suggestions Modal */}
-      {showSuggestionsModal && aiResults && jobDescription && (
-        <AISuggestionsModal
-          isOpen={showSuggestionsModal}
-          onClose={() => {
-            setShowSuggestionsModal(false);
-            onClose(); // Close the parent modal when suggestions modal is closed
-          }}
-          suggestions={aiResults.suggestions || {}}
-          jobDescription={jobDescription}
-          onApplyChanges={() => {
-            setShowSuggestionsModal(false);
-            onContinue({ 
-              sector, 
-              country, 
-              designation, 
-              aiResults, 
-              resumeFile: uploadedFile || undefined
-            });
-          }}
-        />
-      )}
     </>
   );
 };

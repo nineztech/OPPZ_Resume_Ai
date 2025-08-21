@@ -3,23 +3,20 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, FileText, Sparkles, ArrowLeft, CheckCircle, User } from 'lucide-react';
-import ResumeUploadModal from '@/components/modals/ResumeUploadModal';
-import AICustomizationModal from '@/components/modals/AICustomizationModal';
-import AISuggestionsModal from '@/components/modals/AISuggestionsModal';
+
+
 import { geminiParserService } from '@/services/geminiParserService';
 import { getTemplateById } from '@/data/templates';
-import type { AIProcessingResult } from '@/services/geminiParserService';
+
 
 const UseTemplatePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
-  const [isSuggestionsModalOpen, setIsSuggestionsModalOpen] = useState(false);
+
+
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [extractedData, setExtractedData] = useState<any>(null);
-  const [aiResults, setAIResults] = useState<AIProcessingResult | null>(null);
+
 
   const templateId = searchParams.get('templateId');
   const selectedColor = searchParams.get('color');
@@ -35,9 +32,17 @@ const UseTemplatePage = () => {
       // Convert Gemini data to the format expected by ResumeBuilderPage
       const convertedData = geminiParserService.convertToResumeData(geminiData);
       console.log("Converted data for ResumeBuilderPage:", convertedData);
-      setExtractedData(convertedData);
       setIsUploading(false);
-      setIsModalOpen(true); // <-- This should open the modal
+      
+      // Navigate to ResumeProcessingPage instead of opening modal
+      navigate('/resume/processing', {
+        state: {
+          uploadedFile: file,
+          extractedData: convertedData,
+          templateId,
+          selectedColor
+        }
+      });
     } catch (err) {
       setIsUploading(false);
       console.error('Gemini parsing error:', err);
@@ -45,29 +50,7 @@ const UseTemplatePage = () => {
     }
   };
 
-  const handleContinueWithRaw = () => {
-    console.log("Navigating to ResumeBuilderPage with raw data:", extractedData);
-    navigate('/resume/builder', { 
-      state: { 
-        templateId, 
-        selectedColor, 
-        mode: 'raw',
-        extractedData // pass extracted data, not file!
-      } 
-    });
-  };
 
-  const handleCustomizeWithAI = () => {
-    console.log("Navigating to ResumeBuilderPage with AI data:", extractedData);
-    navigate('/resume/builder', { 
-      state: { 
-        templateId, 
-        selectedColor, 
-        mode: 'ai',
-        extractedData // pass extracted data, not file!
-      } 
-    });
-  };
 
   const handleContinueWithoutResume = async () => {
     // Get default template data
@@ -84,49 +67,9 @@ const UseTemplatePage = () => {
     });
   };
 
-  const handleAICustomization = (data: { 
-    sector: string; 
-    country: string; 
-    designation: string; 
-    aiResults?: AIProcessingResult;
-    resumeFile?: File;
-  }) => {
-    if (data.aiResults) {
-      // Show AI suggestions modal
-      setAIResults(data.aiResults);
-      setIsAIModalOpen(false);
-      setIsSuggestionsModalOpen(true);
-    } else {
-      // Continue without AI analysis (just job description)
-      setIsAIModalOpen(false);
-      navigate("/resume/builder", { 
-        state: { 
-          templateId, 
-          selectedColor,
-          mode: 'ai-basic',
-          aiParams: { sector: data.sector, country: data.country, designation: data.designation }
-        } 
-      });
-    }
-  };
 
-  const handleApplyAISuggestions = () => {
-    if (aiResults) {
-      // Navigate to resume builder with AI suggestions and parsed data
-      setIsSuggestionsModalOpen(false);
-      navigate("/resume/builder", { 
-        state: { 
-          templateId, 
-          selectedColor,
-          mode: 'ai-enhanced',
-          extractedData: aiResults.resumeData,
-          aiSuggestions: aiResults.suggestions,
-          jobDescription: aiResults.jobDescription,
-          aiParams: aiResults.parameters
-        } 
-      });
-    }
-  };
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -263,7 +206,15 @@ const UseTemplatePage = () => {
                 </Button>
                 <Button
                   size="lg"
-                  onClick={() => setIsAIModalOpen(true)}
+                  onClick={() => navigate('/resume/processing', {
+                    state: {
+                      uploadedFile: null,
+                      extractedData: null,
+                      templateId,
+                      selectedColor,
+                      directToAI: true
+                    }
+                  })}
                   className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
@@ -310,33 +261,7 @@ const UseTemplatePage = () => {
           </div>
         </section>
 
-      {/* Resume Upload Modal */}
-      <ResumeUploadModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onContinueWithRaw={handleContinueWithRaw}
-        onCustomizeWithAI={handleCustomizeWithAI}
-        fileName={uploadedFile?.name || ''}
-        uploadedFile={uploadedFile} // Pass the uploaded file
-      />
 
-      {/* AI Customization Modal */}
-      <AICustomizationModal
-        isOpen={isAIModalOpen}
-        onClose={() => setIsAIModalOpen(false)}
-        onContinue={handleAICustomization}
-      />
-
-      {/* AI Suggestions Modal */}
-      {aiResults && aiResults.suggestions && aiResults.jobDescription && (
-        <AISuggestionsModal
-          isOpen={isSuggestionsModalOpen}
-          onClose={() => setIsSuggestionsModalOpen(false)}
-          suggestions={aiResults.suggestions}
-          jobDescription={aiResults.jobDescription}
-          onApplyChanges={handleApplyAISuggestions}
-        />
-      )}
     </div>
   );
 };
