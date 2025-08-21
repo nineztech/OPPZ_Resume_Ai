@@ -16,6 +16,7 @@ import ATSScorePage from './pages/ATSScorePage';
 import ATSResultsPage from './pages/ATSResultsPage';
 import ATSTemplatesPage from './pages/ATSTemplatesPage';
 import AISuggestionsPage from './pages/AISuggestionsPage';
+import ResumeCreator from './pages/ResumeCreator';
 
 function App() {
   return (
@@ -102,8 +103,21 @@ function App() {
                   </Layout>
                 </ProtectedRoute>
               } 
-            />
+            />  
+             <Route 
+              path="/resume/new" 
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ResumeCreator/>
+                  </Layout>
+                </ProtectedRoute>
+              } 
+            />  
           </Routes>
+          
+          {/* <Route path="/resume/new" element={<ResumeCreator/>} /> */}
+
           <Toaster />
         </div>
       </ToastProvider>
