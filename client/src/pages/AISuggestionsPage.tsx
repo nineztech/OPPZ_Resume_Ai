@@ -106,6 +106,11 @@ const AISuggestionsPage: React.FC = () => {
             sector: state.sector,
             country: state.country,
             designation: state.designation
+          },
+          appliedSuggestions: {
+            timestamp: new Date().toISOString(),
+            suggestions: state.suggestions,
+            jobDescription: state.jobDescription
           }
         }
       });
@@ -117,7 +122,12 @@ const AISuggestionsPage: React.FC = () => {
           country: state.country,
           designation: state.designation,
           aiResults: state.aiResults,
-          resumeFile: state.resumeFile
+          resumeFile: state.resumeFile,
+          appliedSuggestions: {
+            timestamp: new Date().toISOString(),
+            suggestions: state.suggestions,
+            jobDescription: state.jobDescription
+          }
         }
       });
     }

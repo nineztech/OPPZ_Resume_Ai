@@ -78,6 +78,7 @@ interface TemplateData {
 interface CleanMinimalProps {
   data?: TemplateData;
   color?: string;
+  highlightedSections?: Set<string>;
 }
 
 const cleanMinimalTemplateData: TemplateData = {
@@ -162,9 +163,19 @@ const cleanMinimalTemplateData: TemplateData = {
   }
 };
 
-const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
+const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSections }) => {
   // Use the passed data prop if available, otherwise fall back to default data
   const templateData = data || cleanMinimalTemplateData;
+  
+  // Helper function to get highlighting styles
+  const getHighlightStyle = (sectionName: string) => {
+    return highlightedSections?.has(sectionName) ? {
+      backgroundColor: 'rgba(255, 235, 59, 0.15)',
+      borderLeft: '4px solid #ffc107',
+      paddingLeft: '8px',
+      position: 'relative' as const
+    } : {};
+  };
   
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white" style={{ 

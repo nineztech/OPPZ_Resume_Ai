@@ -78,6 +78,7 @@ interface TemplateData {
 interface CleanMinimalProps {
   data?: TemplateData;
   color?: string;
+  highlightedSections?: Set<string>;
 }
 
 const cleanMinimalTemplateData: TemplateData = {
@@ -162,16 +163,51 @@ const cleanMinimalTemplateData: TemplateData = {
   }
 };
 
-const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
+const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSections }) => {
   // Use the passed data prop if available, otherwise fall back to default data
   const templateData = data || cleanMinimalTemplateData;
   
+  // Helper function to get highlighting styles
+  const getHighlightStyle = (sectionName: string) => {
+    return highlightedSections?.has(sectionName) ? {
+      backgroundColor: 'rgba(255, 235, 59, 0.15)',
+      borderLeft: '4px solid #ffc107',
+      paddingLeft: '8px',
+      position: 'relative' as const,
+      animation: 'highlightPulse 3s ease-in-out infinite'
+    } : {};
+  };
+
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white" style={{ 
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '11px',
-      lineHeight: '1.3'
-    }}>
+    <>
+      <style>
+        {`
+          @keyframes highlightPulse {
+            0%, 100% { background-color: rgba(255, 235, 59, 0.1); }
+            50% { background-color: rgba(255, 235, 59, 0.2); }
+          }
+          .ai-enhanced-badge {
+            position: absolute;
+            top: -8px;
+            right: 8px;
+            background: #ffc107;
+            color: #fff;
+            font-size: 8px;
+            padding: 2px 4px;
+            border-radius: 6px;
+            font-weight: 500;
+            z-index: 10;
+          }
+          .ai-enhanced-badge::before {
+            content: "✨ AI Enhanced";
+          }
+        `}
+      </style>
+      <div className="max-w-4xl mx-auto p-6 bg-white" style={{ 
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '11px',
+        lineHeight: '1.3'
+      }}>
       {/* Header */}
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold mb-1" style={{ 
@@ -191,7 +227,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       </div>
 
       {/* Summary */}
-      <div className="mb-3">
+      <div className="mb-3" style={getHighlightStyle('summary')}>
+        {highlightedSections?.has('summary') && <div className="ai-enhanced-badge"></div>}
         <h2 className="text-left font-bold mb-2 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
@@ -212,7 +249,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       </div>
 
       {/* Technical Skills */}
-      <div className="mb-3">
+      <div className="mb-3" style={getHighlightStyle('skills')}>
+        {highlightedSections?.has('skills') && <div className="ai-enhanced-badge"></div>}
         <h2 className="text-left font-bold mb-2 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
@@ -270,7 +308,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       </div>
 
       {/* Professional Experience */}
-      <div className="mb-3">
+      <div className="mb-3" style={getHighlightStyle('experience')}>
+        {highlightedSections?.has('experience') && <div className="ai-enhanced-badge"></div>}
         <h2 className="text-left font-bold mb-2 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
@@ -460,7 +499,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
