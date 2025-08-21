@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
 import { tokenUtils } from '@/lib/utils';
 import LoginPromptModal from '@/components/modals/LoginPromptModal';
+
 const FeaturesSection = () => {
   const [ref, inView] = useInView({
     triggerOnce: true,
@@ -61,59 +62,6 @@ const FeaturesSection = () => {
     }
   ];
 
-    const [statsRef, statsInView] = useInView({
-    triggerOnce: true,
-    threshold: 0.1,
-  });
-
-  const [counts, setCounts] = useState({
-    users: 0,
-    success: 0,
-    rating: 0
-  });
-
-  const [displayCounts, setDisplayCounts] = useState({
-      users: 0,
-  success: 0,
-  rating: 0
-  });
-
-useEffect(() => {
-  if (inView) {
-    const timer = setTimeout(() => {
-      setCounts({
-        users: 45,      // 👈 This is the "50K+" part
-        success: 95,
-        rating: 4.7     // 👈 This will later be shown as 4.9/5
-      });
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }
-}, [inView]);
-
-  
-  useEffect(() => {
-    const duration = 2000;
-    const steps = 60;
-    const stepDuration = duration / steps;
-
-    if (counts.users > 0) {
-      const interval = setInterval(() => {
-        setDisplayCounts(prev => ({
-          users: Math.min(prev.users + Math.ceil(counts.users / steps), counts.users),
-          success: Math.min(prev.success + Math.ceil(counts.success / steps), counts.success),
-          rating: Math.min(
-            Math.round((prev.rating + (counts.rating / steps)) * 10) / 10,
-            counts.rating
-          )
-        }));
-      }, stepDuration);
-
-      return () => clearInterval(interval);
-    }
-  }, [counts]);
-
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -135,34 +83,6 @@ useEffect(() => {
       }
     }
   };
-    const stats = [
-    {
-      icon: Users,
-      value: displayCounts.users,
-      suffix: "K+",
-      label: "Happy Users",
-      color: "text-blue-600",
-      bgColor: "bg-blue-50"
-    },
-    {
-      icon: TrendingUp,
-      value: displayCounts.success,
-      suffix: "%",
-      label: "Success Rate",
-      color: "text-purple-600",
-      bgColor: "bg-purple-50"
-    },
-    {
-      icon: Award,
-      value: displayCounts.rating,
-      suffix: "/5",
-      label: "User Rating",
-      color: "text-green-600",
-      bgColor: "bg-green-50"
-    }
-  ];
-
-  
 
   return (
     <section id="features" className="py-12 sm:py-16 lg:py-20 bg-white">
@@ -221,51 +141,43 @@ useEffect(() => {
           ))}
         </motion.div>
 
+        {/* Stats Section - Clean Style */}
+        <motion.div
+          className="mt-12 sm:mt-16 grid grid-cols-2 sm:grid-cols-4 gap-8 sm:gap-12 text-center"
+          initial={{ opacity: 0, y: 30 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.8, delay: 0.5 }}
+        >
+          <div>
+            <div className="text-3xl sm:text-4xl font-bold text-blue-600 mb-2">280+</div>
+            <div className="text-sm sm:text-base text-gray-600">Clients Served</div>
+          </div>
+          <div>
+            <div className="text-3xl sm:text-4xl font-bold text-blue-600 mb-2">95%</div>
+            <div className="text-sm sm:text-base text-gray-600">Client Retention</div>
+          </div>
+          <div>
+            <div className="text-3xl sm:text-4xl font-bold text-blue-600 mb-2">18+</div>
+            <div className="text-sm sm:text-base text-gray-600">Years Experience</div>
+          </div>
+          <div>
+            <div className="text-3xl sm:text-4xl font-bold text-blue-600 mb-2">50+</div>
+            <div className="text-sm sm:text-base text-gray-600">Expert Consultants</div>
+          </div>
+        </motion.div>
+
         {/* Bottom CTA */}
         <motion.div
           className="text-center mt-12 sm:mt-16"
           initial={{ opacity: 0, y: 30 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, delay: 0.5 }}
+          transition={{ duration: 0.8, delay: 0.8 }}
         >
-          {/* Stats Section */}
-        <motion.div
-          className="mt-12 sm:mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8"
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, delay: 0.5 }}
-        >
-          {stats.map((stat, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={inView ? { opacity: 1, scale: 1 } : {}}
-              transition={{ duration: 0.6, delay: 0.8 + index * 0.2 }}
-            >
-              <Card className={`${stat.bgColor} border-0 shadow-lg hover:shadow-xl transition-all duration-300`}>
-                <CardContent className="p-6 text-center">
-                  <div className={`${stat.color} mb-4 flex justify-center`}>
-                    <stat.icon className="h-8 w-8 sm:h-10 sm:w-10" />
-                  </div>
-                  <CardTitle className={`${stat.color} text-xl sm:text-2xl lg:text-3xl font-bold mb-2`}>
-                    {stat.value}{stat.suffix}
-                  </CardTitle>
-                  <CardDescription className="text-gray-600 text-sm sm:text-base font-medium">
-                    {stat.label}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
-
-
-        
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl p-6 sm:p-8 lg:p-12 mx-4">
-                            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-4">
+            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-4">
               Ready to create your professional CV?
             </h3>
-                          <p className="text-xs sm:text-sm lg:text-base text-gray-600 mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
+            <p className="text-xs sm:text-sm lg:text-base text-gray-600 mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
               Join thousands of professionals who have already created standout CVs with our platform
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center px-4">
@@ -308,15 +220,8 @@ useEffect(() => {
         isOpen={showLoginPrompt}
         onClose={() => setShowLoginPrompt(false)}
       />
-      
-        
-      
     </section>
   );
 };
 
-export default FeaturesSection; 
-
-// // function useEffect(arg0: () => (() => void) | undefined, arg1: { users: number; success: number; rating: number; }[]) {
-// //   throw new Error('Function not implemented.');
-// }
+export default FeaturesSection;

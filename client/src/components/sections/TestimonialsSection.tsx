@@ -1,58 +1,13 @@
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Quote, Users, TrendingUp, Award } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Star, Quote } from 'lucide-react';
 
 const TestimonialsSection = () => {
   const [ref, inView] = useInView({
     triggerOnce: true,
     threshold: 0.1,
   });
-
-  const [counts, setCounts] = useState({
-    users: 0,
-    success: 0,
-    rating: 0
-  });
-
-  const [displayCounts, setDisplayCounts] = useState({
-    users: 0,
-    success: 0,
-    rating: 0
-  });
-
-  useEffect(() => {
-    if (inView) {
-      const timer = setTimeout(() => {
-        setCounts({
-          users: 50,
-          success: 95,
-          rating: 49
-        });
-      }, 500);
-
-      return () => clearTimeout(timer);
-    }
-  }, [inView]);
-
-  useEffect(() => {
-    const duration = 2000; // 2 seconds
-    const steps = 60; // 60 steps for smooth animation
-    const stepDuration = duration / steps;
-
-    if (counts.users > 0) {
-      const interval = setInterval(() => {
-        setDisplayCounts(prev => ({
-          users: Math.min(prev.users + Math.ceil(counts.users / steps), counts.users),
-          success: Math.min(prev.success + Math.ceil(counts.success / steps), counts.success),
-          rating: Math.min(prev.rating + Math.ceil(counts.rating / steps), counts.rating)
-        }));
-      }, stepDuration);
-
-      return () => clearInterval(interval);
-    }
-  }, [counts]);
 
   const testimonials = [
     {
@@ -132,33 +87,6 @@ const TestimonialsSection = () => {
     }
   };
 
-  const stats = [
-    {
-      icon: Users,
-      value: displayCounts.users,
-      suffix: "K+",
-      label: "Happy Users",
-      color: "text-blue-600",
-      bgColor: "bg-blue-50"
-    },
-    {
-      icon: TrendingUp,
-      value: displayCounts.success,
-      suffix: "%",
-      label: "Success Rate",
-      color: "text-purple-600",
-      bgColor: "bg-purple-50"
-    },
-    {
-      icon: Award,
-      value: displayCounts.rating,
-      suffix: "/5",
-      label: "User Rating",
-      color: "text-green-600",
-      bgColor: "bg-green-50"
-    }
-  ];
-
   return (
     <section className="py-16 sm:py-20 bg-gradient-to-br from-gray-50 to-blue-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -235,40 +163,9 @@ const TestimonialsSection = () => {
             </motion.div>
           ))}
         </motion.div>
-
-        {/* Stats Section */}
-        <motion.div
-          className="mt-12 sm:mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8"
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, delay: 0.5 }}
-        >
-          {stats.map((stat, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={inView ? { opacity: 1, scale: 1 } : {}}
-              transition={{ duration: 0.6, delay: 0.8 + index * 0.2 }}
-            >
-              <Card className={`${stat.bgColor} border-0 shadow-lg hover:shadow-xl transition-all duration-300`}>
-                <CardContent className="p-6 text-center">
-                  <div className={`${stat.color} mb-4 flex justify-center`}>
-                    <stat.icon className="h-8 w-8 sm:h-10 sm:w-10" />
-                  </div>
-                  <CardTitle className={`${stat.color} text-xl sm:text-2xl lg:text-3xl font-bold mb-2`}>
-                    {stat.value}{stat.suffix}
-                  </CardTitle>
-                  <CardDescription className="text-gray-600 text-sm sm:text-base font-medium">
-                    {stat.label}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
       </div>
     </section>
   );
 };
 
-export default TestimonialsSection; 
+export default TestimonialsSection;
