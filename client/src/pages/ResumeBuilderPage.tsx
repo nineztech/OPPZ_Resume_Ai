@@ -148,88 +148,105 @@ const ResumeBuilderPage = () => {
   
   // Helper function to categorize skills into appropriate categories
   const categorizeSkill = (skill: string): string => {
-    const skillLower = skill.toLowerCase();
+    const skillLower = skill.toLowerCase().trim();
     
-    // Database technologies
-    if (skillLower.includes('mysql') || skillLower.includes('sql server') || skillLower.includes('oracle') || 
-        skillLower.includes('mongodb') || skillLower.includes('postgresql') || skillLower.includes('redis') ||
-        skillLower.includes('database') || skillLower.includes('db')) {
-      return 'Database';
-    }
-    
-    // Frameworks and Libraries
-    if (skillLower.includes('react') || skillLower.includes('angular') || skillLower.includes('vue') ||
-        skillLower.includes('express') || skillLower.includes('node.js') || skillLower.includes('jquery') ||
-        skillLower.includes('redux') || skillLower.includes('bootstrap') || skillLower.includes('tailwind') ||
-        skillLower.includes('framework') || skillLower.includes('library')) {
-      return 'Frameworks/Libraries';
-    }
-    
-    // Programming Languages
-    if (skillLower.includes('javascript') || skillLower.includes('typescript') || skillLower.includes('python') ||
-        skillLower.includes('java') || skillLower.includes('c#') || skillLower.includes('php') ||
-        skillLower.includes('html') || skillLower.includes('css') || skillLower.includes('sass') ||
-        skillLower.includes('language') || skillLower.includes('js')) {
+    // Programming Languages (most specific first)
+    if (skillLower === 'java' || skillLower === 'javascript' || skillLower === 'typescript' || skillLower === 'python' ||
+        skillLower === 'c#' || skillLower === 'c++' || skillLower === 'php' || skillLower === 'ruby' || 
+        skillLower === 'swift' || skillLower === 'kotlin' || skillLower === 'go' || skillLower === 'rust' ||
+        skillLower === 'scala' || skillLower === 'r' || skillLower === 'matlab' || skillLower === 'perl' ||
+        skillLower === 'html' || skillLower === 'css' || skillLower === 'sass' || skillLower === 'scss' ||
+        skillLower === 'less' || skillLower === 'jsx' || skillLower === 'tsx' || skillLower.startsWith('html') ||
+        skillLower.startsWith('css') || skillLower.includes(' programming') || skillLower.endsWith(' lang')) {
       return 'Languages';
     }
     
+    // Frameworks and Libraries
+    if (skillLower === 'react' || skillLower === 'angular' || skillLower === 'vue' || skillLower === 'vue.js' ||
+        skillLower === 'express' || skillLower === 'node.js' || skillLower === 'nodejs' || skillLower === 'jquery' ||
+        skillLower === 'redux' || skillLower === 'bootstrap' || skillLower === 'tailwind' || skillLower === 'tailwindcss' ||
+        skillLower === 'spring' || skillLower === 'django' || skillLower === 'flask' || skillLower === 'laravel' ||
+        skillLower === 'rails' || skillLower === 'ember' || skillLower === 'backbone' || skillLower === 'svelte' ||
+        skillLower.includes('framework') || skillLower.includes('library') || skillLower.includes('.js') ||
+        skillLower.includes(' js') || skillLower.endsWith('js')) {
+      return 'Frameworks/Libraries';
+    }
+    
+    // Database technologies
+    if (skillLower === 'mysql' || skillLower === 'postgresql' || skillLower === 'oracle' || skillLower === 'mongodb' ||
+        skillLower === 'redis' || skillLower === 'cassandra' || skillLower === 'dynamodb' || skillLower === 'sqlite' ||
+        skillLower === 'mariadb' || skillLower === 'sql server' || skillLower === 'elasticsearch' ||
+        skillLower.includes('database') || skillLower.includes('db') || skillLower.includes('sql') ||
+        skillLower.includes('nosql')) {
+      return 'Database';
+    }
+    
     // Cloud platforms
-    if (skillLower.includes('aws') || skillLower.includes('azure') || skillLower.includes('gcp') ||
-        skillLower.includes('cloud') || skillLower.includes('docker') || skillLower.includes('kubernetes')) {
+    if (skillLower === 'aws' || skillLower === 'azure' || skillLower === 'gcp' || skillLower === 'google cloud' ||
+        skillLower === 'docker' || skillLower === 'kubernetes' || skillLower === 'heroku' || skillLower === 'vercel' ||
+        skillLower === 'netlify' || skillLower.includes('cloud') || skillLower.includes('k8s')) {
       return 'Cloud';
     }
     
     // Version Control
-    if (skillLower.includes('git') || skillLower.includes('svn') || skillLower.includes('version control')) {
+    if (skillLower === 'git' || skillLower === 'github' || skillLower === 'gitlab' || skillLower === 'bitbucket' ||
+        skillLower === 'svn' || skillLower.includes('version control') || skillLower.includes('source control')) {
       return 'Version Control Tools';
     }
     
     // IDEs and Development Tools
-    if (skillLower.includes('visual studio') || skillLower.includes('pycharm') || skillLower.includes('intellij') ||
-        skillLower.includes('eclipse') || skillLower.includes('ide') || skillLower.includes('editor')) {
+    if (skillLower === 'visual studio' || skillLower === 'vs code' || skillLower === 'pycharm' || skillLower === 'intellij' ||
+        skillLower === 'eclipse' || skillLower === 'sublime' || skillLower === 'atom' || skillLower === 'vim' ||
+        skillLower === 'emacs' || skillLower.includes('ide') || skillLower.includes('editor')) {
       return 'IDEs';
     }
     
     // Web Technologies
-    if (skillLower.includes('web') || skillLower.includes('api') || skillLower.includes('rest') ||
-        skillLower.includes('http') || skillLower.includes('dom') || skillLower.includes('json')) {
+    if (skillLower === 'rest api' || skillLower === 'graphql' || skillLower === 'soap' || skillLower === 'json' ||
+        skillLower === 'xml' || skillLower === 'ajax' || skillLower === 'websockets' || skillLower === 'oauth' ||
+        skillLower.includes('web') || skillLower.includes('api') || skillLower.includes('rest') ||
+        skillLower.includes('http') || skillLower.includes('dom')) {
       return 'Web-Technologies';
     }
     
     // Web Servers
-    if (skillLower.includes('apache') || skillLower.includes('tomcat') || skillLower.includes('websphere') ||
-        skillLower.includes('nginx') || skillLower.includes('iis')) {
+    if (skillLower === 'apache' || skillLower === 'nginx' || skillLower === 'tomcat' || skillLower === 'iis' ||
+        skillLower === 'websphere' || skillLower.includes('server')) {
       return 'Web Server';
     }
     
     // Methodologies
-    if (skillLower.includes('agile') || skillLower.includes('waterfall') || skillLower.includes('sdlc') ||
-        skillLower.includes('scrum') || skillLower.includes('kanban') || skillLower.includes('methodology')) {
+    if (skillLower === 'agile' || skillLower === 'scrum' || skillLower === 'kanban' || skillLower === 'waterfall' ||
+        skillLower === 'sdlc' || skillLower === 'devops' || skillLower === 'ci/cd' ||
+        skillLower.includes('methodology') || skillLower.includes('agile')) {
       return 'Methodologies';
     }
     
     // Operating Systems
-    if (skillLower.includes('windows') || skillLower.includes('linux') || skillLower.includes('macos') ||
-        skillLower.includes('unix') || skillLower.includes('os')) {
+    if (skillLower === 'windows' || skillLower === 'linux' || skillLower === 'macos' || skillLower === 'ubuntu' ||
+        skillLower === 'centos' || skillLower === 'unix' || skillLower.includes('os')) {
       return 'Operating Systems';
     }
     
-    // Soft Skills and Professional Skills
+    // Professional/Soft Skills
     if (skillLower.includes('communication') || skillLower.includes('leadership') || skillLower.includes('team') ||
         skillLower.includes('problem-solving') || skillLower.includes('analytical') || skillLower.includes('collaboration') ||
-        skillLower.includes('self-motivated') || skillLower.includes('detail-oriented') || skillLower.includes('adaptability')) {
+        skillLower.includes('self-motivated') || skillLower.includes('detail-oriented') || skillLower.includes('adaptability') ||
+        skillLower.includes('management') || skillLower.includes('presentation')) {
       return 'Professional Skills';
     }
     
     // Testing and Quality Assurance
-    if (skillLower.includes('testing') || skillLower.includes('qa') || skillLower.includes('postman') ||
-        skillLower.includes('insomnia') || skillLower.includes('junit') || skillLower.includes('selenium')) {
+    if (skillLower === 'junit' || skillLower === 'selenium' || skillLower === 'postman' || skillLower === 'insomnia' ||
+        skillLower === 'jest' || skillLower === 'cypress' || skillLower === 'mocha' || skillLower === 'jasmine' ||
+        skillLower.includes('testing') || skillLower.includes('qa') || skillLower.includes('test')) {
       return 'Testing';
     }
     
     // Build and Deployment Tools
-    if (skillLower.includes('webpack') || skillLower.includes('babel') || skillLower.includes('npm') ||
-        skillLower.includes('yarn') || skillLower.includes('maven') || skillLower.includes('gradle')) {
+    if (skillLower === 'webpack' || skillLower === 'babel' || skillLower === 'npm' || skillLower === 'yarn' ||
+        skillLower === 'maven' || skillLower === 'gradle' || skillLower === 'gulp' || skillLower === 'grunt' ||
+        skillLower === 'jenkins' || skillLower.includes('build') || skillLower.includes('deploy')) {
       return 'Build Tools';
     }
     
@@ -252,17 +269,22 @@ const ResumeBuilderPage = () => {
     objective: '',
     experience: [],
     education: [],
-    skills: {
-      "Languages": [],
-      "Frameworks": [],
-      "Frontend": [],
-      "Databases": [],
-      "Cloud": [],
-      "DevOps": [],
-      "Testing": [],
-      "Messaging/Event-Driven": [],
-      "Tools": []
-    },
+         skills: {
+       "Languages": [],
+       "Frameworks/Libraries": [],
+       "Database": [],
+       "Cloud": [],
+       "Version Control Tools": [],
+       "IDEs": [],
+       "Web-Technologies": [],
+       "Web Server": [],
+       "Methodologies": [],
+       "Operating Systems": [],
+       "Professional Skills": [],
+       "Testing": [],
+       "Build Tools": [],
+       "Other Tools": []
+     },
     languages: [],
     activities: [],
     projects: [],
@@ -324,240 +346,287 @@ const ResumeBuilderPage = () => {
         customSections: extractedData.customSections || []
       };
       
-      // Track changes and apply AI suggestions if in 'ai-enhanced' mode
+      // Track specific changes for highlighting
       const changesSet = new Set<string>();
       
-             if (location.state?.mode === 'ai-enhanced' && location.state?.aiSuggestions) {
-         const aiSuggestions = location.state.aiSuggestions;
-         console.log('=== AI SUGGESTIONS DEBUG ===');
-         console.log('Full AI suggestions object:', JSON.stringify(aiSuggestions, null, 2));
-         console.log('Available properties:', Object.keys(aiSuggestions));
-         console.log('sectionAnalysis:', aiSuggestions.sectionAnalysis);
-         console.log('keywordAnalysis:', aiSuggestions.keywordAnalysis);
-         console.log('improvementPriority:', aiSuggestions.improvementPriority);
-         console.log('=== END DEBUG ===');
-         
-         // Ensure skills object is properly initialized for categorized structure
+      if (location.state?.mode === 'ai-enhanced' && location.state?.aiSuggestions) {
+        const aiSuggestions = location.state.aiSuggestions;
+        console.log('=== AI SUGGESTIONS DEBUG ===');
+        console.log('Full AI suggestions object:', JSON.stringify(aiSuggestions, null, 2));
+        console.log('Available properties:', Object.keys(aiSuggestions));
+        console.log('sectionAnalysis:', aiSuggestions.sectionAnalysis);
+        console.log('keywordAnalysis:', aiSuggestions.keywordAnalysis);
+        console.log('improvementPriority:', aiSuggestions.improvementPriority);
+        console.log('=== END DEBUG ===');
+        
+                 // Ensure skills object is properly initialized for categorized structure
          if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
            // Initialize with default categories if skills object is empty or malformed
            if (!processedData.skills || Object.keys(processedData.skills).length === 0) {
              processedData.skills = {
                "Languages": [],
-               "Frameworks": [],
-               "Frontend": [],
-               "Databases": [],
+               "Frameworks/Libraries": [],
+               "Database": [],
                "Cloud": [],
-               "DevOps": [],
+               "Version Control Tools": [],
+               "IDEs": [],
+               "Web-Technologies": [],
+               "Web Server": [],
+               "Methodologies": [],
+               "Operating Systems": [],
+               "Professional Skills": [],
                "Testing": [],
-               "Messaging/Event-Driven": [],
-               "Tools": []
+               "Build Tools": [],
+               "Other Tools": []
              };
            } else {
-             // Ensure all existing categories are arrays
-             Object.keys(processedData.skills).forEach(category => {
-               if (!Array.isArray(processedData.skills[category])) {
+             // Ensure all existing categories are arrays and add missing categories
+             const defaultCategories = {
+               "Languages": [],
+               "Frameworks/Libraries": [],
+               "Database": [],
+               "Cloud": [],
+               "Version Control Tools": [],
+               "IDEs": [],
+               "Web-Technologies": [],
+               "Web Server": [],
+               "Methodologies": [],
+               "Operating Systems": [],
+               "Professional Skills": [],
+               "Testing": [],
+               "Build Tools": [],
+               "Other Tools": []
+             };
+             
+             Object.keys(defaultCategories).forEach(category => {
+               if (!processedData.skills[category]) {
+                 processedData.skills[category] = [];
+               } else if (!Array.isArray(processedData.skills[category])) {
                  processedData.skills[category] = [];
                }
              });
            }
+         } else if (Array.isArray(processedData.skills)) {
+           // Convert flat array to categorized structure
+           const flatSkills = processedData.skills;
+           const categorizedSkills: { [key: string]: string[] } = {
+             "Languages": [],
+             "Frameworks/Libraries": [],
+             "Database": [],
+             "Cloud": [],
+             "Version Control Tools": [],
+             "IDEs": [],
+             "Web-Technologies": [],
+             "Web Server": [],
+             "Methodologies": [],
+             "Operating Systems": [],
+             "Professional Skills": [],
+             "Testing": [],
+             "Build Tools": [],
+             "Other Tools": []
+           };
+           
+           flatSkills.forEach((skill: string) => {
+             if (skill && typeof skill === 'string') {
+               const category = categorizeSkill(skill);
+               if (categorizedSkills[category]) {
+                 categorizedSkills[category].push(skill);
+               }
+             }
+           });
+           
+           processedData.skills = categorizedSkills;
+         }
+                
+        // Apply missing critical skills from AI analysis - Categorized approach
+         if (aiSuggestions.sectionAnalysis?.skillsSection?.suggestedData?.missingCriticalSkills?.length > 0) {
+           console.log('Adding missing critical skills:', aiSuggestions.sectionAnalysis.skillsSection.suggestedData.missingCriticalSkills);
+           
+           aiSuggestions.sectionAnalysis.skillsSection.suggestedData.missingCriticalSkills.forEach((skill: string) => {
+             const category = categorizeSkill(skill);
+             // Ensure the category exists and is an array
+             if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+               processedData.skills[category] = [];
+             }
+             if (!processedData.skills[category].includes(skill)) {
+               processedData.skills[category].push(skill);
+               // Track individual skill additions for highlighting
+               changesSet.add(`skill-${skill}`);
+             }
+           });
+         }
+         
+         // Apply skills by category if provided
+         if (aiSuggestions.sectionAnalysis?.skillsSection?.suggestedData?.skillsToAddByCategory) {
+           console.log('Adding skills by category:', aiSuggestions.sectionAnalysis.skillsSection.suggestedData.skillsToAddByCategory);
+           
+           Object.entries(aiSuggestions.sectionAnalysis.skillsSection.suggestedData.skillsToAddByCategory).forEach(([category, skills]: [string, any]) => {
+             if (Array.isArray(skills) && skills.length > 0) {
+               // Ensure the category exists and is an array
+               if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+                 processedData.skills[category] = [];
+               }
+               
+               skills.forEach((skill: string) => {
+                 if (skill && !processedData.skills[category].includes(skill)) {
+                   processedData.skills[category].push(skill);
+                   // Track individual skill additions for highlighting
+                   changesSet.add(`skill-${skill}`);
+                 }
+               });
+             }
+           });
          }
         
-        // Apply missing critical skills from AI analysis - Categorized approach
-        if (aiSuggestions.sectionAnalysis?.skillsSection?.missingCriticalSkills?.length > 0) {
-          console.log('Adding missing critical skills:', aiSuggestions.sectionAnalysis.skillsSection.missingCriticalSkills);
-          
-          if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
-            // Categorize skills into existing categories
-            aiSuggestions.sectionAnalysis.skillsSection.missingCriticalSkills.forEach((skill: string) => {
-              const category = categorizeSkill(skill);
-              // Ensure the category exists and is an array
-              if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
-                processedData.skills[category] = [];
-              }
-              if (!processedData.skills[category].includes(skill)) {
-                processedData.skills[category].push(skill);
-              }
-            });
-          } else {
-            // Handle flat skills array
-            const currentSkills = Array.isArray(processedData.skills) ? processedData.skills : [];
-            processedData.skills = [...new Set([...currentSkills, ...aiSuggestions.sectionAnalysis.skillsSection.missingCriticalSkills])];
-          }
-          changesSet.add('skills');
-        }
-        
-        // Apply missing keywords from keyword analysis - Categorized approach
-        if (aiSuggestions.keywordAnalysis?.missingKeywords?.length > 0) {
-          console.log('Adding missing keywords:', aiSuggestions.keywordAnalysis.missingKeywords);
-          
-          if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
-            // Categorize skills into existing categories
-            aiSuggestions.keywordAnalysis.missingKeywords.slice(0, 5).forEach((keyword: string) => {
-              const category = categorizeSkill(keyword);
-              // Ensure the category exists and is an array
-              if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
-                processedData.skills[category] = [];
-              }
-              if (!processedData.skills[category].includes(keyword)) {
-                processedData.skills[category].push(keyword);
-              }
-            });
-          } else {
-            // Add to flat skills array
-            const currentSkills = Array.isArray(processedData.skills) ? processedData.skills : [];
-            processedData.skills = [...new Set([...currentSkills, ...aiSuggestions.keywordAnalysis.missingKeywords.slice(0, 5)])];
-          }
-          changesSet.add('skills');
-        }
+                 // Apply missing keywords from keyword analysis - Categorized approach
+         if (aiSuggestions.keywordAnalysis?.missingKeywords?.length > 0) {
+           console.log('Adding missing keywords:', aiSuggestions.keywordAnalysis.missingKeywords);
+           
+           aiSuggestions.keywordAnalysis.missingKeywords.slice(0, 5).forEach((keyword: string) => {
+             const category = categorizeSkill(keyword);
+             // Ensure the category exists and is an array
+             if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+               processedData.skills[category] = [];
+             }
+             if (!processedData.skills[category].includes(keyword)) {
+               processedData.skills[category].push(keyword);
+               // Track individual keyword additions for highlighting
+               changesSet.add(`skill-${keyword}`);
+             }
+           });
+         }
         
         // Apply suggested summary rewrite
-        if (aiSuggestions.sectionAnalysis?.professionalSummary?.suggestedRewrite) {
+        if (aiSuggestions.sectionAnalysis?.professionalSummary?.suggestedData?.suggestedRewrite) {
           console.log('Applying suggested summary rewrite');
-          processedData.summary = aiSuggestions.sectionAnalysis.professionalSummary.suggestedRewrite;
-          changesSet.add('summary');
+          processedData.summary = aiSuggestions.sectionAnalysis.professionalSummary.suggestedData.suggestedRewrite;
+          changesSet.add('summary-ai-enhanced');
         }
         
-        // Apply work experience improvements
-        if (aiSuggestions.sectionAnalysis?.workExperience?.recommendations?.length > 0 && processedData.experience.length > 0) {
-          console.log('Enhancing work experience with AI recommendations');
-          processedData.experience = processedData.experience.map((exp: any, index: number) => {
-            const recommendations = aiSuggestions.sectionAnalysis.workExperience.recommendations;
-            if (recommendations[index] && exp.description) {
-              changesSet.add(`experience-${exp.id}`);
-              return {
-                ...exp,
-                description: `${exp.description}\n\n• ${recommendations[index]}`
-              };
-            } else if (recommendations.length > 0 && exp.description) {
-              // Use first recommendation if no specific match
-              changesSet.add(`experience-${exp.id}`);
-              return {
-                ...exp,
-                description: `${exp.description}\n\n• ${recommendations[0]}`
-              };
-            }
-            return exp;
-          });
-          changesSet.add('experience');
-        }
+                 // Apply work experience improvements
+         if (aiSuggestions.sectionAnalysis?.workExperience?.suggestedData?.recommendations?.length > 0 && processedData.experience.length > 0) {
+           console.log('Enhancing work experience with AI recommendations');
+           processedData.experience = processedData.experience.map((exp: any, index: number) => {
+             const recommendations = aiSuggestions.sectionAnalysis.workExperience.suggestedData.recommendations;
+             if (recommendations[index] && exp.description) {
+               changesSet.add(`experience-${index}-ai-enhanced`);
+               return {
+                 ...exp,
+                 description: `${exp.description}\n\n• ${recommendations[index]}`
+               };
+             } else if (recommendations.length > 0 && exp.description) {
+               // Use first recommendation if no specific match
+               changesSet.add(`experience-${index}-ai-enhanced`);
+               return {
+                 ...exp,
+                 description: `${exp.description}\n\n• ${recommendations[0]}`
+               };
+             }
+             return exp;
+           });
+         }
         
-        // Apply improvement priority actions
-        if (aiSuggestions.improvementPriority?.length > 0) {
-          console.log('Applying priority improvements:', aiSuggestions.improvementPriority);
-          
-          aiSuggestions.improvementPriority.forEach((improvement: any) => {
-            if (improvement.section === 'skillsSection' || improvement.section === 'skills') {
-              // Add high-priority skill improvements
-              if (improvement.action && improvement.action.includes('skill')) {
-                if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
-                  if (!processedData.skills['Priority Skills']) {
-                    processedData.skills['Priority Skills'] = [];
-                  }
-                  // Extract skills from action text (simple approach)
-                  const skillMatch = improvement.action.match(/add\s+([^.]+)/i);
-                  if (skillMatch) {
-                    processedData.skills['Priority Skills'].push(skillMatch[1].trim());
-                  }
-                }
-                changesSet.add('skills');
-              }
-            }
-          });
-        }
+                 // Apply improvement priority actions
+         if (aiSuggestions.improvementPriority?.length > 0) {
+           console.log('Applying priority improvements:', aiSuggestions.improvementPriority);
+           
+           aiSuggestions.improvementPriority.forEach((improvement: any) => {
+             if (improvement.section === 'skillsSection' || improvement.section === 'skills') {
+               // Add high-priority skill improvements
+               if (improvement.action && improvement.action.includes('skill')) {
+                 // Extract skills from action text (simple approach)
+                 const skillMatch = improvement.action.match(/add\s+([^.]+)/i);
+                 if (skillMatch) {
+                   const skill = skillMatch[1].trim();
+                   const category = categorizeSkill(skill);
+                   // Ensure the category exists and is an array
+                   if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+                     processedData.skills[category] = [];
+                   }
+                   if (!processedData.skills[category].includes(skill)) {
+                     processedData.skills[category].push(skill);
+                     changesSet.add(`skill-${skill}`);
+                   }
+                 }
+               }
+             }
+           });
+         }
+         
+         // Apply critical missing keywords as skills - Categorized approach
+         if (aiSuggestions.keywordAnalysis?.keywordImportance?.critical?.length > 0) {
+           console.log('Adding critical keywords:', aiSuggestions.keywordAnalysis.keywordImportance.critical);
+           
+           aiSuggestions.keywordAnalysis.keywordImportance.critical.slice(0, 3).forEach((keyword: string) => {
+             const category = categorizeSkill(keyword);
+             // Ensure the category exists and is an array
+             if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+               processedData.skills[category] = [];
+             }
+             if (!processedData.skills[category].includes(keyword)) {
+               processedData.skills[category].push(keyword);
+               changesSet.add(`skill-${keyword}`);
+             }
+           });
+         }
         
-        // Apply critical missing keywords as skills - Categorized approach
-        if (aiSuggestions.keywordAnalysis?.keywordImportance?.critical?.length > 0) {
-          console.log('Adding critical keywords:', aiSuggestions.keywordAnalysis.keywordImportance.critical);
-          
-          if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
-            // Categorize skills into existing categories
-            aiSuggestions.keywordAnalysis.keywordImportance.critical.slice(0, 3).forEach((keyword: string) => {
-              const category = categorizeSkill(keyword);
-              // Ensure the category exists and is an array
-              if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
-                processedData.skills[category] = [];
-              }
-              if (!processedData.skills[category].includes(keyword)) {
-                processedData.skills[category].push(keyword);
-              }
-            });
-          } else {
-            const currentSkills = Array.isArray(processedData.skills) ? processedData.skills : [];
-            processedData.skills = [...new Set([...currentSkills, ...aiSuggestions.keywordAnalysis.keywordImportance.critical.slice(0, 3)])];
-          }
-          changesSet.add('skills');
-        }
-        
-        // === FALLBACK: Handle current AISuggestionsPage structure ===
-        // Apply skills from skillsAnalysis (current structure) - Categorized approach
-        if (aiSuggestions.skillsAnalysis?.missingSkills?.length > 0) {
-          console.log('Adding missing skills from skillsAnalysis:', aiSuggestions.skillsAnalysis.missingSkills);
-          
-          if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
-            // Categorize skills into existing categories
-            aiSuggestions.skillsAnalysis.missingSkills.forEach((skill: string) => {
-              const category = categorizeSkill(skill);
-              // Ensure the category exists and is an array
-              if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
-                processedData.skills[category] = [];
-              }
-              if (!processedData.skills[category].includes(skill)) {
-                processedData.skills[category].push(skill);
-              }
-            });
-          } else {
-            const currentSkills = Array.isArray(processedData.skills) ? processedData.skills : [];
-            processedData.skills = [...new Set([...currentSkills, ...aiSuggestions.skillsAnalysis.missingSkills.slice(0, 5)])];
-          }
-          changesSet.add('skills');
-        }
-        
-        // Apply skills to add - Categorized approach
-        if (aiSuggestions.skillsAnalysis?.skillsToAdd?.length > 0) {
-          console.log('Adding skills to add:', aiSuggestions.skillsAnalysis.skillsToAdd);
-          
-          if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
-            // Categorize skills into existing categories
-            aiSuggestions.skillsAnalysis.skillsToAdd.forEach((skill: string) => {
-              const category = categorizeSkill(skill);
-              // Ensure the category exists and is an array
-              if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
-                processedData.skills[category] = [];
-              }
-              if (!processedData.skills[category].includes(skill)) {
-                processedData.skills[category].push(skill);
-              }
-            });
-          } else {
-            const currentSkills = Array.isArray(processedData.skills) ? processedData.skills : [];
-            processedData.skills = [...new Set([...currentSkills, ...aiSuggestions.skillsAnalysis.skillsToAdd])];
-          }
-          changesSet.add('skills');
-        }
+                 // === FALLBACK: Handle current AISuggestionsPage structure ===
+         // Apply skills from skillsAnalysis (current structure) - Categorized approach
+         if (aiSuggestions.skillsAnalysis?.missingSkills?.length > 0) {
+           console.log('Adding missing skills from skillsAnalysis:', aiSuggestions.skillsAnalysis.missingSkills);
+           
+           aiSuggestions.skillsAnalysis.missingSkills.forEach((skill: string) => {
+             const category = categorizeSkill(skill);
+             // Ensure the category exists and is an array
+             if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+               processedData.skills[category] = [];
+             }
+             if (!processedData.skills[category].includes(skill)) {
+               processedData.skills[category].push(skill);
+               changesSet.add(`skill-${skill}`);
+             }
+           });
+         }
+         
+         // Apply skills to add - Categorized approach
+         if (aiSuggestions.skillsAnalysis?.skillsToAdd?.length > 0) {
+           console.log('Adding skills to add:', aiSuggestions.skillsAnalysis.skillsToAdd);
+           
+           aiSuggestions.skillsAnalysis.skillsToAdd.forEach((skill: string) => {
+             const category = categorizeSkill(skill);
+             // Ensure the category exists and is an array
+             if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+               processedData.skills[category] = [];
+             }
+             if (!processedData.skills[category].includes(skill)) {
+               processedData.skills[category].push(skill);
+               changesSet.add(`skill-${skill}`);
+             }
+           });
+         }
         
         // Apply suggested summary from sectionRecommendations
         if (aiSuggestions.sectionRecommendations?.summary?.suggested) {
           console.log('Applying summary from sectionRecommendations');
           processedData.summary = aiSuggestions.sectionRecommendations.summary.suggested;
-          changesSet.add('summary');
+          changesSet.add('summary-ai-enhanced');
         }
         
-        // Apply experience enhancements
-        if (aiSuggestions.experienceAnalysis?.experienceEnhancements?.length > 0 && processedData.experience.length > 0) {
-          console.log('Applying experience enhancements');
-          processedData.experience = processedData.experience.map((exp: any, index: number) => {
-            const enhancement = aiSuggestions.experienceAnalysis.experienceEnhancements[index];
-            if (enhancement && exp.description) {
-              changesSet.add(`experience-${exp.id}`);
-              return {
-                ...exp,
-                description: `${exp.description}\n\n• AI Enhancement: ${enhancement}`
-              };
-            }
-            return exp;
-          });
-          changesSet.add('experience');
-        }
+                 // Apply experience enhancements
+         if (aiSuggestions.experienceAnalysis?.experienceEnhancements?.length > 0 && processedData.experience.length > 0) {
+           console.log('Applying experience enhancements');
+           processedData.experience = processedData.experience.map((exp: any, index: number) => {
+             const enhancement = aiSuggestions.experienceAnalysis.experienceEnhancements[index];
+             if (enhancement && exp.description) {
+               changesSet.add(`experience-${index}-ai-enhanced`);
+               return {
+                 ...exp,
+                 description: `${exp.description}\n\n• AI Enhancement: ${enhancement}`
+               };
+             }
+             return exp;
+           });
+         }
         
         console.log('Changes applied to sections:', Array.from(changesSet));
         console.log('Updated skills:', processedData.skills);
@@ -997,29 +1066,6 @@ const ResumeBuilderPage = () => {
             scrollbar-width: thick;
             scrollbar-color: #cbd5e0 #f7fafc;
           }
-          .ai-enhanced-section {
-            background: linear-gradient(90deg, rgba(255, 235, 59, 0.2) 0%, rgba(255, 235, 59, 0.1) 100%);
-            border-left: 4px solid #ffc107;
-            position: relative;
-            animation: highlightPulse 2s ease-in-out infinite;
-          }
-          .ai-enhanced-section::before {
-            content: "✨ AI Enhanced";
-            position: absolute;
-            top: -8px;
-            right: 8px;
-            background: #ffc107;
-            color: #fff;
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 8px;
-            font-weight: 500;
-            z-index: 10;
-          }
-          @keyframes highlightPulse {
-            0%, 100% { background-color: rgba(255, 235, 59, 0.1); }
-            50% { background-color: rgba(255, 235, 59, 0.2); }
-          }
         `}
       </style>
       <div className="min-h-screen bg-gray-50 mt-14">
@@ -1034,7 +1080,7 @@ const ResumeBuilderPage = () => {
                   AI suggestions applied successfully!
                 </span>
                 <span className="text-xs text-green-600 ml-2">
-                  {highlightedChanges.size} sections enhanced
+                  {highlightedChanges.size} enhancements applied
                 </span>
                 <Button
                   variant="ghost"
@@ -1050,7 +1096,7 @@ const ResumeBuilderPage = () => {
               </div>
               <p className="text-xs text-green-700 mt-1">
                 {highlightedChanges.size > 0 
-                  ? `Enhanced sections are highlighted in yellow: ${Array.from(highlightedChanges).join(', ')}. You can continue editing to fine-tune your resume.`
+                  ? `Enhanced elements are highlighted in yellow. Individual skills, summary text, and experience descriptions have been improved with AI suggestions.`
                   : 'AI analysis completed. Check the console for detailed logs of applied changes.'
                 }
               </p>
@@ -1246,9 +1292,7 @@ const ResumeBuilderPage = () => {
                         
                         {/* Dropdown Content */}
                         {activeSection === section.id && (
-                          <div className={`mt-2 bg-white rounded-lg border border-gray-200 p-4 ${
-                            highlightedChanges.has(section.id.replace('custom-', '')) ? 'ai-enhanced-section' : ''
-                          }`}>
+                          <div className="mt-2 bg-white rounded-lg border border-gray-200 p-4">
                             {section.id === 'basic-details' && (
                               <BasicDetailsSection
                                 data={resumeData.basicDetails}
@@ -1522,18 +1566,23 @@ const SkillsSection = ({ skills, languages, onChange }: { skills: any; languages
   const isCategorizedSkills = skills && typeof skills === 'object' && !Array.isArray(skills);
   const safeLanguages = Array.isArray(languages) ? languages : [];
 
-  // Initialize categorized skills if not present
-  const defaultCategories = {
-    "Languages": [],
-    "Frameworks": [],
-    "Frontend": [],
-    "Databases": [],
-    "Cloud": [],
-    "DevOps": [],
-    "Testing": [],
-    "Messaging/Event-Driven": [],
-    "Tools": []
-  };
+     // Initialize categorized skills if not present
+   const defaultCategories = {
+     "Languages": [],
+     "Frameworks/Libraries": [],
+     "Database": [],
+     "Cloud": [],
+     "Version Control Tools": [],
+     "IDEs": [],
+     "Web-Technologies": [],
+     "Web Server": [],
+     "Methodologies": [],
+     "Operating Systems": [],
+     "Professional Skills": [],
+     "Testing": [],
+     "Build Tools": [],
+     "Other Tools": []
+   };
 
   const currentSkills = isCategorizedSkills ? skills : defaultCategories;
 

@@ -166,17 +166,7 @@ const cleanMinimalTemplateData: TemplateData = {
 const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSections }) => {
   // Use the passed data prop if available, otherwise fall back to default data
   const templateData = data || cleanMinimalTemplateData;
-  
-  // Helper function to get highlighting styles
-  const getHighlightStyle = (sectionName: string) => {
-    return highlightedSections?.has(sectionName) ? {
-      backgroundColor: 'rgba(255, 235, 59, 0.15)',
-      borderLeft: '4px solid #ffc107',
-      paddingLeft: '8px',
-      position: 'relative' as const
-    } : {};
-  };
-  
+
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white" style={{ 
       fontFamily: 'Arial, sans-serif',
@@ -202,7 +192,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
       </div>
 
       {/* Summary */}
-      <div className="mb-3">
+      <div className="mb-3" style={{ position: 'relative' }}>
         <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
@@ -218,6 +208,22 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
         }}>
           {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
         </p>
+        {highlightedSections?.has('summary-ai-enhanced') && (
+          <div style={{
+            position: 'absolute',
+            top: '-8px',
+            right: '8px',
+            background: '#ffc107',
+            color: '#fff',
+            fontSize: '10px',
+            padding: '2px 6px',
+            borderRadius: '8px',
+            fontWeight: '500',
+            zIndex: 10
+          }}>
+            ✨ AI Enhanced
+          </div>
+        )}
       </div>
 
       {/* Technical Skills */}
@@ -252,7 +258,38 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
                   fontSize: '11px',
                   lineHeight: '1.3'
                 }}>
-                  <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {Array.isArray(cleanSkills) ? cleanSkills.join(', ') : cleanSkills}
+                  <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> 
+                  {Array.isArray(cleanSkills) ? cleanSkills.map((skill, index) => {
+                    const isHighlighted = highlightedSections?.has(`skill-${skill}`) || 
+                                        highlightedSections?.has(`keyword-${skill}`) || 
+                                        highlightedSections?.has(`critical-keyword-${skill}`) ||
+                                        highlightedSections?.has(`missing-skill-${skill}`) ||
+                                        highlightedSections?.has(`added-skill-${skill}`) ||
+                                        highlightedSections?.has(`priority-skill-${skill}`);
+                    
+                    return (
+                      <span key={index}>
+                        {index > 0 ? ', ' : ' '}
+                        <span style={{
+                          background: isHighlighted ? 'rgba(255, 235, 59, 0.3)' : 'transparent',
+                          padding: isHighlighted ? '1px 3px' : '0',
+                          borderRadius: isHighlighted ? '3px' : '0',
+                          border: isHighlighted ? '1px solid #ffc107' : 'none'
+                        }}>
+                          {skill}
+                        </span>
+                      </span>
+                    );
+                  }) : (
+                    <span style={{
+                      background: highlightedSections?.has(`skill-${cleanSkills}`) ? 'rgba(255, 235, 59, 0.3)' : 'transparent',
+                      padding: highlightedSections?.has(`skill-${cleanSkills}`) ? '1px 3px' : '0',
+                      borderRadius: highlightedSections?.has(`skill-${cleanSkills}`) ? '3px' : '0',
+                      border: highlightedSections?.has(`skill-${cleanSkills}`) ? '1px solid #ffc107' : 'none'
+                    }}>
+                      {cleanSkills}
+                    </span>
+                  )}
                 </div>
               );
             })
@@ -262,7 +299,28 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
               fontSize: '11px',
               lineHeight: '1.3'
             }}>
-              {templateData.skills.technical.join(', ')}
+              {templateData.skills.technical.map((skill, index) => {
+                const isHighlighted = highlightedSections?.has(`skill-${skill}`) || 
+                                    highlightedSections?.has(`keyword-${skill}`) || 
+                                    highlightedSections?.has(`critical-keyword-${skill}`) ||
+                                    highlightedSections?.has(`missing-skill-${skill}`) ||
+                                    highlightedSections?.has(`added-skill-${skill}`) ||
+                                    highlightedSections?.has(`priority-skill-${skill}`);
+                
+                return (
+                  <span key={index}>
+                    {index > 0 ? ', ' : ''}
+                    <span style={{
+                      background: isHighlighted ? 'rgba(255, 235, 59, 0.3)' : 'transparent',
+                      padding: isHighlighted ? '1px 3px' : '0',
+                      borderRadius: isHighlighted ? '3px' : '0',
+                      border: isHighlighted ? '1px solid #ffc107' : 'none'
+                    }}>
+                      {skill}
+                    </span>
+                  </span>
+                );
+              })}
             </div>
           ) : (
             <div className="text-sm text-gray-500" style={{ 
@@ -288,49 +346,76 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
         </h2>
         <div className="space-y-1">
           {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
-            templateData.experience.map((exp, index) => (
-              <div key={index}>
-                <div className="flex justify-between items-start mb-1">
-                  <h3 className="font-bold" style={{ 
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    flex: '1'
-                  }}>
-                    {exp.title}
-                  </h3>
-                  <div className="font-bold text-right" style={{ 
-                    fontSize: '11px',
-                    fontWeight: 'bold'
-                  }}>
-                    {exp.dates}
-                  </div>
-                </div>
-                <div className="space-y-0 ml-0">
-                  {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
-                    exp.achievements.map((achievement, idx) => (
-                      <div key={idx} className="flex items-start" style={{ fontSize: '11px' }}>
-                        <span className="mr-2">•</span>
-                        <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{achievement}</span>
-                      </div>
-                    ))
-                  ) : exp.description ? (
-                    // Fallback to description if no achievements array
-                    <div className="flex items-start" style={{ fontSize: '11px' }}>
-                      <span className="mr-2">•</span>
-                      <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{exp.description}</span>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-500" style={{ 
-                      fontSize: '11px',
-                      lineHeight: '1.3',
-                      fontStyle: 'italic'
+            templateData.experience.map((exp, index) => {
+              const isExperienceHighlighted = highlightedSections?.has(`experience-${index}-ai-enhanced`);
+              
+              return (
+                <div key={index} style={{
+                  background: isExperienceHighlighted ? 'rgba(255, 235, 59, 0.1)' : 'transparent',
+                  borderLeft: isExperienceHighlighted ? '3px solid #ffc107' : 'none',
+                  padding: isExperienceHighlighted ? '8px' : '0',
+                  borderRadius: isExperienceHighlighted ? '4px' : '0',
+                  position: 'relative'
+                }}>
+                  {isExperienceHighlighted && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      right: '8px',
+                      background: '#ffc107',
+                      color: '#fff',
+                      fontSize: '8px',
+                      padding: '1px 4px',
+                      borderRadius: '6px',
+                      fontWeight: '500',
+                      zIndex: 10
                     }}>
-                      No achievements listed
+                      ✨ AI Enhanced
                     </div>
                   )}
+                  
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-bold" style={{ 
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      flex: '1'
+                    }}>
+                      {exp.title}
+                    </h3>
+                    <div className="font-bold text-right" style={{ 
+                      fontSize: '11px',
+                      fontWeight: 'bold'
+                    }}>
+                      {exp.dates}
+                    </div>
+                  </div>
+                  <div className="space-y-0 ml-0">
+                    {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
+                      exp.achievements.map((achievement, idx) => (
+                        <div key={idx} className="flex items-start" style={{ fontSize: '11px' }}>
+                          <span className="mr-2">•</span>
+                          <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{achievement}</span>
+                        </div>
+                      ))
+                    ) : exp.description ? (
+                      // Fallback to description if no achievements array
+                      <div className="flex items-start" style={{ fontSize: '11px' }}>
+                        <span className="mr-2">•</span>
+                        <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{exp.description}</span>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500" style={{ 
+                        fontSize: '11px',
+                        lineHeight: '1.3',
+                        fontStyle: 'italic'
+                      }}>
+                        No achievements listed
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="text-sm text-gray-500" style={{ 
               fontSize: '11px',

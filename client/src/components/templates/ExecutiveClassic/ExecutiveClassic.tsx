@@ -19,7 +19,7 @@ interface TemplateData {
     company: string;
     dates: string;
     achievements: string[];
-    description?: string; // Added for fallback
+    description?: string;
   }>;
   education: Array<{
     degree: string;
@@ -75,399 +75,364 @@ interface TemplateData {
   }>;
 }
 
-interface CleanMinimalProps {
+interface ExecutiveClassicProps {
   data?: TemplateData;
   color?: string;
   highlightedSections?: Set<string>;
 }
 
-const cleanMinimalTemplateData: TemplateData = {
-  personalInfo: {
-    name: 'Nikhil Dundu',
-    title: 'Supply Chain Analyst',
-    address: 'AZ USA',
-    email: 'ndundu1804@gmail.com',
-    website: 'https://www.linkedin.com/in/nikhild180495/',
-    phone: '+1 623-388-1239'
-  },
-  summary: 'Results-driven Supply Chain Analyst with 5 years of experience. India & USA optimizing end-to-end supply chain operations for heavy equipment, telecom, and defense electronics manufacturers. Proven record of reducing inventory 15 – 25 %, cutting logistics costs 12 – 18 %, and accelerating on-time delivery through data-driven planning. Lean Six Sigma methods, and advanced analytics (Power BI, Tableau, SQL, SAP, ERP, WMS). Adept at Agile & Waterfall project environments, cross-functional leadership, and translating complex data into actionable insights that drive margin and service-level improvements.',
-  skills: {
-    technical: [
-      'Analytics & Reporting: Power BI, Tableau, Advanced Excel (Pivot, Power Query, Solver, VBA)',
-      'Database & Languages: SQL Server, MS Access, Python, R, MATLAB',
-      'ERP / SCM Systems: SAP (MM, WM, PP, QM, CO), Oracle NetSuite, Looker',
-      'Process Ideologies: SDLC, Agile/Scrum, Waterfall, Lean Six Sigma, 5S',
-      'Planning & Optimization: Demand Forecasting, S&OP, JIT, ROP, Inventory Optimization, Scorecards',
-      'Project & Collaboration: Jira, Confluence, MS Project, SharePoint, Git',
-      'Soft Skills: Stakeholder Communication, Cross-functional Leadership, Process Improvement, Data Storytelling'
-    ],
-    professional: []
-  },
-  experience: [
-    {
-      title: 'Supply Chain Analyst — Systel Inc. (Remote — Austin, TX, USA)',
-      company: '',
-      dates: 'Apr 2023 – Present',
-      achievements: [
-        'Implemented JIT and ROP inventory models for rugged-server line; reducing excess stock by 15% while maintaining a 98% service level.',
-        'Designed and launched Power BI dashboards with Row-Level Security, enabling 50+ users to access real-time inventory and demand KPIs.',
-        'Automated manual reporting workflows, cutting weekly report preparation time from 6 hours to under 30 minutes.',
-        'Collaborated with cross-functional teams to align demand planning and procurement, improving planning accuracy and visibility.',
-        'Led data consolidation and reporting standardization using Excel and SQL, streamlining data-driven decision-making processes.'
-      ]
-    },
-    {
-      title: 'Supply Chain Analyst — Sterlite Technologies Ltd. (Chennai, India)',
-      company: '',
-      dates: 'Apr 2020 – Apr 2023',
-      achievements: [
-        'Managed end-to-end order fulfillment for fiber optic cables (400+ demand); deployed SAP MM MRP parameters and safety-stock modeling, cutting stockouts 22 %.',
-        'Designed integrated Power BI-Tableau supply-chain control tower integrating SAP, WMS, and freight APIs; provided real-time OTD, capacity, and cost dashboards used by COO.',
-        'Partnered with procurement to institute Supplier Scorecards (quality, OTD, cost variance), improved top-tier supplier OTD from 85 % to 97 % within 9 months.',
-        'Led data consolidation DMAIC project on extrusion line changeovers; reduced setup time 18 % and saved ₹11 M annually.',
-        'Forecasted demand using ARIMA & Prophet models in Python, improving 6-month forecast accuracy from 72 % to 88 %.',
-        'Automated daily WMS reconciliations via SQL & VBA, eliminating 600+ manual hours per year.'
-      ]
-    },
-    {
-      title: 'Supply Chain Analyst — Caterpillar (Chennai, India)',
-      company: '',
-      dates: 'Jun 2018 – Mar 2020',
-      achievements: [
-        'Co-developed inventory segmentation (ABC/XYZ) and Goal-Seek/Solver-based reorder policies, reducing working capital by 10 (1.5 % of finished-goods inventory).',
-        'Enhanced SAP SD order-to-cash workflow; cut order cycle time 20 % and improved order fillrate 10 pp.',
-        'Piloted barcode/RFID tracking for engine components; delivered real-time visibility and cut data entry errors 15 %.',
-        'Supported implementation of Power BI KPI suite for plant leadership, enabling weekly variance root-cause reviews and driving 5 % productivity gain.',
-        'Facilitated supplier negotiations that lowered raw-material cost 12 % and instituted consignment stock for high-turn items.'
-      ]
-    }
-  ],
-  education: [
-    {
-      degree: 'Master of Science, Industrial Engineering (GPA: 3.73) Tempe, Arizona',
-      institution: 'Arizona State University',
-      dates: 'Aug 2023 - May 2025',
-      details: []
-    },
-    {
-      degree: 'Bachelor of Technology, Mechanical Engineering (GPA: 3.65) Chennai, India',
-      institution: 'SRM University',
-      dates: 'Jun 2013 - Jul 2017',
-      details: []
-    }
-  ],
-  additionalInfo: {
-    languages: [],
-    certifications: [],
-    awards: []
+const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({ 
+  data: templateData, 
+  color = '#1a365d',
+  highlightedSections 
+}) => {
+  if (!templateData) {
+    return <div>No data provided</div>;
   }
-};
 
-const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSections }) => {
-  // Use the passed data prop if available, otherwise fall back to default data
-  const templateData = data || cleanMinimalTemplateData;
-  
-  // Helper function to get highlighting styles
-  const getHighlightStyle = (sectionName: string) => {
-    return highlightedSections?.has(sectionName) ? {
-      backgroundColor: 'rgba(255, 235, 59, 0.15)',
-      borderLeft: '4px solid #ffc107',
-      paddingLeft: '8px',
-      position: 'relative' as const
-    } : {};
-  };
-  
+  const isHighlighted = (key: string) => highlightedSections?.has(key);
+
   return (
-    <div className="max-w-4xl mx-auto pt-0 px-0 pb-6 bg-white" style={{ 
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '11px',
-      lineHeight: '1.3'
-    }}>
-      {/* Header */}
-      <div className="text-center mb-4">
-        <h1 className="text-2xl font-bold mb-1" style={{ 
-          fontSize: '22px',
-          fontWeight: 'bold',
-          letterSpacing: '1px',
-          color: color || '#1f2937'
+    <div className="min-h-screen bg-white p-8" style={{ fontFamily: 'Georgia, serif' }}>
+      {/* Header Section */}
+      <div className="text-center mb-8" style={{ borderBottom: `4px solid ${color}`, paddingBottom: '25px' }}>
+        <h1 className="text-5xl font-bold mb-3" style={{ 
+          color: color,
+          textTransform: 'uppercase',
+          letterSpacing: '3px'
         }}>
-          {templateData.personalInfo?.name || 'Your Name'}
+          {templateData.personalInfo.name}
         </h1>
-        <div className="text-lg font-semibold mb-2" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
-          {templateData.personalInfo?.title || 'Your Title'}
-        </div>
-        <div className="text-sm" style={{ fontSize: '11px' }}>
-          {templateData.personalInfo?.address || 'Your Address'} | {templateData.personalInfo?.phone || 'Your Phone'} | {templateData.personalInfo?.email || 'your.email@example.com'} | {templateData.personalInfo?.website || 'your-website.com'}
-        </div>
-      </div>
-
-      {/* Summary */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          paddingBottom: '0px',
-          color: color || '#1f2937'
-        }}>
-          SUMMARY
+        <h2 className="text-2xl font-semibold mb-3" style={{ color: '#4a5568' }}>
+          {templateData.personalInfo.title}
         </h2>
-        <p className="text-justify leading-relaxed" style={{ 
-          fontSize: '11px',
-          lineHeight: '1.4',
-          textAlign: 'justify'
-        }}>
-          {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
-        </p>
+        <div className="text-lg text-gray-600 space-y-1">
+          {templateData.personalInfo.address && (
+            <div>{templateData.personalInfo.address}</div>
+          )}
+          {templateData.personalInfo.phone && (
+            <div>{templateData.personalInfo.phone}</div>
+          )}
+          <div>{templateData.personalInfo.email}</div>
+          {templateData.personalInfo.website && (
+            <div className="text-blue-600">{templateData.personalInfo.website}</div>
+          )}
+        </div>
       </div>
 
-      {/* Technical Skills */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          paddingBottom: '0px',
-          color: color || '#1f2937'
-        }}>
+      {/* Professional Summary */}
+      <div className="mb-8">
+        <h3 className="text-2xl font-bold mb-4" style={{ color: color, borderBottom: `2px solid ${color}`, paddingBottom: '8px' }}>
+          PROFESSIONAL SUMMARY
+          {isHighlighted('summary-ai-enhanced') && (
+            <span className="ml-3 text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded">✨ AI Enhanced</span>
+          )}
+        </h3>
+        <div 
+          className="text-lg leading-relaxed text-gray-700"
+          style={{
+            backgroundColor: isHighlighted('summary-ai-enhanced') ? '#fef3c7' : 'transparent',
+            padding: isHighlighted('summary-ai-enhanced') ? '16px' : '0',
+            borderRadius: isHighlighted('summary-ai-enhanced') ? '8px' : '0'
+          }}
+        >
+          {templateData.summary}
+        </div>
+      </div>
+
+      {/* Skills Section */}
+      <div className="mb-8">
+        <h3 className="text-2xl font-bold mb-4" style={{ color: color, borderBottom: `2px solid ${color}`, paddingBottom: '8px' }}>
           TECHNICAL SKILLS
-        </h2>
-        <div className="space-y-1">
-          {templateData.skills?.technical && typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
-            // Handle nested skills structure with categories - display as "Category: skills"
-            Object.entries(templateData.skills.technical).map(([category, skills]) => {
-              // Clean up malformed skills data by removing extra characters and fixing spacing
-              let cleanSkills: string | string[] = skills as string | string[];
-              if (typeof skills === 'string') {
-                // Fix malformed skills like "A, W, S, , (, I, d, e, n, t, i, t, y, , a, n, d, , A, c, c, e, s, s, , M, a, n, a, g, e, m, e, n, t, ,, , E, C, 2, ,, , S, 3, ,, , V, P, C, ,, , C, l, o, u, d, T, r, a, i, l, ,, , C, l, o, u, d, W, a, t, c, h, ,, , S, e, c, u, r, i, t, y, , H, u, b, ), ,, , C, l, o, u, d, , S, e, c, u, r, i, t, y, , P, o, s, t, u, r, e, , M, a, n, a, g, e, m, e, n, t, , (, C, S, P, M, )"
-                cleanSkills = skills
-                  .replace(/,\s*,/g, ',') // Remove double commas
-                  .replace(/,\s*\(/g, ' (') // Fix spacing before parentheses
-                  .replace(/\)\s*,/g, ') ') // Fix spacing after parentheses
-                  .replace(/,\s*\)/g, ')') // Remove commas before closing parentheses
-                  .replace(/\s+/g, ' ') // Normalize multiple spaces
-                  .trim();
-              }
-              
-              return (
-                <div key={category} className="text-sm" style={{ 
-                  fontSize: '11px',
-                  lineHeight: '1.3'
-                }}>
-                  <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {Array.isArray(cleanSkills) ? cleanSkills.join(', ') : cleanSkills}
-                </div>
-              );
-            })
-          ) : Array.isArray(templateData.skills?.technical) && templateData.skills.technical.length > 0 ? (
-            // Handle flat skills array (fallback)
-            <div className="text-sm" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3'
-            }}>
-              {templateData.skills.technical.join(', ')}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {templateData.skills.technical && templateData.skills.technical.length > 0 && (
+            <div>
+              <h4 className="text-lg font-semibold mb-3" style={{ color: '#4a5568' }}>Technical Skills</h4>
+              <div className="space-y-2">
+                {templateData.skills.technical.map((skill, index) => (
+                  <div 
+                    key={index}
+                    className="text-gray-700"
+                    style={{
+                      backgroundColor: isHighlighted(`skill-${skill}`) ? '#dbeafe' : 'transparent',
+                      padding: isHighlighted(`skill-${skill}`) ? '8px' : '0',
+                      borderRadius: isHighlighted(`skill-${skill}`) ? '4px' : '0',
+                      border: isHighlighted(`skill-${skill}`) ? '1px solid #3b82f6' : 'none'
+                    }}
+                  >
+                    • {skill}
+                  </div>
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
-            }}>
-              No technical skills added yet
+          )}
+          
+          {templateData.skills.professional && templateData.skills.professional.length > 0 && (
+            <div>
+              <h4 className="text-lg font-semibold mb-3" style={{ color: '#4a5568' }}>Professional Skills</h4>
+              <div className="space-y-2">
+                {templateData.skills.professional.map((skill, index) => (
+                  <div 
+                    key={index}
+                    className="text-gray-700"
+                    style={{
+                      backgroundColor: isHighlighted(`skill-${skill}`) ? '#dbeafe' : 'transparent',
+                      padding: isHighlighted(`skill-${skill}`) ? '8px' : '0',
+                      borderRadius: isHighlighted(`skill-${skill}`) ? '4px' : '0',
+                      border: isHighlighted(`skill-${skill}`) ? '1px solid #3b82f6' : 'none'
+                    }}
+                  >
+                    • {skill}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
       </div>
 
       {/* Professional Experience */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          paddingBottom: '0px',
-          color: color || '#1f2937'
-        }}>
+      <div className="mb-8">
+        <h3 className="text-2xl font-bold mb-4" style={{ color: color, borderBottom: `2px solid ${color}`, paddingBottom: '8px' }}>
           PROFESSIONAL EXPERIENCE
-        </h2>
-        <div className="space-y-1">
-          {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
-            templateData.experience.map((exp, index) => (
-              <div key={index}>
-                <div className="flex justify-between items-start mb-1">
-                  <h3 className="font-bold" style={{ 
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    flex: '1'
-                  }}>
-                    {exp.title}
-                  </h3>
-                  <div className="font-bold text-right" style={{ 
-                    fontSize: '11px',
-                    fontWeight: 'bold'
-                  }}>
-                    {exp.dates}
-                  </div>
-                </div>
-                <div className="space-y-0 ml-0">
-                  {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
-                    exp.achievements.map((achievement, idx) => (
-                      <div key={idx} className="flex items-start" style={{ fontSize: '11px' }}>
-                        <span className="mr-2">•</span>
-                        <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{achievement}</span>
-                      </div>
-                    ))
-                  ) : exp.description ? (
-                    // Fallback to description if no achievements array
-                    <div className="flex items-start" style={{ fontSize: '11px' }}>
-                      <span className="mr-2">•</span>
-                      <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{exp.description}</span>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-500" style={{ 
-                      fontSize: '11px',
-                      lineHeight: '1.3',
-                      fontStyle: 'italic'
-                    }}>
-                      No achievements listed
-                    </div>
-                  )}
-                </div>
+        </h3>
+        <div className="space-y-6">
+          {templateData.experience.map((exp, index) => (
+            <div 
+              key={index}
+              className="border-l-4 pl-6"
+              style={{ 
+                borderLeftColor: color,
+                backgroundColor: isHighlighted(`experience-${index}-ai-enhanced`) ? '#fef3c7' : 'transparent',
+                padding: isHighlighted(`experience-${index}-ai-enhanced`) ? '16px' : '0',
+                borderRadius: isHighlighted(`experience-${index}-ai-enhanced`) ? '8px' : '0'
+              }}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <h4 className="text-xl font-bold text-gray-800">{exp.title}</h4>
+                <span className="text-gray-600 font-medium">{exp.dates}</span>
               </div>
-            ))
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
-            }}>
-              No experience added yet
+              <div className="text-lg font-semibold text-gray-700 mb-2">{exp.company}</div>
+              {isHighlighted(`experience-${index}-ai-enhanced`) && (
+                <span className="inline-block text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded mb-2">✨ AI Enhanced</span>
+              )}
+              <div className="text-gray-700 space-y-2">
+                {exp.achievements.map((achievement, achievementIndex) => (
+                  <div key={achievementIndex} className="flex items-start">
+                    <span className="text-blue-600 mr-2 mt-1">•</span>
+                    <span>{achievement}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          )}
+          ))}
         </div>
       </div>
 
-     
+      {/* Education */}
+      <div className="mb-8">
+        <h3 className="text-2xl font-bold mb-4" style={{ color: color, borderBottom: `2px solid ${color}`, paddingBottom: '8px' }}>
+          EDUCATION
+        </h3>
+        <div className="space-y-4">
+          {templateData.education.map((edu, index) => (
+            <div key={index} className="flex justify-between items-start">
+              <div>
+                <h4 className="text-lg font-semibold text-gray-800">{edu.degree}</h4>
+                <div className="text-gray-700">{edu.institution}</div>
+                <div className="text-gray-600 text-sm space-y-1 mt-2">
+                  {edu.details.map((detail, detailIndex) => (
+                    <div key={detailIndex}>• {detail}</div>
+                  ))}
+                </div>
+              </div>
+              <span className="text-gray-600 font-medium">{edu.dates}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Projects */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          paddingBottom: '0px',
-          color: color || '#1f2937'
-        }}>
-          PROJECTS
-        </h2>
-        <div className="space-y-1">
-          {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
-            templateData.projects.map((project, index) => (
-              <div key={index}>
-                                 <div className="mb-1">
-                   <div className="flex justify-between items-center">
-                     <div className="flex items-center gap-2">
-                       <h3 className="font-bold" style={{ 
-                         fontSize: '11px',
-                         fontWeight: 'bold'
-                       }}>
-                         {project.Name}
-                       </h3>
-                       <span className="text-sm" style={{ 
-                         fontSize: '10px',
-                         color: '#666'
-                       }}>
-                         {project.Tech_Stack}
-                       </span>
-                     </div>
-                                           {(project.Start_Date || project.End_Date) && (
-                        <div className="font-bold" style={{ 
-                          fontSize: '11px',
-                          fontWeight: 'bold'
-                        }}>
-                          {project.Start_Date && project.End_Date 
-                            ? `${project.Start_Date} - ${project.End_Date}`
-                            : project.Start_Date || project.End_Date
-                          }
-                        </div>
-                      )}
-                   </div>
-                 </div>
-                <div className="space-y-0 ml-0">
-                  {project.Description ? (
-                    <div className="flex items-start" style={{ fontSize: '11px' }}>
-                      <span className="mr-2">•</span>
-                      <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{project.Description}</span>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-500" style={{ 
-                      fontSize: '11px',
-                      lineHeight: '1.3',
-                      fontStyle: 'italic'
-                    }}>
-                      No project description available
+      {templateData.projects && templateData.projects.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold mb-4" style={{ color: color, borderBottom: `2px solid ${color}`, paddingBottom: '8px' }}>
+            PROJECTS
+          </h3>
+          <div className="space-y-4">
+            {templateData.projects.map((project, index) => (
+              <div key={index} className="border-l-4 pl-6" style={{ borderLeftColor: color }}>
+                <h4 className="text-lg font-semibold text-gray-800 mb-2">{project.Name}</h4>
+                <p className="text-gray-700 mb-2">{project.Description}</p>
+                <div className="text-sm text-gray-600">
+                  <strong>Tech Stack:</strong> {project.Tech_Stack}
+                  {project.Start_Date && project.End_Date && (
+                    <span className="ml-4">
+                      <strong>Duration:</strong> {project.Start_Date} - {project.End_Date}
+                    </span>
+                  )}
+                  {project.Link && (
+                    <div className="mt-1">
+                      <a href={project.Link} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
+                        View Project
+                      </a>
                     </div>
                   )}
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
-            }}>
-              No projects added yet
-            </div>
-          )}
+            ))}
+          </div>
         </div>
-      </div>
-             {/* Education */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          paddingBottom: '0px',
-          color: color || '#1f2937'
-        }}>
-          EDUCATION
-        </h2>
-        <div className="space-y-2">
-          {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
-            templateData.education.map((edu, index) => (
-              <div key={index} className="flex justify-between items-start">
-                <div>
-                  <div className="font-bold" style={{ 
-                    fontSize: '11px',
-                    fontWeight: 'bold'
-                  }}>
-                    {edu.institution}
-                  </div>
-                  <div style={{ fontSize: '11px' }}>
-                    {edu.degree}
-                  </div>
+      )}
+
+      {/* Additional Information */}
+      {(templateData.additionalInfo.languages || templateData.additionalInfo.certifications || templateData.additionalInfo.awards) && (
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold mb-4" style={{ color: color, borderBottom: `2px solid ${color}`, paddingBottom: '8px' }}>
+            ADDITIONAL INFORMATION
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {templateData.additionalInfo.languages && templateData.additionalInfo.languages.length > 0 && (
+              <div>
+                <h4 className="text-lg font-semibold mb-3" style={{ color: '#4a5568' }}>Languages</h4>
+                <div className="space-y-1">
+                  {templateData.additionalInfo.languages.map((language, index) => (
+                    <div key={index} className="text-gray-700">• {language}</div>
+                  ))}
                 </div>
-                <div className="font-bold" style={{ 
-                  fontSize: '11px',
-                  fontWeight: 'bold'
-                }}>
-                  {edu.dates}
-                  </div>
               </div>
-            ))
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
-            }}>
-              No education added yet
-            </div>
-          )}
+            )}
+            
+            {templateData.additionalInfo.certifications && templateData.additionalInfo.certifications.length > 0 && (
+              <div>
+                <h4 className="text-lg font-semibold mb-3" style={{ color: '#4a5568' }}>Certifications</h4>
+                <div className="space-y-1">
+                  {templateData.additionalInfo.certifications.map((cert, index) => (
+                    <div key={index} className="text-gray-700">• {cert}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {templateData.additionalInfo.awards && templateData.additionalInfo.awards.length > 0 && (
+              <div>
+                <h4 className="text-lg font-semibold mb-3" style={{ color: '#4a5568' }}>Awards</h4>
+                <div className="space-y-1">
+                  {templateData.additionalInfo.awards.map((award, index) => (
+                    <div key={index} className="text-gray-700">• {award}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Custom Sections */}
+      {templateData.customSections && templateData.customSections.length > 0 && (
+        <div className="space-y-8">
+          {templateData.customSections
+            .sort((a, b) => a.position - b.position)
+            .map((section) => (
+              <div key={section.id}>
+                <h3 className="text-2xl font-bold mb-4" style={{ color: color, borderBottom: `2px solid ${color}`, paddingBottom: '8px' }}>
+                  {section.title.toUpperCase()}
+                </h3>
+                
+                {section.type === 'text' && section.content.text && (
+                  <div className="text-gray-700 leading-relaxed">{section.content.text}</div>
+                )}
+                
+                {section.type === 'list' && section.content.items && (
+                  <div className="space-y-3">
+                    {section.content.items.map((item) => (
+                      <div key={item.id} className="border-l-4 pl-6" style={{ borderLeftColor: color }}>
+                        {item.title && <h4 className="text-lg font-semibold text-gray-800 mb-1">{item.title}</h4>}
+                        {item.subtitle && <div className="text-gray-600 mb-2">{item.subtitle}</div>}
+                        {item.description && <p className="text-gray-700 mb-2">{item.description}</p>}
+                        {item.bullets && item.bullets.length > 0 && (
+                          <div className="space-y-1">
+                            {item.bullets.map((bullet, bulletIndex) => (
+                              <div key={bulletIndex} className="flex items-start">
+                                <span className="text-blue-600 mr-2 mt-1">•</span>
+                                <span className="text-gray-700">{bullet}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {item.tags && item.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {item.tags.map((tag, tagIndex) => (
+                              <span 
+                                key={tagIndex} 
+                                className="px-2 py-1 text-xs rounded-full"
+                                style={{ backgroundColor: color, color: 'white' }}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {section.type === 'timeline' && section.content.items && (
+                  <div className="space-y-4">
+                    {section.content.items.map((item) => (
+                      <div key={item.id} className="flex">
+                        <div className="flex-shrink-0 w-24 text-sm text-gray-600">
+                          {item.startDate && item.endDate ? `${item.startDate} - ${item.endDate}` : ''}
+                        </div>
+                        <div className="flex-grow border-l-4 pl-6" style={{ borderLeftColor: color }}>
+                          {item.title && <h4 className="text-lg font-semibold text-gray-800 mb-1">{item.title}</h4>}
+                          {item.subtitle && <div className="text-gray-600 mb-2">{item.subtitle}</div>}
+                          {item.description && <p className="text-gray-700">{item.description}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {section.type === 'grid' && section.content.columns && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {section.content.columns.map((column, columnIndex) => (
+                      <div key={columnIndex}>
+                        <h4 className="text-lg font-semibold mb-3" style={{ color: '#4a5568' }}>{column.title}</h4>
+                        <div className="space-y-1">
+                          {column.items.map((item, itemIndex) => (
+                            <div key={itemIndex} className="text-gray-700">• {item}</div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {section.type === 'mixed' && (
+                  <div className="space-y-4">
+                    {section.content.text && (
+                      <div className="text-gray-700 leading-relaxed">{section.content.text}</div>
+                    )}
+                    {section.content.items && section.content.items.length > 0 && (
+                      <div className="space-y-3">
+                        {section.content.items.map((item) => (
+                          <div key={item.id} className="border-l-4 pl-6" style={{ borderLeftColor: color }}>
+                            {item.title && <h4 className="text-lg font-semibold text-gray-800 mb-1">{item.title}</h4>}
+                            {item.description && <p className="text-gray-700">{item.description}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 };
 
-export default ResumePDF;
+export default ExecutiveClassic;
