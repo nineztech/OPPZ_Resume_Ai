@@ -375,13 +375,22 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
                   )}
                   
                   <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-bold" style={{ 
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                      flex: '1'
-                    }}>
-                      {exp.title}
-                    </h3>
+                    <div className="flex-1">
+                      <h3 className="font-bold" style={{ 
+                        fontSize: '11px',
+                        fontWeight: 'bold'
+                      }}>
+                        {exp.title}
+                      </h3>
+                      {exp.company && (
+                        <p className="text-gray-600" style={{ 
+                          fontSize: '10px',
+                          fontWeight: '500'
+                        }}>
+                          {exp.company}
+                        </p>
+                      )}
+                    </div>
                     <div className="font-bold text-right" style={{ 
                       fontSize: '11px',
                       fontWeight: 'bold'

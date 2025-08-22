@@ -1233,7 +1233,8 @@ const ResumeBuilderPage = () => {
                       }
                       return [];
                     })(),
-                    description: exp.description // Keep original description as fallback
+                    description: exp.description, // Keep original description as fallback
+                    location: exp.location // Add location for templates that need it
                   })),
                   education: resumeData.education.map(edu => ({
                     degree: edu.degree,
@@ -1445,7 +1446,8 @@ const ResumeBuilderPage = () => {
             }
             return [];
           })(),
-          description: exp.description // Keep original description as fallback
+          description: exp.description, // Keep original description as fallback
+          location: exp.location // Add location for templates that need it
         })),
           education: resumeData.education.map(edu => ({
             degree: edu.degree,
