@@ -202,7 +202,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
       </div>
 
       {/* Summary */}
-      <div className="mb-3">
+      <div className="mb-3" style={{ position: 'relative' }}>
         <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
@@ -218,6 +218,22 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
         }}>
           {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
         </p>
+        {highlightedSections?.has('summary-ai-enhanced') && (
+          <div style={{
+            position: 'absolute',
+            top: '-8px',
+            right: '8px',
+            background: '#ffc107',
+            color: '#fff',
+            fontSize: '8px',
+            padding: '1px 4px',
+            borderRadius: '6px',
+            fontWeight: '500',
+            zIndex: 10
+          }}>
+            ✨ AI Enhanced
+          </div>
+        )}
       </div>
 
       {/* Technical Skills */}
@@ -252,7 +268,38 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
                   fontSize: '11px',
                   lineHeight: '1.3'
                 }}>
-                  <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {Array.isArray(cleanSkills) ? cleanSkills.join(', ') : cleanSkills}
+                  <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> 
+                  {Array.isArray(cleanSkills) ? cleanSkills.map((skill, index) => {
+                    const isHighlighted = highlightedSections?.has(`skill-${skill}`) || 
+                                        highlightedSections?.has(`keyword-${skill}`) || 
+                                        highlightedSections?.has(`critical-keyword-${skill}`) ||
+                                        highlightedSections?.has(`missing-skill-${skill}`) ||
+                                        highlightedSections?.has(`added-skill-${skill}`) ||
+                                        highlightedSections?.has(`priority-skill-${skill}`);
+                    
+                    return (
+                      <span key={index}>
+                        {index > 0 ? ', ' : ' '}
+                        <span style={{
+                          background: isHighlighted ? 'rgba(255, 235, 59, 0.3)' : 'transparent',
+                          padding: isHighlighted ? '1px 3px' : '0',
+                          borderRadius: isHighlighted ? '3px' : '0',
+                          border: isHighlighted ? '1px solid #ffc107' : 'none'
+                        }}>
+                          {skill}
+                        </span>
+                      </span>
+                    );
+                  }) : (
+                    <span style={{
+                      background: highlightedSections?.has(`skill-${cleanSkills}`) ? 'rgba(255, 235, 59, 0.3)' : 'transparent',
+                      padding: highlightedSections?.has(`skill-${cleanSkills}`) ? '1px 3px' : '0',
+                      borderRadius: highlightedSections?.has(`skill-${cleanSkills}`) ? '3px' : '0',
+                      border: highlightedSections?.has(`skill-${cleanSkills}`) ? '1px solid #ffc107' : 'none'
+                    }}>
+                      {cleanSkills}
+                    </span>
+                  )}
                 </div>
               );
             })
@@ -262,7 +309,28 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
               fontSize: '11px',
               lineHeight: '1.3'
             }}>
-              {templateData.skills.technical.join(', ')}
+              {templateData.skills.technical.map((skill, index) => {
+                const isHighlighted = highlightedSections?.has(`skill-${skill}`) || 
+                                    highlightedSections?.has(`keyword-${skill}`) || 
+                                    highlightedSections?.has(`critical-keyword-${skill}`) ||
+                                    highlightedSections?.has(`missing-skill-${skill}`) ||
+                                    highlightedSections?.has(`added-skill-${skill}`) ||
+                                    highlightedSections?.has(`priority-skill-${skill}`);
+                
+                return (
+                  <span key={index}>
+                    {index > 0 ? ', ' : ''}
+                    <span style={{
+                      background: isHighlighted ? 'rgba(255, 235, 59, 0.3)' : 'transparent',
+                      padding: isHighlighted ? '1px 3px' : '0',
+                      borderRadius: isHighlighted ? '3px' : '0',
+                      border: isHighlighted ? '1px solid #ffc107' : 'none'
+                    }}>
+                      {skill}
+                    </span>
+                  </span>
+                );
+              })}
             </div>
           ) : (
             <div className="text-sm text-gray-500" style={{ 
@@ -288,8 +356,33 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
         </h2>
         <div className="space-y-1">
           {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
-            templateData.experience.map((exp, index) => (
-              <div key={index}>
+            templateData.experience.map((exp, index) => {
+              const isExperienceHighlighted = highlightedSections?.has(`experience-${index}-ai-enhanced`);
+              
+              return (
+              <div key={index} style={{
+                background: isExperienceHighlighted ? 'rgba(255, 235, 59, 0.1)' : 'transparent',
+                borderLeft: isExperienceHighlighted ? '3px solid #ffc107' : 'none',
+                padding: isExperienceHighlighted ? '8px' : '0',
+                borderRadius: isExperienceHighlighted ? '4px' : '0',
+                position: 'relative'
+              }}>
+                {isExperienceHighlighted && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '8px',
+                    background: '#ffc107',
+                    color: '#fff',
+                    fontSize: '8px',
+                    padding: '1px 4px',
+                    borderRadius: '6px',
+                    fontWeight: '500',
+                    zIndex: 10
+                  }}>
+                    ✨ AI Enhanced
+                  </div>
+                )}
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="font-bold" style={{ 
                     fontSize: '11px',
@@ -330,7 +423,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
                   )}
                 </div>
               </div>
-            ))
+              );
+            })
           ) : (
             <div className="text-sm text-gray-500" style={{ 
               fontSize: '11px',

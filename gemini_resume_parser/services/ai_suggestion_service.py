@@ -129,6 +129,7 @@ class AISuggestionService:
         - Return ONLY valid JSON. No markdown, no code fences, no explanations, no comments, no trailing commas.
         - Follow the schema exactly. Use integers where numbers are expected. Use ISO 8601 UTC for timestamps.
         - Keep recommendations specific to the job description and resume content.
+        - For each section, provide both existing data and suggested improvements separately.
 
         RESUME DATA:
         {resume_text}
@@ -168,108 +169,176 @@ class AISuggestionService:
                     "score": 0,
                     "status": "",
                     "completeness": 0,
-                    "strengths": [""],
-                    "improvements": [""],
-                    "recommendations": [""],
-                    "missingElements": [""]
+                    "existingData": {{
+                        "strengths": [""],
+                        "currentElements": [""]
+                    }},
+                    "suggestedData": {{
+                        "improvements": [""],
+                        "recommendations": [""],
+                        "missingElements": [""]
+                    }}
                 }},
                 "professionalSummary": {{
                     "score": 0,
                     "status": "",
                     "completeness": 0,
-                    "strengths": [""],
-                    "improvements": [""],
-                    "recommendations": [""],
-                    "suggestedRewrite": "",
-                    "keywordGaps": [""],
-                    "impactScore": 0
+                    "existingData": {{
+                        "currentSummary": "",
+                        "strengths": [""],
+                        "keywordGaps": [""]
+                    }},
+                    "suggestedData": {{
+                        "suggestedRewrite": "",
+                        "improvements": [""],
+                        "recommendations": [""],
+                        "impactScore": 0
+                    }}
                 }},
                 "skillsSection": {{
                     "score": 0,
                     "status": "",
                     "completeness": 0,
-                    "strengths": [""],
-                    "improvements": [""],
-                    "recommendations": [""],
-                    "missingCriticalSkills": [""],
-                    "skillGapAnalysis": {{
-                        "technical": {{
-                            "score": 0,
-                            "gaps": [""],
-                            "recommendations": ""
+                    "existingData": {{
+                        "currentSkills": {{
+                            "Languages": [""],
+                            "Frameworks/Libraries": [""],
+                            "Database": [""],
+                            "Cloud": [""],
+                            "Version Control Tools": [""],
+                            "IDEs": [""],
+                            "Web-Technologies": [""],
+                            "Web Server": [""],
+                            "Methodologies": [""],
+                            "Operating Systems": [""],
+                            "Professional Skills": [""],
+                            "Testing": [""],
+                            "Build Tools": [""],
+                            "Other Tools": [""]
                         }},
-                        "soft": {{
-                            "score": 0,
-                            "gaps": [""],
-                            "recommendations": ""
-                        }},
-                        "leadership": {{
-                            "score": 0,
-                            "gaps": [""],
-                            "recommendations": ""
-                        }}
+                        "strengths": [""],
+                        "skillCategories": [""]
                     }},
-                    "skillPrioritization": {{
-                        "critical": [""],
-                        "important": [""],
-                        "niceToHave": [""]
+                    "suggestedData": {{
+                        "skillsToAddByCategory": {{
+                            "Languages": [""],
+                            "Frameworks/Libraries": [""],
+                            "Database": [""],
+                            "Cloud": [""],
+                            "Version Control Tools": [""],
+                            "IDEs": [""],
+                            "Web-Technologies": [""],
+                            "Web Server": [""],
+                            "Methodologies": [""],
+                            "Operating Systems": [""],
+                            "Professional Skills": [""],
+                            "Testing": [""],
+                            "Build Tools": [""],
+                            "Other Tools": [""]
+                        }},
+                        "missingCriticalSkills": [""],
+                        "skillsToAdd": [""],
+                        "improvements": [""],
+                        "recommendations": [""],
+                        "skillGapAnalysis": {{
+                            "technical": {{
+                                "score": 0,
+                                "gaps": [""],
+                                "recommendations": ""
+                            }},
+                            "soft": {{
+                                "score": 0,
+                                "gaps": [""],
+                                "recommendations": ""
+                            }},
+                            "leadership": {{
+                                "score": 0,
+                                "gaps": [""],
+                                "recommendations": ""
+                            }}
+                        }},
+                        "skillPrioritization": {{
+                            "critical": [""],
+                            "important": [""],
+                            "niceToHave": [""]
+                        }}
                     }}
                 }},
                 "workExperience": {{
                     "score": 0,
                     "status": "",
                     "completeness": 0,
-                    "strengths": [""],
-                    "improvements": [""],
-                    "recommendations": [""],
-                    "experienceRelevance": {{
-                        "highlyRelevant": 0,
-                        "moderatelyRelevant": 0,
-                        "lessRelevant": 0,
-                        "totalPositions": 0
+                    "existingData": {{
+                        "currentExperience": [""],
+                        "strengths": [""],
+                        "experienceRelevance": {{
+                            "highlyRelevant": 0,
+                            "moderatelyRelevant": 0,
+                            "lessRelevant": 0,
+                            "totalPositions": 0
+                        }}
                     }},
-                    "achievementAnalysis": {{
-                        "quantified": 0,
-                        "qualitative": 0,
-                        "recommendation": "",
-                        "impactScore": 0
-                    }},
-                    "careerProgression": {{
-                        "score": 0,
-                        "trend": "",
-                        "gaps": "",
-                        "recommendations": ""
+                    "suggestedData": {{
+                        "improvements": [""],
+                        "recommendations": [""],
+                        "achievementAnalysis": {{
+                            "quantified": 0,
+                            "qualitative": 0,
+                            "recommendation": "",
+                            "impactScore": 0
+                        }},
+                        "careerProgression": {{
+                            "score": 0,
+                            "trend": "",
+                            "gaps": "",
+                            "recommendations": ""
+                        }}
                     }}
                 }},
                 "educationSection": {{
                     "score": 0,
                     "status": "",
                     "completeness": 0,
-                    "strengths": [""],
-                    "improvements": [""],
-                    "recommendations": [""],
-                    "relevanceScore": 0,
-                    "additionalSuggestions": [""]
+                    "existingData": {{
+                        "currentEducation": [""],
+                        "strengths": [""]
+                    }},
+                    "suggestedData": {{
+                        "improvements": [""],
+                        "recommendations": [""],
+                        "relevanceScore": 0,
+                        "additionalSuggestions": [""]
+                    }}
                 }},
                 "certifications": {{
                     "score": 0,
                     "status": "",
                     "completeness": 0,
-                    "strengths": [""],
-                    "improvements": [""],
-                    "recommendations": [""],
-                    "suggestedCertifications": [""],
-                    "priorityLevel": ""
+                    "existingData": {{
+                        "currentCertifications": [""],
+                        "strengths": [""]
+                    }},
+                    "suggestedData": {{
+                        "improvements": [""],
+                        "recommendations": [""],
+                        "suggestedCertifications": [""],
+                        "priorityLevel": ""
+                    }}
                 }},
                 "projects": {{
                     "score": 0,
                     "status": "",
                     "completeness": 0,
-                    "strengths": [""],
-                    "improvements": [""],
-                    "recommendations": [""],
-                    "technicalDepth": 0,
-                    "businessImpact": 0
+                    "existingData": {{
+                        "currentProjects": [""],
+                        "strengths": [""]
+                    }},
+                    "suggestedData": {{
+                        "improvements": [""],
+                        "recommendations": [""],
+                        "technicalDepth": 0,
+                        "businessImpact": 0
+                    }}
                 }}
             }},
             "keywordAnalysis": {{
