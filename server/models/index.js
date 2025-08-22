@@ -1,8 +1,10 @@
 import { sequelize } from "../config/dbConnection.js";
 import User from "./userModel.js";
+import Resume from "./resumeModel.js";
 
 // Define associations here if needed
-// User.hasMany(OtherModel);
+User.hasMany(Resume, { foreignKey: 'userId', as: 'resumes' });
+Resume.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // Sync all models with database
 const syncDatabase = async () => {
@@ -17,4 +19,4 @@ const syncDatabase = async () => {
   }
 };
 
-export { User, sequelize, syncDatabase };
+export { User, Resume, sequelize, syncDatabase };

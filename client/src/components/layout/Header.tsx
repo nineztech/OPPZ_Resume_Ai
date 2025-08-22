@@ -27,6 +27,7 @@ const Header = ({ onShowLogin, user: propUser }: HeaderProps) => {
 
   const navItems = [
     { name: 'Templates', href: '/resume/templates', requiresAuth: true },
+    { name: 'My Resumes', href: '/my-resumes', requiresAuth: true },
     { name: 'ATS Score', href: '/resume/ats-score', requiresAuth: true },
     { name: 'Features', href: '/resume/features', requiresAuth: false },
     { name: 'Pricing', href: '#pricing', requiresAuth: false },

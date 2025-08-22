@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { tokenUtils } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -31,6 +33,43 @@ import ResumePreviewModal from '@/components/modals/ResumePreviewModal';
 import AddCustomSectionModal from '@/components/modals/AddCustomSectionModal';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+
+// Helper function to safely process description text
+const safeProcessDescription = (description: any): string[] => {
+  // Handle null, undefined, or non-string values
+  if (!description || typeof description !== 'string') {
+    return [];
+  }
+  
+  // Handle empty strings
+  if (description.trim().length === 0) {
+    return [];
+  }
+  
+  try {
+    // Check if description already contains bullet points
+    if (description.includes('•') || description.includes('*') || description.includes('-')) {
+      // Split by bullet characters and filter out empty strings
+      const bullets = description
+        .split(/[•*\-]/)
+        .map(bullet => bullet.trim())
+        .filter(bullet => bullet.length > 0);
+      return bullets.length > 0 ? bullets : [description];
+    } else {
+      // Split by full stops and filter out empty strings, remove trailing dots
+      const bullets = description
+        .split('.')
+        .map(bullet => bullet.trim())
+        .filter(bullet => bullet.length > 0)
+        .map(bullet => bullet.replace(/\.$/, '')); // Remove trailing dots
+      return bullets.length > 0 ? bullets : [description];
+    }
+  } catch (error) {
+    console.warn('Error processing description:', error, 'Description:', description);
+    // Return the original description as a single item if processing fails
+    return [String(description)];
+  }
+};
 
 interface ResumeData {
   basicDetails: {
@@ -145,6 +184,10 @@ const ResumeBuilderPage = () => {
   const resumeRef = useRef<HTMLDivElement>(null);
   const [appliedSuggestions, setAppliedSuggestions] = useState<any>(null);
   const [highlightedChanges, setHighlightedChanges] = useState<Set<string>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
+  const [resumeId, setResumeId] = useState<number | null>(null);
+  const [resumeTitle, setResumeTitle] = useState<string>('');
+  const { toast } = useToast();
   
   // Helper function to categorize skills into appropriate categories
   const categorizeSkill = (skill: string): string => {
@@ -310,7 +353,17 @@ const ResumeBuilderPage = () => {
   useEffect(() => {
     console.log('ResumeBuilderPage useEffect - location.state:', location.state);
     
-    if (location.state?.extractedData && (location.state?.mode === 'raw' || location.state?.mode === 'ai' || location.state?.mode === 'ai-enhanced')) {
+    // Check if this is an edit mode and set resume ID and title
+    if (location.state?.mode === 'edit' && location.state?.resumeId) {
+      setResumeId(location.state.resumeId);
+      setResumeTitle(location.state.resumeTitle || 'Untitled Resume');
+    } else {
+      // Generate a default title for new resumes
+      const defaultTitle = `Resume - ${new Date().toLocaleDateString()}`;
+      setResumeTitle(defaultTitle);
+    }
+    
+    if (location.state?.extractedData && (location.state?.mode === 'raw' || location.state?.mode === 'ai' || location.state?.mode === 'ai-enhanced' || location.state?.mode === 'edit')) {
       // Handle Gemini parsed data directly
       const extractedData = location.state.extractedData;
       console.log('Setting resume data from Gemini parser:', extractedData);
@@ -947,6 +1000,80 @@ const ResumeBuilderPage = () => {
     }
   };
 
+  const handleSaveResume = async () => {
+    try {
+      setIsSaving(true);
+      const token = tokenUtils.getToken();
+      
+      if (!token) {
+        toast({
+          title: 'Authentication Required',
+          description: 'Please log in to save your resume.',
+          variant: 'destructive',
+        });
+        navigate('/resume/login');
+        return;
+      }
+
+      const saveData = {
+        title: resumeTitle,
+        templateId: selectedTemplate?.id || templateId,
+        selectedColor: selectedColor,
+        resumeData: resumeData
+      };
+
+      let response;
+      if (resumeId) {
+        // Update existing resume
+        response = await fetch(`http://localhost:5006/api/resume/${resumeId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(saveData),
+        });
+      } else {
+        // Create new resume
+        response = await fetch('http://localhost:5006/api/resume', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(saveData),
+        });
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save resume');
+      }
+
+      const result = await response.json();
+      
+      // If this was a new resume, set the ID for future saves
+      if (!resumeId && result.resume?.id) {
+        setResumeId(result.resume.id);
+      }
+
+      toast({
+        title: 'Success',
+        description: resumeId ? 'Resume updated successfully!' : 'Resume saved successfully!',
+      });
+
+    } catch (error) {
+      console.error('Error saving resume:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to save resume. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDownloadPDF = async () => {
     if (!resumeRef.current) return;
 
@@ -1109,17 +1236,33 @@ const ResumeBuilderPage = () => {
           )}
           
           <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/resume/templates')}
-              className="text-gray-600 hover:text-gray-900"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Templates
-            </Button>
+            <div className="flex items-center gap-0">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/resume/templates')}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="w-4 h-4 " />
+                {/* Back to Templates */}
+              </Button>
+              
+              {/* Resume Title Input */}
+              <div className="flex items-center gap-2">
+                <Label htmlFor="resumeTitle" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                  Title:
+                </Label>
+                <Input
+                  id="resumeTitle"
+                  value={resumeTitle}
+                  onChange={(e) => setResumeTitle(e.target.value)}
+                  className="w-48 h-8 text-sm"
+                  placeholder="Enter resume title"
+                />
+              </div>
+            </div>
             
             {/* Centered Template Selector */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0">
               <Button
                 variant="ghost"
                 size="sm"
@@ -1131,7 +1274,7 @@ const ResumeBuilderPage = () => {
               </Button>
               
               <div className="flex items-center gap-1">
-                {templateData.slice(templateScrollIndex, templateScrollIndex + 4).map((template) => (
+                {templateData.slice(templateScrollIndex, templateScrollIndex + 3).map((template) => (
                   <button
                     key={template.id}
                     onClick={() => handleTemplateChange(template)}
@@ -1150,7 +1293,7 @@ const ResumeBuilderPage = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => scrollTemplates('right')}
-                disabled={templateScrollIndex >= templateData.length - 4}
+                disabled={templateScrollIndex >= templateData.length - 3}
                 className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-50"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -1174,9 +1317,14 @@ const ResumeBuilderPage = () => {
                 <Award className="w-4 h-4 mr-2" />
                 Check ATS
               </Button>
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleSaveResume}
+                disabled={isSaving}
+              >
                 <Save className="w-4 h-4 mr-2" />
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </Button>
               <Button size="sm" onClick={handleDownloadPDF}>
                 <Download className="w-4 h-4 mr-2" />
@@ -1210,29 +1358,7 @@ const ResumeBuilderPage = () => {
                     title: exp.position,
                     company: exp.company,
                     dates: exp.duration,
-                    achievements: (() => {
-                      // Parse description into bullet points by splitting on full stops
-                      if (exp.description) {
-                        // Check if description already contains bullet points
-                        if (exp.description.includes('•') || exp.description.includes('*') || exp.description.includes('-')) {
-                          // Split by bullet characters and filter out empty strings
-                          const bullets = exp.description
-                            .split(/[•*\-]/)
-                            .map(bullet => bullet.trim())
-                            .filter(bullet => bullet.length > 0);
-                          return bullets.length > 0 ? bullets : [exp.description];
-                        } else {
-                          // Split by full stops and filter out empty strings, remove trailing dots
-                          const bullets = exp.description
-                            .split('.')
-                            .map(bullet => bullet.trim())
-                            .filter(bullet => bullet.length > 0)
-                            .map(bullet => bullet.replace(/\.$/, '')); // Remove trailing dots
-                          return bullets.length > 0 ? bullets : [exp.description];
-                        }
-                      }
-                      return [];
-                    })(),
+                    achievements: safeProcessDescription(exp.description),
                     description: exp.description, // Keep original description as fallback
                     location: exp.location // Add location for templates that need it
                   })),
@@ -1240,7 +1366,7 @@ const ResumeBuilderPage = () => {
                     degree: edu.degree,
                     institution: edu.institution,
                     dates: edu.year,
-                    details: [edu.description]
+                    details: safeProcessDescription(edu.description)
                   })),
                   // Note: projects are not part of the standard TemplateData interface
                   // They will be handled by the template renderer if supported
@@ -1423,29 +1549,7 @@ const ResumeBuilderPage = () => {
           title: exp.position,
           company: exp.company,
           dates: exp.duration,
-          achievements: (() => {
-            // Parse description into bullet points by splitting on full stops
-            if (exp.description) {
-              // Check if description already contains bullet points
-              if (exp.description.includes('•') || exp.description.includes('*') || exp.description.includes('-')) {
-                // Split by bullet characters and filter out empty strings
-                const bullets = exp.description
-                  .split(/[•*\-]/)
-                  .map(bullet => bullet.trim())
-                  .filter(bullet => bullet.length > 0);
-                return bullets.length > 0 ? bullets : [exp.description];
-              } else {
-                // Split by full stops and filter out empty strings, remove trailing dots
-                const bullets = exp.description
-                  .split('.')
-                  .map(bullet => bullet.trim())
-                  .filter(bullet => bullet.length > 0)
-                  .map(bullet => bullet.replace(/\.$/, '')); // Remove trailing dots
-                return bullets.length > 0 ? bullets : [exp.description];
-              }
-            }
-            return [];
-          })(),
+          achievements: safeProcessDescription(exp.description),
           description: exp.description, // Keep original description as fallback
           location: exp.location // Add location for templates that need it
         })),
@@ -1453,7 +1557,7 @@ const ResumeBuilderPage = () => {
             degree: edu.degree,
             institution: edu.institution,
             dates: edu.year,
-            details: [edu.description]
+            details: safeProcessDescription(edu.description)
           })),
           // Note: projects are not part of the standard TemplateData interface
           // They will be handled by the template renderer if supported
