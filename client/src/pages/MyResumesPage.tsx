@@ -1,20 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Plus, 
-  Edit, 
-  Eye, 
-  Trash2, 
-  Calendar, 
+import {
+  Plus,
+  Edit,
+  Eye,
+  Trash2,
+  Calendar,
   FileText,
-  Download,
   Copy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
+import TemplateRenderer from '@/components/templates/TemplateRenderer';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -51,7 +50,7 @@ const MyResumesPage = () => {
     try {
       setLoading(true);
       const token = tokenUtils.getToken();
-      
+
       if (!token) {
         navigate('/login');
         return;
@@ -81,7 +80,7 @@ const MyResumesPage = () => {
           navigate('/login');
           return;
         }
-        
+
         // Get more detailed error information
         let errorMessage = 'Failed to fetch resumes';
         try {
@@ -91,7 +90,7 @@ const MyResumesPage = () => {
           // If we can't parse the error response, use the status text
           errorMessage = `${response.status}: ${response.statusText}`;
         }
-        
+
         throw new Error(errorMessage);
       }
 
@@ -114,7 +113,7 @@ const MyResumesPage = () => {
   const deleteResume = async (resumeId: number) => {
     try {
       const token = tokenUtils.getToken();
-      
+
       if (!token) {
         navigate('/login');
         return;
@@ -141,7 +140,7 @@ const MyResumesPage = () => {
 
       // Remove the deleted resume from the state
       setResumes(prev => prev.filter(resume => resume.id !== resumeId));
-      
+
       toast({
         title: 'Success',
         description: 'Resume deleted successfully.',
@@ -160,7 +159,7 @@ const MyResumesPage = () => {
   const duplicateResume = async (resume: Resume) => {
     try {
       const token = tokenUtils.getToken();
-      
+
       if (!token) {
         navigate('/login');
         return;
@@ -194,10 +193,10 @@ const MyResumesPage = () => {
       }
 
       const newResume = await response.json();
-      
+
       // Add the new resume to the state
       setResumes(prev => [newResume.resume, ...prev]);
-      
+
       toast({
         title: 'Success',
         description: 'Resume duplicated successfully.',
@@ -211,6 +210,8 @@ const MyResumesPage = () => {
       });
     }
   };
+
+
 
   // Edit resume
   const editResume = (resume: Resume) => {
@@ -280,6 +281,47 @@ const MyResumesPage = () => {
     return templateNames[templateId] || templateId;
   };
 
+  // Convert resume data to template format
+  const convertToTemplateData = (resumeData: any) => {
+    if (!resumeData) return undefined;
+
+    return {
+      personalInfo: {
+        name: resumeData.basicDetails?.fullName || '',
+        title: resumeData.basicDetails?.title || '',
+        address: resumeData.basicDetails?.address || '',
+        email: resumeData.basicDetails?.email || '',
+        website: resumeData.basicDetails?.website || '',
+        phone: resumeData.basicDetails?.phone || ''
+      },
+      summary: resumeData.summary || '',
+      skills: {
+        technical: resumeData.skills || [],
+        professional: resumeData.languages?.map((lang: any) => lang.name) || []
+      },
+      experience: (resumeData.experience || []).map((exp: any) => ({
+        title: exp.position || '',
+        company: exp.company || '',
+        dates: exp.duration || '',
+        achievements: Array.isArray(exp.description) ? exp.description :
+          typeof exp.description === 'string' ? [exp.description] : []
+      })),
+      education: (resumeData.education || []).map((edu: any) => ({
+        degree: edu.degree || '',
+        institution: edu.institution || '',
+        dates: edu.year || '',
+        details: Array.isArray(edu.details) ? edu.details : []
+      })),
+      projects: resumeData.projects || [],
+      additionalInfo: {
+        languages: resumeData.additionalInfo?.languages || [],
+        certifications: resumeData.additionalInfo?.certifications || [],
+        awards: resumeData.additionalInfo?.awards || []
+      },
+      customSections: resumeData.customSections || []
+    };
+  };
+
   useEffect(() => {
     fetchResumes();
   }, []);
@@ -305,8 +347,8 @@ const MyResumesPage = () => {
             <p className="text-gray-600 mb-4">{error}</p>
             <div className="space-y-4">
               <Button onClick={fetchResumes} className="mr-4">Try Again</Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   console.log('Current token:', tokenUtils.getToken());
                   console.log('Token exists:', !!tokenUtils.getToken());
@@ -317,9 +359,9 @@ const MyResumesPage = () => {
             </div>
             <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left">
               <p className="text-sm text-gray-700">
-                <strong>Debug Info:</strong><br/>
-                • Backend URL: http://localhost:5006<br/>
-                • Token exists: {tokenUtils.getToken() ? 'Yes' : 'No'}<br/>
+                <strong>Debug Info:</strong><br />
+                • Backend URL: http://localhost:5006<br />
+                • Token exists: {tokenUtils.getToken() ? 'Yes' : 'No'}<br />
                 • Error: {error}
               </p>
             </div>
@@ -341,8 +383,8 @@ const MyResumesPage = () => {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={checkBackendStatus}
               className="flex items-center gap-2"
             >
@@ -357,7 +399,7 @@ const MyResumesPage = () => {
 
         {/* Resumes Grid */}
         {resumes.length === 0 ? (
-          <motion.div 
+          <motion.div
             className="text-center py-16"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -382,105 +424,139 @@ const MyResumesPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <Card className="hover:shadow-lg transition-shadow duration-200">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg font-semibold truncate">
-                          {resume.title}
-                        </CardTitle>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {getTemplateDisplayName(resume.templateId)}
-                          </Badge>
-                          <div 
-                            className="w-4 h-4 rounded-full border border-gray-300"
-                            style={{ backgroundColor: resume.selectedColor }}
-                            title={`Color: ${resume.selectedColor}`}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                  {/* Resume Preview */}
+                  <div className="relative bg-gradient-to-b from-gray-50 to-white p-4 group">
+                    {/* Resume Preview - Better fit to container */}
+                    <div className="aspect-[3/4] bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden flex items-center justify-center">
+                      <div
+                        className="absolute inset-0 flex items-center justify-center"
+                        style={{
+                          transform: 'scale(0.45)',
+                          transformOrigin: 'center center',
+                          width: '222%',
+                          height: '222%',
+                          left: '-61%',
+                          top: '-61%'
+                        }}
+                      >
+                        <div
+                          className="bg-white shadow-lg"
+                          style={{
+                            width: '210mm',
+                            height: '297mm',
+                            maxWidth: '210mm',
+                            maxHeight: '297mm'
+                          }}
+                        >
+                          <TemplateRenderer
+                            templateId={resume.templateId}
+                            data={convertToTemplateData(resume.resumeData)}
+                            color={resume.selectedColor}
                           />
                         </div>
                       </div>
                     </div>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    <div className="space-y-4">
-                      {/* Last edited info */}
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Calendar className="w-4 h-4 mr-2" />
-                        Last edited: {formatDate(resume.lastEdited)}
-                      </div>
+                  </div>
 
-                      {/* Basic info from resume data */}
-                      {resume.resumeData?.basicDetails?.fullName && (
-                        <div className="text-sm text-gray-600">
-                          <strong>Name:</strong> {resume.resumeData.basicDetails.fullName}
+                  {/* Resume Info */}
+                  <div className="p-6 pt-16">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold text-gray-900 truncate mb-2 mt-2">
+                          {resume.title}
+                        </h3>
+
+                        {/* Template and Color Badge */}
+                        <div className="flex gap-2 mb-2">
+                          <Badge className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-1 rounded-md border-0">
+                            {getTemplateDisplayName(resume.templateId)}
+                          </Badge>
+                          <div
+                            className="w-4 h-4 mt-2 rounded-full border border-gray-300"
+                            style={{ backgroundColor: resume.selectedColor }}
+                            title={`Color: ${resume.selectedColor}`}
+                          />
+
                         </div>
-                      )}
-                      
-                      {resume.resumeData?.basicDetails?.title && (
-                        <div className="text-sm text-gray-600">
-                          <strong>Title:</strong> {resume.resumeData.basicDetails.title}
+
+                        {/* Last edited info */}
+                        <div className="flex items-center text-sm text-gray-600 mb-2">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Last edited: {formatDate(resume.lastEdited)}
                         </div>
-                      )}
 
-                      {/* Action buttons */}
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => editResume(resume)}
-                          className="flex-1"
-                        >
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit
-                        </Button>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => duplicateResume(resume)}
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
+                        {/* Basic info from resume data */}
+                        {resume.resumeData?.basicDetails?.fullName && (
+                          <div className="text-sm text-gray-600 mb-1">
+                            <strong>Name:</strong> {resume.resumeData.basicDetails.fullName}
+                          </div>
+                        )}
 
-                        <Dialog open={deleteDialogOpen === resume.id} onOpenChange={(open) => setDeleteDialogOpen(open ? resume.id : null)}>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Delete Resume</DialogTitle>
-                              <DialogDescription>
-                                Are you sure you want to delete "{resume.title}"? This action cannot be undone.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
-                              <Button variant="outline" onClick={() => setDeleteDialogOpen(null)}>
-                                Cancel
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  deleteResume(resume.id);
-                                  setDeleteDialogOpen(null);
-                                }}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                Delete
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                        {resume.resumeData?.basicDetails?.title && (
+                          <div className="text-sm text-gray-600">
+                            <strong>Title:</strong> {resume.resumeData.basicDetails.title}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+
+                    {/* Action buttons */}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => editResume(resume)}
+                        className="flex-1"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => duplicateResume(resume)}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+
+                      <Dialog open={deleteDialogOpen === resume.id} onOpenChange={(open) => setDeleteDialogOpen(open ? resume.id : null)}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Delete Resume</DialogTitle>
+                            <DialogDescription>
+                              Are you sure you want to delete "{resume.title}"? This action cannot be undone.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setDeleteDialogOpen(null)}>
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                deleteResume(resume.id);
+                                setDeleteDialogOpen(null);
+                              }}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Delete
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
