@@ -20,7 +20,7 @@ interface ResumePreviewModalProps {
     };
     summary: string;
     skills: {
-      technical: string[];
+      technical: string[] | { [category: string]: string[] };
       professional?: string[];
     };
     experience: Array<{
@@ -34,6 +34,14 @@ interface ResumePreviewModalProps {
       institution: string;
       dates: string;
       details: string[];
+    }>;
+    projects?: Array<{
+      Name: string;
+      Description: string;
+      Tech_Stack: string;
+      Start_Date?: string;
+      End_Date?: string;
+      Link?: string;
     }>;
     additionalInfo: {
       languages?: string[];

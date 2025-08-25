@@ -16,7 +16,7 @@ interface TemplateData {
   };
   summary: string;
   skills: {
-    technical: string[];
+    technical: string[] | { [category: string]: string[] };
     professional?: string[];
   };
   experience: Array<{

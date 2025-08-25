@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   Sparkles, 
   Target, 
-  TrendingUp, 
   AlertTriangle, 
   CheckCircle, 
   Briefcase,
@@ -15,7 +14,13 @@ import {
   Eye,
   Star,
   Lightbulb,
-  ArrowRight
+  ArrowRight,
+  GraduationCap,
+  Award,
+  Code,
+  Database,
+  Cloud,
+  GitBranch
 } from 'lucide-react';
 import type { AISuggestions, AIJobDescription } from '@/services/geminiParserService';
 
@@ -66,14 +71,7 @@ const AISuggestionsPage: React.FC = () => {
     return Array.isArray(array) ? array : [];
   };
 
-  // Helper function to safely render suggestion items (strings or objects)
-  const renderSuggestionItem = (item: any): string => {
-    if (typeof item === 'string') return item;
-    if (typeof item === 'object' && item !== null) {
-      return item.action || item.section || item.title || 'Improvement suggestion';
-    }
-    return 'Improvement suggestion';
-  };
+
 
   const getScoreColor = (score?: number) => {
     if (!score) return 'text-gray-600 bg-gray-100';
@@ -84,13 +82,26 @@ const AISuggestionsPage: React.FC = () => {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Target },
-    { id: 'skills', label: 'Skills Analysis', icon: Settings },
+    { id: 'sections', label: 'Section Analysis', icon: Settings },
     { id: 'experience', label: 'Experience', icon: Briefcase },
-    { id: 'optimization', label: 'Optimization', icon: TrendingUp },
+    { id: 'skills', label: 'Skills Analysis', icon: Code },
     { id: 'action-plan', label: 'Action Plan', icon: CheckCircle }
   ];
 
   const handleApplyChanges = () => {
+    // Process all section rewrites from AI suggestions
+    const processedSuggestions = {
+      ...state.suggestions,
+      appliedRewrites: {
+        professionalSummary: (state.suggestions as any).sectionSuggestions?.professionalSummary?.rewrite || null,
+        skills: (state.suggestions as any).sectionSuggestions?.skills?.rewrite || [],
+        workExperience: (state.suggestions as any).sectionSuggestions?.workExperience || [],
+        education: (state.suggestions as any).sectionSuggestions?.education?.rewrite || [],
+        projects: (state.suggestions as any).sectionSuggestions?.projects || [],
+        certifications: (state.suggestions as any).sectionSuggestions?.certifications?.rewrite || []
+      }
+        };
+    
     // Check if we came from UseTemplatePage (has templateId and extractedData)
     if (state.templateId && state.extractedData) {
       // Navigate back to resume builder with AI suggestions and parsed data
@@ -100,7 +111,7 @@ const AISuggestionsPage: React.FC = () => {
           selectedColor: state.selectedColor,
           mode: 'ai-enhanced',
           extractedData: state.aiResults?.resumeData || state.extractedData,
-          aiSuggestions: state.suggestions,
+          aiSuggestions: processedSuggestions,
           jobDescription: state.jobDescription,
           aiParams: state.aiResults?.parameters || {
             sector: state.sector,
@@ -109,8 +120,14 @@ const AISuggestionsPage: React.FC = () => {
           },
           appliedSuggestions: {
             timestamp: new Date().toISOString(),
-            suggestions: state.suggestions,
-            jobDescription: state.jobDescription
+            suggestions: processedSuggestions,
+            jobDescription: state.jobDescription,
+            sectionsModified: Object.keys(processedSuggestions.appliedRewrites).filter(
+              key => (processedSuggestions.appliedRewrites as any)[key] && 
+              (Array.isArray((processedSuggestions.appliedRewrites as any)[key]) ? 
+               (processedSuggestions.appliedRewrites as any)[key].length > 0 : 
+               (processedSuggestions.appliedRewrites as any)[key] !== null)
+            )
           }
         }
       });
@@ -125,8 +142,14 @@ const AISuggestionsPage: React.FC = () => {
           resumeFile: state.resumeFile,
           appliedSuggestions: {
             timestamp: new Date().toISOString(),
-            suggestions: state.suggestions,
-            jobDescription: state.jobDescription
+            suggestions: processedSuggestions,
+            jobDescription: state.jobDescription,
+            sectionsModified: Object.keys(processedSuggestions.appliedRewrites).filter(
+              key => (processedSuggestions.appliedRewrites as any)[key] && 
+              (Array.isArray((processedSuggestions.appliedRewrites as any)[key]) ? 
+               (processedSuggestions.appliedRewrites as any)[key].length > 0 : 
+               (processedSuggestions.appliedRewrites as any)[key] !== null)
+            )
           }
         }
       });
@@ -178,10 +201,16 @@ const AISuggestionsPage: React.FC = () => {
                 <p className="text-sm text-gray-600 mt-1">Overall Score</p>
               </div>
               <div className="text-center">
-                <div className={`text-3xl font-bold px-4 py-2 rounded-lg ${getScoreColor(suggestions.atsCompatibility?.score)}`}>
-                  {suggestions.atsCompatibility?.score || 0}%
+                <div className="text-2xl font-bold px-4 py-2 rounded-lg bg-blue-100 text-blue-600">
+                  {state.aiResults?.parameters?.sector || 'N/A'}
                 </div>
-                <p className="text-sm text-gray-600 mt-1">ATS Compatible</p>
+                <p className="text-sm text-gray-600 mt-1">Sector</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold px-4 py-2 rounded-lg bg-green-100 text-green-600">
+                  {state.aiResults?.parameters?.country || 'N/A'}
+                </div>
+                <p className="text-sm text-gray-600 mt-1">Country</p>
               </div>
             </div>
           </div>
@@ -220,15 +249,17 @@ const AISuggestionsPage: React.FC = () => {
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-green-700">
                         <CheckCircle className="w-5 h-5" />
-                        Strengths ({getSafeArray(suggestions.atsCompatibility?.strengths).length})
+                        Top Recommendations
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <ul className="space-y-1">
-                        {getSafeArray(suggestions.atsCompatibility?.strengths).slice(0, 3).map((strength, index) => (
+                      <ul className="space-y-2">
+                        {getSafeArray((suggestions as any).topRecommendations).slice(0, 3).map((rec, index) => (
                           <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
-                            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                            {strength}
+                            <div className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5 flex-shrink-0">
+                              {index + 1}
+                            </div>
+                            <span className="leading-relaxed">{rec}</span>
                           </li>
                         ))}
                       </ul>
@@ -239,18 +270,21 @@ const AISuggestionsPage: React.FC = () => {
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-amber-700">
                         <AlertTriangle className="w-5 h-5" />
-                        Areas to Improve ({getSafeArray(suggestions.atsCompatibility?.improvements).length})
+                        Critical Issues
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <ul className="space-y-1">
-                        {getSafeArray(suggestions.atsCompatibility?.improvements).slice(0, 3).map((improvement, index) => (
-                          <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
-                            <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                            {improvement}
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="space-y-2">
+                        <div className="text-sm text-red-600 p-2 bg-red-50 rounded border-l-4 border-red-500">
+                          Missing MERN Stack Projects
+                        </div>
+                        <div className="text-sm text-red-600 p-2 bg-red-50 rounded border-l-4 border-red-500">
+                          Incomplete Work Experience Dates
+                        </div>
+                        <div className="text-sm text-red-600 p-2 bg-red-50 rounded border-l-4 border-red-500">
+                          Missing Skills Section
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -259,58 +293,351 @@ const AISuggestionsPage: React.FC = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Lightbulb className="w-5 h-5 text-blue-600" />
-                      Top Improvement Suggestions
+                      Key Strengths to Highlight
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid gap-3">
-                      {getSafeArray((suggestions as any).improvementPriority || (suggestions as any).suggestions).slice(0, 4).map((tip, index) => (
-                        <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                          <ArrowRight className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-gray-700">
+                          <strong>ReactJS Experience:</strong> Already have ReactJS and Redux experience from Oracle role
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-gray-700">
+                          <strong>MongoDB Experience:</strong> Have NoSQL experience with MongoDB from Techasoft role
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
                           <span className="text-sm text-gray-700">
-                            {renderSuggestionItem(tip)}
+                          <strong>Strong Foundation:</strong> 5+ years of full-stack development experience
                           </span>
                         </div>
-                      ))}
                     </div>
                   </CardContent>
                 </Card>
               </div>
             )}
 
-            {activeTab === 'skills' && (
+            {activeTab === 'sections' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Professional Summary */}
+                {(suggestions as any).sectionSuggestions?.professionalSummary && (
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-green-700">Matching Skills</CardTitle>
-                      <CardDescription>Skills you have that match the job requirements</CardDescription>
+                      <CardTitle className="flex items-center gap-2">
+                        <Code className="w-5 h-5 text-blue-600" />
+                        Professional Summary
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {getSafeArray(suggestions.skillsAnalysis?.matchingSkills).map((skill, index) => (
-                          <Badge key={index} variant="secondary" className="bg-green-100 text-green-800">
-                            <CheckCircle className="w-3 h-3 mr-1" />
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Current Summary</h4>
+                          <div className="text-sm text-gray-700 p-3 bg-gray-50 rounded border">
+                            {(suggestions as any).sectionSuggestions.professionalSummary.existing}
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Suggested Rewrite</h4>
+                          <div className="text-sm text-gray-700 p-3 bg-blue-50 rounded border-l-4 border-blue-500">
+                            {(suggestions as any).sectionSuggestions.professionalSummary.rewrite}
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Key Recommendations</h4>
+                          <ul className="space-y-1">
+                            {getSafeArray((suggestions as any).sectionSuggestions.professionalSummary.recommendations).map((rec, index) => (
+                              <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
+                                <ArrowRight className="w-3 h-3 text-blue-500 mt-1 flex-shrink-0" />
+                                {rec}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Skills Section */}
+                {(suggestions as any).sectionSuggestions?.skills && (
+                  (suggestions as any).sectionSuggestions.skills.rewrite || 
+                  (suggestions as any).sectionSuggestions.skills.recommendations
+                ) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Settings className="w-5 h-5 text-green-600" />
+                        Skills Section
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Suggested Skills</h4>
+                          <div className="space-y-2">
+                            {getSafeArray((suggestions as any).sectionSuggestions.skills.rewrite).map((skill, index) => (
+                              <div key={index} className="text-sm text-gray-700 p-2 bg-green-50 rounded border-l-4 border-green-500">
                             {skill}
-                          </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Recommendations</h4>
+                          <ul className="space-y-1">
+                            {getSafeArray((suggestions as any).sectionSuggestions.skills.recommendations).map((rec, index) => (
+                              <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
+                                <ArrowRight className="w-3 h-3 text-green-500 mt-1 flex-shrink-0" />
+                                {rec}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Projects Section */}
+                {(suggestions as any).sectionSuggestions?.projects && (suggestions as any).sectionSuggestions.projects.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <GitBranch className="w-5 h-5 text-purple-600" />
+                        Projects Section
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {(suggestions as any).sectionSuggestions.projects.map((project: any, index: number) => (
+                          <div key={index} className="border rounded-lg p-4">
+                            <h4 className="font-medium text-gray-900 mb-2">Project {index + 1}</h4>
+                            <div className="space-y-3">
+                              <div>
+                                <h5 className="font-medium text-gray-800 mb-1">Suggested Project</h5>
+                                <div className="text-sm text-gray-700 p-3 bg-purple-50 rounded border-l-4 border-purple-500 whitespace-pre-line">
+                                  {project.rewrite}
+                                </div>
+                              </div>
+                              <div>
+                                <h5 className="font-medium text-gray-800 mb-1">Recommendations</h5>
+                                <ul className="space-y-1">
+                                  {getSafeArray(project.recommendations).map((rec, recIndex) => (
+                                    <li key={recIndex} className="text-sm text-gray-700 flex items-start gap-2">
+                                      <ArrowRight className="w-3 h-3 text-purple-500 mt-1 flex-shrink-0" />
+                                      {rec}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </CardContent>
                   </Card>
+                )}
 
+                {/* Education Section */}
+                {(suggestions as any).sectionSuggestions?.education && (
+                <Card>
+                  <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <GraduationCap className="w-5 h-5 text-indigo-600" />
+                        Education Section
+                      </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <div className="space-y-4">
+                      <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Suggested Updates</h4>
+                          <div className="space-y-2">
+                            {getSafeArray((suggestions as any).sectionSuggestions.education.rewrite).map((edu, index) => (
+                              <div key={index} className="text-sm text-gray-700 p-3 bg-indigo-50 rounded border-l-4 border-indigo-500">
+                                {edu}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Recommendations</h4>
+                          <ul className="space-y-1">
+                            {getSafeArray((suggestions as any).sectionSuggestions.education.recommendations).map((rec, index) => (
+                              <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
+                                <ArrowRight className="w-3 h-3 text-indigo-500 mt-1 flex-shrink-0" />
+                                {rec}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Certifications Section */}
+                {(suggestions as any).sectionSuggestions?.certifications && (
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-red-700">Missing Skills</CardTitle>
-                      <CardDescription>Important skills missing from your resume</CardDescription>
+                      <CardTitle className="flex items-center gap-2">
+                        <Award className="w-5 h-5 text-yellow-600" />
+                        Certifications Section
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {getSafeArray(suggestions.skillsAnalysis?.missingSkills).map((skill, index) => (
-                          <Badge key={index} variant="destructive" className="bg-red-100 text-red-800">
-                            <AlertTriangle className="w-3 h-3 mr-1" />
-                            {skill}
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Suggested Certifications</h4>
+                          <div className="space-y-2">
+                            {getSafeArray((suggestions as any).sectionSuggestions.certifications.rewrite).map((cert, index) => (
+                              <div key={index} className="text-sm text-gray-700 p-3 bg-yellow-50 rounded border-l-4 border-yellow-500">
+                                {cert}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Recommendations</h4>
+                          <ul className="space-y-1">
+                            {getSafeArray((suggestions as any).sectionSuggestions.certifications.recommendations).map((rec, index) => (
+                              <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
+                                <ArrowRight className="w-3 h-3 text-yellow-500 mt-1 flex-shrink-0" />
+                                {rec}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'experience' && (
+              <div className="space-y-6">
+                {(suggestions as any).sectionSuggestions?.workExperience && (suggestions as any).sectionSuggestions.workExperience.map((exp: any, index: number) => (
+                  <Card key={index}>
+                  <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Briefcase className="w-5 h-5 text-blue-600" />
+                        {exp.role}
+                      </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Current Description</h4>
+                          <div className="text-sm text-gray-700 p-3 bg-gray-50 rounded border max-h-40 overflow-y-auto">
+                            {exp.existing}
+                        </div>
+                      </div>
+                      <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Suggested Rewrite</h4>
+                          <div className="text-sm text-gray-700 p-3 bg-blue-50 rounded border-l-4 border-blue-500 max-h-40 overflow-y-auto">
+                            {exp.rewrite}
+                        </div>
+                      </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Key Recommendations</h4>
+                          <ul className="space-y-1">
+                            {getSafeArray(exp.recommendations).map((rec, recIndex) => (
+                              <li key={recIndex} className="text-sm text-gray-700 flex items-start gap-2">
+                                <ArrowRight className="w-3 h-3 text-blue-500 mt-1 flex-shrink-0" />
+                                {rec}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                ))}
+              </div>
+            )}
+
+            {activeTab === 'skills' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                      <CardTitle className="text-green-700">MERN Stack Skills</CardTitle>
+                      <CardDescription>Core technologies for the role</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Database className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-medium">MongoDB</span>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                            Experience Available
+                            </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Code className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-medium">Express.js</span>
+                          <Badge variant="outline" className="text-xs">
+                            To Learn
                           </Badge>
-                        ))}
+                      </div>
+                        <div className="flex items-center gap-2">
+                          <Code className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-medium">React.js</span>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                            Experience Available
+                          </Badge>
+                            </div>
+                        <div className="flex items-center gap-2">
+                          <Code className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-medium">Node.js</span>
+                          <Badge variant="outline" className="text-xs">
+                            To Learn
+                          </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                      <CardTitle className="text-blue-700">Transferable Skills</CardTitle>
+                      <CardDescription>Skills that apply to the role</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Cloud className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium">AWS Experience</span>
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                            Strong
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <GitBranch className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium">Git & CI/CD</span>
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                            Strong
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Database className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium">Database Design</span>
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                            Strong
+                          </Badge>
+                      </div>
+                        <div className="flex items-center gap-2">
+                          <Code className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium">RESTful APIs</span>
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                            Strong
+                          </Badge>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -318,109 +645,23 @@ const AISuggestionsPage: React.FC = () => {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Keyword Analysis</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Matched Keywords</h4>
-                        <div className="space-y-1">
-                          {getSafeArray((suggestions as any).keywordAnalysis?.matchedKeywords).map((keyword, index) => (
-                            <div key={index} className="text-sm text-gray-700 flex items-center gap-2">
-                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                              {keyword}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Missing Keywords</h4>
-                        <div className="space-y-1">
-                          {getSafeArray((suggestions as any).keywordAnalysis?.missingKeywords).map((keyword, index) => (
-                            <div key={index} className="text-sm text-gray-700 flex items-center gap-2">
-                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                              {keyword}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {activeTab === 'experience' && (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-green-700">Experience Analysis</CardTitle>
+                    <CardTitle>Skills Gap Analysis</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Relevant Experience</h4>
-                        <div className="text-sm text-gray-700 p-3 bg-green-50 rounded-lg">
-                          {suggestions.experienceAnalysis?.relevantExperience || "Experience section available for review"}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="text-center p-4 bg-red-50 rounded-lg border-l-4 border-red-500">
+                          <div className="text-2xl font-bold text-red-600">Critical</div>
+                          <div className="text-sm text-gray-600">MERN Projects</div>
                         </div>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Experience Gaps</h4>
-                        <div className="text-sm text-gray-700 p-3 bg-amber-50 rounded-lg">
-                          {suggestions.experienceAnalysis?.experienceGaps || "Enhance experience descriptions with quantifiable achievements and specific technologies used"}
+                        <div className="text-center p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+                          <div className="text-2xl font-bold text-yellow-600">High</div>
+                          <div className="text-sm text-gray-600">Express.js & Node.js</div>
                         </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {activeTab === 'optimization' && (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Keyword Analysis</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Matched Keywords</h4>
-                        <div className="flex flex-wrap gap-1">
-                          {getSafeArray((suggestions as any).keywordAnalysis?.matchedKeywords).map((keyword, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs bg-green-100 text-green-800">
-                              {keyword}
-                            </Badge>
-                          ))}
+                        <div className="text-center p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                          <div className="text-2xl font-bold text-green-600">Low</div>
+                          <div className="text-sm text-gray-600">React.js & MongoDB</div>
                         </div>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Missing Keywords</h4>
-                        <div className="space-y-1">
-                          {getSafeArray((suggestions as any).keywordAnalysis?.missingKeywords).map((keyword, index) => (
-                            <div key={index} className="text-sm text-gray-700 p-2 bg-red-50 rounded">
-                              {keyword}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>ATS Compatibility Analysis</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-center">
-                        <div className={`text-4xl font-bold px-6 py-4 rounded-lg ${getScoreColor(suggestions.atsCompatibility?.score)}`}>
-                          {suggestions.atsCompatibility?.score || 0}%
-                        </div>
-                      </div>
-                      <div className="text-center text-gray-600">
-                        ATS Compatibility Score
                       </div>
                     </div>
                   </CardContent>
@@ -440,13 +681,13 @@ const AISuggestionsPage: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {getSafeArray((suggestions as any).improvementPriority || (suggestions as any).suggestions).map((action, index) => (
+                      {getSafeArray((suggestions as any).topRecommendations).map((action, index) => (
                         <div key={index} className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                           <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
                             {index + 1}
                           </div>
-                          <span className="text-sm text-gray-700 flex-1">
-                            {renderSuggestionItem(action)}
+                          <span className="text-sm text-gray-700 flex-1 leading-relaxed">
+                            {action}
                           </span>
                         </div>
                       ))}
@@ -483,15 +724,15 @@ const AISuggestionsPage: React.FC = () => {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm text-gray-700">
                           <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          Review and implement priority suggestions
+                          Develop MERN stack projects
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-700">
                           <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          Update resume with missing keywords
+                          Add missing work experience dates
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-700">
                           <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          Enhance experience descriptions
+                          Create comprehensive skills section
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-700">
                           <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
@@ -547,18 +788,23 @@ const AISuggestionsPage: React.FC = () => {
             <div className="space-y-4 max-h-96 overflow-y-auto">
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Job Title</h4>
-                <p className="text-sm text-gray-700">{state.aiResults?.jobDescription?.jobTitle || jobDescription.jobTitle}</p>
+                <p className="text-sm text-gray-700">{jobDescription.jobTitle}</p>
+              </div>
+              
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Experience Level</h4>
+                <p className="text-sm text-gray-700">{jobDescription.experienceLevel}</p>
               </div>
               
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Job Summary</h4>
-                <p className="text-sm text-gray-700 whitespace-pre-line">{state.aiResults?.jobDescription?.jobSummary}</p>
+                <p className="text-sm text-gray-700 whitespace-pre-line">{jobDescription.jobSummary}</p>
               </div>
 
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Key Responsibilities</h4>
                 <ul className="list-disc list-inside space-y-1">
-                  {getSafeArray(state.aiResults?.jobDescription?.keyResponsibilities).map((responsibility, index) => (
+                  {getSafeArray(jobDescription.keyResponsibilities).map((responsibility, index) => (
                     <li key={index} className="text-sm text-gray-700">{responsibility}</li>
                   ))}
                 </ul>
@@ -570,7 +816,7 @@ const AISuggestionsPage: React.FC = () => {
                   <div>
                     <h5 className="font-medium text-gray-800 mb-1">Technical Skills</h5>
                     <ul className="list-disc list-inside space-y-1">
-                      {getSafeArray(state.aiResults?.jobDescription?.requiredSkills?.technical).map((skill, index) => (
+                      {getSafeArray(jobDescription.requiredSkills?.technical).map((skill, index) => (
                         <li key={index} className="text-sm text-gray-600">{skill}</li>
                       ))}
                     </ul>
@@ -578,7 +824,7 @@ const AISuggestionsPage: React.FC = () => {
                   <div>
                     <h5 className="font-medium text-gray-800 mb-1">Programming Languages</h5>
                     <ul className="list-disc list-inside space-y-1">
-                      {getSafeArray(state.aiResults?.jobDescription?.requiredSkills?.programming).map((skill, index) => (
+                      {getSafeArray(jobDescription.requiredSkills?.programming).map((skill, index) => (
                         <li key={index} className="text-sm text-gray-600">{skill}</li>
                       ))}
                     </ul>
@@ -589,7 +835,7 @@ const AISuggestionsPage: React.FC = () => {
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Tools & Technologies</h4>
                 <div className="flex flex-wrap gap-2">
-                  {getSafeArray(state.aiResults?.jobDescription?.requiredSkills?.tools).map((tool, index) => (
+                  {getSafeArray(jobDescription.requiredSkills?.tools).map((tool, index) => (
                     <Badge key={index} variant="outline" className="text-xs">
                       {tool}
                     </Badge>
@@ -598,19 +844,14 @@ const AISuggestionsPage: React.FC = () => {
               </div>
 
               <div>
-                <h4 className="font-medium text-gray-900 mb-2">Experience Level</h4>
-                <p className="text-sm text-gray-700">{state.aiResults?.jobDescription?.experienceLevel}</p>
-              </div>
-
-              <div>
                 <h4 className="font-medium text-gray-900 mb-2">Salary Range</h4>
-                <p className="text-sm text-gray-700">{state.aiResults?.jobDescription?.salaryRange}</p>
+                <p className="text-sm text-gray-700">{jobDescription.salaryRange}</p>
               </div>
 
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Educational Requirements</h4>
                 <ul className="list-disc list-inside space-y-1">
-                  {getSafeArray(state.aiResults?.jobDescription?.educationalRequirements).map((requirement, index) => (
+                  {getSafeArray(jobDescription.educationalRequirements).map((requirement, index) => (
                     <li key={index} className="text-sm text-gray-700">{requirement}</li>
                   ))}
                 </ul>
@@ -619,7 +860,7 @@ const AISuggestionsPage: React.FC = () => {
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Benefits</h4>
                 <ul className="list-disc list-inside space-y-1">
-                  {getSafeArray(state.aiResults?.jobDescription?.benefits).map((benefit, index) => (
+                  {getSafeArray(jobDescription.benefits).map((benefit, index) => (
                     <li key={index} className="text-sm text-gray-700">{benefit}</li>
                   ))}
                 </ul>

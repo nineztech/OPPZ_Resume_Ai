@@ -404,13 +404,251 @@ const ResumeBuilderPage = () => {
       
       if (location.state?.mode === 'ai-enhanced' && location.state?.aiSuggestions) {
         const aiSuggestions = location.state.aiSuggestions;
-        console.log('=== AI SUGGESTIONS DEBUG ===');
-        console.log('Full AI suggestions object:', JSON.stringify(aiSuggestions, null, 2));
-        console.log('Available properties:', Object.keys(aiSuggestions));
-        console.log('sectionAnalysis:', aiSuggestions.sectionAnalysis);
-        console.log('keywordAnalysis:', aiSuggestions.keywordAnalysis);
-        console.log('improvementPriority:', aiSuggestions.improvementPriority);
-        console.log('=== END DEBUG ===');
+        
+        // Apply AI suggestions from appliedRewrites if available
+        if (aiSuggestions.appliedRewrites) {
+          const rewrites = aiSuggestions.appliedRewrites;
+          
+          // Apply Professional Summary rewrite
+          if (rewrites.professionalSummary) {
+            console.log('Applying professional summary rewrite:', rewrites.professionalSummary);
+            processedData.summary = rewrites.professionalSummary;
+            changesSet.add('summary-ai-rewrite');
+          }
+          
+                  // Apply Skills rewrite - Merge with existing skills instead of replacing
+        if (rewrites.skills && Array.isArray(rewrites.skills) && rewrites.skills.length > 0) {
+          console.log('Processing skills rewrite:', rewrites.skills);
+          
+          // Start with existing skills structure, don't replace completely
+          const existingSkills = processedData.skills || {};
+          console.log('Existing skills:', existingSkills);
+          
+          // Helper function to ensure a category is an array
+          const ensureCategoryIsArray = (skillsObj: any, category: string): string[] => {
+            if (!skillsObj[category]) {
+              return [];
+            }
+            if (Array.isArray(skillsObj[category])) {
+              return [...skillsObj[category]];
+            }
+            if (typeof skillsObj[category] === 'string') {
+              return [skillsObj[category]];
+            }
+            return [];
+          };
+          
+          // Ensure all default categories exist
+          const defaultCategories = {
+            "Languages": [],
+            "Frameworks/Libraries": [],
+            "Database": [],
+            "Cloud": [],
+            "Version Control Tools": [],
+            "IDEs": [],
+            "Web-Technologies": [],
+            "Web Server": [],
+            "Methodologies": [],
+            "Operating Systems": [],
+            "Professional Skills": [],
+            "Testing": [],
+            "Build Tools": [],
+            "Other Tools": []
+          };
+          
+          // Merge existing skills with default categories and ensure all are arrays
+          const mergedSkills: { [key: string]: string[] } = { ...defaultCategories };
+          
+          // Process existing skills and ensure they are arrays
+          Object.keys(defaultCategories).forEach(category => {
+            mergedSkills[category] = ensureCategoryIsArray(existingSkills, category);
+          });
+          
+          // Add any additional categories from existing skills that aren't in defaults
+          Object.keys(existingSkills).forEach(category => {
+            if (!mergedSkills.hasOwnProperty(category)) {
+              mergedSkills[category] = ensureCategoryIsArray(existingSkills, category);
+            }
+          });
+          
+          console.log('Merged skills structure:', mergedSkills);
+          
+          // Process each skill from the rewrite and add only missing skills
+          rewrites.skills.forEach((skillLine: string) => {
+            try {
+              if (skillLine && typeof skillLine === 'string') {
+                console.log('Processing skill line:', skillLine);
+                
+                if (skillLine.includes(':')) {
+                  const [category, skillsString] = skillLine.split(':', 2);
+                  const categoryName = category.trim();
+                  const newSkills = skillsString.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                  
+                  console.log(`Category: "${categoryName}", Skills:`, newSkills);
+                  
+                  // Ensure the category exists and is an array
+                  if (!mergedSkills[categoryName]) {
+                    mergedSkills[categoryName] = [];
+                  } else {
+                    mergedSkills[categoryName] = ensureCategoryIsArray(mergedSkills, categoryName);
+                  }
+                  
+                  // Add only skills that don't already exist in that category
+                  newSkills.forEach(skill => {
+                    if (!mergedSkills[categoryName].includes(skill)) {
+                      mergedSkills[categoryName].push(skill);
+                      // Track individual skill additions for highlighting
+                      changesSet.add(`skill-${skill}`);
+                      console.log(`Added skill "${skill}" to category "${categoryName}"`);
+                    } else {
+                      console.log(`Skill "${skill}" already exists in category "${categoryName}"`);
+                    }
+                  });
+                } else {
+                  // If no colon found, treat as a single skill and add to "Other Tools" if not already present
+                  const skill = skillLine.trim();
+                  
+                  // Ensure "Other Tools" is an array
+                  mergedSkills["Other Tools"] = ensureCategoryIsArray(mergedSkills, "Other Tools");
+                  
+                  if (!mergedSkills["Other Tools"].includes(skill)) {
+                    mergedSkills["Other Tools"].push(skill);
+                    // Track individual skill additions for highlighting
+                    changesSet.add(`skill-${skill}`);
+                    console.log(`Added skill "${skill}" to "Other Tools"`);
+                  } else {
+                    console.log(`Skill "${skill}" already exists in "Other Tools"`);
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error processing skill line:', skillLine, error);
+              // Continue processing other skills even if one fails
+            }
+          });
+          
+          processedData.skills = mergedSkills;
+          changesSet.add('skills-ai-rewrite');
+          console.log('Final merged skills:', mergedSkills);
+        }
+          
+          // Apply Work Experience rewrites
+          if (rewrites.workExperience && Array.isArray(rewrites.workExperience) && rewrites.workExperience.length > 0) {
+            console.log('Applying work experience rewrites:', rewrites.workExperience);
+            rewrites.workExperience.forEach((expRewrite: any, index: number) => {
+              if (expRewrite.rewrite && processedData.experience[index]) {
+                // Parse the rewrite text to extract structured data
+                const rewriteText = expRewrite.rewrite;
+                const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+                
+                // Extract title and company from first line
+                const titleLine = lines[0];
+                if (titleLine.includes('|')) {
+                  const parts = titleLine.split('|').map((p: string) => p.trim());
+                  if (parts.length >= 3) {
+                    processedData.experience[index].position = parts[0];
+                    processedData.experience[index].company = parts[1];
+                    processedData.experience[index].duration = parts[2];
+                    if (parts.length >= 4) {
+                      processedData.experience[index].location = parts[3];
+                    }
+                  }
+                }
+                
+                // Extract bullet points (lines starting with *)
+                const bulletPoints = lines.filter((line: string) => line.startsWith('*')).map((line: string) => line.substring(1).trim());
+                if (bulletPoints.length > 0) {
+                  processedData.experience[index].description = bulletPoints.join('\n');
+                }
+                
+                changesSet.add(`experience-${index}-ai-rewrite`);
+              }
+            });
+          }
+          
+          // Apply Education rewrites
+          if (rewrites.education && Array.isArray(rewrites.education) && rewrites.education.length > 0) {
+            console.log('Applying education rewrites:', rewrites.education);
+            rewrites.education.forEach((eduRewrite: string, index: number) => {
+              if (eduRewrite && processedData.education[index]) {
+                // Parse education rewrite
+                const lines = eduRewrite.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+                const titleLine = lines[0];
+                
+                if (titleLine.includes('|')) {
+                  const parts = titleLine.split('|').map((p: string) => p.trim());
+                  if (parts.length >= 3) {
+                    processedData.education[index].degree = parts[0];
+                    processedData.education[index].institution = parts[1];
+                    processedData.education[index].year = parts[2];
+                  }
+                }
+                
+                // Extract bullet points for description
+                const bulletPoints = lines.filter((line: string) => line.startsWith('*')).map((line: string) => line.substring(1).trim());
+                if (bulletPoints.length > 0) {
+                  processedData.education[index].description = bulletPoints.join('\n');
+                }
+                
+                changesSet.add(`education-${index}-ai-rewrite`);
+              }
+            });
+          }
+          
+          // Apply Projects rewrites (create new projects if they don't exist)
+          if (rewrites.projects && Array.isArray(rewrites.projects) && rewrites.projects.length > 0) {
+            console.log('Applying projects rewrites:', rewrites.projects);
+            rewrites.projects.forEach((projectRewrite: any, index: number) => {
+              if (projectRewrite.rewrite) {
+                const rewriteText = projectRewrite.rewrite;
+                const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+                
+                // Extract project title from first line (usually starts with **)
+                let projectTitle = 'AI Suggested Project';
+                const titleLine = lines.find((line: string) => line.startsWith('**') && line.endsWith('**'));
+                if (titleLine) {
+                  projectTitle = titleLine.replace(/\*\*/g, '').trim();
+                }
+                
+                // Extract bullet points for description
+                const bulletPoints = lines.filter((line: string) => line.startsWith('*') && !line.startsWith('**')).map((line: string) => line.substring(1).trim());
+                
+                const newProject = {
+                  id: `ai-project-${index}-${Date.now()}`,
+                  name: projectTitle,
+                  techStack: 'MERN Stack', // Default for MERN suggestions
+                  startDate: '',
+                  endDate: '',
+                  description: bulletPoints.join('\n'),
+                  link: ''
+                };
+                
+                processedData.projects.push(newProject);
+                changesSet.add(`project-${processedData.projects.length - 1}-ai-rewrite`);
+              }
+            });
+          }
+          
+          // Apply Certifications rewrites (create new certifications if they don't exist)
+          if (rewrites.certifications && Array.isArray(rewrites.certifications) && rewrites.certifications.length > 0) {
+            console.log('Applying certifications rewrites:', rewrites.certifications);
+            rewrites.certifications.forEach((certRewrite: string, index: number) => {
+              if (certRewrite) {
+                const newCertification = {
+                  id: `ai-cert-${index}-${Date.now()}`,
+                  certificateName: certRewrite,
+                  link: '',
+                  startDate: '',
+                  endDate: '',
+                  instituteName: ''
+                };
+                
+                processedData.certifications.push(newCertification);
+                changesSet.add(`certification-${processedData.certifications.length - 1}-ai-rewrite`);
+              }
+            });
+          }
+        }
         
                  // Ensure skills object is properly initialized for categorized structure
          if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
@@ -1223,7 +1461,16 @@ const ResumeBuilderPage = () => {
               </div>
               <p className="text-xs text-green-700 mt-1">
                 {highlightedChanges.size > 0 
-                  ? `Enhanced elements are highlighted in yellow. Individual skills, summary text, and experience descriptions have been improved with AI suggestions.`
+                  ? `Enhanced elements are highlighted in yellow. Applied changes include: ${Array.from(highlightedChanges).map(change => {
+                      if (change.includes('summary-ai-rewrite')) return 'Professional Summary';
+                      if (change.includes('skills-ai-rewrite')) return 'Skills Section';
+                      if (change.includes('experience') && change.includes('ai-rewrite')) return 'Work Experience';
+                      if (change.includes('education') && change.includes('ai-rewrite')) return 'Education';
+                      if (change.includes('project') && change.includes('ai-rewrite')) return 'Projects';
+                      if (change.includes('certification') && change.includes('ai-rewrite')) return 'Certifications';
+                      if (change.includes('skill-')) return 'Individual Skills';
+                      return change;
+                    }).filter((value, index, self) => self.indexOf(value) === index).join(', ')}.`
                   : 'AI analysis completed. Check the console for detailed logs of applied changes.'
                 }
               </p>
@@ -1231,6 +1478,23 @@ const ResumeBuilderPage = () => {
                 <p className="text-xs text-amber-700 mt-1">
                   Note: If no changes were applied, the AI may have determined your resume already meets the job requirements.
                 </p>
+              )}
+              
+              {/* Show specific skills that were added */}
+              {Array.from(highlightedChanges).some(change => change.includes('skill-')) && (
+                <div className="mt-2 p-2 bg-blue-50 rounded border-l-4 border-blue-500">
+                  <p className="text-xs text-blue-800 font-medium mb-1">New Skills Added:</p>
+                  <div className="text-xs text-blue-700">
+                    {Array.from(highlightedChanges)
+                      .filter(change => change.includes('skill-'))
+                      .map(change => change.replace('skill-', ''))
+                      .slice(0, 5) // Show first 5 skills
+                      .join(', ')}
+                    {Array.from(highlightedChanges).filter(change => change.includes('skill-')).length > 5 && 
+                      ` and ${Array.from(highlightedChanges).filter(change => change.includes('skill-')).length - 5} more...`
+                    }
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -1368,10 +1632,17 @@ const ResumeBuilderPage = () => {
                     dates: edu.year,
                     details: safeProcessDescription(edu.description)
                   })),
-                  // Note: projects are not part of the standard TemplateData interface
-                  // They will be handled by the template renderer if supported
+                  projects: resumeData.projects.map(project => ({
+                    Name: project.name,
+                    Description: project.description,
+                    Tech_Stack: project.techStack,
+                    Start_Date: project.startDate,
+                    End_Date: project.endDate,
+                    Link: project.link
+                  })),
                   additionalInfo: {
-                    languages: resumeData.languages.map(lang => lang.name)
+                    languages: resumeData.languages.map(lang => lang.name),
+                    certifications: resumeData.certifications.map(cert => cert.certificateName).filter(name => name.length > 0)
                   },
                   customSections: resumeData.customSections
                 }}
@@ -1559,10 +1830,17 @@ const ResumeBuilderPage = () => {
             dates: edu.year,
             details: safeProcessDescription(edu.description)
           })),
-          // Note: projects are not part of the standard TemplateData interface
-          // They will be handled by the template renderer if supported
+          projects: resumeData.projects.map(project => ({
+            Name: project.name,
+            Description: project.description,
+            Tech_Stack: project.techStack,
+            Start_Date: project.startDate,
+            End_Date: project.endDate,
+            Link: project.link
+          })),
           additionalInfo: {
-            languages: resumeData.languages.map(lang => lang.name)
+            languages: resumeData.languages.map(lang => lang.name),
+            certifications: resumeData.certifications.map(cert => cert.certificateName).filter(name => name.length > 0)
           },
           customSections: resumeData.customSections
         }}
