@@ -460,15 +460,28 @@ const ATSTemplatesPage = () => {
                   
                   <CardContent>
                     {/* Template Preview */}
-                    <div className="relative bg-gray-50 rounded-lg p-4 mb-4 group-hover:bg-gray-100 transition-colors">
-                      <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden flex items-center justify-center h-80">
-                        <div className="transform scale-[0.4] origin-center w-[800px] h-[1400px]">
-                          <TemplateRenderer
-                            templateId={template.id}
-                            data={template.templateData}
-                            color={template.colors[0]}
-                          />
-                        </div>
+                    <div className="relative bg-gray-50 rounded-lg p-2 mb-4 group-hover:bg-gray-100 transition-colors">
+                      <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden flex items-center justify-center h-50">
+                      <div className="aspect-[3/4] bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden flex items-center justify-center">
+                    <div 
+                      className="transform origin-center" 
+                      style={{ 
+                        transform: 'scale(0.4)',
+                        width: '250%', 
+                        height: '250%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <div style={{ width: '210mm', height: '297mm' }}>
+                        <TemplateRenderer 
+                          templateId={template.id} 
+                          color={template.colors[0]}
+                        />
+                      </div>
+                    </div>
+                  </div>
                       </div>
                       
                       {/* Hover Overlay */}
