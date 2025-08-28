@@ -68,10 +68,15 @@ class AISuggestionService:
         # Infer experience level if not provided
         if experience_level:
             target_experience = experience_level
+            logger.info(f"🎯 Using provided experience level: {target_experience}")
         elif resume_data:
             target_experience = self._analyze_experience_level(resume_data)
+            logger.info(f"🎯 Analyzed experience level from resume: {target_experience}")
         else:
-            target_experience = "Mid level"
+            # If no resume data is provided, use a more intelligent default
+            # Instead of always defaulting to "Mid level", analyze the context
+            target_experience = self._get_intelligent_default_experience(sector, designation)
+            logger.info(f"🎯 Using intelligent default experience level: {target_experience}")
 
         prompt = f"""
         You are an expert global job market analyst and HR recruiter.
@@ -165,6 +170,7 @@ class AISuggestionService:
         - Tailor rewrites to {target_experience} level.
         - Never leave placeholders like "improve wording" — always provide final rewritten text.
         - ALWAYS provide a numeric overallScore between 0-100 (never "NA", "N/A", or text).
+        - NEVER use "NA", "N/A", "None", "Null", "Unknown", or similar placeholder values - use empty strings or appropriate defaults instead.
         
         CRITICAL SKILLS RULES:
         - For skills section: ONLY suggest skills that can be added to EXISTING categories shown in the resume.
@@ -273,32 +279,70 @@ class AISuggestionService:
             # Enforce schema compliance - ensure all required sections are present
             ai_response = self._enforce_schema_compliance(ai_response, resume_data)
             
-            # Validate that skills suggestions only reference existing categories
+            # Validate that skills suggestions only reference existing categories and remove duplicate skills
             if 'sectionSuggestions' in ai_response and 'skills' in ai_response['sectionSuggestions']:
                 skills_suggestions = ai_response['sectionSuggestions']['skills']
                 if 'rewrite' in skills_suggestions and isinstance(skills_suggestions['rewrite'], list):
-                    # Get existing categories from resume data
+                    # Get existing categories and skills from resume data
                     existing_categories = []
+                    existing_skills = set()
                     if isinstance(resume_data.get('skills'), dict):
                         existing_categories = list(resume_data['skills'].keys())
+                        # Extract all existing skills from each category
+                        for category, skill_list in resume_data['skills'].items():
+                            if isinstance(skill_list, list):
+                                for skill in skill_list:
+                                    if skill and str(skill).strip():
+                                        existing_skills.add(str(skill).strip().lower())
+                            elif isinstance(skill_list, str) and skill_list.strip():
+                                existing_skills.add(skill_list.strip().lower())
                     
-                    # Filter skills suggestions to only include existing categories
+                    # Filter skills suggestions to only include existing categories and remove duplicate skills
                     if existing_categories:
                         filtered_rewrite = []
                         for skill_line in skills_suggestions['rewrite']:
                             if isinstance(skill_line, str) and ':' in skill_line:
                                 category = skill_line.split(':')[0].strip()
                                 if category in existing_categories:
-                                    filtered_rewrite.append(skill_line)
-                                    logger.info(f"Keeping skill suggestion for existing category: {category}")
+                                    # Extract skills from this line and check for duplicates
+                                    skills_part = skill_line.split(':', 1)[1].strip()
+                                    if skills_part:
+                                        # Split skills by comma and filter out existing ones
+                                        individual_skills = [skill.strip() for skill in skills_part.split(',') if skill.strip()]
+                                        new_skills = []
+                                        for skill in individual_skills:
+                                            if skill.lower() not in existing_skills:
+                                                new_skills.append(skill)
+                                            else:
+                                                logger.info(f"Filtering out duplicate skill: {skill} (already exists in {category})")
+                                        
+                                        # Only add the line if there are new skills to add
+                                        if new_skills:
+                                            new_skill_line = f"{category}: {', '.join(new_skills)}"
+                                            filtered_rewrite.append(new_skill_line)
+                                            logger.info(f"Keeping skill suggestion for existing category with new skills: {category}")
+                                        else:
+                                            logger.info(f"Skipping {category} - all skills already exist")
+                                    else:
+                                        # Empty skills part, skip this line
+                                        logger.info(f"Skipping {category} - no skills specified")
                                 else:
                                     logger.warning(f"Filtering out skill suggestion for non-existing category: {category}")
                             else:
-                                # Single skill without category, keep it
-                                filtered_rewrite.append(skill_line)
+                                # Single skill without category, check if it already exists
+                                if isinstance(skill_line, str) and skill_line.strip():
+                                    skill_name = skill_line.strip()
+                                    if skill_name.lower() not in existing_skills:
+                                        filtered_rewrite.append(skill_line)
+                                        logger.info(f"Keeping single skill suggestion: {skill_name}")
+                                    else:
+                                        logger.info(f"Keeping single skill suggestion: {skill_name}")
                         
                         skills_suggestions['rewrite'] = filtered_rewrite
-                        logger.info(f"Filtered skills suggestions to {len(filtered_rewrite)} items for existing categories")
+                        logger.info(f"Filtered skills suggestions to {len(filtered_rewrite)} items, removing duplicates from existing data")
+            
+            # FINAL NA VALIDATION: Double-check that no "NA" values exist anywhere in the response
+            ai_response = self._final_na_validation(ai_response)
             
             return ai_response
         except json.JSONDecodeError as json_error:
@@ -529,11 +573,13 @@ class AISuggestionService:
             
             if not experience:
                 logger.warning("❌ No experience data found in any expected location")
-                return "Entry level"
+                # Instead of defaulting to Entry level, analyze other indicators
+                return self._analyze_experience_from_other_indicators(resume_data)
 
             if not isinstance(experience, list) or not experience:
                 logger.warning(f"❌ Experience data is not a valid list: {type(experience)}")
-                return "Entry level"
+                # Instead of defaulting to Entry level, analyze other indicators
+                return self._analyze_experience_from_other_indicators(resume_data)
 
             total_years = 0
             current_year = datetime.datetime.now().year
@@ -579,6 +625,194 @@ class AISuggestionService:
 
         except Exception as e:
             logger.warning(f"❌ Error analyzing experience level: {str(e)}")
+            return self._analyze_experience_from_other_indicators(resume_data)
+    
+    def _analyze_experience_from_other_indicators(self, resume_data: Dict[str, Any]) -> str:
+        """
+        Analyze experience level from other resume indicators when direct experience data is not available.
+        This provides a more intelligent fallback than just defaulting to Entry level.
+        """
+        try:
+            logger.info("🔍 Analyzing experience level from other resume indicators")
+            
+            # Check for education level and completion date
+            education_level = "bachelor"  # default
+            education_completion_year = None
+            
+            if 'education' in resume_data and isinstance(resume_data['education'], list) and resume_data['education']:
+                for edu in resume_data['education']:
+                    if isinstance(edu, dict):
+                        degree = edu.get('degree', '').lower()
+                        if any(level in degree for level in ['phd', 'doctorate', 'doctoral']):
+                            education_level = "phd"
+                        elif any(level in degree for level in ['master', 'ms', 'ma', 'mba']):
+                            education_level = "master"
+                        elif any(level in degree for level in ['bachelor', 'bs', 'ba', 'btech']):
+                            education_level = "bachelor"
+                        
+                        # Check completion date
+                        end_date = edu.get('endDate', edu.get('to', ''))
+                        if end_date:
+                            import re
+                            year_match = re.search(r'(\d{4})', str(end_date))
+                            if year_match:
+                                education_completion_year = int(year_match.group(1))
+                                break
+            
+            # Check for certifications and professional achievements
+            has_certifications = False
+            has_projects = False
+            
+            if 'certifications' in resume_data and isinstance(resume_data['certifications'], list) and resume_data['certifications']:
+                has_certifications = True
+            
+            if 'projects' in resume_data and isinstance(resume_data['projects'], list) and resume_data['projects']:
+                has_projects = True
+            
+            # Check for skills complexity
+            has_advanced_skills = False
+            if 'skills' in resume_data:
+                skills_data = resume_data['skills']
+                if isinstance(skills_data, dict):
+                    # Check for advanced technical skills
+                    technical_skills = skills_data.get('technical', [])
+                    programming_skills = skills_data.get('programming', [])
+                    
+                    advanced_indicators = [
+                        'architecture', 'design patterns', 'microservices', 'distributed systems',
+                        'machine learning', 'ai', 'artificial intelligence', 'data science',
+                        'cloud', 'aws', 'azure', 'gcp', 'kubernetes', 'docker', 'devops',
+                        'leadership', 'mentoring', 'team management', 'project management'
+                    ]
+                    
+                    all_skills = []
+                    if isinstance(technical_skills, list):
+                        all_skills.extend([str(skill).lower() for skill in technical_skills if skill])
+                    if isinstance(programming_skills, list):
+                        all_skills.extend([str(skill).lower() for skill in programming_skills if skill])
+                    
+                    has_advanced_skills = any(indicator in skill for skill in all_skills for indicator in advanced_indicators)
+            
+            # Calculate years since education completion
+            current_year = datetime.datetime.now().year
+            years_since_education = 0
+            if education_completion_year:
+                years_since_education = current_year - education_completion_year
+            
+            # Determine experience level based on multiple factors
+            experience_score = 0
+            
+            # Education level contribution
+            if education_level == "phd":
+                experience_score += 3
+            elif education_level == "master":
+                experience_score += 2
+            elif education_level == "bachelor":
+                experience_score += 1
+            
+            # Years since education contribution
+            if years_since_education >= 5:
+                experience_score += 3
+            elif years_since_education >= 3:
+                experience_score += 2
+            elif years_since_education >= 1:
+                experience_score += 1
+            
+            # Professional achievements contribution
+            if has_certifications:
+                experience_score += 1
+            if has_projects:
+                experience_score += 1
+            if has_advanced_skills:
+                experience_score += 2
+            
+            logger.info(f"📊 Experience analysis results:")
+            logger.info(f"   Education level: {education_level}")
+            logger.info(f"   Years since education: {years_since_education}")
+            logger.info(f"   Has certifications: {has_certifications}")
+            logger.info(f"   Has projects: {has_projects}")
+            logger.info(f"   Has advanced skills: {has_advanced_skills}")
+            logger.info(f"   Total experience score: {experience_score}")
+            
+            # Determine level based on score
+            if experience_score <= 2:
+                level = "Entry level"
+            elif experience_score <= 5:
+                level = "Mid level"
+            else:
+                level = "Senior level"
+            
+            logger.info(f"🎯 Determined experience level from indicators: {level}")
+            return level
+            
+        except Exception as e:
+            logger.warning(f"❌ Error analyzing experience from indicators: {str(e)}")
+            # As a last resort, return Mid level instead of Entry level
+            return "Mid level"
+    
+    def _get_intelligent_default_experience(self, sector: str, designation: str) -> str:
+        """
+        Determine intelligent default experience level based on sector and designation context.
+        This provides better defaults than always using "Mid level".
+        """
+        try:
+            logger.info(f"🔍 Determining intelligent default experience for sector: {sector}, designation: {designation}")
+            
+            # Convert to lowercase for easier matching
+            sector_lower = sector.lower()
+            designation_lower = designation.lower()
+            
+            # Entry level indicators (typically junior positions)
+            entry_level_indicators = [
+                'junior', 'jr', 'entry', 'associate', 'assistant', 'trainee', 'intern',
+                'graduate', 'fresher', 'new grad', 'recent graduate', 'student'
+            ]
+            
+            # Senior level indicators (typically leadership/experienced positions)
+            senior_level_indicators = [
+                'senior', 'sr', 'lead', 'principal', 'architect', 'manager', 'director',
+                'head', 'chief', 'vp', 'vice president', 'executive', 'expert', 'specialist'
+            ]
+            
+            # Check designation for level indicators
+            if any(indicator in designation_lower for indicator in entry_level_indicators):
+                logger.info(f"🎯 Designation suggests Entry level: {designation}")
+                return "Entry level"
+            elif any(indicator in designation_lower for indicator in senior_level_indicators):
+                logger.info(f"🎯 Designation suggests Senior level: {designation}")
+                return "Senior level"
+            
+            # Check sector-specific patterns
+            if any(tech_sector in sector_lower for tech_sector in ['technology', 'tech', 'software', 'it', 'information']):
+                # Tech sector often requires more experience
+                if 'junior' in designation_lower or 'entry' in designation_lower:
+                    return "Entry level"
+                elif 'senior' in designation_lower or 'lead' in designation_lower:
+                    return "Senior level"
+                else:
+                    # Default to Mid level for tech sector
+                    return "Mid level"
+            
+            elif any(creative_sector in sector_lower for creative_sector in ['design', 'creative', 'art', 'media', 'marketing']):
+                # Creative sectors often have entry-level opportunities
+                if 'senior' in designation_lower or 'lead' in designation_lower:
+                    return "Senior level"
+                else:
+                    return "Mid level"
+            
+            elif any(management_sector in sector_lower for management_sector in ['management', 'consulting', 'strategy', 'business']):
+                # Management/consulting often requires experience
+                if 'junior' in designation_lower or 'associate' in designation_lower:
+                    return "Mid level"
+                else:
+                    return "Senior level"
+            
+            # Default to Mid level for most other cases
+            logger.info(f"🎯 Using default Mid level for sector: {sector}, designation: {designation}")
+            return "Mid level"
+            
+        except Exception as e:
+            logger.warning(f"❌ Error determining intelligent default experience: {str(e)}")
             return "Mid level"
 
     def _clean_gemini_response(self, response_text: str) -> str:
@@ -745,7 +979,14 @@ class AISuggestionService:
             ai_response["overallScore"] = 0
         
         # AGGRESSIVE OVERRIDE: Force any remaining "NA" values to be 0
-        if str(ai_response.get("overallScore", "")).strip().upper() in ['NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE']:
+        score_str = str(ai_response.get("overallScore", "")).strip().upper()
+        na_variations = [
+            'NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE', 
+            'NOT APPLICABLE', 'NOT AVAILABLE', 'NONE', 'NULL', 'UNDEFINED',
+            'UNKNOWN', 'TBD', 'TO BE DETERMINED', 'PENDING', 'INVALID',
+            'ERROR', 'FAILED', 'MISSING', 'EMPTY', 'BLANK'
+        ]
+        if score_str in na_variations:
             logger.error(f"🚨 AGGRESSIVE OVERRIDE: Score still contains 'NA': '{ai_response.get('overallScore')}', forcing to 0")
             ai_response["overallScore"] = 0
         
@@ -758,9 +999,19 @@ class AISuggestionService:
             logger.info(f"🔄 Calculated fallback score based on resume completeness: {calculated_score}")
         
         # FINAL CHECK: Ensure the score is absolutely never "NA"
-        if str(ai_response['overallScore']).strip().upper() in ['NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE']:
+        final_score_str = str(ai_response['overallScore']).strip().upper()
+        na_variations = [
+            'NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE', 
+            'NOT APPLICABLE', 'NOT AVAILABLE', 'NONE', 'NULL', 'UNDEFINED',
+            'UNKNOWN', 'TBD', 'TO BE DETERMINED', 'PENDING', 'INVALID',
+            'ERROR', 'FAILED', 'MISSING', 'EMPTY', 'BLANK'
+        ]
+        if final_score_str in na_variations:
             logger.error(f"🚨 FINAL OVERRIDE: Score still 'NA' at the very end: '{ai_response['overallScore']}', forcing to 50")
             ai_response['overallScore'] = 50
+        
+        # ULTIMATE NA CLEANUP: Clean any remaining "NA" values in all sections
+        ai_response = self._clean_all_na_values(ai_response)
         
         logger.info(f"🎯 ULTIMATE FINAL SCORE: {ai_response['overallScore']} (type: {type(ai_response['overallScore'])})")
         logger.info("✅ Schema compliance enforcement completed")
@@ -1146,12 +1397,24 @@ class AISuggestionService:
         Validates and ensures the overall score is a number between 0 and 100.
         If it's "NA", "N/A", or an invalid type, it defaults to 0.
         """
-        # Handle string variations of "NA"
+        # Handle string variations of "NA" - more comprehensive check
         if isinstance(score, str):
             score_str = score.strip().upper()
-            if score_str in ['NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE']:
+            # Extended list of NA variations
+            na_variations = [
+                'NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE', 
+                'NOT APPLICABLE', 'NOT AVAILABLE', 'NONE', 'NULL', 'UNDEFINED',
+                'UNKNOWN', 'TBD', 'TO BE DETERMINED', 'PENDING', 'INVALID',
+                'ERROR', 'FAILED', 'MISSING', 'EMPTY', 'BLANK'
+            ]
+            if score_str in na_variations:
                 logger.warning(f"⚠️ 'NA' score detected: '{score}', defaulting to 0.")
                 return 0
+        
+        # Handle None values
+        if score is None:
+            logger.warning(f"⚠️ None score detected, defaulting to 0.")
+            return 0
         
         try:
             score_int = int(score)
@@ -1171,6 +1434,68 @@ class AISuggestionService:
         except (ValueError, TypeError):
             logger.warning(f"⚠️ Invalid timestamp '{timestamp}' detected, defaulting to current UTC timestamp.")
             return datetime.datetime.utcnow().isoformat() + "Z"
+
+    def _clean_all_na_values(self, ai_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Recursively cleans all "NA" values from the AI response and replaces them with appropriate defaults.
+        This ensures no "NA" values ever reach the user.
+        """
+        na_variations = [
+            'NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE', 
+            'NOT APPLICABLE', 'NOT AVAILABLE', 'NONE', 'NULL', 'UNDEFINED',
+            'UNKNOWN', 'TBD', 'TO BE DETERMINED', 'PENDING', 'INVALID',
+            'ERROR', 'FAILED', 'MISSING', 'EMPTY', 'BLANK'
+        ]
+        
+        def clean_value(value):
+            if isinstance(value, str):
+                value_str = value.strip().upper()
+                if value_str in na_variations:
+                    logger.warning(f"🧹 Cleaning 'NA' value: '{value}' -> ''")
+                    return ""
+                return value
+            elif isinstance(value, list):
+                return [clean_value(item) for item in value if item is not None]
+            elif isinstance(value, dict):
+                return {k: clean_value(v) for k, v in value.items()}
+            else:
+                return value
+        
+        # Clean the entire response recursively
+        cleaned_response = clean_value(ai_response)
+        logger.info("🧹 Completed comprehensive NA value cleanup")
+        return cleaned_response
+    
+    def _final_na_validation(self, ai_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Final validation to ensure absolutely no "NA" values exist anywhere in the response.
+        This is the last line of defense against "NA" values.
+        """
+        na_variations = [
+            'NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE', 
+            'NOT APPLICABLE', 'NOT AVAILABLE', 'NONE', 'NULL', 'UNDEFINED',
+            'UNKNOWN', 'TBD', 'TO BE DETERMINED', 'PENDING', 'INVALID',
+            'ERROR', 'FAILED', 'MISSING', 'EMPTY', 'BLANK'
+        ]
+        
+        def validate_and_fix(value, path=""):
+            if isinstance(value, str):
+                value_str = value.strip().upper()
+                if value_str in na_variations:
+                    logger.error(f"🚨 FINAL VALIDATION: Found 'NA' value at {path}: '{value}' -> ''")
+                    return ""
+                return value
+            elif isinstance(value, list):
+                return [validate_and_fix(item, f"{path}[{i}]") for i, item in enumerate(value) if item is not None]
+            elif isinstance(value, dict):
+                return {k: validate_and_fix(v, f"{path}.{k}") for k, v in value.items()}
+            else:
+                return value
+        
+        # Perform final validation and fix any remaining "NA" values
+        validated_response = validate_and_fix(ai_response, "root")
+        logger.info("🔒 Completed final NA validation - response is guaranteed to be NA-free")
+        return validated_response
 
     def _calculate_resume_score(self, resume_data: Dict[str, Any]) -> int:
         """

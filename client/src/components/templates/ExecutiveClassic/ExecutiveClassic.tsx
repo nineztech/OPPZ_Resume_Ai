@@ -78,19 +78,15 @@ interface TemplateData {
 interface ExecutiveClassicProps {
   data?: TemplateData;
   color?: string;
-  highlightedSections?: Set<string>;
 }
 
 const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({ 
   data: templateData, 
-  color = '#1a365d',
-  highlightedSections 
+  color = '#1a365d'
 }) => {
   if (!templateData) {
     return <div>No data provided</div>;
   }
-
-  const isHighlighted = (key: string) => highlightedSections?.has(key);
 
   return (
     <div className="min-h-screen bg-white p-8" style={{ fontFamily: 'Georgia, serif' }}>
@@ -124,18 +120,8 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
       <div className="mb-8">
         <h3 className="text-2xl font-bold mb-4" style={{ color: color, borderBottom: `2px solid ${color}`, paddingBottom: '8px' }}>
           PROFESSIONAL SUMMARY
-          {isHighlighted('summary-ai-enhanced') && (
-            <span className="ml-3 text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded">✨ AI Enhanced</span>
-          )}
         </h3>
-        <div 
-          className="text-lg leading-relaxed text-gray-700"
-          style={{
-            backgroundColor: isHighlighted('summary-ai-enhanced') ? '#fef3c7' : 'transparent',
-            padding: isHighlighted('summary-ai-enhanced') ? '16px' : '0',
-            borderRadius: isHighlighted('summary-ai-enhanced') ? '8px' : '0'
-          }}
-        >
+        <div className="text-lg leading-relaxed text-gray-700">
           {templateData.summary}
         </div>
       </div>
@@ -154,12 +140,6 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
                   <div 
                     key={index}
                     className="text-gray-700"
-                    style={{
-                      backgroundColor: isHighlighted(`skill-${skill}`) ? '#dbeafe' : 'transparent',
-                      padding: isHighlighted(`skill-${skill}`) ? '8px' : '0',
-                      borderRadius: isHighlighted(`skill-${skill}`) ? '4px' : '0',
-                      border: isHighlighted(`skill-${skill}`) ? '1px solid #3b82f6' : 'none'
-                    }}
                   >
                     • {skill}
                   </div>
@@ -176,12 +156,6 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
                   <div 
                     key={index}
                     className="text-gray-700"
-                    style={{
-                      backgroundColor: isHighlighted(`skill-${skill}`) ? '#dbeafe' : 'transparent',
-                      padding: isHighlighted(`skill-${skill}`) ? '8px' : '0',
-                      borderRadius: isHighlighted(`skill-${skill}`) ? '4px' : '0',
-                      border: isHighlighted(`skill-${skill}`) ? '1px solid #3b82f6' : 'none'
-                    }}
                   >
                     • {skill}
                   </div>
@@ -203,10 +177,7 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
               key={index}
               className="border-l-4 pl-6"
               style={{ 
-                borderLeftColor: color,
-                backgroundColor: isHighlighted(`experience-${index}-ai-enhanced`) ? '#fef3c7' : 'transparent',
-                padding: isHighlighted(`experience-${index}-ai-enhanced`) ? '16px' : '0',
-                borderRadius: isHighlighted(`experience-${index}-ai-enhanced`) ? '8px' : '0'
+                borderLeftColor: color
               }}
             >
               <div className="flex justify-between items-start mb-2">
@@ -214,9 +185,6 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
                 <span className="text-gray-600 font-medium">{exp.dates}</span>
               </div>
               <div className="text-lg font-semibold text-gray-700 mb-2">{exp.company}</div>
-              {isHighlighted(`experience-${index}-ai-enhanced`) && (
-                <span className="inline-block text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded mb-2">✨ AI Enhanced</span>
-              )}
               <div className="text-gray-700 space-y-2">
                 {exp.achievements.map((achievement, achievementIndex) => (
                   <div key={achievementIndex} className="flex items-start">
