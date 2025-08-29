@@ -70,8 +70,11 @@ class AISuggestionService:
             target_experience = experience_level
             logger.info(f"🎯 Using provided experience level: {target_experience}")
         elif resume_data:
+            logger.info(f"🎯 generate_job_description: Calling _analyze_experience_level with resume_data")
+            logger.info(f"🎯 generate_job_description: resume_data type: {type(resume_data)}")
+            logger.info(f"🎯 generate_job_description: resume_data keys: {list(resume_data.keys()) if isinstance(resume_data, dict) else 'N/A'}")
             target_experience = self._analyze_experience_level(resume_data)
-            logger.info(f"🎯 Analyzed experience level from resume: {target_experience}")
+            logger.info(f"🎯 generate_job_description: Analyzed experience level from resume: {target_experience}")
         else:
             # If no resume data is provided, use a more intelligent default
             # Instead of always defaulting to "Mid level", analyze the context
@@ -155,7 +158,11 @@ class AISuggestionService:
         
         resume_text = self._format_resume_for_comparison(resume_data)
         if not target_experience:
+            logger.info(f"🎯 compare_resume_with_jd: Calling _analyze_experience_level with resume_data")
+            logger.info(f"🎯 compare_resume_with_jd: resume_data type: {type(resume_data)}")
+            logger.info(f"🎯 compare_resume_with_jd: resume_data keys: {list(resume_data.keys()) if isinstance(resume_data, dict) else 'N/A'}")
             target_experience = self._analyze_experience_level(resume_data)
+            logger.info(f"🎯 compare_resume_with_jd: Analyzed experience level from resume: {target_experience}")
 
         prompt = f"""
         You are an expert resume consultant and recruiter.  
@@ -244,6 +251,7 @@ class AISuggestionService:
 
         try:
             logger.info(f"Comparing resume with JD using temperature={self.temperature}, top_p={self.top_p}")
+            logger.info(f"🔍 Starting AI response generation...")
             response = self.model.generate_content(prompt)
             
             # Log raw response for debugging
@@ -255,6 +263,30 @@ class AISuggestionService:
                 logger.info("✅ 'overallScore' found in raw response")
             else:
                 logger.warning("⚠️ 'overallScore' NOT found in raw response")
+            
+            # Check for key sections in raw response
+            key_sections = ['sectionSuggestions', 'workExperience', 'skills', 'projects', 'education', 'certifications']
+            for section in key_sections:
+                if section in response.text:
+                    logger.info(f"✅ '{section}' found in raw response")
+                    # Show context around the section
+                    section_pos = response.text.find(section)
+                    if section_pos > 0:
+                        context_start = max(0, section_pos - 50)
+                        context_end = min(len(response.text), section_pos + 100)
+                        context = response.text[context_start:context_end]
+                        logger.info(f"   Context around '{section}': {context}")
+                else:
+                    logger.warning(f"⚠️ '{section}' NOT found in raw response")
+            
+            # Check for overallScore in raw response
+            if 'overallScore' in response.text:
+                score_pos = response.text.find('overallScore')
+                if score_pos > 0:
+                    context_start = max(0, score_pos - 30)
+                    context_end = min(len(response.text), score_pos + 50)
+                    score_context = response.text[context_start:context_end]
+                    logger.info(f"   Context around 'overallScore': {score_context}")
             
             cleaned_response = self._clean_gemini_response(response.text)
             logger.info(f"🔍 Cleaned response length: {len(cleaned_response)} characters")
@@ -274,10 +306,128 @@ class AISuggestionService:
             if "overallScore" in response.text and "overallScore" not in cleaned_response:
                 logger.error("🚨 CRITICAL: overallScore was removed during cleaning!")
             
-            ai_response = json.loads(cleaned_response)
+            # Log the first 200 characters of cleaned response for debugging
+            logger.info(f"🔍 First 200 chars of cleaned response: {cleaned_response[:200]}")
+            logger.info(f"🔍 Last 200 chars of cleaned response: {cleaned_response[-200:]}")
+            
+            # Check if the response contains the expected structure
+            expected_keys = ['overallScore', 'sectionSuggestions', 'workExperience', 'skills']
+            missing_keys = [key for key in expected_keys if key not in cleaned_response]
+            
+            # Initialize present_keys to avoid reference error
+            present_keys = []
+            for key in ['existing', 'rewrite', 'recommendations', 'overallScore', 'sectionSuggestions', 'workExperience', 'skills', 'projects', 'education', 'certifications']:
+                if key in cleaned_response:
+                    present_keys.append(key)
+            
+            if missing_keys:
+                logger.warning(f"⚠️ Missing expected keys in cleaned response: {missing_keys}")
+                logger.warning(f"⚠️ This suggests the JSON extraction is incomplete")
+                
+                logger.info(f"🔍 Keys actually present in cleaned response: {present_keys}")
+                
+                # If we only have fragment keys, this is a problem
+                if set(present_keys).issubset({'existing', 'rewrite', 'recommendations'}):
+                    logger.error("🚨 CRITICAL: Only fragment keys found - JSON extraction is incomplete!")
+                    logger.error("🚨 The system extracted only a portion of the response instead of the complete structure")
+            else:
+                logger.info(f"✅ All expected keys found in cleaned response")
+            
+            # Check if the response is incomplete (only fragment keys)
+            if set(present_keys).issubset({'existing', 'rewrite', 'recommendations'}):
+                logger.error("🚨 Detected incomplete JSON response - attempting recovery...")
+                
+                # Try to extract the complete response again with more aggressive methods
+                logger.info("🔄 Attempting aggressive JSON recovery...")
+                recovered_response = self._aggressive_json_recovery(response.text)
+                
+                if recovered_response and recovered_response != cleaned_response:
+                    logger.info(f"🔄 Recovered response length: {len(recovered_response)} characters")
+                    cleaned_response = recovered_response
+                    
+                    # Re-check the keys
+                    present_keys = []
+                    for key in ['existing', 'rewrite', 'recommendations', 'overallScore', 'sectionSuggestions', 'workExperience', 'skills', 'projects', 'education', 'certifications']:
+                        if key in cleaned_response:
+                            present_keys.append(key)
+                    
+                    logger.info(f"🔍 Keys after recovery: {present_keys}")
+            
+            # Additional check for incomplete JSON structure
+            if 'sectionSuggestions' in cleaned_response and not cleaned_response.strip().startswith('{"overallScore"'):
+                logger.info("🔍 Detected potentially incomplete JSON structure, attempting to fix...")
+                fixed_response = self._detect_and_fix_incomplete_json(cleaned_response)
+                if fixed_response != cleaned_response:
+                    logger.info(f"🔄 Fixed incomplete JSON structure: {len(fixed_response)} characters")
+                    cleaned_response = fixed_response
+            
+            try:
+                ai_response = json.loads(cleaned_response)
+                logger.info(f"✅ Successfully parsed JSON response with {len(cleaned_response)} characters")
+            except json.JSONDecodeError as json_error:
+                logger.error(f"🚨 Failed to parse cleaned JSON response: {str(json_error)}")
+                logger.error(f"🚨 Cleaned response that failed: {cleaned_response}")
+                
+                # Try to extract a valid JSON portion
+                logger.info("🔄 Attempting to extract valid JSON portion...")
+                valid_json = self._extract_and_fix_json(cleaned_response)
+                
+                try:
+                    ai_response = json.loads(valid_json)
+                    logger.info(f"✅ Successfully parsed extracted JSON: {len(valid_json)} characters")
+                except json.JSONDecodeError as second_error:
+                    logger.error(f"🚨 Even extracted JSON failed: {str(second_error)}")
+                    # Create a minimal fallback response
+                    ai_response = {
+                        "overallScore": 0,
+                        "analysisTimestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                        "sectionSuggestions": {
+                            "professionalSummary": {"existing": "", "rewrite": "", "recommendations": [""]},
+                            "skills": {"existing": [], "rewrite": [], "recommendations": [""]},
+                            "workExperience": [],
+                            "projects": [],
+                            "education": {"existing": [], "rewrite": "", "recommendations": [""]},
+                            "certifications": {"existing": [], "rewrite": "", "recommendations": [""]}
+                        },
+                        "topRecommendations": [""]
+                    }
+                    logger.warning("⚠️ Using fallback response structure")
             
             # Enforce schema compliance - ensure all required sections are present
-            ai_response = self._enforce_schema_compliance(ai_response, resume_data)
+            logger.info(f"🔍 Starting schema compliance enforcement...")
+            try:
+                ai_response = self._enforce_schema_compliance(ai_response, resume_data)
+                logger.info(f"✅ Schema compliance enforcement completed")
+            except Exception as e:
+                logger.error(f"🚨 Error during schema compliance enforcement: {str(e)}")
+                logger.error(f"🚨 AI response type: {type(ai_response)}")
+                logger.error(f"🚨 AI response keys: {list(ai_response.keys()) if isinstance(ai_response, dict) else 'Not a dict'}")
+                raise
+            
+            # Log the structure of the parsed AI response
+            logger.info(f"🔍 Parsed AI response structure:")
+            logger.info(f"   - Keys: {list(ai_response.keys())}")
+            logger.info(f"   - overallScore: {ai_response.get('overallScore', 'NOT_FOUND')}")
+            if 'sectionSuggestions' in ai_response:
+                section_keys = list(ai_response['sectionSuggestions'].keys())
+                logger.info(f"   - sectionSuggestions keys: {section_keys}")
+                
+                # Log the structure of each section
+                try:
+                    for section_name, section_data in ai_response['sectionSuggestions'].items():
+                        if isinstance(section_data, dict):
+                            section_data_keys = list(section_data.keys())
+                            logger.info(f"   - {section_name} section keys: {section_data_keys}")
+                        elif isinstance(section_data, list):
+                            logger.info(f"   - {section_name} section: List with {len(section_data)} items")
+                        else:
+                            logger.info(f"   - {section_name} section: {type(section_data)}")
+                except Exception as e:
+                    logger.error(f"🚨 Error iterating over sectionSuggestions: {str(e)}")
+                    logger.error(f"🚨 sectionSuggestions type: {type(ai_response['sectionSuggestions'])}")
+                    raise
+            else:
+                logger.warning("⚠️ No sectionSuggestions in AI response")
             
             # Validate that skills suggestions only reference existing categories and remove duplicate skills
             if 'sectionSuggestions' in ai_response and 'skills' in ai_response['sectionSuggestions']:
@@ -286,24 +436,44 @@ class AISuggestionService:
                     # Get existing categories and skills from resume data
                     existing_categories = []
                     existing_skills = set()
-                    if isinstance(resume_data.get('skills'), dict):
-                        existing_categories = list(resume_data['skills'].keys())
+                    
+                    # Handle different skills data structures
+                    skills_data = resume_data.get('skills')
+                    if isinstance(skills_data, dict):
+                        existing_categories = list(skills_data.keys())
                         # Extract all existing skills from each category
-                        for category, skill_list in resume_data['skills'].items():
+                        for category, skill_list in skills_data.items():
                             if isinstance(skill_list, list):
                                 for skill in skill_list:
                                     if skill and str(skill).strip():
                                         existing_skills.add(str(skill).strip().lower())
                             elif isinstance(skill_list, str) and skill_list.strip():
                                 existing_skills.add(skill_list.strip().lower())
+                    elif isinstance(skills_data, list):
+                        # If skills is a flat list, treat all skills as uncategorized
+                        existing_skills = set()
+                        for skill in skills_data:
+                            if skill and str(skill).strip():
+                                existing_skills.add(str(skill).strip().lower())
+                        logger.info(f"Skills data is a list with {len(existing_skills)} unique skills")
+                    elif isinstance(skills_data, str):
+                        # If skills is a string, split and add to existing skills
+                        existing_skills = set()
+                        if skills_data.strip():
+                            skills_list = [skill.strip() for skill in skills_data.split(',') if skill.strip()]
+                            existing_skills.update([skill.lower() for skill in skills_list])
+                        logger.info(f"Skills data is a string with {len(existing_skills)} unique skills")
+                    else:
+                        logger.warning(f"Unexpected skills data type: {type(skills_data)}")
                     
                     # Filter skills suggestions to only include existing categories and remove duplicate skills
-                    if existing_categories:
+                    if existing_categories or existing_skills:
                         filtered_rewrite = []
                         for skill_line in skills_suggestions['rewrite']:
                             if isinstance(skill_line, str) and ':' in skill_line:
+                                # Handle categorized skills (e.g., "Technical: Python, Java")
                                 category = skill_line.split(':')[0].strip()
-                                if category in existing_categories:
+                                if existing_categories and category in existing_categories:
                                     # Extract skills from this line and check for duplicates
                                     skills_part = skill_line.split(':', 1)[1].strip()
                                     if skills_part:
@@ -326,6 +496,24 @@ class AISuggestionService:
                                     else:
                                         # Empty skills part, skip this line
                                         logger.info(f"Skipping {category} - no skills specified")
+                                elif not existing_categories:
+                                    # No categories defined, treat as uncategorized skills
+                                    skills_part = skill_line.split(':', 1)[1].strip()
+                                    if skills_part:
+                                        individual_skills = [skill.strip() for skill in skills_part.split(',') if skill.strip()]
+                                        new_skills = []
+                                        for skill in individual_skills:
+                                            if skill.lower() not in existing_skills:
+                                                new_skills.append(skill)
+                                            else:
+                                                logger.info(f"Filtering out duplicate skill: {skill} (already exists)")
+                                        
+                                        if new_skills:
+                                            new_skill_line = f"{category}: {', '.join(new_skills)}"
+                                            filtered_rewrite.append(new_skill_line)
+                                            logger.info(f"Keeping skill suggestion for category with new skills: {category}")
+                                        else:
+                                            logger.info(f"Skipping {category} - all skills already exist")
                                 else:
                                     logger.warning(f"Filtering out skill suggestion for non-existing category: {category}")
                             else:
@@ -336,13 +524,15 @@ class AISuggestionService:
                                         filtered_rewrite.append(skill_line)
                                         logger.info(f"Keeping single skill suggestion: {skill_name}")
                                     else:
-                                        logger.info(f"Keeping single skill suggestion: {skill_name}")
+                                        logger.info(f"Filtering out duplicate skill: {skill_name}")
                         
                         skills_suggestions['rewrite'] = filtered_rewrite
                         logger.info(f"Filtered skills suggestions to {len(filtered_rewrite)} items, removing duplicates from existing data")
             
             # FINAL NA VALIDATION: Double-check that no "NA" values exist anywhere in the response
+            logger.info(f"🔍 Starting final NA validation...")
             ai_response = self._final_na_validation(ai_response)
+            logger.info(f"✅ Final NA validation completed")
             
             return ai_response
         except json.JSONDecodeError as json_error:
@@ -451,6 +641,11 @@ class AISuggestionService:
                 for i, job in enumerate(experience_data):
                     logger.info(f"Processing job {i+1}: {type(job)} - {job}")
                     
+                    # Ensure job is a dictionary, skip if not
+                    if not isinstance(job, dict):
+                        logger.warning(f"Job {i+1} is not a dictionary (type: {type(job)}), skipping: {job}")
+                        continue
+                    
                     # Handle different possible field names
                     role = job.get('role', job.get('title', job.get('jobTitle', 'N/A')))
                     company = job.get('company', job.get('employer', job.get('organization', 'N/A')))
@@ -495,6 +690,11 @@ class AISuggestionService:
                     exp_data = resume_data[exp_key]
                     if isinstance(exp_data, list) and exp_data:
                         for i, job in enumerate(exp_data):
+                            # Ensure job is a dictionary, skip if not
+                            if not isinstance(job, dict):
+                                logger.warning(f"Alternative experience job {i+1} is not a dictionary (type: {type(job)}), skipping: {job}")
+                                continue
+                            
                             role = job.get('role', job.get('title', job.get('jobTitle', 'N/A')))
                             company = job.get('company', job.get('employer', job.get('organization', 'N/A')))
                             start_date = job.get('startDate', job.get('start', job.get('from', 'N/A')))
@@ -523,6 +723,11 @@ class AISuggestionService:
         if 'education' in resume_data:
             formatted_parts.append("\nEducation:")
             for edu in resume_data['education']:
+                # Ensure edu is a dictionary, skip if not
+                if not isinstance(edu, dict):
+                    logger.warning(f"Education item is not a dictionary (type: {type(edu)}), skipping: {edu}")
+                    continue
+                    
                 formatted_parts.append(f"\n{edu.get('degree', 'N/A')} from {edu.get('institution', 'N/A')}")
                 formatted_parts.append(f"Duration: {edu.get('startDate', 'N/A')} - {edu.get('endDate', 'N/A')}")
                 formatted_parts.append(f"Grade: {edu.get('grade', 'N/A')}")
@@ -540,6 +745,11 @@ class AISuggestionService:
         if 'projects' in resume_data:
             formatted_parts.append("\nProjects:")
             for project in resume_data['projects']:
+                # Ensure project is a dictionary, skip if not
+                if not isinstance(project, dict):
+                    logger.warning(f"Project item is not a dictionary (type: {type(project)}), skipping: {project}")
+                    continue
+                    
                 formatted_parts.append(f"\n{project.get('name', project.get('title', 'N/A'))}")
                 formatted_parts.append(f"Description: {project.get('description', 'N/A')}")
                 if 'techStack' in project:
@@ -557,9 +767,51 @@ class AISuggestionService:
 
     
     def _analyze_experience_level(self, resume_data: Dict[str, Any]) -> str:
-        """Analyze resume data to determine experience level"""
+        """Analyze resume level from resume data"""
         try:
-            logger.info("🔍 Analyzing experience level from resume data")
+            import traceback
+            # Add call counter to track multiple calls
+            if not hasattr(self, '_experience_analysis_call_count'):
+                self._experience_analysis_call_count = 0
+            self._experience_analysis_call_count += 1
+            
+            logger.info(f"🔍 Analyzing experience level from resume data (Call #{self._experience_analysis_call_count})")
+            logger.info("📋 Analysis Strategy: Summary-first, then date-based fallback")
+            logger.info(f"📋 Called from: {traceback.extract_stack()[-2].name if len(traceback.extract_stack()) > 1 else 'Unknown'}")
+            logger.info(f"📋 resume_data type: {type(resume_data)}")
+            logger.info(f"📋 resume_data keys: {list(resume_data.keys()) if isinstance(resume_data, dict) else 'N/A'}")
+            
+            # Validate input data type
+            if not isinstance(resume_data, dict):
+                logger.error(f"❌ Invalid resume_data type: {type(resume_data)}. Expected dict, got {type(resume_data)}")
+                logger.error(f"❌ resume_data content: {resume_data}")
+                # Try to handle string input (might be JSON string)
+                if isinstance(resume_data, str):
+                    try:
+                        import json
+                        resume_data = json.loads(resume_data)
+                        logger.info("✅ Successfully parsed string resume_data as JSON")
+                    except json.JSONDecodeError:
+                        logger.error("❌ Failed to parse string resume_data as JSON")
+                        return "Mid level"  # Default fallback
+                else:
+                    logger.error("❌ Cannot handle non-dict, non-string resume_data")
+                    return "Mid level"  # Default fallback
+            
+            # First, check summary for explicit experience statements
+            summary_text = resume_data.get('summary', '')
+            if summary_text:
+                logger.info(f"📝 Summary text available: {summary_text[:100]}{'...' if len(summary_text) > 100 else ''}")
+            else:
+                logger.info("📝 No summary text available")
+            
+            summary_experience = self._extract_experience_from_summary(resume_data)
+            if summary_experience:
+                logger.info(f"✅ Found explicit experience in summary: {summary_experience} years")
+                logger.info(f"🎯 Using summary-based experience analysis instead of date-based analysis")
+                return self._map_experience_to_level(summary_experience)
+            
+            logger.info("📝 No explicit experience found in summary, falling back to date-based analysis")
             
             # Check for experience in multiple possible locations
             experience = None
@@ -583,12 +835,22 @@ class AISuggestionService:
 
             total_years = 0
             current_year = datetime.datetime.now().year
-            import re
 
             logger.info(f"📊 Processing {len(experience)} experience entries")
 
+            # Check if this is primarily an internship/student resume
+            is_internship_student = self._is_internship_student_resume(experience, resume_data)
+            if is_internship_student:
+                logger.info("🎓 Detected internship/student resume - using appropriate experience level")
+                return "Entry level"
+            
             for i, exp in enumerate(experience):
                 logger.info(f"   Job {i+1}: {exp}")
+                
+                # Ensure exp is a dict before calling .get()
+                if not isinstance(exp, dict):
+                    logger.warning(f"⚠️ Job {i+1} is not a dict: {type(exp)} - {exp}")
+                    continue
                 
                 start_date = exp.get('startDate', exp.get('start', exp.get('from', '')))
                 end_date = exp.get('endDate', exp.get('end', exp.get('to', exp.get('current', ''))))
@@ -599,13 +861,19 @@ class AISuggestionService:
                     if year_match:
                         start_year = int(year_match.group(1))
                         logger.info(f"     Start year: {start_year}")
+                        
+                        # Handle future dates (internships, planned positions)
+                        if start_year > current_year:
+                            logger.info(f"     Future start date detected - likely internship/planned position")
+                            # Don't add negative years, but mark as internship
+                            continue
                 if end_date and str(end_date).lower() not in ['present', 'current', '']:
                     year_match = re.search(r'(\d{4})', str(end_date))
                     if year_match:
                         end_year = int(year_match.group(1))
                         logger.info(f"     End year: {end_year}")
 
-                if start_year:
+                if start_year and start_year <= current_year:
                     years_in_role = max(0, end_year - start_year)
                     years_in_role = min(years_in_role, 10)  # cap outliers
                     total_years += years_in_role
@@ -613,19 +881,98 @@ class AISuggestionService:
 
             logger.info(f"📊 Total calculated experience: {total_years} years")
 
-            if total_years <= 2:
-                level = "Entry level"
-            elif total_years <= 4:
-                level = "Mid level"
-            else:
-                level = "Senior level"
-                
+            # Use the same mapping function for consistency
+            level = self._map_experience_to_level(total_years)
             logger.info(f"🎯 Determined experience level: {level}")
+            logger.info(f"📊 Experience Analysis Summary:")
+            logger.info(f"   - Summary-based analysis: {'Yes' if summary_experience else 'No'}")
+            logger.info(f"   - Date-based analysis: {'Yes' if not summary_experience else 'No'}")
+            logger.info(f"   - Total years calculated: {total_years if not summary_experience else summary_experience}")
+            logger.info(f"   - Final level: {level}")
+            logger.info(f"📊 Call #{self._experience_analysis_call_count} completed successfully with level: {level}")
             return level
 
         except Exception as e:
             logger.warning(f"❌ Error analyzing experience level: {str(e)}")
+            logger.warning(f"❌ resume_data type: {type(resume_data)}")
+            logger.warning(f"❌ resume_data content: {str(resume_data)[:200]}")
+            logger.warning(f"❌ Call #{self._experience_analysis_call_count} failed, falling back to indicators method")
             return self._analyze_experience_from_other_indicators(resume_data)
+    
+    def _is_internship_student_resume(self, experience: list, resume_data: Dict[str, Any]) -> bool:
+        """
+        Detect if this is primarily an internship/student resume based on various indicators.
+        """
+        try:
+            logger.info("🔍 Checking if resume is internship/student focused")
+            
+            # Check for internship-related keywords in job titles
+            internship_keywords = ['intern', 'internship', 'student', 'trainee', 'apprentice', 'junior']
+            has_internship_role = False
+            
+            for exp in experience:
+                if isinstance(exp, dict):
+                    role = exp.get('role', exp.get('title', exp.get('jobTitle', '')).lower())
+                    if any(keyword in role for keyword in internship_keywords):
+                        has_internship_role = True
+                        logger.info(f"🎓 Found internship role: {role}")
+                        break
+            
+            # Check for education level and recent graduation
+            education = resume_data.get('education', [])
+            if isinstance(education, list) and education:
+                for edu in education:
+                    if isinstance(edu, dict):
+                        degree = edu.get('degree', '').lower()
+                        if any(level in degree for level in ['bachelor', 'bs', 'ba', 'btech', 'master', 'ms', 'ma']):
+                            # Check if graduation is recent or in the future
+                            end_date = edu.get('endDate', edu.get('to', ''))
+                            if end_date:
+                                year_match = re.search(r'(\d{4})', str(end_date))
+                                if year_match:
+                                    grad_year = int(year_match.group(1))
+                                    current_year = datetime.datetime.now().year
+                                    if grad_year >= current_year - 2:  # Recent graduate
+                                        logger.info(f"🎓 Recent graduate detected: {grad_year}")
+                                        return True
+            
+            # Check for future start dates (planned internships)
+            current_year = datetime.datetime.now().year
+            has_future_dates = False
+            
+            for exp in experience:
+                if isinstance(exp, dict):
+                    start_date = exp.get('startDate', exp.get('start', exp.get('from', '')))
+                    if start_date:
+                        year_match = re.search(r'(\d{4})', str(start_date))
+                        if year_match:
+                            start_year = int(year_match.group(1))
+                            if start_year > current_year:
+                                has_future_dates = True
+                                logger.info(f"🎓 Future start date detected: {start_year}")
+                                break
+            
+            # Check summary for student/internship indicators
+            summary = resume_data.get('summary', '').lower()
+            student_indicators = ['student', 'intern', 'internship', 'learning', 'studying', 'graduate', 'fresh']
+            has_student_summary = any(indicator in summary for indicator in student_indicators)
+            
+            if has_student_summary:
+                logger.info("🎓 Student indicators found in summary")
+            
+            # Determine if this is an internship/student resume
+            is_internship_student = (has_internship_role or has_future_dates or has_student_summary)
+            
+            logger.info(f"🎓 Internship/Student resume detection: {is_internship_student}")
+            logger.info(f"   - Has internship role: {has_internship_role}")
+            logger.info(f"   - Has future dates: {has_future_dates}")
+            logger.info(f"   - Has student summary: {has_student_summary}")
+            
+            return is_internship_student
+            
+        except Exception as e:
+            logger.warning(f"❌ Error detecting internship/student resume: {str(e)}")
+            return False
     
     def _analyze_experience_from_other_indicators(self, resume_data: Dict[str, Any]) -> str:
         """
@@ -634,6 +981,8 @@ class AISuggestionService:
         """
         try:
             logger.info("🔍 Analyzing experience level from other resume indicators")
+            logger.info(f"🔍 resume_data type: {type(resume_data)}")
+            logger.info(f"🔍 resume_data content: {str(resume_data)[:200]}")
             
             # Check for education level and completion date
             education_level = "bachelor"  # default
@@ -737,12 +1086,17 @@ class AISuggestionService:
             # Determine level based on score
             if experience_score <= 2:
                 level = "Entry level"
-            elif experience_score <= 5:
+            elif experience_score <= 4:
                 level = "Mid level"
             else:
                 level = "Senior level"
             
             logger.info(f"🎯 Determined experience level from indicators: {level}")
+            logger.info(f"🔍 This fallback analysis was triggered because:")
+            logger.info(f"   - Direct experience analysis failed or was incomplete")
+            logger.info(f"   - resume_data type: {type(resume_data)}")
+            logger.info(f"   - resume_data keys: {list(resume_data.keys()) if isinstance(resume_data, dict) else 'N/A'}")
+            logger.info(f"📊 Fallback analysis completed with level: {level}")
             return level
             
         except Exception as e:
@@ -843,8 +1197,182 @@ class AISuggestionService:
             except json.JSONDecodeError:
                 logger.warning("❌ Extracted JSON from markdown block is invalid")
         
-        # Try to find any JSON object in the text
-        json_pattern = r'(\{.*\})'
+        # Try to find the complete JSON response by looking for the root structure
+        # Look for responses that start with { and contain sectionSuggestions
+        if 'sectionSuggestions' in response_text:
+            logger.info("🔍 Found 'sectionSuggestions' in response, looking for complete JSON structure")
+            
+            # Find the opening brace before sectionSuggestions
+            section_start = response_text.find('sectionSuggestions')
+            if section_start > 0:
+                # Look backwards for the opening brace
+                brace_start = response_text.rfind('{', 0, section_start)
+                if brace_start > 0:
+                    # Extract from opening brace to the end
+                    potential_complete = response_text[brace_start:]
+                    logger.info(f"🔍 Found potential complete JSON starting at brace {brace_start}: {len(potential_complete)} characters")
+                    
+                    # Try to find the matching closing brace
+                    brace_count = 0
+                    end_pos = -1
+                    for i, char in enumerate(potential_complete):
+                        if char == '{':
+                            brace_count += 1
+                        elif char == '}':
+                            brace_count -= 1
+                            if brace_count == 0:
+                                end_pos = i + 1
+                                break
+                    
+                    if end_pos > 0:
+                        complete_json = potential_complete[:end_pos]
+                        logger.info(f"🔍 Extracted complete JSON with balanced braces: {len(complete_json)} characters")
+                        
+                        # Validate the extracted JSON
+                        try:
+                            parsed = json.loads(complete_json)
+                            logger.info(f"✅ Successfully extracted complete JSON: {len(complete_json)} characters")
+                            
+                            # Validate the structure
+                            if self._validate_json_structure(complete_json):
+                                logger.info("✅ JSON structure validation passed")
+                                return complete_json
+                            else:
+                                logger.warning("⚠️ JSON structure validation failed, trying to fix...")
+                                try:
+                                    fixed_json = self._fix_common_json_issues(complete_json)
+                                    if self._validate_json_structure(fixed_json):
+                                        logger.info("✅ Fixed JSON structure validation passed")
+                                        return fixed_json
+                                    else:
+                                        logger.warning("⚠️ Fixed JSON still fails structure validation")
+                                except Exception as fix_error:
+                                    logger.warning(f"⚠️ Error fixing JSON: {str(fix_error)}")
+                        except json.JSONDecodeError:
+                            logger.warning("❌ Complete JSON extraction failed, trying to fix...")
+                            try:
+                                fixed_json = self._fix_common_json_issues(complete_json)
+                                parsed = json.loads(fixed_json)
+                                if self._validate_json_structure(fixed_json):
+                                    logger.info("✅ Successfully fixed complete JSON with valid structure: {len(fixed_json)} characters")
+                                    return fixed_json
+                                else:
+                                    logger.warning("⚠️ Fixed JSON has invalid structure")
+                            except json.JSONDecodeError:
+                                logger.warning("❌ Fixed complete JSON still invalid")
+            
+            # Method 2: Look for the overallScore and extract from there
+            if 'overallScore' in response_text:
+                logger.info("🔍 Found 'overallScore', looking for complete JSON structure from there")
+                
+                score_start = response_text.find('overallScore')
+                if score_start > 0:
+                    # Look backwards for the opening brace
+                    brace_start = response_text.rfind('{', 0, score_start)
+                    if brace_start > 0:
+                        # Extract from opening brace to end
+                        potential_from_score = response_text[brace_start:]
+                        logger.info(f"🔍 Found potential JSON starting from overallScore: {len(potential_from_score)} characters")
+                        
+                        # Try to find the matching closing brace
+                        brace_count = 0
+                        end_pos = -1
+                        for i, char in enumerate(potential_from_score):
+                            if char == '{':
+                                brace_count += 1
+                            elif char == '}':
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    end_pos = i + 1
+                                    break
+                        
+                        if end_pos > 0:
+                            complete_from_score = potential_from_score[:end_pos]
+                            logger.info(f"🔍 Extracted complete JSON from overallScore: {len(complete_from_score)} characters")
+                            
+                            # Validate the extracted JSON
+                            try:
+                                parsed = json.loads(complete_from_score)
+                                logger.info(f"✅ Successfully extracted complete JSON from overallScore: {len(complete_from_score)} characters")
+                                
+                                # Validate the structure
+                                if self._validate_json_structure(complete_from_score):
+                                    logger.info("✅ JSON structure validation passed for overallScore extraction")
+                                    return complete_from_score
+                                else:
+                                    logger.warning("⚠️ JSON structure validation failed for overallScore extraction")
+                            except json.JSONDecodeError:
+                                logger.warning("❌ overallScore JSON extraction failed")
+            
+            # Method 3: Try to reconstruct the complete structure from fragments
+            logger.info("🔍 Attempting to reconstruct complete JSON structure from fragments")
+            
+            # Look for the main sections and try to reconstruct
+            main_sections = ['professionalSummary', 'skills', 'workExperience', 'projects', 'education', 'certifications']
+            found_sections = {}
+            
+            for section in main_sections:
+                if section in response_text:
+                    # Find the section content
+                    section_start = response_text.find(section)
+                    if section_start > 0:
+                        # Look for the content after the section name
+                        content_start = response_text.find('{', section_start)
+                        if content_start > 0:
+                            # Try to extract the section content
+                            brace_count = 0
+                            end_pos = -1
+                            for i, char in enumerate(response_text[content_start:], content_start):
+                                if char == '{':
+                                    brace_count += 1
+                                elif char == '}':
+                                    brace_count -= 1
+                                    if brace_count == 0:
+                                        end_pos = i + 1
+                                        break
+                            
+                            if end_pos > 0:
+                                section_content = response_text[content_start:end_pos]
+                                found_sections[section] = section_content
+                                logger.info(f"🔍 Extracted {section} section: {len(section_content)} characters")
+            
+            if found_sections:
+                # Try to reconstruct a complete response
+                reconstructed = {
+                    "overallScore": 75,  # Default score
+                    "analysisTimestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                    "sectionSuggestions": {},
+                    "topRecommendations": ["Resume analysis completed with reconstructed data"]
+                }
+                
+                # Add extracted sections
+                for section_name, section_content in found_sections.items():
+                    try:
+                        # Try to parse the section content
+                        section_data = json.loads(section_content)
+                        reconstructed["sectionSuggestions"][section_name] = section_data
+                    except:
+                        # If parsing fails, create a basic structure
+                        reconstructed["sectionSuggestions"][section_name] = {
+                            "existing": "",
+                            "rewrite": "",
+                            "recommendations": [""]
+                        }
+                
+                # Add missing sections with defaults
+                for section in main_sections:
+                    if section not in reconstructed["sectionSuggestions"]:
+                        reconstructed["sectionSuggestions"][section] = {
+                            "existing": "",
+                            "rewrite": "",
+                            "recommendations": [""]
+                        }
+                
+                logger.info("✅ Fragment reconstruction completed")
+                return json.dumps(reconstructed)
+        
+        # Try to find any JSON object in the text - use more specific pattern
+        json_pattern = r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})'
         match = re.search(json_pattern, response_text, re.DOTALL)
         if match:
             json_content = match.group(1).strip()
@@ -855,6 +1383,27 @@ class AISuggestionService:
                 return json_content
             except json.JSONDecodeError:
                 logger.warning("❌ Extracted JSON object is invalid")
+                # Try to fix common issues
+                try:
+                    fixed_json = self._fix_common_json_issues(json_content)
+                    parsed = json.loads(fixed_json)
+                    logger.info(f"✅ Successfully fixed and parsed JSON: {len(fixed_json)} characters")
+                    return fixed_json
+                except json.JSONDecodeError:
+                    logger.warning("❌ Fixed JSON is still invalid")
+        
+        # Try to find JSON with more flexible pattern
+        json_pattern = r'(\{.*\})'
+        match = re.search(json_pattern, response_text, re.DOTALL)
+        if match:
+            json_content = match.group(1).strip()
+            # Validate the extracted JSON
+            try:
+                parsed = json.loads(json_content)
+                logger.info(f"✅ Successfully extracted JSON with flexible pattern: {len(json_content)} characters")
+                return json_content
+            except json.JSONDecodeError:
+                logger.warning("❌ Flexible JSON extraction failed")
         
         # If the entire response looks like JSON, try to clean it
         if response_text.startswith('{') and response_text.endswith('}'):
@@ -885,11 +1434,42 @@ class AISuggestionService:
         # Remove any control characters
         json_text = ''.join(char for char in json_text if ord(char) >= 32 or char in '\n\r\t')
         
+        # Fix common Gemini response issues
+        # Remove any text before the first {
+        first_brace = json_text.find('{')
+        if first_brace > 0:
+            json_text = json_text[first_brace:]
+            logger.info(f"🧹 Removed {first_brace} characters before first brace")
+        
+        # Remove any text after the last }
+        last_brace = json_text.rfind('}')
+        if last_brace > 0 and last_brace < len(json_text) - 1:
+            json_text = json_text[:last_brace + 1]
+            logger.info(f"🧹 Removed {len(json_text) - last_brace - 1} characters after last brace")
+        
+        # Fix common Gemini formatting issues
+        json_text = re.sub(r'```json\s*', '', json_text)
+        json_text = re.sub(r'```\s*', '', json_text)
+        
+        # Fix any remaining markdown artifacts
+        json_text = re.sub(r'^[^{]*', '', json_text)
+        json_text = re.sub(r'[^}]*$', '', json_text)
+        
+        # Ensure the structure is preserved - look for missing wrapper
+        if 'sectionSuggestions' in json_text and not json_text.strip().startswith('{"overallScore"'):
+            logger.info("🧹 Detected missing overallScore wrapper, attempting to preserve structure")
+            
+            # Check if we need to add the wrapper
+            if not json_text.strip().startswith('{'):
+                logger.warning("🧹 JSON doesn't start with {, this might cause issues")
+        
         return json_text
     
     def _extract_and_fix_json(self, text: str) -> str:
         """Extract JSON from text and attempt to fix it"""
         import re
+        
+        logger.info(f"🔍 Attempting to extract and fix JSON from text of length {len(text)}")
         
         # Find the largest potential JSON object
         json_pattern = r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})'
@@ -898,6 +1478,7 @@ class AISuggestionService:
         if matches:
             # Sort by length to get the largest match
             largest_match = max(matches, key=len)
+            logger.info(f"🔍 Found potential JSON object of length {len(largest_match)}")
             
             # Try to fix common issues
             fixed = self._fix_common_json_issues(largest_match)
@@ -905,9 +1486,52 @@ class AISuggestionService:
             # Validate
             try:
                 json.loads(fixed)
+                logger.info(f"✅ Successfully extracted and fixed JSON: {len(fixed)} characters")
                 return fixed
+            except json.JSONDecodeError as e:
+                logger.warning(f"❌ Fixed JSON still invalid: {str(e)}")
+        
+        # Try alternative extraction methods
+        logger.info("🔍 Trying alternative JSON extraction methods")
+        
+        # Method 1: Find anything between { and }
+        simple_pattern = r'(\{.*\})'
+        simple_matches = re.findall(simple_pattern, text, re.DOTALL)
+        if simple_matches:
+            largest_simple = max(simple_matches, key=len)
+            logger.info(f"🔍 Found simple JSON pattern of length {len(largest_simple)}")
+            
+            # Try to fix it
+            fixed_simple = self._fix_common_json_issues(largest_simple)
+            try:
+                json.loads(fixed_simple)
+                logger.info(f"✅ Successfully extracted and fixed simple JSON: {len(fixed_simple)} characters")
+                return fixed_simple
             except json.JSONDecodeError:
-                pass
+                logger.warning("❌ Simple JSON extraction also failed")
+        
+        # Method 2: Look for specific sections that might be valid
+        logger.info("🔍 Looking for specific valid JSON sections")
+        
+        # Try to find sectionSuggestions
+        if 'sectionSuggestions' in text:
+            start_idx = text.find('sectionSuggestions')
+            if start_idx > 0:
+                # Find the opening brace before sectionSuggestions
+                brace_idx = text.rfind('{', 0, start_idx)
+                if brace_idx > 0:
+                    # Extract from opening brace to end
+                    potential_json = text[brace_idx:]
+                    logger.info(f"🔍 Found potential JSON starting with sectionSuggestions: {len(potential_json)} characters")
+                    
+                    # Try to fix and validate
+                    fixed_section = self._fix_common_json_issues(potential_json)
+                    try:
+                        json.loads(fixed_section)
+                        logger.info(f"✅ Successfully extracted sectionSuggestions JSON: {len(fixed_section)} characters")
+                        return fixed_section
+                    except json.JSONDecodeError:
+                        logger.warning("❌ sectionSuggestions JSON extraction failed")
         
         # If we can't extract valid JSON, return a minimal valid structure
         logger.warning("Could not extract valid JSON from AI response, returning fallback structure")
@@ -939,10 +1563,16 @@ class AISuggestionService:
         }
         
         # Ensure top-level structure exists
-        for key, default_value in required_sections.items():
-            if key not in ai_response:
-                ai_response[key] = default_value
-                logger.warning(f"🔒 Enforced missing top-level section: {key}")
+        try:
+            for key, default_value in required_sections.items():
+                if key not in ai_response:
+                    ai_response[key] = default_value
+                    logger.warning(f"🔒 Enforced missing top-level section: {key}")
+        except Exception as e:
+            logger.error(f"🚨 Error enforcing top-level structure: {str(e)}")
+            logger.error(f"🚨 required_sections type: {type(required_sections)}")
+            logger.error(f"🚨 ai_response type: {type(ai_response)}")
+            raise
         
         # Ensure sectionSuggestions structure exists
         if "sectionSuggestions" not in ai_response:
@@ -1035,28 +1665,51 @@ class AISuggestionService:
             "certifications": {"existing": [], "rewrite": "", "recommendations": [""]}
         }
         
-        for section_name, default_structure in section_defaults.items():
-            if section_name not in section_suggestions:
-                section_suggestions[section_name] = default_structure
-                logger.warning(f"🔒 Enforced missing section: {section_name}")
-            elif isinstance(section_suggestions[section_name], dict):
-                # Ensure all required keys exist
-                for key, default_value in default_structure.items():
-                    if key not in section_suggestions[section_name]:
-                        section_suggestions[section_name][key] = default_value
-                        logger.warning(f"🔒 Enforced missing key in {section_name}: {key}")
-            elif isinstance(section_suggestions[section_name], list) and not section_suggestions[section_name]:
-                # For empty lists, provide at least one item
-                if section_name == "projects":
-                    section_suggestions[section_name] = self._create_projects_fallback(resume_data)
-                elif section_name == "workExperience":
-                    section_suggestions[section_name] = self._create_experience_fallback(resume_data)
-            elif isinstance(section_suggestions[section_name], dict) and not section_suggestions[section_name].get('existing'):
-                # For empty dicts, populate with original data
-                if section_name == "education":
-                    section_suggestions[section_name] = self._create_education_fallback(resume_data)
-                elif section_name == "certifications":
-                    section_suggestions[section_name] = self._create_certifications_fallback(resume_data)
+        try:
+            for section_name, default_structure in section_defaults.items():
+                if section_name not in section_suggestions:
+                    section_suggestions[section_name] = default_structure
+                    logger.warning(f"🔒 Enforced missing section: {section_name}")
+                elif isinstance(section_suggestions[section_name], dict):
+                    # Ensure all required keys exist - but only if default_structure is also a dict
+                    if isinstance(default_structure, dict):
+                        try:
+                            for key, default_value in default_structure.items():
+                                if key not in section_suggestions[section_name]:
+                                    section_suggestions[section_name][key] = default_value
+                                    logger.warning(f"🔒 Enforced missing key in {section_name}: {key}")
+                        except Exception as e:
+                            logger.error(f"🚨 Error enforcing keys in section {section_name}: {str(e)}")
+                            logger.error(f"🚨 default_structure type: {type(default_structure)}")
+                            raise
+                    else:
+                        logger.warning(f"🔒 Section {section_name} is dict but default_structure is {type(default_structure)}, skipping key enforcement")
+                elif isinstance(section_suggestions[section_name], list):
+                    # Handle list sections (like projects)
+                    if isinstance(default_structure, list) and not section_suggestions[section_name]:
+                        # For empty lists, provide at least one item
+                        if section_name == "projects":
+                            section_suggestions[section_name] = self._create_projects_fallback(resume_data)
+                        elif section_name == "workExperience":
+                            section_suggestions[section_name] = self._create_experience_fallback(resume_data)
+                    elif isinstance(default_structure, dict):
+                        # If default_structure is a dict but section is a list, convert to proper format
+                        logger.warning(f"🔒 Section {section_name} is list but default_structure is dict, converting to list format")
+                        if section_name == "projects":
+                            section_suggestions[section_name] = self._create_projects_fallback(resume_data)
+                        elif section_name == "workExperience":
+                            section_suggestions[section_name] = self._create_experience_fallback(resume_data)
+                elif isinstance(section_suggestions[section_name], dict) and not section_suggestions[section_name].get('existing'):
+                    # For empty dicts, populate with original data
+                    if section_name == "education":
+                        section_suggestions[section_name] = self._create_education_fallback(resume_data)
+                    elif section_name == "certifications":
+                        section_suggestions[section_name] = self._create_certifications_fallback(resume_data)
+        except Exception as e:
+            logger.error(f"🚨 Error enforcing section compliance: {str(e)}")
+            logger.error(f"🚨 section_defaults type: {type(section_defaults)}")
+            logger.error(f"🚨 section_suggestions type: {type(section_suggestions)}")
+            raise
         
         return section_suggestions
     
@@ -1077,6 +1730,11 @@ class AISuggestionService:
         if experience_data and isinstance(experience_data, list) and experience_data:
             logger.info(f"🔒 Creating experience fallback from {len(experience_data)} original entries")
             for job in experience_data:
+                # Ensure job is a dictionary, skip if not
+                if not isinstance(job, dict):
+                    logger.warning(f"Experience job item is not a dictionary (type: {type(job)}), skipping: {job}")
+                    continue
+                    
                 fallback_item = {
                     "role": job.get('role', job.get('title', job.get('jobTitle', 'N/A'))),
                     "existing": self._extract_job_description(job),
@@ -1107,6 +1765,11 @@ class AISuggestionService:
         if projects_data and isinstance(projects_data, list) and projects_data:
             logger.info(f"🔒 Creating projects fallback from {len(projects_data)} original entries")
             for project in projects_data:
+                # Ensure project is a dictionary, skip if not
+                if not isinstance(project, dict):
+                    logger.warning(f"Project item is not a dictionary (type: {type(project)}), skipping: {project}")
+                    continue
+                    
                 project_parts = []
                 
                 # Only add fields that have actual data
@@ -1153,6 +1816,11 @@ class AISuggestionService:
             # Create a formatted string from all education entries
             education_texts = []
             for edu in education_data:
+                # Ensure edu is a dictionary, skip if not
+                if not isinstance(edu, dict):
+                    logger.warning(f"Education item is not a dictionary (type: {type(edu)}), skipping: {edu}")
+                    continue
+                    
                 edu_parts = []
                 
                 # Only add fields that have actual data
@@ -1458,7 +2126,11 @@ class AISuggestionService:
                 return [clean_value(item) for item in value if item is not None]
             elif isinstance(value, dict):
                 return {k: clean_value(v) for k, v in value.items()}
+            elif isinstance(value, (int, float)):
+                # Numbers are fine, no need to clean
+                return value
             else:
+                logger.warning(f"🧹 Unexpected value type in clean_value: {type(value)} - {value}")
                 return value
         
         # Clean the entire response recursively
@@ -1489,7 +2161,11 @@ class AISuggestionService:
                 return [validate_and_fix(item, f"{path}[{i}]") for i, item in enumerate(value) if item is not None]
             elif isinstance(value, dict):
                 return {k: validate_and_fix(v, f"{path}.{k}") for k, v in value.items()}
+            elif isinstance(value, (int, float)):
+                # Numbers are fine, no need to validate
+                return value
             else:
+                logger.warning(f"🚨 FINAL VALIDATION: Unexpected value type at {path}: {type(value)} - {value}")
                 return value
         
         # Perform final validation and fix any remaining "NA" values
@@ -1497,6 +2173,412 @@ class AISuggestionService:
         logger.info("🔒 Completed final NA validation - response is guaranteed to be NA-free")
         return validated_response
 
+    def _aggressive_json_recovery(self, response_text: str) -> str:
+        """
+        Aggressively try to recover the complete JSON response when normal extraction fails.
+        """
+        logger.info("🚨 Starting aggressive JSON recovery...")
+        
+        # Method 1: Look for the largest JSON object that contains sectionSuggestions
+        if 'sectionSuggestions' in response_text:
+            logger.info("🔍 Found sectionSuggestions, looking for complete structure...")
+            
+            # Find all potential JSON objects
+            json_pattern = r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})'
+            matches = re.findall(json_pattern, response_text, re.DOTALL)
+            
+            # Filter for objects that contain sectionSuggestions
+            valid_matches = [match for match in matches if 'sectionSuggestions' in match]
+            
+            if valid_matches:
+                # Get the largest valid match
+                largest_valid = max(valid_matches, key=len)
+                logger.info(f"🔍 Found valid JSON with sectionSuggestions: {len(largest_valid)} characters")
+                
+                # Try to fix and validate
+                try:
+                    fixed = self._fix_common_json_issues(largest_valid)
+                    if self._validate_json_structure(fixed):
+                        logger.info("✅ Aggressive recovery successful!")
+                        return fixed
+                except Exception as e:
+                    logger.warning(f"⚠️ Aggressive recovery failed: {str(e)}")
+        
+        # Method 2: Look for JSON that starts with overallScore
+        if 'overallScore' in response_text:
+            logger.info("🔍 Found overallScore, looking for complete structure...")
+            
+            score_pos = response_text.find('overallScore')
+            if score_pos > 0:
+                # Look backwards for opening brace
+                brace_start = response_text.rfind('{', 0, score_pos)
+                if brace_start > 0:
+                    # Extract from opening brace to end
+                    potential = response_text[brace_start:]
+                    
+                    # Try to find balanced braces
+                    brace_count = 0
+                    end_pos = -1
+                    for i, char in enumerate(potential):
+                        if char == '{':
+                            brace_count += 1
+                        elif char == '}':
+                            brace_count -= 1
+                            if brace_count == 0:
+                                end_pos = i + 1
+                                break
+                    
+                    if end_pos > 0:
+                        complete = potential[:end_pos]
+                        logger.info(f"🔍 Extracted complete JSON from overallScore: {len(complete)} characters")
+                        
+                        try:
+                            fixed = self._fix_common_json_issues(complete)
+                            if self._validate_json_structure(fixed):
+                                logger.info("✅ Aggressive recovery from overallScore successful!")
+                                return fixed
+                        except Exception as e:
+                            logger.warning(f"⚠️ Aggressive recovery from overallScore failed: {str(e)}")
+        
+        # Method 3: Try to reconstruct from fragments
+        logger.info("🔍 Attempting fragment reconstruction...")
+        
+        # Look for individual sections and try to reconstruct
+        sections = {}
+        for section in ['professionalSummary', 'skills', 'workExperience', 'projects', 'education', 'certifications']:
+            if section in response_text:
+                # Find the section content
+                section_start = response_text.find(section)
+                if section_start > 0:
+                    # Look for the content after the section name
+                    content_start = response_text.find('{', section_start)
+                    if content_start > 0:
+                        # Try to extract the section content
+                        brace_count = 0
+                        end_pos = -1
+                        for i, char in enumerate(response_text[content_start:], content_start):
+                            if char == '{':
+                                brace_count += 1
+                            elif char == '}':
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    end_pos = i + 1
+                                    break
+                        
+                        if end_pos > 0:
+                            section_content = response_text[content_start:end_pos]
+                            sections[section] = section_content
+                            logger.info(f"🔍 Extracted {section} section: {len(section_content)} characters")
+        
+        if sections:
+            # Try to reconstruct a complete response
+            reconstructed = {
+                "overallScore": 75,  # Default score
+                "analysisTimestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                "sectionSuggestions": {},
+                "topRecommendations": ["Resume analysis completed with partial data"]
+            }
+            
+            # Add extracted sections
+            for section_name, section_content in sections.items():
+                try:
+                    # Try to parse the section content
+                    section_data = json.loads(section_content)
+                    reconstructed["sectionSuggestions"][section_name] = section_data
+                except:
+                    # If parsing fails, create a basic structure
+                    reconstructed["sectionSuggestions"][section_name] = {
+                        "existing": "",
+                        "rewrite": "",
+                        "recommendations": [""]
+                    }
+            
+            # Add missing sections with defaults
+            for section in ['professionalSummary', 'skills', 'workExperience', 'projects', 'education', 'certifications']:
+                if section not in reconstructed["sectionSuggestions"]:
+                    reconstructed["sectionSuggestions"][section] = {
+                        "existing": "",
+                        "rewrite": "",
+                        "recommendations": [""]
+                    }
+            
+            logger.info("✅ Fragment reconstruction completed")
+            return json.dumps(reconstructed)
+        
+        logger.warning("⚠️ All aggressive recovery methods failed")
+        return ""
+    
+    def _detect_and_fix_incomplete_json(self, json_text: str) -> str:
+        """
+        Detect and fix incomplete JSON structures that are missing the root wrapper.
+        """
+        try:
+            # Check if the JSON is missing the root wrapper
+            if 'sectionSuggestions' in json_text and not json_text.strip().startswith('{"overallScore"'):
+                logger.info("🔍 Detected incomplete JSON structure, attempting to fix...")
+                
+                # Try to parse what we have
+                try:
+                    parsed = json.loads(json_text)
+                    logger.info("✅ Incomplete JSON is still valid, no fixing needed")
+                    return json_text
+                except json.JSONDecodeError:
+                    logger.info("🔍 Incomplete JSON is invalid, attempting to wrap...")
+                    
+                    # Look for the first valid JSON object
+                    first_brace = json_text.find('{')
+                    if first_brace >= 0:
+                        # Try to find the matching closing brace
+                        brace_count = 0
+                        end_pos = -1
+                        for i, char in enumerate(json_text[first_brace:], first_brace):
+                            if char == '{':
+                                brace_count += 1
+                            elif char == '}':
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    end_pos = i + 1
+                                    break
+                        
+                        if end_pos > 0:
+                            # Extract the valid JSON portion
+                            valid_portion = json_text[first_brace:end_pos]
+                            logger.info(f"🔍 Extracted valid JSON portion: {len(valid_portion)} characters")
+                            
+                            # Try to parse it
+                            try:
+                                parsed = json.loads(valid_portion)
+                                logger.info("✅ Valid JSON portion extracted and parsed")
+                                
+                                # Now wrap it in the complete structure
+                                wrapped_json = {
+                                    "overallScore": 75,
+                                    "analysisTimestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                                    "sectionSuggestions": parsed,
+                                    "topRecommendations": ["Resume analysis completed with wrapped data"]
+                                }
+                                
+                                logger.info("✅ Successfully wrapped incomplete JSON")
+                                return json.dumps(wrapped_json)
+                                
+                            except json.JSONDecodeError:
+                                logger.warning("⚠️ Even the extracted portion is invalid")
+            
+            return json_text
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Error detecting/fixing incomplete JSON: {str(e)}")
+            return json_text
+    
+    def _validate_json_structure(self, json_text: str) -> bool:
+        """
+        Validate that the extracted JSON has the complete structure we need.
+        """
+        try:
+            # Check if it contains the essential keys
+            essential_keys = ['overallScore', 'sectionSuggestions']
+            if not all(key in json_text for key in essential_keys):
+                logger.warning(f"⚠️ JSON missing essential keys: {[key for key in essential_keys if key not in json_text]}")
+                return False
+            
+            # Check if sectionSuggestions has the required structure
+            if 'sectionSuggestions' in json_text:
+                section_keys = ['professionalSummary', 'skills', 'workExperience', 'projects', 'education', 'certifications']
+                missing_sections = [key for key in section_keys if key not in json_text]
+                if missing_sections:
+                    logger.warning(f"⚠️ sectionSuggestions missing sections: {missing_sections}")
+                    return False
+            
+            logger.info("✅ JSON structure validation passed")
+            return True
+            
+        except Exception as e:
+            logger.warning(f"⚠️ JSON structure validation failed: {str(e)}")
+            return False
+
+    def _extract_experience_from_summary(self, resume_data: Dict[str, Any]) -> Optional[int]:
+        """
+        Extract experience years from summary text using intelligent pattern matching.
+        Looks for patterns like "5+ years", "over 5 years", "5 years of experience", etc.
+        """
+        try:
+            summary = resume_data.get('summary', '')
+            if not summary or not isinstance(summary, str):
+                return None
+            
+            logger.info(f"🔍 Analyzing summary for experience: {summary[:100]}...")
+            
+            # Convert to lowercase for easier matching
+            summary_lower = summary.lower()
+            
+            # Pattern 1: "X+ years" or "X+ years of experience"
+            plus_pattern = r'(\d+)\+?\s*years?\s*(?:of\s*experience)?'
+            plus_match = re.search(plus_pattern, summary_lower)
+            if plus_match:
+                years = int(plus_match.group(1))
+                logger.info(f"✅ Found 'X+ years' pattern: {years}+ years")
+                return years
+            
+            # Pattern 2: "over X years" or "more than X years"
+            over_pattern = r'(?:over|more\s*than|above|beyond)\s*(\d+)\s*years?'
+            over_match = re.search(over_pattern, summary_lower)
+            if over_match:
+                years = int(over_match.group(1))
+                logger.info(f"✅ Found 'over X years' pattern: {years} years")
+                return years
+            
+            # Pattern 3: "X years of experience" or "X years in"
+            exact_pattern = r'(\d+)\s*years?\s*(?:of\s*experience|in\s*the\s*field|in\s*industry)'
+            exact_match = re.search(exact_pattern, summary_lower)
+            if exact_match:
+                years = int(exact_match.group(1))
+                logger.info(f"✅ Found 'X years of experience' pattern: {years} years")
+                return years
+            
+            # Pattern 4: "X years" followed by professional context
+            context_pattern = r'(\d+)\s*years?\s*(?:working|developing|managing|leading|designing|architecting)'
+            context_match = re.search(context_pattern, summary_lower)
+            if context_match:
+                years = int(context_match.group(1))
+                logger.info(f"✅ Found 'X years working' pattern: {years} years")
+                return years
+            
+            # Pattern 5: "X years" in various professional contexts
+            professional_pattern = r'(\d+)\s*years?\s*(?:professional|technical|industry|field|domain)'
+            professional_match = re.search(professional_pattern, summary_lower)
+            if professional_match:
+                years = int(professional_match.group(1))
+                logger.info(f"✅ Found 'X years professional' pattern: {years} years")
+                return years
+            
+            # Pattern 6: "X years" with specific roles
+            role_pattern = r'(\d+)\s*years?\s*(?:as\s*a|as\s*an|working\s*as)'
+            role_match = re.search(role_pattern, summary_lower)
+            if role_match:
+                years = int(role_match.group(1))
+                logger.info(f"✅ Found 'X years as a' pattern: {years} years")
+                return years
+            
+            # Pattern 7: "X years" with company/industry context
+            company_pattern = r'(\d+)\s*years?\s*(?:at|with|in|within)'
+            company_match = re.search(company_pattern, summary_lower)
+            if company_match:
+                years = int(company_match.group(1))
+                logger.info(f"✅ Found 'X years at/with' pattern: {years} years")
+                return years
+            
+            # Pattern 8: "X years" in various contexts
+            general_pattern = r'(\d+)\s*years?'
+            general_match = re.search(general_pattern, summary_lower)
+            if general_match:
+                years = int(general_match.group(1))
+                # Only use this if it's in a professional context (not just random numbers)
+                context_before = summary_lower[max(0, general_match.start() - 50):general_match.start()]
+                context_after = summary_lower[general_match.end():min(len(summary_lower), general_match.end() + 50)]
+                
+                professional_indicators = [
+                    'experience', 'working', 'developing', 'managing', 'leading', 'designing',
+                    'architecting', 'professional', 'technical', 'industry', 'field', 'domain',
+                    'career', 'background', 'expertise', 'specialization', 'practice'
+                ]
+                
+                if any(indicator in context_before or indicator in context_after for indicator in professional_indicators):
+                    logger.info(f"✅ Found 'X years' in professional context: {years} years")
+                    return years
+            
+            # Pattern 9: "X+ years" variations
+            plus_variations = [
+                r'(\d+)\+?\s*years?\s*experience',
+                r'(\d+)\+?\s*years?\s*in\s*the\s*field',
+                r'(\d+)\+?\s*years?\s*of\s*professional',
+                r'(\d+)\+?\s*years?\s*background',
+                r'(\d+)\+?\s*years?\s*career'
+            ]
+            
+            for pattern in plus_variations:
+                match = re.search(pattern, summary_lower)
+                if match:
+                    years = int(match.group(1))
+                    logger.info(f"✅ Found plus variation pattern: {years}+ years")
+                    return years
+            
+            # Pattern 10: "X years" with specific professional terms
+            specific_patterns = [
+                r'(\d+)\s*years?\s*software\s*development',
+                r'(\d+)\s*years?\s*web\s*development',
+                r'(\d+)\s*years?\s*data\s*analysis',
+                r'(\d+)\s*years?\s*project\s*management',
+                r'(\d+)\s*years?\s*team\s*leadership',
+                r'(\d+)\s*years?\s*consulting',
+                r'(\d+)\s*years?\s*research',
+                r'(\d+)\s*years?\s*design'
+            ]
+            
+            for pattern in specific_patterns:
+                match = re.search(pattern, summary_lower)
+                if match:
+                    years = int(match.group(1))
+                    logger.info(f"✅ Found specific professional pattern: {years} years")
+                    return years
+            
+            # Pattern 11: "X years" with industry-specific terms
+            industry_patterns = [
+                r'(\d+)\s*years?\s*in\s*it',
+                r'(\d+)\s*years?\s*in\s*technology',
+                r'(\d+)\s*years?\s*in\s*finance',
+                r'(\d+)\s*years?\s*in\s*healthcare',
+                r'(\d+)\s*years?\s*in\s*marketing',
+                r'(\d+)\s*years?\s*in\s*sales',
+                r'(\d+)\s*years?\s*in\s*engineering',
+                r'(\d+)\s*years?\s*in\s*consulting'
+            ]
+            
+            for pattern in industry_patterns:
+                match = re.search(pattern, summary_lower)
+                if match:
+                    years = int(match.group(1))
+                    logger.info(f"✅ Found industry-specific pattern: {years} years")
+                    return years
+            
+            # Pattern 12: "X years" with role-specific terms
+            role_patterns = [
+                r'(\d+)\s*years?\s*as\s*developer',
+                r'(\d+)\s*years?\s*as\s*engineer',
+                r'(\d+)\s*years?\s*as\s*manager',
+                r'(\d+)\s*years?\s*as\s*analyst',
+                r'(\d+)\s*years?\s*as\s*consultant',
+                r'(\d+)\s*years?\s*as\s*designer',
+                r'(\d+)\s*years?\s*as\s*architect'
+            ]
+            
+            for pattern in role_patterns:
+                match = re.search(pattern, summary_lower)
+                if match:
+                    years = int(match.group(1))
+                    logger.info(f"✅ Found role-specific pattern: {years} years")
+                    return years
+            
+            logger.info("❌ No explicit experience patterns found in summary")
+            return None
+            
+        except Exception as e:
+            logger.warning(f"❌ Error extracting experience from summary: {str(e)}")
+            return None
+    
+    def _map_experience_to_level(self, years: int) -> str:
+        """
+        Map years of experience to experience level.
+        More accurate mapping based on industry standards.
+        """
+        if years <= 1:
+            return "Entry level"
+        elif years <= 3:
+            return "Entry level"
+        elif years <= 4:
+            return "Mid level"
+        else:
+            return "Senior level"
+    
     def _calculate_resume_score(self, resume_data: Dict[str, Any]) -> int:
         """
         Calculates a default score based on the completeness of the resume data.

@@ -2010,13 +2010,9 @@ def ai_suggestions():
             parser = GeminiResumeParser()
             resume_data = parser.parse_resume_from_file(filepath)
             
-            # Step 2: Analyze resume experience level
-            experience_level = ai_service._analyze_experience_level(resume_data)
-            logger.info(f"Analyzed experience level from resume: {experience_level}")
-            
-            # Step 3: Generate job description based on resume experience level
-            logger.info(f"Generating job description for {designation} in {sector} sector, {country} at {experience_level}")
-            job_description_dict = ai_service.generate_job_description(sector, country, designation, experience_level)
+            # Step 2: Generate job description - let the service analyze experience level internally
+            logger.info(f"Generating job description for {designation} in {sector} sector, {country}")
+            job_description_dict = ai_service.generate_job_description(sector, country, designation, resume_data)
             
             # Convert job description dict to text format for comparison
             job_description_text = json.dumps(job_description_dict, indent=2)
