@@ -562,6 +562,9 @@ const ResumeBuilderPage = () => {
                 }
                 
                 changesSet.add(`experience-${index}-ai-rewrite`);
+              } else if (processedData.experience[index]) {
+                // If no rewrite available, preserve existing experience data
+                console.log(`Preserving existing experience data for index ${index}:`, processedData.experience[index]);
               }
             });
           }
@@ -591,6 +594,9 @@ const ResumeBuilderPage = () => {
                 }
                 
                 changesSet.add(`education-${index}-ai-rewrite`);
+              } else if (processedData.education[index]) {
+                // If no rewrite available, preserve existing education data
+                console.log(`Preserving existing education data for index ${index}:`, processedData.education[index]);
               }
             });
           }
@@ -629,6 +635,11 @@ const ResumeBuilderPage = () => {
             });
           }
           
+          // Ensure existing projects are preserved if no AI rewrites
+          if (!rewrites.projects || !Array.isArray(rewrites.projects) || rewrites.projects.length === 0) {
+            console.log('No AI project rewrites available, preserving existing projects:', processedData.projects);
+          }
+          
           // Apply Certifications rewrites (create new certifications if they don't exist)
           if (rewrites.certifications && Array.isArray(rewrites.certifications) && rewrites.certifications.length > 0) {
             console.log('Applying certifications rewrites:', rewrites.certifications);
@@ -647,6 +658,11 @@ const ResumeBuilderPage = () => {
                 changesSet.add(`certification-${processedData.certifications.length - 1}-ai-rewrite`);
               }
             });
+          }
+          
+          // Ensure existing certifications are preserved if no AI rewrites
+          if (!rewrites.certifications || !Array.isArray(rewrites.certifications) || rewrites.certifications.length === 0) {
+            console.log('No AI certification rewrites available, preserving existing certifications:', processedData.certifications);
           }
         }
         
@@ -1659,7 +1675,6 @@ const ResumeBuilderPage = () => {
                   customSections: resumeData.customSections
                 }}
                 color={selectedColor}
-                highlightedSections={highlightedChanges}
               />
             </div>
           </div>

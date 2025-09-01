@@ -78,7 +78,6 @@ interface TemplateData {
 interface CleanMinimalProps {
   data?: TemplateData;
   color?: string;
-  highlightedSections?: Set<string>;
 }
 
 const cleanMinimalTemplateData: TemplateData = {
@@ -163,36 +162,14 @@ const cleanMinimalTemplateData: TemplateData = {
   }
 };
 
-const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSections }) => {
+const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
   // Use the passed data prop if available, otherwise fall back to default data
   const templateData = data || cleanMinimalTemplateData;
 
   return (
     <>
-      <style>
-        {`
-          @keyframes highlightPulse {
-            0%, 100% { background-color: rgba(255, 235, 59, 0.1); }
-            50% { background-color: rgba(255, 235, 59, 0.2); }
-          }
-          .ai-enhanced-badge {
-            position: absolute;
-            top: -8px;
-            right: 8px;
-            background: #ffc107;
-            color: #fff;
-            font-size: 8px;
-            padding: 2px 4px;
-            border-radius: 6px;
-            font-weight: 500;
-            z-index: 10;
-          }
-          .ai-enhanced-badge::before {
-            content: "✨ AI Enhanced";
-          }
-        `}
-      </style>
-      <div className="w-full bg-white" style={{ 
+
+      <div className="max-w-4xl mx-auto p-6 bg-white" style={{ 
         fontFamily: 'Arial, sans-serif',
         fontSize: '11px',
         lineHeight: '1.3',
@@ -241,22 +218,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
         }}>
           {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
         </p>
-        {(highlightedSections?.has('summary-ai-enhanced') || highlightedSections?.has('summary-ai-rewrite')) && (
-          <div className="ai-enhanced-badge" style={{
-            position: 'absolute',
-            top: '-8px',
-            right: '8px',
-            background: '#ffc107',
-            color: '#fff',
-            fontSize: '10px',
-            padding: '2px 6px',
-            borderRadius: '8px',
-            fontWeight: '500',
-            zIndex: 10
-          }}>
-            ✨ AI Enhanced
-          </div>
-        )}
+
       </div>
 
       {/* Technical Skills */}
@@ -294,25 +256,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
                   {skillsArray.map((skill, index) => {
                     if (!skill || typeof skill !== 'string') return null;
                     
-                    const isHighlighted = highlightedSections?.has(`skill-${skill}`) || 
-                                        highlightedSections?.has(`keyword-${skill}`) || 
-                                        highlightedSections?.has(`critical-keyword-${skill}`) ||
-                                        highlightedSections?.has(`missing-skill-${skill}`) ||
-                                        highlightedSections?.has(`added-skill-${skill}`) ||
-                                        highlightedSections?.has(`priority-skill-${skill}`) ||
-                                        highlightedSections?.has('skills-ai-rewrite');
-                    
                     return (
                       <span key={index}>
                         {index > 0 ? ', ' : ' '}
-                        <span style={{
-                          background: isHighlighted ? 'rgba(255, 235, 59, 0.3)' : 'transparent',
-                          padding: isHighlighted ? '1px 3px' : '0',
-                          borderRadius: isHighlighted ? '3px' : '0',
-                          border: isHighlighted ? '1px solid #ffc107' : 'none'
-                        }}>
-                          {skill}
-                        </span>
+                        <span>{skill}</span>
                       </span>
                     );
                   })}
@@ -326,25 +273,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
               lineHeight: '1.3'
             }}>
               {templateData.skills.technical.map((skill, index) => {
-                const isHighlighted = highlightedSections?.has(`skill-${skill}`) || 
-                                    highlightedSections?.has(`keyword-${skill}`) || 
-                                    highlightedSections?.has(`critical-keyword-${skill}`) ||
-                                    highlightedSections?.has(`missing-skill-${skill}`) ||
-                                    highlightedSections?.has(`added-skill-${skill}`) ||
-                                    highlightedSections?.has(`priority-skill-${skill}`) ||
-                                    highlightedSections?.has('skills-ai-rewrite');
-                
                 return (
                   <span key={index}>
                     {index > 0 ? ', ' : ''}
-                    <span style={{
-                      background: isHighlighted ? 'rgba(255, 235, 59, 0.3)' : 'transparent',
-                      padding: isHighlighted ? '1px 3px' : '0',
-                      borderRadius: isHighlighted ? '3px' : '0',
-                      border: isHighlighted ? '1px solid #ffc107' : 'none'
-                    }}>
-                      {skill}
-                    </span>
+                    <span>{skill}</span>
                   </span>
                 );
               })}
@@ -377,33 +309,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
         <div className="space-y-0">
           {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
             templateData.experience.map((exp, index) => {
-              const isExperienceHighlighted = highlightedSections?.has(`experience-${index}-ai-enhanced`) || highlightedSections?.has(`experience-${index}-ai-rewrite`);
-              
               return (
-                <div key={index} style={{
-                  background: isExperienceHighlighted ? 'rgba(255, 235, 59, 0.1)' : 'transparent',
-                  borderLeft: isExperienceHighlighted ? '3px solid #ffc107' : 'none',
-                  padding: isExperienceHighlighted ? '6px' : '0',
-                  borderRadius: isExperienceHighlighted ? '4px' : '0',
-                  position: 'relative',
-                  marginBottom: '8px'
-                }}>
-                  {isExperienceHighlighted && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '-8px',
-                      right: '8px',
-                      background: '#ffc107',
-                      color: '#fff',
-                      fontSize: '8px',
-                      padding: '1px 4px',
-                      borderRadius: '6px',
-                      fontWeight: '500',
-                      zIndex: 10
-                    }}>
-                      ✨ AI Enhanced
-                    </div>
-                  )}
+                <div key={index}>
                   
                   <div className="flex justify-between items-start mb-1">
                     <div className="flex-1">
@@ -486,17 +393,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
         <div className="space-y-0">
           {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
             templateData.projects.map((project, index) => {
-              const isProjectHighlighted = highlightedSections?.has(`project-${index}-ai-rewrite`);
-              
               return (
-              <div key={index} style={{
-                background: isProjectHighlighted ? 'rgba(255, 235, 59, 0.1)' : 'transparent',
-                borderLeft: isProjectHighlighted ? '3px solid #ffc107' : 'none',
-                padding: isProjectHighlighted ? '6px' : '0',
-                borderRadius: isProjectHighlighted ? '4px' : '0',
-                position: 'relative',
-                marginBottom: '8px'
-              }}>
+              <div key={index}>
                                  <div className="mb-1">
                    <div className="flex justify-between items-center">
                      <div className="flex items-center gap-2">
@@ -542,21 +440,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
                     </div>
                   )}
                 </div>
-                {isProjectHighlighted && (
-                  <div className="ai-enhanced-badge" style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '8px',
-                    background: '#ffc107',
-                    color: '#000',
-                    fontSize: '8px',
-                    padding: '2px 6px',
-                    borderRadius: '10px',
-                    fontWeight: 'bold'
-                  }}>
-                    AI Enhanced
-                  </div>
-                )}
+
               </div>
               );
             })
@@ -587,17 +471,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
         <div className="space-y-1">
           {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
             templateData.education.map((edu, index) => {
-              const isEducationHighlighted = highlightedSections?.has(`education-${index}-ai-rewrite`);
-              
               return (
-              <div key={index} className="flex justify-between items-start" style={{
-                background: isEducationHighlighted ? 'rgba(255, 235, 59, 0.1)' : 'transparent',
-                borderLeft: isEducationHighlighted ? '3px solid #ffc107' : 'none',
-                padding: isEducationHighlighted ? '6px' : '0',
-                borderRadius: isEducationHighlighted ? '4px' : '0',
-                position: 'relative',
-                marginBottom: '4px'
-              }}>
+              <div key={index} className="flex justify-between items-start">
                 <div>
                   <div className="font-bold" style={{ 
                     fontSize: '11px',
@@ -615,21 +490,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
                 }}>
                   {edu.dates}
                   </div>
-                  {isEducationHighlighted && (
-                    <div className="ai-enhanced-badge" style={{
-                      position: 'absolute',
-                      top: '-8px',
-                      right: '8px',
-                      background: '#ffc107',
-                      color: '#000',
-                      fontSize: '8px',
-                      padding: '2px 6px',
-                      borderRadius: '10px',
-                      fontWeight: 'bold'
-                    }}>
-                      AI Enhanced
-                    </div>
-                  )}
+
               </div>
               );
             })
@@ -646,52 +507,26 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
       </div>
       
       {/* Certifications */}
-              {Array.isArray(templateData.additionalInfo.certifications) && templateData.additionalInfo.certifications.length > 0 && (
-          <div className="mb-2">
-                  <h2 className="text-left font-bold mb-1 uppercase" style={{ 
-          fontSize: '12px',
-          fontWeight: 'bold',
-          color: color || '#374151',
-          borderBottom: `2px solid ${color || '#d1d5db'}`,
-          paddingBottom: '2px',
-          marginBottom: '4px'
-        }}>
-          CERTIFICATIONS
-        </h2>
-                      <div className="space-y-1">
-              {templateData.additionalInfo.certifications.map((cert, index) => {
-                const isCertificationHighlighted = highlightedSections?.has(`certification-${index}-ai-rewrite`);
-                
-                return (
-                  <div key={index} style={{
-                    background: isCertificationHighlighted ? 'rgba(255, 235, 59, 0.1)' : 'transparent',
-                    borderLeft: isCertificationHighlighted ? '3px solid #ffc107' : 'none',
-                    padding: isCertificationHighlighted ? '6px' : '0',
-                    borderRadius: isCertificationHighlighted ? '4px' : '0',
-                    position: 'relative',
-                    marginBottom: '4px'
-                  }}>
+      {Array.isArray(templateData.additionalInfo.certifications) && templateData.additionalInfo.certifications.length > 0 && (
+        <div className="mb-3">
+          <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+            fontSize: '12px',
+            fontWeight: 'bold',
+            color: color || '#374151',
+            borderBottom: `2px solid ${color || '#d1d5db'}`
+          }}>
+            CERTIFICATIONS
+          </h2>
+          <div className="space-y-2">
+            {templateData.additionalInfo.certifications.map((cert, index) => {
+              return (
+                <div key={index}>
                   <div className="font-bold" style={{ 
                     fontSize: '11px',
                     fontWeight: 'bold'
                   }}>
                     {cert}
                   </div>
-                  {isCertificationHighlighted && (
-                    <div className="ai-enhanced-badge" style={{
-                      position: 'absolute',
-                      top: '-8px',
-                      right: '8px',
-                      background: '#ffc107',
-                      color: '#000',
-                      fontSize: '8px',
-                      padding: '2px 6px',
-                      borderRadius: '10px',
-                      fontWeight: 'bold'
-                    }}>
-                      AI Enhanced
-                    </div>
-                  )}
                 </div>
               );
             })}

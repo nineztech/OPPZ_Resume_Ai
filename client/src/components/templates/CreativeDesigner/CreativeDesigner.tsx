@@ -78,13 +78,11 @@ interface TemplateData {
 interface CreativeDesignerProps {
   data?: TemplateData;
   color?: string;
-  highlightedSections?: Set<string>;
 }
 
 const CreativeDesigner: React.FC<CreativeDesignerProps> = ({ 
   data: templateData, 
-  color = '#1f2937',
-  highlightedSections 
+  color = '#1f2937'
 }) => {
   if (!templateData) {
     return <div>No data provided</div>;
@@ -128,22 +126,7 @@ const CreativeDesigner: React.FC<CreativeDesignerProps> = ({
         }}>
           {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
         </p>
-        {highlightedSections?.has('summary-ai-enhanced') && (
-          <div style={{
-            position: 'absolute',
-            top: '-8px',
-            right: '8px',
-            background: '#ffc107',
-            color: '#fff',
-            fontSize: '8px',
-            padding: '1px 4px',
-            borderRadius: '6px',
-            fontWeight: '500',
-            zIndex: 10
-          }}>
-            ✨ AI Enhanced
-          </div>
-        )}
+
       </div>
 
       {/* Skills Section */}
@@ -174,21 +157,12 @@ const CreativeDesigner: React.FC<CreativeDesignerProps> = ({
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {cleanSkills.map((skill, index) => {
-                    const skillKey = `skill-${skill}`;
-                    const isHighlighted = highlightedSections?.has(skillKey);
-                    
-                    // Debug logging
-                    if (highlightedSections && highlightedSections.size > 0) {
-                      console.log(`CreativeDesigner - Skill: "${skill}", Key: "${skillKey}", Highlighted: ${isHighlighted}`);
-                      console.log('All highlighted sections:', Array.from(highlightedSections));
-                    }
-                    
                     return (
                       <span key={index} className="px-3 py-1 rounded-full text-sm" style={{
-                        background: isHighlighted ? 'rgba(255, 235, 59, 0.3)' : '#f3f4f6',
-                        border: isHighlighted ? '2px solid #ffc107' : '1px solid #d1d5db',
-                        color: isHighlighted ? '#92400e' : '#374151',
-                        fontWeight: isHighlighted ? '600' : '400'
+                        background: '#f3f4f6',
+                        border: '1px solid #d1d5db',
+                        color: '#374151',
+                        fontWeight: '400'
                       }}>
                         {skill}
                       </span>
@@ -202,20 +176,12 @@ const CreativeDesigner: React.FC<CreativeDesignerProps> = ({
           // Handle flat skills array (fallback)
           <div className="flex flex-wrap gap-2">
             {templateData.skills.technical.map((skill, index) => {
-              const skillKey = `skill-${skill}`;
-              const isHighlighted = highlightedSections?.has(skillKey);
-              
-              // Debug logging
-              if (highlightedSections && highlightedSections.size > 0) {
-                console.log(`CreativeDesigner Flat - Skill: "${skill}", Key: "${skillKey}", Highlighted: ${isHighlighted}`);
-              }
-              
               return (
                 <span key={index} className="px-3 py-1 rounded-full text-sm" style={{
-                  background: isHighlighted ? 'rgba(255, 235, 59, 0.3)' : '#f3f4f6',
-                  border: isHighlighted ? '2px solid #ffc107' : '1px solid #d1d5db',
-                  color: isHighlighted ? '#92400e' : '#374151',
-                  fontWeight: isHighlighted ? '600' : '400'
+                  background: '#f3f4f6',
+                  border: '1px solid #d1d5db',
+                  color: '#374151',
+                  fontWeight: '400'
                 }}>
                   {skill}
                 </span>
@@ -243,31 +209,8 @@ const CreativeDesigner: React.FC<CreativeDesignerProps> = ({
         {templateData.experience && templateData.experience.length > 0 ? (
           <div className="space-y-6">
             {templateData.experience.map((exp, index) => {
-              const isExperienceHighlighted = highlightedSections?.has(`experience-${index}-ai-enhanced`);
-              
               return (
-                <div key={index} className="relative" style={{
-                  background: isExperienceHighlighted ? 'rgba(255, 235, 59, 0.1)' : 'transparent',
-                  borderLeft: isExperienceHighlighted ? '4px solid #ffc107' : 'none',
-                  padding: isExperienceHighlighted ? '12px' : '0',
-                  borderRadius: isExperienceHighlighted ? '6px' : '0'
-                }}>
-                  {isExperienceHighlighted && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '-8px',
-                      right: '8px',
-                      background: '#ffc107',
-                      color: '#fff',
-                      fontSize: '8px',
-                      padding: '1px 4px',
-                      borderRadius: '6px',
-                      fontWeight: '500',
-                      zIndex: 10
-                    }}>
-                      ✨ AI Enhanced
-                    </div>
-                  )}
+                <div key={index} className="relative">
                   
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-lg font-bold" style={{ color: color }}>

@@ -13,7 +13,6 @@ import {
   Settings,
   Eye,
   Star,
-  Lightbulb,
   ArrowRight,
   GraduationCap,
   Award,
@@ -66,9 +65,28 @@ const AISuggestionsPage: React.FC = () => {
 
   const { suggestions, jobDescription } = state;
 
+  // Add fallback for empty suggestions
+  if (!suggestions || Object.keys(suggestions).length === 0) {
+    console.warn('Suggestions object is empty or undefined:', suggestions);
+  }
+
   // Helper function to safely get arrays from suggestions
   const getSafeArray = (array: any[] | undefined): any[] => {
-    return Array.isArray(array) ? array : [];
+    if (Array.isArray(array)) {
+      return array;
+    }
+    if (array && typeof array === 'object') {
+      // Handle case where it might be an object with array properties
+      const values = Object.values(array);
+      if (values.length > 0 && Array.isArray(values[0])) {
+        return values[0];
+      }
+    }
+    if (array && typeof array === 'string') {
+      // Handle case where it might be a string that should be split
+      return [array];
+    }
+    return [];
   };
 
 
@@ -190,6 +208,18 @@ const AISuggestionsPage: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Debug Information - Remove in production */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <h3 className="text-sm font-medium text-yellow-800 mb-2">Debug Info (Development Only)</h3>
+            <div className="text-xs text-yellow-700 space-y-1">
+              <div><strong>Suggestions structure:</strong> {JSON.stringify(Object.keys(suggestions || {}))}</div>
+              <div><strong>Top recommendations:</strong> {JSON.stringify((suggestions as any)?.topRecommendations)}</div>
+              <div><strong>Section suggestions:</strong> {JSON.stringify(Object.keys((suggestions as any)?.sectionSuggestions || {}))}</div>
+            </div>
+          </div>
+        )}
+        
         {/* Score Overview */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
           <div className="flex items-center justify-between">
@@ -254,14 +284,28 @@ const AISuggestionsPage: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                       <ul className="space-y-2">
-                        {getSafeArray((suggestions as any).topRecommendations).slice(0, 3).map((rec, index) => (
-                          <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
-                            <div className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5 flex-shrink-0">
-                              {index + 1}
-                            </div>
-                            <span className="leading-relaxed">{rec}</span>
-                          </li>
-                        ))}
+                        {(() => {
+                          const recommendations = getSafeArray((suggestions as any).topRecommendations);
+                          console.log('Top recommendations data:', (suggestions as any).topRecommendations);
+                          console.log('Processed recommendations:', recommendations);
+                          
+                          if (recommendations.length === 0) {
+                            return (
+                              <li className="text-sm text-gray-500 italic">
+                                No specific recommendations available at this time.
+                              </li>
+                            );
+                          }
+                          
+                          return recommendations.slice(0, 3).map((rec, index) => (
+                            <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
+                              <div className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5 flex-shrink-0">
+                                {index + 1}
+                              </div>
+                              <span className="leading-relaxed">{rec}</span>
+                            </li>
+                          ));
+                        })()}
                       </ul>
                     </CardContent>
                   </Card>
@@ -289,36 +333,7 @@ const AISuggestionsPage: React.FC = () => {
                   </Card>
                 </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Lightbulb className="w-5 h-5 text-blue-600" />
-                      Key Strengths to Highlight
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-3">
-                      <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
-                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-gray-700">
-                          <strong>ReactJS Experience:</strong> Already have ReactJS and Redux experience from Oracle role
-                        </span>
-                      </div>
-                      <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
-                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-gray-700">
-                          <strong>MongoDB Experience:</strong> Have NoSQL experience with MongoDB from Techasoft role
-                        </span>
-                      </div>
-                      <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
-                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-700">
-                          <strong>Strong Foundation:</strong> 5+ years of full-stack development experience
-                          </span>
-                        </div>
-                    </div>
-                  </CardContent>
-                </Card>
+
               </div>
             )}
 
@@ -350,12 +365,26 @@ const AISuggestionsPage: React.FC = () => {
                         <div>
                           <h4 className="font-medium text-gray-900 mb-2">Key Recommendations</h4>
                           <ul className="space-y-1">
-                            {getSafeArray((suggestions as any).sectionSuggestions.professionalSummary.recommendations).map((rec, index) => (
-                              <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
-                                <ArrowRight className="w-3 h-3 text-blue-500 mt-1 flex-shrink-0" />
-                                {rec}
-                              </li>
-                            ))}
+                            {(() => {
+                              const recommendations = getSafeArray((suggestions as any).sectionSuggestions.professionalSummary.recommendations);
+                              console.log('Professional summary recommendations:', (suggestions as any).sectionSuggestions.professionalSummary.recommendations);
+                              console.log('Processed recommendations:', recommendations);
+                              
+                              if (recommendations.length === 0) {
+                                return (
+                                  <li className="text-sm text-gray-500 italic">
+                                    No specific recommendations for this section.
+                                  </li>
+                                );
+                              }
+                              
+                              return recommendations.map((rec, index) => (
+                                <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
+                                  <ArrowRight className="w-3 h-3 text-blue-500 mt-1 flex-shrink-0" />
+                                  {rec}
+                                </li>
+                              ));
+                            })()}
                           </ul>
                         </div>
                       </div>
@@ -380,22 +409,50 @@ const AISuggestionsPage: React.FC = () => {
                         <div>
                           <h4 className="font-medium text-gray-900 mb-2">Suggested Skills</h4>
                           <div className="space-y-2">
-                            {getSafeArray((suggestions as any).sectionSuggestions.skills.rewrite).map((skill, index) => (
-                              <div key={index} className="text-sm text-gray-700 p-2 bg-green-50 rounded border-l-4 border-green-500">
-                            {skill}
-                              </div>
-                            ))}
+                            {(() => {
+                              const skills = getSafeArray((suggestions as any).sectionSuggestions.skills.rewrite);
+                              console.log('Skills rewrite data:', (suggestions as any).sectionSuggestions.skills.rewrite);
+                              console.log('Processed skills:', skills);
+                              
+                              if (skills.length === 0) {
+                                return (
+                                  <div className="text-sm text-gray-500 italic p-2">
+                                    No specific skill suggestions available.
+                                  </div>
+                                );
+                              }
+                              
+                              return skills.map((skill, index) => (
+                                <div key={index} className="text-sm text-gray-700 p-2 bg-green-50 rounded border-l-4 border-green-500">
+                                  {skill}
+                                </div>
+                              ));
+                            })()}
                           </div>
                         </div>
                         <div>
                           <h4 className="font-medium text-gray-900 mb-2">Recommendations</h4>
                           <ul className="space-y-1">
-                            {getSafeArray((suggestions as any).sectionSuggestions.skills.recommendations).map((rec, index) => (
-                              <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
-                                <ArrowRight className="w-3 h-3 text-green-500 mt-1 flex-shrink-0" />
-                                {rec}
-                              </li>
-                            ))}
+                            {(() => {
+                              const recommendations = getSafeArray((suggestions as any).sectionSuggestions.skills.recommendations);
+                              console.log('Skills recommendations:', (suggestions as any).sectionSuggestions.skills.recommendations);
+                              console.log('Processed recommendations:', recommendations);
+                              
+                              if (recommendations.length === 0) {
+                                return (
+                                  <li className="text-sm text-gray-500 italic">
+                                    No specific recommendations for skills section.
+                                  </li>
+                                );
+                              }
+                              
+                              return recommendations.map((rec, index) => (
+                                <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
+                                  <ArrowRight className="w-3 h-3 text-green-500 mt-1 flex-shrink-0" />
+                                  {rec}
+                                </li>
+                              ));
+                            })()}
                           </ul>
                         </div>
                       </div>
@@ -681,16 +738,31 @@ const AISuggestionsPage: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {getSafeArray((suggestions as any).topRecommendations).map((action, index) => (
-                        <div key={index} className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                          <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                            {index + 1}
+                      {(() => {
+                        const actions = getSafeArray((suggestions as any).topRecommendations);
+                        console.log('Action plan recommendations:', (suggestions as any).topRecommendations);
+                        console.log('Processed actions:', actions);
+                        
+                        if (actions.length === 0) {
+                          return (
+                            <div className="text-center p-6 text-gray-500">
+                              <p className="text-sm italic">No specific action items available at this time.</p>
+                              <p className="text-xs mt-2">The AI analysis may not have generated specific recommendations yet.</p>
+                            </div>
+                          );
+                        }
+                        
+                        return actions.map((action, index) => (
+                          <div key={index} className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                            <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                              {index + 1}
+                            </div>
+                            <span className="text-sm text-gray-700 flex-1 leading-relaxed">
+                              {action}
+                            </span>
                           </div>
-                          <span className="text-sm text-gray-700 flex-1 leading-relaxed">
-                            {action}
-                          </span>
-                        </div>
-                      ))}
+                        ));
+                      })()}
                     </div>
                   </CardContent>
                 </Card>
