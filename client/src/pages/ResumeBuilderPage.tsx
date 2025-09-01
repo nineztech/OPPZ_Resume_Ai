@@ -363,29 +363,32 @@ const ResumeBuilderPage = () => {
       setResumeTitle(defaultTitle);
     }
     
-    if (location.state?.extractedData && (location.state?.mode === 'raw' || location.state?.mode === 'ai' || location.state?.mode === 'ai-enhanced' || location.state?.mode === 'edit')) {
-      // Handle Gemini parsed data directly
-      const extractedData = location.state.extractedData;
-      console.log('Setting resume data from Gemini parser:', extractedData);
-      
-      // Store applied suggestions info for highlighting
-      if (location.state?.appliedSuggestions) {
-        setAppliedSuggestions(location.state.appliedSuggestions);
-        console.log('Applied suggestions detected:', location.state.appliedSuggestions);
-      }
-      
-      // Ensure all required fields are present with proper defaults
-      const processedData = {
-        basicDetails: {
-          fullName: extractedData.basicDetails?.fullName || '',
-          title: extractedData.basicDetails?.title || '',
-          phone: extractedData.basicDetails?.phone || '',
-          email: extractedData.basicDetails?.email || '',
-          location: extractedData.basicDetails?.location || '',
-          website: extractedData.basicDetails?.website || '',
-          github: extractedData.basicDetails?.github || '',
-          linkedin: extractedData.basicDetails?.linkedin || ''
-        },
+          if (location.state?.extractedData && (location.state?.mode === 'raw' || location.state?.mode === 'ai' || location.state?.mode === 'ai-enhanced' || location.state?.mode === 'edit')) {
+        // Handle Gemini parsed data directly
+        const extractedData = location.state.extractedData;
+        console.log('Setting resume data from Gemini parser:', extractedData);
+        
+        // Store applied suggestions info for highlighting
+        if (location.state?.appliedSuggestions) {
+          setAppliedSuggestions(location.state.appliedSuggestions);
+          console.log('Applied suggestions detected:', location.state.appliedSuggestions);
+        }
+        
+        // Handle both basicDetails and basic_details formats
+        const basicDetailsData = extractedData.basicDetails || extractedData.basic_details || {};
+        
+        // Ensure all required fields are present with proper defaults
+        const processedData = {
+          basicDetails: {
+            fullName: basicDetailsData.fullName || '',
+            title: basicDetailsData.title || basicDetailsData.professionalTitle || '',
+            phone: basicDetailsData.phone || '',
+            email: basicDetailsData.email || '',
+            location: basicDetailsData.location || '',
+            website: basicDetailsData.website || '',
+            github: basicDetailsData.github || basicDetailsData.gitHub || '',
+            linkedin: basicDetailsData.linkedin || basicDetailsData.linkedIn || ''
+          },
         summary: extractedData.summary || '',
         objective: extractedData.objective || '',
         experience: extractedData.experience || [],
