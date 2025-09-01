@@ -172,33 +172,39 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       <div className="max-w-4xl mx-auto p-6 bg-white" style={{ 
         fontFamily: 'Arial, sans-serif',
         fontSize: '11px',
-        lineHeight: '1.3'
+        lineHeight: '1.3',
+        padding: '15px',
+        margin: '0',
+        maxWidth: '100%'
       }}>
       {/* Header */}
-      <div className="text-center mb-4">
+      <div className="text-center mb-3">
         <h1 className="text-2xl font-bold mb-1" style={{ 
           fontSize: '22px',
           fontWeight: 'bold',
           letterSpacing: '1px',
-          color: color || '#1f2937'
+          color: color || '#1f2937',
+          marginTop: '0',
+          marginBottom: '4px'
         }}>
           {templateData.personalInfo?.name || 'Your Name'}
         </h1>
-        <div className="text-lg font-semibold mb-2" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
+        <div className="text-lg font-semibold mb-1" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151', marginBottom: '4px' }}>
           {templateData.personalInfo?.title || 'Your Title'}
         </div>
-        <div className="text-sm" style={{ fontSize: '11px' }}>
+        <div className="text-sm" style={{ fontSize: '11px', marginBottom: '0' }}>
           {templateData.personalInfo?.address || 'Your Address'} | {templateData.personalInfo?.phone || 'Your Phone'} | {templateData.personalInfo?.email || 'your.email@example.com'} | {templateData.personalInfo?.website || 'your-website.com'}
         </div>
       </div>
 
       {/* Summary */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+      <div className="mb-2">
+        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px',
+          paddingBottom: '2px',
+          marginBottom: '4px',
           color: color || '#1f2937',
           borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
@@ -206,8 +212,9 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         </h2>
         <p className="text-justify leading-relaxed" style={{ 
           fontSize: '11px',
-          lineHeight: '1.4',
-          textAlign: 'justify'
+          lineHeight: '1.3',
+          textAlign: 'justify',
+          marginBottom: '0'
         }}>
           {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
         </p>
@@ -215,18 +222,19 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       </div>
 
       {/* Technical Skills */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+      <div className="mb-2">
+        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px',
+          paddingBottom: '2px',
+          marginBottom: '4px',
           color: color || '#1f2937',
           borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
           TECHNICAL SKILLS
         </h2>
-        <div className="space-y-1">
+        <div className="space-y-0">
           {templateData.skills?.technical && typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
             // Handle categorized skills structure - display as "Category: skills"
             Object.entries(templateData.skills.technical).map(([category, skills]) => {
@@ -241,7 +249,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
               return (
                 <div key={category} className="text-sm" style={{ 
                   fontSize: '11px',
-                  lineHeight: '1.3'
+                  lineHeight: '1.3',
+                  marginBottom: '4px'
                 }}>
                   <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> 
                   {skillsArray.map((skill, index) => {
@@ -285,18 +294,19 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       </div>
 
       {/* Professional Experience */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+      <div className="mb-2">
+        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px',
+          paddingBottom: '2px',
+          marginBottom: '4px',
           color: color || '#1f2937',
           borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
           PROFESSIONAL EXPERIENCE
         </h2>
-        <div className="space-y-1">
+        <div className="space-y-0">
           {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
             templateData.experience.map((exp, index) => {
               return (
@@ -329,7 +339,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                   <div className="space-y-0 ml-0">
                     {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
                       exp.achievements.map((achievement, idx) => (
-                        <div key={idx} className="flex items-start" style={{ fontSize: '11px' }}>
+                        <div key={idx} className="flex items-start" style={{ fontSize: '11px', marginBottom: '2px' }}>
                           <span className="mr-2">•</span>
                           <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{achievement}</span>
                         </div>
@@ -368,18 +378,19 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
      
 
       {/* Projects */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+      <div className="mb-2">
+        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px',
+          paddingBottom: '2px',
+          marginBottom: '4px',
           color: color || '#1f2937',
           borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
           PROJECTS
         </h2>
-        <div className="space-y-1">
+        <div className="space-y-0">
           {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
             templateData.projects.map((project, index) => {
               return (
@@ -445,18 +456,19 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         </div>
       </div>
              {/* Education */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+      <div className="mb-2">
+        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px',
+          paddingBottom: '2px',
+          marginBottom: '4px',
           color: color || '#1f2937',
           borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
           EDUCATION
         </h2>
-        <div className="space-y-2">
+        <div className="space-y-1">
           {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
             templateData.education.map((edu, index) => {
               return (

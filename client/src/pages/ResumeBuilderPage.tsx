@@ -363,29 +363,32 @@ const ResumeBuilderPage = () => {
       setResumeTitle(defaultTitle);
     }
     
-    if (location.state?.extractedData && (location.state?.mode === 'raw' || location.state?.mode === 'ai' || location.state?.mode === 'ai-enhanced' || location.state?.mode === 'edit')) {
-      // Handle Gemini parsed data directly
-      const extractedData = location.state.extractedData;
-      console.log('Setting resume data from Gemini parser:', extractedData);
-      
-      // Store applied suggestions info for highlighting
-      if (location.state?.appliedSuggestions) {
-        setAppliedSuggestions(location.state.appliedSuggestions);
-        console.log('Applied suggestions detected:', location.state.appliedSuggestions);
-      }
-      
-      // Ensure all required fields are present with proper defaults
-      const processedData = {
-        basicDetails: {
-          fullName: extractedData.basicDetails?.fullName || '',
-          title: extractedData.basicDetails?.title || '',
-          phone: extractedData.basicDetails?.phone || '',
-          email: extractedData.basicDetails?.email || '',
-          location: extractedData.basicDetails?.location || '',
-          website: extractedData.basicDetails?.website || '',
-          github: extractedData.basicDetails?.github || '',
-          linkedin: extractedData.basicDetails?.linkedin || ''
-        },
+          if (location.state?.extractedData && (location.state?.mode === 'raw' || location.state?.mode === 'ai' || location.state?.mode === 'ai-enhanced' || location.state?.mode === 'edit')) {
+        // Handle Gemini parsed data directly
+        const extractedData = location.state.extractedData;
+        console.log('Setting resume data from Gemini parser:', extractedData);
+        
+        // Store applied suggestions info for highlighting
+        if (location.state?.appliedSuggestions) {
+          setAppliedSuggestions(location.state.appliedSuggestions);
+          console.log('Applied suggestions detected:', location.state.appliedSuggestions);
+        }
+        
+        // Handle both basicDetails and basic_details formats
+        const basicDetailsData = extractedData.basicDetails || extractedData.basic_details || {};
+        
+        // Ensure all required fields are present with proper defaults
+        const processedData = {
+          basicDetails: {
+            fullName: basicDetailsData.fullName || '',
+            title: basicDetailsData.title || basicDetailsData.professionalTitle || '',
+            phone: basicDetailsData.phone || '',
+            email: basicDetailsData.email || '',
+            location: basicDetailsData.location || '',
+            website: basicDetailsData.website || '',
+            github: basicDetailsData.github || basicDetailsData.gitHub || '',
+            linkedin: basicDetailsData.linkedin || basicDetailsData.linkedIn || ''
+          },
         summary: extractedData.summary || '',
         objective: extractedData.objective || '',
         experience: extractedData.experience || [],
@@ -1332,38 +1335,50 @@ const ResumeBuilderPage = () => {
     if (!resumeRef.current) return;
 
     try {
-      // Create a temporary container for the resume
+      // Create a temporary container for the resume with minimal margins
       const tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
       tempContainer.style.top = '0';
       tempContainer.style.width = '800px';
       tempContainer.style.backgroundColor = 'white';
-      tempContainer.style.padding = '40px';
+      tempContainer.style.padding = '20px'; // Reduced from 40px to 20px
+      tempContainer.style.margin = '0'; // Remove all margins
+      tempContainer.style.boxSizing = 'border-box';
       document.body.appendChild(tempContainer);
 
       // Clone the resume content
       const resumeClone = resumeRef.current.cloneNode(true) as HTMLElement;
+      
+      // Remove any existing margins/padding from the cloned content
+      if (resumeClone.style) {
+        resumeClone.style.margin = '0';
+        resumeClone.style.padding = '0';
+      }
+      
       tempContainer.appendChild(resumeClone);
 
       // Wait for any images to load
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Convert to canvas
+      // Convert to canvas with optimized settings for smaller file size and better quality
       const canvas = await html2canvas(tempContainer, {
-        scale: 2,
+        scale: 1.8, // Increased slightly for better quality while keeping file size reasonable
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         width: 800,
-        height: tempContainer.scrollHeight
+        height: tempContainer.scrollHeight,
+        imageTimeout: 5000,
+        removeContainer: true,
+        logging: false
       });
 
       // Remove temporary container
       document.body.removeChild(tempContainer);
 
-      // Create PDF
-      const imgData = canvas.toDataURL('image/png');
+      // Create PDF with optimized settings
+      const imgData = canvas.toDataURL('image/jpeg', 0.9); // Increased quality to 90% for better text clarity
       const pdf = new jsPDF('p', 'mm', 'a4');
       
       const imgWidth = 210; // A4 width in mm
@@ -1374,14 +1389,14 @@ const ResumeBuilderPage = () => {
       let position = 0;
 
       // Add first page
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
       heightLeft -= pageHeight;
 
       // Add additional pages if needed
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pageHeight;
       }
 
