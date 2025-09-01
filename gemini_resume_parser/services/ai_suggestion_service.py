@@ -185,8 +185,10 @@ class AISuggestionService:
         - Only add missing skills to existing categories (e.g., if "Java" is missing from "Programming Languages", add it there).
         - If a skill doesn't fit any existing category, do NOT suggest it.
         - Focus on enhancing existing skill categories with relevant missing skills from the job description.
-        - Format skills as "Category: skill1, skill2, skill3" where Category must exist in the resume.
-        - Example: If resume has "Programming Languages" category and job needs "Python", suggest "Programming Languages: Python"
+        - In the "rewrite" field: ONLY include categories that have NEW skills to add, and ONLY list the NEW skills (not existing ones).
+        - Format skills as "Category: new_skill1, new_skill2" where Category must exist in the resume and skills are NEW additions only.
+        - Example: If resume has "Programming Languages: Java, Python" and job needs "JavaScript", suggest "Programming Languages: JavaScript" (not "Programming Languages: Java, Python, JavaScript").
+        - If a category has no new skills to add, do NOT include that category in the rewrite at all.
         - Do NOT suggest "New Category: skills" - only use existing categories.
 
         RESUME DATA:
@@ -469,6 +471,20 @@ class AISuggestionService:
                     # Filter skills suggestions to only include existing categories and remove duplicate skills
                     if existing_categories or existing_skills:
                         filtered_rewrite = []
+                        
+                        # Create a map of existing skills per category for better tracking
+                        existing_skills_per_category = {}
+                        if isinstance(skills_data, dict):
+                            for category, skill_list in skills_data.items():
+                                category_skills = set()
+                                if isinstance(skill_list, list):
+                                    for skill in skill_list:
+                                        if skill and str(skill).strip():
+                                            category_skills.add(str(skill).strip().lower())
+                                elif isinstance(skill_list, str) and skill_list.strip():
+                                    category_skills.add(skill_list.strip().lower())
+                                existing_skills_per_category[category] = category_skills
+                        
                         for skill_line in skills_suggestions['rewrite']:
                             if isinstance(skill_line, str) and ':' in skill_line:
                                 # Handle categorized skills (e.g., "Technical: Python, Java")
@@ -480,19 +496,25 @@ class AISuggestionService:
                                         # Split skills by comma and filter out existing ones
                                         individual_skills = [skill.strip() for skill in skills_part.split(',') if skill.strip()]
                                         new_skills = []
+                                        
+                                        # Get existing skills for this specific category
+                                        category_existing_skills = existing_skills_per_category.get(category, set())
+                                        
                                         for skill in individual_skills:
-                                            if skill.lower() not in existing_skills:
+                                            # Check if skill exists in this specific category
+                                            if skill.lower() not in category_existing_skills:
                                                 new_skills.append(skill)
+                                                logger.info(f"Adding new skill to {category}: {skill}")
                                             else:
                                                 logger.info(f"Filtering out duplicate skill: {skill} (already exists in {category})")
                                         
-                                        # Only add the line if there are new skills to add
+                                        # Only add the category line if there are actually new skills to add
                                         if new_skills:
                                             new_skill_line = f"{category}: {', '.join(new_skills)}"
                                             filtered_rewrite.append(new_skill_line)
-                                            logger.info(f"Keeping skill suggestion for existing category with new skills: {category}")
+                                            logger.info(f"Including {category} in rewrite with {len(new_skills)} new skills: {', '.join(new_skills)}")
                                         else:
-                                            logger.info(f"Skipping {category} - all skills already exist")
+                                            logger.info(f"Excluding {category} from rewrite - no new skills to add")
                                     else:
                                         # Empty skills part, skip this line
                                         logger.info(f"Skipping {category} - no skills specified")
@@ -513,7 +535,7 @@ class AISuggestionService:
                                             filtered_rewrite.append(new_skill_line)
                                             logger.info(f"Keeping skill suggestion for category with new skills: {category}")
                                         else:
-                                            logger.info(f"Skipping {category} - all skills already exist")
+                                            logger.info(f"Excluding {category} from rewrite - no new skills to add")
                                 else:
                                     logger.warning(f"Filtering out skill suggestion for non-existing category: {category}")
                             else:
