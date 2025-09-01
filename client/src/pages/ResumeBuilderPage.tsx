@@ -1395,11 +1395,11 @@ const ResumeBuilderPage = () => {
       // Add additional pages if needed
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
-        pdf.addPage();
+            pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pageHeight;
       }
-
+      
       // Download the PDF
       const fileName = `${resumeData.basicDetails.fullName.replace(/\s+/g, '_')}_Resume.pdf`;
       pdf.save(fileName);
