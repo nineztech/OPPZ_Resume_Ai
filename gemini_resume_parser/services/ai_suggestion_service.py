@@ -178,6 +178,24 @@ class AISuggestionService:
         - Never leave placeholders like "improve wording" — always provide final rewritten text.
         - ALWAYS provide a numeric overallScore between 0-100 (never "NA", "N/A", or text).
         - NEVER use "NA", "N/A", "None", "Null", "Unknown", or similar placeholder values - use empty strings or appropriate defaults instead.
+
+        OVERALL SCORE CALCULATION RULES:
+        - Calculate overallScore based on how well the resume matches the job description requirements
+        - Score 90-100: Excellent match - resume perfectly aligns with JD requirements, strong keywords, relevant experience
+        - Score 80-89: Very good match - resume mostly aligns with JD, minor improvements needed
+        - Score 70-79: Good match - resume has potential but needs significant improvements to align with JD
+        - Score 60-69: Fair match - resume has some relevant elements but major improvements needed
+        - Score 50-59: Poor match - resume lacks many JD requirements, substantial improvements needed
+        - Score 0-49: Very poor match - resume significantly misaligned with JD requirements
+        
+        SCORING FACTORS TO CONSIDER:
+        - Skills alignment: How well do resume skills match JD requirements?
+        - Experience relevance: Does work experience align with job responsibilities?
+        - Keyword matching: Are important JD keywords present in resume?
+        - Quantified achievements: Does resume show measurable results?
+        - Professional summary: Does it effectively communicate value proposition?
+        - Education/certifications: Do they meet JD requirements?
+        - Overall presentation: Is resume well-structured and professional?
         
         CRITICAL SKILLS RULES:
         - For skills section: ONLY suggest skills that can be added to EXISTING categories shown in the resume.
@@ -199,7 +217,7 @@ class AISuggestionService:
 
         REQUIRED OUTPUT SCHEMA (MUST INCLUDE ALL SECTIONS):
         {{
-            "overallScore": 75,
+            "overallScore": <calculate_dynamic_score_based_on_resume_jd_match>,
             "analysisTimestamp": "{datetime.datetime.utcnow().isoformat()}Z",
             "sectionSuggestions": {{
                 "professionalSummary": {{
@@ -381,7 +399,7 @@ class AISuggestionService:
                     logger.error(f"🚨 Even extracted JSON failed: {str(second_error)}")
                     # Create a minimal fallback response
                     ai_response = {
-                        "overallScore": 0,
+                        "overallScore": 0,  # Will be calculated dynamically
                         "analysisTimestamp": datetime.datetime.utcnow().isoformat() + "Z",
                         "sectionSuggestions": {
                             "professionalSummary": {"existing": "", "rewrite": "", "recommendations": [""]},
@@ -398,7 +416,7 @@ class AISuggestionService:
             # Enforce schema compliance - ensure all required sections are present
             logger.info(f"🔍 Starting schema compliance enforcement...")
             try:
-                ai_response = self._enforce_schema_compliance(ai_response, resume_data)
+                ai_response = self._enforce_schema_compliance(ai_response, resume_data, job_description)
                 logger.info(f"✅ Schema compliance enforcement completed")
             except Exception as e:
                 logger.error(f"🚨 Error during schema compliance enforcement: {str(e)}")
@@ -1361,7 +1379,7 @@ class AISuggestionService:
             if found_sections:
                 # Try to reconstruct a complete response
                 reconstructed = {
-                    "overallScore": 75,  # Default score
+                    "overallScore": 0,  # Will be calculated dynamically
                     "analysisTimestamp": datetime.datetime.utcnow().isoformat() + "Z",
                     "sectionSuggestions": {},
                     "topRecommendations": ["Resume analysis completed with reconstructed data"]
@@ -1559,7 +1577,7 @@ class AISuggestionService:
         logger.warning("Could not extract valid JSON from AI response, returning fallback structure")
         return '{"error": "Invalid JSON response", "message": "Could not parse AI response"}'
 
-    def _enforce_schema_compliance(self, ai_response: Dict[str, Any], resume_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _enforce_schema_compliance(self, ai_response: Dict[str, Any], resume_data: Dict[str, Any], job_description: str) -> Dict[str, Any]:
         """
         Enforces schema compliance for the AI response.
         Ensures all required sections are present, even if the AI skips them.
@@ -1579,7 +1597,7 @@ class AISuggestionService:
                 "education": {"existing": [], "rewrite": "", "recommendations": [""]},
                 "certifications": {"existing": [], "rewrite": "", "recommendations": [""]}
             },
-            "overallScore": 0,
+            "overallScore": 0,  # Will be calculated dynamically
             "analysisTimestamp": "",
             "topRecommendations": [""]
         }
@@ -1644,11 +1662,11 @@ class AISuggestionService:
         
         logger.info(f"🔍 Final validated score: {ai_response['overallScore']} (type: {type(ai_response['overallScore'])})")
         
-        # If score is still 0 (default), calculate a reasonable score based on resume completeness
+        # If score is still 0 (default), calculate a reasonable score based on resume completeness and job description match
         if ai_response['overallScore'] == 0:
-            calculated_score = self._calculate_resume_score(resume_data)
+            calculated_score = self._calculate_dynamic_score_with_jd(resume_data, job_description)
             ai_response['overallScore'] = calculated_score
-            logger.info(f"🔄 Calculated fallback score based on resume completeness: {calculated_score}")
+            logger.info(f"🔄 Calculated dynamic fallback score based on resume-JD match: {calculated_score}")
         
         # FINAL CHECK: Ensure the score is absolutely never "NA"
         final_score_str = str(ai_response['overallScore']).strip().upper()
@@ -2295,7 +2313,7 @@ class AISuggestionService:
         if sections:
             # Try to reconstruct a complete response
             reconstructed = {
-                "overallScore": 75,  # Default score
+                "overallScore": 0,  # Will be calculated dynamically
                 "analysisTimestamp": datetime.datetime.utcnow().isoformat() + "Z",
                 "sectionSuggestions": {},
                 "topRecommendations": ["Resume analysis completed with partial data"]
@@ -2374,7 +2392,7 @@ class AISuggestionService:
                                 
                                 # Now wrap it in the complete structure
                                 wrapped_json = {
-                                    "overallScore": 75,
+                                    "overallScore": 0,  # Will be calculated dynamically
                                     "analysisTimestamp": datetime.datetime.utcnow().isoformat() + "Z",
                                     "sectionSuggestions": parsed,
                                     "topRecommendations": ["Resume analysis completed with wrapped data"]
@@ -2649,3 +2667,241 @@ class AISuggestionService:
                     score += 1
 
         # Check for education
+        if 'education' in resume_data and isinstance(resume_data['education'], list) and resume_data['education']:
+            score += 10
+            for edu in resume_data['education']:
+                if edu.get('degree') and edu.get('institution'):
+                    score += 5
+                elif edu.get('degree') or edu.get('institution'):
+                    score += 2
+                elif edu.get('startDate') or edu.get('endDate'):
+                    score += 1
+
+        # Check for certifications
+        if 'certifications' in resume_data and isinstance(resume_data['certifications'], list) and resume_data['certifications']:
+            score += 5
+            for cert in resume_data['certifications']:
+                if cert.get('certificateName') or cert.get('institueName'):
+                    score += 2
+                elif cert.get('issueDate') or cert.get('expiryDate'):
+                    score += 1
+
+        # Check for projects
+        if 'projects' in resume_data and isinstance(resume_data['projects'], list) and resume_data['projects']:
+            score += 10
+            for project in resume_data['projects']:
+                if project.get('name') or project.get('description'):
+                    score += 5
+                elif project.get('techStack'):
+                    score += 2
+                elif project.get('startDate') or project.get('endDate'):
+                    score += 1
+
+        return score
+    
+    def _calculate_dynamic_score_with_jd(self, resume_data: Dict[str, Any], job_description: str) -> int:
+        """
+        Calculates a dynamic score based on how well the resume matches the job description requirements.
+        This provides a more intelligent scoring when AI scoring fails.
+        """
+        try:
+            # Start with base resume completeness score
+            base_score = self._calculate_resume_score(resume_data)
+            logger.info(f"📊 Base resume completeness score: {base_score}/100")
+            
+            # Calculate JD match score (0-50 points)
+            jd_match_score = self._calculate_jd_match_score(resume_data, job_description)
+            logger.info(f"📊 Job description match score: {jd_match_score}/50")
+            
+            # Combine scores: 60% base resume quality + 40% JD match
+            final_score = int((base_score * 0.6) + (jd_match_score * 0.4))
+            final_score = max(0, min(100, final_score))
+            
+            logger.info(f"📊 Final dynamic score: {final_score}/100")
+            logger.info(f"   - Base resume score: {base_score} (60% weight)")
+            logger.info(f"   - JD match score: {jd_match_score} (40% weight)")
+            logger.info(f"   - Calculated final: {final_score}")
+            
+            return final_score
+            
+        except Exception as e:
+            logger.warning(f"❌ Error calculating dynamic score with JD: {str(e)}")
+            # Fallback to base score if JD analysis fails
+            return self._calculate_resume_score(resume_data)
+    
+    def _calculate_jd_match_score(self, resume_data: Dict[str, Any], job_description: str) -> int:
+        """
+        Calculates how well the resume matches the job description requirements.
+        Returns a score from 0-50.
+        """
+        try:
+            score = 0
+            max_score = 50
+            
+            # Convert job description to lowercase for easier matching
+            jd_lower = job_description.lower()
+            
+            # Extract key requirements from job description
+            required_skills = self._extract_required_skills_from_jd(jd_lower)
+            required_experience = self._extract_required_experience_from_jd(jd_lower)
+            required_education = self._extract_required_education_from_jd(jd_lower)
+            
+            logger.info(f"🔍 JD Analysis:")
+            logger.info(f"   - Required skills: {required_skills}")
+            logger.info(f"   - Required experience: {required_experience}")
+            logger.info(f"   - Required education: {required_education}")
+            
+            # Skills match (20 points)
+            skills_match = self._calculate_skills_match(resume_data, required_skills)
+            score += min(skills_match, 20)
+            
+            # Experience match (15 points)
+            experience_match = self._calculate_experience_match(resume_data, required_experience)
+            score += min(experience_match, 15)
+            
+            # Education match (10 points)
+            education_match = self._calculate_education_match(resume_data, required_education)
+            score += min(education_match, 10)
+            
+            # Keyword match (5 points)
+            keyword_match = self._calculate_keyword_match(resume_data, jd_lower)
+            score += min(keyword_match, 5)
+            
+            final_score = max(0, min(max_score, score))
+            logger.info(f"📊 JD Match Score Breakdown:")
+            logger.info(f"   - Skills match: {min(skills_match, 20)}/20")
+            logger.info(f"   - Experience match: {min(experience_match, 15)}/15")
+            logger.info(f"   - Education match: {min(education_match, 10)}/10")
+            logger.info(f"   - Keyword match: {min(keyword_match, 5)}/5")
+            logger.info(f"   - Total JD match: {final_score}/50")
+            
+            return final_score
+            
+        except Exception as e:
+            logger.warning(f"❌ Error calculating JD match score: {str(e)}")
+            return 25  # Return middle score if analysis fails
+    
+    def _extract_required_skills_from_jd(self, jd_lower: str) -> list:
+        """Extract required skills from job description"""
+        skills = []
+        
+        # Common technical skills to look for
+        technical_skills = [
+            'python', 'java', 'javascript', 'react', 'node.js', 'sql', 'aws', 'docker',
+            'kubernetes', 'machine learning', 'ai', 'data analysis', 'excel', 'tableau',
+            'power bi', 'salesforce', 'marketing', 'seo', 'content creation', 'project management'
+        ]
+        
+        for skill in technical_skills:
+            if skill in jd_lower:
+                skills.append(skill)
+        
+        return skills
+    
+    def _extract_required_experience_from_jd(self, jd_lower: str) -> str:
+        """Extract required experience level from job description"""
+        if any(term in jd_lower for term in ['senior', 'lead', 'principal', 'architect', 'manager']):
+            return 'senior'
+        elif any(term in jd_lower for term in ['mid', 'intermediate', '3+ years', '5+ years']):
+            return 'mid'
+        elif any(term in jd_lower for term in ['junior', 'entry', '0-2 years', '1-3 years']):
+            return 'entry'
+        else:
+            return 'mid'  # Default to mid level
+    
+    def _extract_required_education_from_jd(self, jd_lower: str) -> list:
+        """Extract required education from job description"""
+        education = []
+        
+        if 'bachelor' in jd_lower or 'bs' in jd_lower or 'ba' in jd_lower:
+            education.append('bachelor')
+        if 'master' in jd_lower or 'ms' in jd_lower or 'ma' in jd_lower or 'mba' in jd_lower:
+            education.append('master')
+        if 'phd' in jd_lower or 'doctorate' in jd_lower:
+            education.append('phd')
+        
+        return education
+    
+    def _calculate_skills_match(self, resume_data: Dict[str, Any], required_skills: list) -> int:
+        """Calculate skills match score (0-20 points)"""
+        if not required_skills:
+            return 10  # Neutral score if no skills specified
+        
+        resume_skills = set()
+        skills_data = resume_data.get('skills', {})
+        
+        if isinstance(skills_data, dict):
+            for category, skill_list in skills_data.items():
+                if isinstance(skill_list, list):
+                    resume_skills.update([str(s).lower().strip() for s in skill_list if s])
+                elif isinstance(skill_list, str):
+                    resume_skills.add(skill_list.lower().strip())
+        elif isinstance(skills_data, list):
+            resume_skills.update([str(s).lower().strip() for s in skills_data if s])
+        
+        # Calculate match percentage
+        if not resume_skills:
+            return 0
+        
+        matched_skills = sum(1 for skill in required_skills if any(skill in resume_skill for resume_skill in resume_skills))
+        match_percentage = matched_skills / len(required_skills)
+        
+        return int(match_percentage * 20)
+    
+    def _calculate_experience_match(self, resume_data: Dict[str, Any], required_experience: str) -> int:
+        """Calculate experience match score (0-15 points)"""
+        resume_experience = self._analyze_experience_level(resume_data)
+        
+        if required_experience == resume_experience:
+            return 15  # Perfect match
+        elif (required_experience == 'senior' and resume_experience == 'mid') or \
+             (required_experience == 'mid' and resume_experience == 'entry'):
+            return 10  # Close match
+        elif (required_experience == 'senior' and resume_experience == 'entry'):
+            return 5   # Poor match
+        else:
+            return 8   # Neutral score
+    
+    def _calculate_education_match(self, resume_data: Dict[str, Any], required_education: list) -> int:
+        """Calculate education match score (0-10 points)"""
+        if not required_education:
+            return 5  # Neutral score if no education specified
+        
+        resume_education = []
+        education_data = resume_data.get('education', [])
+        
+        if isinstance(education_data, list):
+            for edu in education_data:
+                if isinstance(edu, dict):
+                    degree = edu.get('degree', '').lower()
+                    if 'bachelor' in degree or 'bs' in degree or 'ba' in degree:
+                        resume_education.append('bachelor')
+                    elif 'master' in degree or 'ms' in degree or 'ma' in degree or 'mba' in degree:
+                        resume_education.append('master')
+                    elif 'phd' in degree or 'doctorate' in degree:
+                        resume_education.append('phd')
+        
+        if not resume_education:
+            return 0
+        
+        # Calculate match percentage
+        matched_education = sum(1 for edu in required_education if edu in resume_education)
+        match_percentage = matched_education / len(required_education)
+        
+        return int(match_percentage * 10)
+    
+    def _calculate_keyword_match(self, resume_data: Dict[str, Any], jd_lower: str) -> int:
+        """Calculate keyword match score (0-5 points)"""
+        # Extract key terms from resume
+        resume_text = self._format_resume_for_comparison(resume_data).lower()
+        
+        # Look for important keywords in both resume and JD
+        important_keywords = [
+            'leadership', 'management', 'strategy', 'innovation', 'collaboration',
+            'communication', 'problem solving', 'analytical', 'creative', 'detail-oriented',
+            'results-driven', 'customer-focused', 'team player', 'self-motivated'
+        ]
+        
+        matched_keywords = sum(1 for keyword in important_keywords if keyword in resume_text and keyword in jd_lower)
+        
+        return min(matched_keywords, 5)

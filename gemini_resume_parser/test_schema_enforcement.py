@@ -44,7 +44,7 @@ def test_schema_enforcement():
         "experience": [{"role": "Developer", "description": "Old description"}]
     }
     
-    enforced = service._enforce_schema_compliance(complete_response, sample_resume)
+    enforced = service._enforce_schema_compliance(complete_response, sample_resume, "Software Developer role")
     print(f"✅ Complete response preserved: {len(enforced['sectionSuggestions'])} sections")
     
     # Test Case 2: Missing workExperience section
@@ -61,7 +61,7 @@ def test_schema_enforcement():
         }
     }
     
-    enforced = service._enforce_schema_compliance(incomplete_response, sample_resume)
+    enforced = service._enforce_schema_compliance(incomplete_response, sample_resume, "Software Developer role")
     if "workExperience" in enforced["sectionSuggestions"]:
         print("✅ Missing workExperience section was added")
         print(f"   Added {len(enforced['sectionSuggestions']['workExperience'])} experience entries")
@@ -82,7 +82,7 @@ def test_schema_enforcement():
         }
     }
     
-    enforced = service._enforce_schema_compliance(empty_response, sample_resume)
+    enforced = service._enforce_schema_compliance(empty_response, sample_resume, "Software Developer role")
     if enforced["sectionSuggestions"]["workExperience"]:
         print("✅ Empty workExperience array was populated")
         print(f"   Now has {len(enforced['sectionSuggestions']['workExperience'])} entries")
@@ -96,7 +96,7 @@ def test_schema_enforcement():
         # sectionSuggestions is completely missing!
     }
     
-    enforced = service._enforce_schema_compliance(minimal_response, sample_resume)
+    enforced = service._enforce_schema_compliance(minimal_response, sample_resume, "Software Developer role")
     if "sectionSuggestions" in enforced:
         print("✅ Missing sectionSuggestions was added")
         print(f"   Contains {len(enforced['sectionSuggestions'])} sections")
@@ -124,7 +124,7 @@ def test_schema_enforcement():
         ]
     }
     
-    enforced = service._enforce_schema_compliance(minimal_response, complex_resume)
+    enforced = service._enforce_schema_compliance(minimal_response, complex_resume, "Software Developer role")
     work_exp = enforced["sectionSuggestions"]["workExperience"]
     if work_exp and len(work_exp) == 2:
         print("✅ Fallback created from original resume data")

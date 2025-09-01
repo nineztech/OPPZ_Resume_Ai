@@ -55,7 +55,7 @@ def test_score_validation():
     }
     test_resume_data = {"experience": [{"role": "Developer"}]}
     
-    enforced_response = service._enforce_schema_compliance(test_ai_response, test_resume_data)
+    enforced_response = service._enforce_schema_compliance(test_ai_response, test_resume_data, "Software Developer role")
     final_score = enforced_response.get("overallScore")
     print(f"   Final score after enforcement: {final_score} (type: {type(final_score)})")
     
