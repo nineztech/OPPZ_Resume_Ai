@@ -1333,21 +1333,24 @@ const ResumeBuilderPage = () => {
       // Wait for any images to load
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Convert to canvas
+      // Convert to canvas with optimized settings for smaller file size
       const canvas = await html2canvas(tempContainer, {
-        scale: 2,
+        scale: 1.5, // Reduced from 2 to 1.5 for smaller file size
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         width: 800,
-        height: tempContainer.scrollHeight
+        height: tempContainer.scrollHeight,
+        imageTimeout: 5000, // Reduce timeout
+        removeContainer: true, // Automatically remove container
+        logging: false // Disable logging
       });
 
       // Remove temporary container
       document.body.removeChild(tempContainer);
 
-      // Create PDF
-      const imgData = canvas.toDataURL('image/png');
+      // Create PDF with optimized settings
+      const imgData = canvas.toDataURL('image/jpeg', 0.85); // Use JPEG with 85% quality instead of PNG
       const pdf = new jsPDF('p', 'mm', 'a4');
       
       const imgWidth = 210; // A4 width in mm
@@ -1358,14 +1361,14 @@ const ResumeBuilderPage = () => {
       let position = 0;
 
       // Add first page
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST'); // Use FAST compression
       heightLeft -= pageHeight;
 
       // Add additional pages if needed
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST'); // Use FAST compression
         heightLeft -= pageHeight;
       }
 
