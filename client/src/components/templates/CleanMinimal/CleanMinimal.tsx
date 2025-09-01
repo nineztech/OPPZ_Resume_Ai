@@ -168,14 +168,14 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
   const templateData = data || cleanMinimalTemplateData;
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white" style={{ 
+    <div className="max-w-4xl mx-auto p-2 -mt-4 bg-white" style={{ 
       fontFamily: 'Arial, sans-serif',
       fontSize: '11px',
       lineHeight: '1.3'
     }}>
       {/* Header */}
-      <div className="text-center mb-4">
-        <h1 className="text-2xl font-bold mb-1" style={{ 
+      <div className="text-center mb-1">
+        <h1 className="text-2xl font-bold mb-0" style={{ 
           fontSize: '22px',
           fontWeight: 'bold',
           letterSpacing: '1px',
@@ -183,7 +183,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
         }}>
           {templateData.personalInfo?.name || 'Your Name'}
         </h1>
-        <div className="text-lg font-semibold mb-2" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
+        <div className="text-lg font-semibold mb-1" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
           {templateData.personalInfo?.title || 'Your Title'}
         </div>
         <div className="text-sm" style={{ fontSize: '11px' }}>
@@ -192,8 +192,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
       </div>
 
       {/* Summary */}
-      <div className="mb-3" style={{ position: 'relative' }}>
-        <h2 className="text-center font-bold mb-0 uppercase" style={{ 
+      <div className="mb-1" style={{ position: 'relative' }}>
+        <h2 className="text-center font-bold -mb-2 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
@@ -227,8 +227,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
       </div>
 
       {/* Technical Skills */}
-      <div className="mb-3">
-        <h2 className="text-center font-bold mb-0 uppercase" style={{ 
+      <div className="mb-1">
+        <h2 className="text-center font-bold -mb-2 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
@@ -324,8 +324,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
       </div>
 
       {/* Professional Experience */}
-      <div className="mb-3">
-        <h2 className="text-center font-bold mb-0 uppercase" style={{ 
+      <div className="mb-1 mt-0">
+        <h2 className="text-center font-bold -mb-2 mt-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
@@ -363,7 +363,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
                     </div>
                   )}
                   
-                  <div className="flex justify-between items-start mb-1">
+                  <div className="flex justify-between items-start -mb-2">
                     <div className="flex-1">
                       <h3 className="font-bold" style={{ 
                         fontSize: '11px',
@@ -372,11 +372,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
                         {exp.title}
                       </h3>
                       {exp.company && (
-                        <p className="text-gray-600" style={{ 
+                        <p className="text-gray-600 mb-4" style={{ 
                           fontSize: '10px',
                           fontWeight: '500'
                         }}>
-                          {exp.company}
+                          <b>{exp.company}</b>
                         </p>
                       )}
                     </div>
@@ -387,7 +387,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
                       {exp.dates}
                     </div>
                   </div>
-                  <div className="space-y-0 ml-0">
+                  <div className="space-y-0 ml-0 mt-1">
                     {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
                       exp.achievements.map((achievement, idx) => (
                         <div key={idx} className="flex items-start" style={{ fontSize: '11px' }}>
@@ -429,7 +429,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
      
 
       {/* Projects */}
-      <div className="mb-3">
+      <div className="mb-2">
         <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
@@ -442,7 +442,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
           {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
             templateData.projects.map((project, index) => (
               <div key={index}>
-                                 <div className="mb-1">
+                                 <div className="mb-0">
                    <div className="flex justify-between items-center">
                      <div className="flex items-center gap-2">
                        <h3 className="font-bold" style={{ 
@@ -471,7 +471,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
                       )}
                    </div>
                  </div>
-                <div className="space-y-0 ml-0">
+                <div className="space-y-0 ml-0 mt-1">
                   {project.Description ? (
                     <div className="flex items-start" style={{ fontSize: '11px' }}>
                       <span className="mr-2">•</span>
@@ -501,7 +501,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
         </div>
       </div>
              {/* Education */}
-      <div className="mb-3">
+      <div className="mb-2">
         <h2 className="text-center font-bold mb-0 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
@@ -510,7 +510,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
         }}>
           EDUCATION
         </h2>
-        <div className="space-y-2">
+        <div className="space-y-1">
           {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
             templateData.education.map((edu, index) => (
               <div key={index} className="flex justify-between items-start">

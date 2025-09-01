@@ -192,36 +192,42 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
           }
         `}
       </style>
-      <div className="max-w-4xl mx-auto p-6 bg-white" style={{ 
+      <div className="w-full bg-white" style={{ 
         fontFamily: 'Arial, sans-serif',
         fontSize: '11px',
-        lineHeight: '1.3'
+        lineHeight: '1.3',
+        padding: '15px',
+        margin: '0',
+        maxWidth: '100%'
       }}>
       {/* Header */}
-      <div className="text-center mb-4">
+      <div className="text-center mb-3">
         <h1 className="text-2xl font-bold mb-1" style={{ 
           fontSize: '22px',
           fontWeight: 'bold',
           letterSpacing: '1px',
-          color: color || '#1f2937'
+          color: color || '#1f2937',
+          marginTop: '0',
+          marginBottom: '4px'
         }}>
           {templateData.personalInfo?.name || 'Your Name'}
         </h1>
-        <div className="text-lg font-semibold mb-2" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
+        <div className="text-lg font-semibold mb-1" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151', marginBottom: '4px' }}>
           {templateData.personalInfo?.title || 'Your Title'}
         </div>
-        <div className="text-sm" style={{ fontSize: '11px' }}>
+        <div className="text-sm" style={{ fontSize: '11px', marginBottom: '0' }}>
           {templateData.personalInfo?.address || 'Your Address'} | {templateData.personalInfo?.phone || 'Your Phone'} | {templateData.personalInfo?.email || 'your.email@example.com'} | {templateData.personalInfo?.website || 'your-website.com'}
         </div>
       </div>
 
       {/* Summary */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+      <div className="mb-2">
+        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px',
+          paddingBottom: '2px',
+          marginBottom: '4px',
           color: color || '#1f2937',
           borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
@@ -229,8 +235,9 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
         </h2>
         <p className="text-justify leading-relaxed" style={{ 
           fontSize: '11px',
-          lineHeight: '1.4',
-          textAlign: 'justify'
+          lineHeight: '1.3',
+          textAlign: 'justify',
+          marginBottom: '0'
         }}>
           {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
         </p>
@@ -253,18 +260,19 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
       </div>
 
       {/* Technical Skills */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+      <div className="mb-2">
+        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px',
+          paddingBottom: '2px',
+          marginBottom: '4px',
           color: color || '#1f2937',
           borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
           TECHNICAL SKILLS
         </h2>
-        <div className="space-y-1">
+        <div className="space-y-0">
           {templateData.skills?.technical && typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
             // Handle categorized skills structure - display as "Category: skills"
             Object.entries(templateData.skills.technical).map(([category, skills]) => {
@@ -279,7 +287,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
               return (
                 <div key={category} className="text-sm" style={{ 
                   fontSize: '11px',
-                  lineHeight: '1.3'
+                  lineHeight: '1.3',
+                  marginBottom: '4px'
                 }}>
                   <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> 
                   {skillsArray.map((skill, index) => {
@@ -353,18 +362,19 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
       </div>
 
       {/* Professional Experience */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+      <div className="mb-2">
+        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px',
+          paddingBottom: '2px',
+          marginBottom: '4px',
           color: color || '#1f2937',
           borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
           PROFESSIONAL EXPERIENCE
         </h2>
-        <div className="space-y-1">
+        <div className="space-y-0">
           {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
             templateData.experience.map((exp, index) => {
               const isExperienceHighlighted = highlightedSections?.has(`experience-${index}-ai-enhanced`) || highlightedSections?.has(`experience-${index}-ai-rewrite`);
@@ -373,9 +383,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
                 <div key={index} style={{
                   background: isExperienceHighlighted ? 'rgba(255, 235, 59, 0.1)' : 'transparent',
                   borderLeft: isExperienceHighlighted ? '3px solid #ffc107' : 'none',
-                  padding: isExperienceHighlighted ? '8px' : '0',
+                  padding: isExperienceHighlighted ? '6px' : '0',
                   borderRadius: isExperienceHighlighted ? '4px' : '0',
-                  position: 'relative'
+                  position: 'relative',
+                  marginBottom: '8px'
                 }}>
                   {isExperienceHighlighted && (
                     <div style={{
@@ -421,7 +432,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
                   <div className="space-y-0 ml-0">
                     {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
                       exp.achievements.map((achievement, idx) => (
-                        <div key={idx} className="flex items-start" style={{ fontSize: '11px' }}>
+                        <div key={idx} className="flex items-start" style={{ fontSize: '11px', marginBottom: '2px' }}>
                           <span className="mr-2">•</span>
                           <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{achievement}</span>
                         </div>
@@ -460,18 +471,19 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
      
 
       {/* Projects */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+      <div className="mb-2">
+        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px',
+          paddingBottom: '2px',
+          marginBottom: '4px',
           color: color || '#1f2937',
           borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
           PROJECTS
         </h2>
-        <div className="space-y-1">
+        <div className="space-y-0">
           {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
             templateData.projects.map((project, index) => {
               const isProjectHighlighted = highlightedSections?.has(`project-${index}-ai-rewrite`);
@@ -480,9 +492,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
               <div key={index} style={{
                 background: isProjectHighlighted ? 'rgba(255, 235, 59, 0.1)' : 'transparent',
                 borderLeft: isProjectHighlighted ? '3px solid #ffc107' : 'none',
-                padding: isProjectHighlighted ? '8px' : '0',
+                padding: isProjectHighlighted ? '6px' : '0',
                 borderRadius: isProjectHighlighted ? '4px' : '0',
-                position: 'relative'
+                position: 'relative',
+                marginBottom: '8px'
               }}>
                                  <div className="mb-1">
                    <div className="flex justify-between items-center">
@@ -559,18 +572,19 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
         </div>
       </div>
              {/* Education */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
+      <div className="mb-2">
+        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '0px',
+          paddingBottom: '2px',
+          marginBottom: '4px',
           color: color || '#1f2937',
           borderBottom: `2px solid ${color || '#d1d5db'}`
         }}>
           EDUCATION
         </h2>
-        <div className="space-y-2">
+        <div className="space-y-1">
           {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
             templateData.education.map((edu, index) => {
               const isEducationHighlighted = highlightedSections?.has(`education-${index}-ai-rewrite`);
@@ -579,9 +593,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
               <div key={index} className="flex justify-between items-start" style={{
                 background: isEducationHighlighted ? 'rgba(255, 235, 59, 0.1)' : 'transparent',
                 borderLeft: isEducationHighlighted ? '3px solid #ffc107' : 'none',
-                padding: isEducationHighlighted ? '8px' : '0',
+                padding: isEducationHighlighted ? '6px' : '0',
                 borderRadius: isEducationHighlighted ? '4px' : '0',
-                position: 'relative'
+                position: 'relative',
+                marginBottom: '4px'
               }}>
                 <div>
                   <div className="font-bold" style={{ 
@@ -631,28 +646,31 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSectio
       </div>
       
       {/* Certifications */}
-      {Array.isArray(templateData.additionalInfo.certifications) && templateData.additionalInfo.certifications.length > 0 && (
-        <div className="mb-3">
-          <h2 className="text-left font-bold mb-2 uppercase" style={{ 
-            fontSize: '12px',
-            fontWeight: 'bold',
-            color: color || '#374151',
-            borderBottom: `2px solid ${color || '#d1d5db'}`
-          }}>
-            CERTIFICATIONS
-          </h2>
-          <div className="space-y-2">
-            {templateData.additionalInfo.certifications.map((cert, index) => {
-              const isCertificationHighlighted = highlightedSections?.has(`certification-${index}-ai-rewrite`);
-              
-              return (
-                <div key={index} style={{
-                  background: isCertificationHighlighted ? 'rgba(255, 235, 59, 0.1)' : 'transparent',
-                  borderLeft: isCertificationHighlighted ? '3px solid #ffc107' : 'none',
-                  padding: isCertificationHighlighted ? '8px' : '0',
-                  borderRadius: isCertificationHighlighted ? '4px' : '0',
-                  position: 'relative'
-                }}>
+              {Array.isArray(templateData.additionalInfo.certifications) && templateData.additionalInfo.certifications.length > 0 && (
+          <div className="mb-2">
+                  <h2 className="text-left font-bold mb-1 uppercase" style={{ 
+          fontSize: '12px',
+          fontWeight: 'bold',
+          color: color || '#374151',
+          borderBottom: `2px solid ${color || '#d1d5db'}`,
+          paddingBottom: '2px',
+          marginBottom: '4px'
+        }}>
+          CERTIFICATIONS
+        </h2>
+                      <div className="space-y-1">
+              {templateData.additionalInfo.certifications.map((cert, index) => {
+                const isCertificationHighlighted = highlightedSections?.has(`certification-${index}-ai-rewrite`);
+                
+                return (
+                  <div key={index} style={{
+                    background: isCertificationHighlighted ? 'rgba(255, 235, 59, 0.1)' : 'transparent',
+                    borderLeft: isCertificationHighlighted ? '3px solid #ffc107' : 'none',
+                    padding: isCertificationHighlighted ? '6px' : '0',
+                    borderRadius: isCertificationHighlighted ? '4px' : '0',
+                    position: 'relative',
+                    marginBottom: '4px'
+                  }}>
                   <div className="font-bold" style={{ 
                     fontSize: '11px',
                     fontWeight: 'bold'

@@ -1316,41 +1316,50 @@ const ResumeBuilderPage = () => {
     if (!resumeRef.current) return;
 
     try {
-      // Create a temporary container for the resume
+      // Create a temporary container for the resume with minimal margins
       const tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
       tempContainer.style.top = '0';
       tempContainer.style.width = '800px';
       tempContainer.style.backgroundColor = 'white';
-      tempContainer.style.padding = '40px';
+      tempContainer.style.padding = '20px'; // Reduced from 40px to 20px
+      tempContainer.style.margin = '0'; // Remove all margins
+      tempContainer.style.boxSizing = 'border-box';
       document.body.appendChild(tempContainer);
 
       // Clone the resume content
       const resumeClone = resumeRef.current.cloneNode(true) as HTMLElement;
+      
+      // Remove any existing margins/padding from the cloned content
+      if (resumeClone.style) {
+        resumeClone.style.margin = '0';
+        resumeClone.style.padding = '0';
+      }
+      
       tempContainer.appendChild(resumeClone);
 
       // Wait for any images to load
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Convert to canvas with optimized settings for smaller file size
+      // Convert to canvas with optimized settings for smaller file size and better quality
       const canvas = await html2canvas(tempContainer, {
-        scale: 1.5, // Reduced from 2 to 1.5 for smaller file size
+        scale: 1.8, // Increased slightly for better quality while keeping file size reasonable
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         width: 800,
         height: tempContainer.scrollHeight,
-        imageTimeout: 5000, // Reduce timeout
-        removeContainer: true, // Automatically remove container
-        logging: false // Disable logging
+        imageTimeout: 5000,
+        removeContainer: true,
+        logging: false
       });
 
       // Remove temporary container
       document.body.removeChild(tempContainer);
 
       // Create PDF with optimized settings
-      const imgData = canvas.toDataURL('image/jpeg', 0.85); // Use JPEG with 85% quality instead of PNG
+      const imgData = canvas.toDataURL('image/jpeg', 0.9); // Increased quality to 90% for better text clarity
       const pdf = new jsPDF('p', 'mm', 'a4');
       
       const imgWidth = 210; // A4 width in mm
@@ -1361,14 +1370,14 @@ const ResumeBuilderPage = () => {
       let position = 0;
 
       // Add first page
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST'); // Use FAST compression
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
       heightLeft -= pageHeight;
 
       // Add additional pages if needed
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST'); // Use FAST compression
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pageHeight;
       }
 
