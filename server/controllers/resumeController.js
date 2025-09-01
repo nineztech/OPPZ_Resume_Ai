@@ -1,5 +1,8 @@
 import Resume from "../models/resumeModel.js";
 import User from "../models/userModel.js";
+import puppeteer from 'puppeteer';
+import fs from 'fs';
+import path from 'path';
 
 // Save new resume
 // Save new resume
@@ -161,5 +164,79 @@ export const deleteResume = async (req, res) => {
   } catch (error) {
     console.error("Delete resume error:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Generate PDF from HTML resume data
+export const generatePDF = async (req, res) => {
+  try {
+    const { htmlContent, templateId, resumeData } = req.body;
+
+    if (!htmlContent || !templateId) {
+      return res.status(400).json({ 
+        message: "Missing required fields: htmlContent and templateId" 
+      });
+    }
+
+    // Launch Puppeteer
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    const page = await browser.newPage();
+    
+    // Set viewport for consistent rendering
+    await page.setViewport({ width: 1200, height: 1600 });
+    
+    // Set the HTML content
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    
+    // Wait for any dynamic content to load
+    await page.waitForTimeout(1000);
+    
+    // Generate PDF
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '20mm',
+        right: '20mm',
+        bottom: '20mm',
+        left: '20mm'
+      }
+    });
+
+    await browser.close();
+
+    // Extract text from the generated PDF for ATS analysis (optional)
+    let extractedText = '';
+    try {
+      // Only attempt text extraction if pdf-parse is available
+      const pdfParseModule = await import('pdf-parse').catch(() => null);
+      if (pdfParseModule) {
+        const pdfData = await pdfParseModule.default(pdfBuffer);
+        extractedText = pdfData.text;
+        console.log('Extracted text length:', extractedText.length);
+      }
+    } catch (parseError) {
+      console.log('Text extraction skipped - pdf-parse not available');
+      // Continue without text extraction - this is optional
+    }
+
+    // Set response headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="resume_${templateId}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    // Send the PDF buffer
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error("PDF generation error:", error);
+    res.status(500).json({ 
+      message: "Error generating PDF",
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 };

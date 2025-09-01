@@ -16,8 +16,8 @@ import {
 } from 'lucide-react';
 import { templates, type Template } from '@/data/templates';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { generatePDF, downloadPDF } from '@/services/pdfService';
+import { createRoot } from 'react-dom/client';
 
 interface ATSScore {
   templateId: string;
@@ -43,105 +43,94 @@ const TemplatePreviewModal = ({ isOpen, onClose, template, atsScore }: TemplateP
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
     try {
-      // Create a temporary container for the resume
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.width = '800px';
-      tempContainer.style.backgroundColor = 'white';
-      tempContainer.style.padding = '40px';
-      document.body.appendChild(tempContainer);
+      // Create a temporary div to render the template
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '0';
+      tempDiv.style.width = '800px';
+      tempDiv.style.backgroundColor = 'white';
+      tempDiv.style.padding = '40px';
+      document.body.appendChild(tempDiv);
+
+      // Render the template with sample data
+      const sampleData = {
+        personalInfo: {
+          name: 'John Doe',
+          title: 'Software Engineer',
+          address: 'New York, NY',
+          email: 'john.doe@example.com',
+          website: 'https://johndoe.com',
+          phone: '+1 (555) 123-4567'
+        },
+        summary: 'Experienced software engineer with expertise in modern web technologies.',
+        skills: {
+          technical: ['JavaScript', 'React', 'Node.js', 'Python'],
+          professional: ['Leadership', 'Communication', 'Problem Solving']
+        },
+        experience: [
+          {
+            title: 'Senior Software Engineer',
+            company: 'Tech Corp',
+            dates: '2020 - Present',
+            achievements: ['Led development team', 'Improved performance by 40%']
+          }
+        ],
+        education: [
+          {
+            degree: 'Bachelor of Science in Computer Science',
+            institution: 'University of Technology',
+            dates: '2016 - 2020',
+            details: ['GPA: 3.8/4.0', 'Dean\'s List']
+          }
+        ],
+        projects: [
+          {
+            Name: 'E-commerce Platform',
+            Description: 'Full-stack web application',
+            Tech_Stack: 'React, Node.js, MongoDB',
+            Start_Date: '2021',
+            End_Date: '2022',
+            Link: 'https://github.com/johndoe/ecommerce'
+          }
+        ],
+        additionalInfo: {
+          languages: ['English', 'Spanish'],
+          certifications: ['AWS Certified Developer'],
+          awards: ['Best Employee 2022']
+        }
+      };
 
       // Create the template renderer
-      const tempDiv = document.createElement('div');
-      tempContainer.appendChild(tempDiv);
+      const root = createRoot(tempDiv);
+      root.render(
+        <TemplateRenderer
+          templateId={template.id}
+          data={sampleData}
+          color={template.colors[0]}
+        />
+      );
 
-      // Render the template (simplified version - in real implementation you'd need to properly render the React component)
-      tempDiv.innerHTML = `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h1 style="font-size: 24px; margin-bottom: 10px;">${template.templateData.personalInfo.name}</h1>
-          <h2 style="font-size: 18px; color: #666; margin-bottom: 20px;">${template.templateData.personalInfo.title}</h2>
-          <div style="margin-bottom: 20px;">
-            <p>${template.templateData.personalInfo.email} | ${template.templateData.personalInfo.phone || 'N/A'}</p>
-            <p>${template.templateData.personalInfo.address}</p>
-            ${template.templateData.personalInfo.website ? `<p>${template.templateData.personalInfo.website}</p>` : ''}
-          </div>
-          <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 16px; margin-bottom: 10px; color: #333;">SUMMARY</h3>
-            <p style="line-height: 1.5;">${template.templateData.summary}</p>
-          </div>
-          <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 16px; margin-bottom: 10px; color: #333;">SKILLS</h3>
-            <p>${template.templateData.skills.technical.join(', ')}</p>
-          </div>
-          <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 16px; margin-bottom: 10px; color: #333;">EXPERIENCE</h3>
-            ${template.templateData.experience.map(exp => `
-              <div style="margin-bottom: 15px;">
-                <h4 style="font-size: 14px; margin-bottom: 5px;">${exp.title} - ${exp.company}</h4>
-                <p style="font-size: 12px; color: #666; margin-bottom: 5px;">${exp.dates}</p>
-                <ul style="margin-left: 20px;">
-                  ${exp.achievements.map(achievement => `<li style="margin-bottom: 3px;">${achievement}</li>`).join('')}
-                </ul>
-              </div>
-            `).join('')}
-          </div>
-          <div>
-            <h3 style="font-size: 16px; margin-bottom: 10px; color: #333;">EDUCATION</h3>
-            ${template.templateData.education.map(edu => `
-              <div style="margin-bottom: 10px;">
-                <h4 style="font-size: 14px;">${edu.degree}</h4>
-                <p style="font-size: 12px; color: #666;">${edu.institution} | ${edu.dates}</p>
-                ${edu.details.map(detail => `<p style="font-size: 12px;">${detail}</p>`).join('')}
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
+      // Wait for rendering
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Wait for any images to load
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Get the HTML content
+      const htmlContent = tempDiv.innerHTML;
 
-      // Convert to canvas
-      const canvas = await html2canvas(tempContainer, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: 800,
-        height: tempContainer.scrollHeight
+      // Clean up
+      document.body.removeChild(tempDiv);
+
+      // Generate PDF using the service
+      const blob = await generatePDF({
+        htmlContent,
+        templateId: template.id,
+        resumeData: sampleData
       });
 
-      // Remove temporary container
-      document.body.removeChild(tempContainer);
-
-      // Create PDF
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-
-      let position = 0;
-
-      // Add first page
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      // Add additional pages if needed
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
       // Download the PDF
-      const fileName = `${template.name.replace(/\s+/g, '_')}_Template.pdf`;
-      pdf.save(fileName);
+      const filename = `${template.name.replace(/\s+/g, '_')}_Template.pdf`;
+      downloadPDF(blob, filename);
+
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');

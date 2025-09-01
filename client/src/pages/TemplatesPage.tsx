@@ -8,8 +8,8 @@ import TemplatePreviewModal from '@/components/modals/TemplatePreviewModal';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 import { templates as templateData, getTemplateById } from '@/data/templates';
 import type { Template } from '@/data/templates';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { generatePDF, downloadPDF } from '@/services/pdfService';
+import { createRoot } from 'react-dom/client';
 
 const TemplatesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,147 +56,49 @@ const TemplatesPage = () => {
 
     const generateResumePreview = async (template: Template, selectedColor?: string) => {
     try {
+      // Create a temporary div to render the template
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '0';
+      tempDiv.style.width = '800px';
+      tempDiv.style.backgroundColor = 'white';
+      tempDiv.style.padding = '40px';
+      document.body.appendChild(tempDiv);
+
       // Use the template data directly from the template object
       const templateDataObj = template.templateData;
       
-      // Create a temporary container for the resume
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.width = '800px';
-      tempContainer.style.backgroundColor = 'white';
-      tempContainer.style.padding = '40px';
-      document.body.appendChild(tempContainer);
+      // Create the template renderer
+      const root = createRoot(tempDiv);
+      root.render(
+        <TemplateRenderer
+          templateId={template.id}
+          data={templateDataObj}
+          color={selectedColor || template.colors[0]}
+        />
+      );
 
-      // Create the resume content
-      const resumeContent = document.createElement('div');
-      resumeContent.innerHTML = `
-        <div style="font-family: Arial, sans-serif; font-size: 12px; color: #333; line-height: 1.4;">
-          <div style="margin-bottom: 20px; border-bottom: 2px solid ${selectedColor || template.colors[0]}; padding-bottom: 10px;">
-            <h1 style="font-size: 28px; font-weight: bold; color: ${selectedColor || template.colors[0]}; margin: 0 0 5px 0;">
-              ${templateDataObj.personalInfo.name}
-            </h1>
-            <h2 style="font-size: 18px; font-weight: 600; color: #666; margin: 0 0 10px 0;">
-              ${templateDataObj.personalInfo.title}
-            </h2>
-            <div style="font-size: 11px; color: #888;">
-              ${templateDataObj.personalInfo.address} | ${templateDataObj.personalInfo.email} | ${templateDataObj.personalInfo.website}
-            </div>
-          </div>
-          
-          <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 14px; font-weight: bold; color: ${selectedColor || template.colors[0]}; margin: 0 0 10px 0; text-transform: uppercase;">
-              Professional Summary
-            </h3>
-            <p style="font-size: 11px; color: #333; margin: 0; text-align: justify;">
-              ${templateDataObj.summary}
-            </p>
-          </div>
-          
-          <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 14px; font-weight: bold; color: ${selectedColor || template.colors[0]}; margin: 0 0 10px 0; text-transform: uppercase;">
-              Skills
-            </h3>
-            <div style="font-size: 11px; color: #333;">
-              ${templateDataObj.skills.technical.join(', ')}
-            </div>
-          </div>
-          
-          <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 14px; font-weight: bold; color: ${selectedColor || template.colors[0]}; margin: 0 0 10px 0; text-transform: uppercase;">
-              Experience
-            </h3>
-            ${templateDataObj.experience.map((exp: any) => `
-              <div style="margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                  <h4 style="font-size: 12px; font-weight: bold; color: #333; margin: 0;">
-                    ${exp.title}
-                  </h4>
-                  <span style="font-size: 10px; color: #888;">
-                    ${exp.dates}
-                  </span>
-                </div>
-                <p style="font-size: 11px; color: #666; margin: 0 0 5px 0;">
-                  ${exp.company}
-                </p>
-                <ul style="font-size: 10px; color: #333; margin: 0; padding-left: 15px;">
-                  ${exp.achievements.map((achievement: any) => `<li style="margin-bottom: 3px;">${achievement}</li>`).join('')}
-                </ul>
-              </div>
-            `).join('')}
-          </div>
-          
-          <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 14px; font-weight: bold; color: ${selectedColor || template.colors[0]}; margin: 0 0 10px 0; text-transform: uppercase;">
-              Education
-            </h3>
-            ${templateDataObj.education.map((edu: any) => `
-              <div style="margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <h4 style="font-size: 12px; font-weight: bold; color: #333; margin: 0;">
-                    ${edu.degree}
-                  </h4>
-                  <span style="font-size: 10px; color: #888;">
-                    ${edu.dates}
-                  </span>
-                </div>
-                <p style="font-size: 11px; color: #666; margin: 0 0 5px 0;">
-                  ${edu.institution}
-                </p>
-                <ul style="font-size: 10px; color: #333; margin: 0; padding-left: 15px;">
-                  ${edu.details.map((detail: any) => `<li style="margin-bottom: 3px;">${detail}</li>`).join('')}
-                </ul>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-      
-      tempContainer.appendChild(resumeContent);
+      // Wait for rendering
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Wait for any images to load
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Get the HTML content
+      const htmlContent = tempDiv.innerHTML;
 
-      // Convert to canvas
-      const canvas = await html2canvas(tempContainer, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: 800,
-        height: tempContainer.scrollHeight
+      // Clean up
+      document.body.removeChild(tempDiv);
+
+      // Generate PDF using the service
+      const blob = await generatePDF({
+        htmlContent,
+        templateId: template.id,
+        resumeData: templateDataObj
       });
 
-      // Remove temporary container
-      document.body.removeChild(tempContainer);
-
-      // Create PDF
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-
-      let position = 0;
-
-      // Add first page
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      // Add additional pages if needed
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
       // Download the PDF
-      const fileName = `${template.name.replace(/\s+/g, '_')}_Template_Resume.pdf`;
-      pdf.save(fileName);
+      const filename = `${template.name.replace(/\s+/g, '_')}_Template.pdf`;
+      downloadPDF(blob, filename);
+
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');

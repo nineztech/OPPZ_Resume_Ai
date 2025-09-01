@@ -20,7 +20,7 @@ A professional, animated landing page inspired by Zety's CV Maker, built with Re
 - **Lucide React** - Beautiful icons
 - **Shadcn/ui** - Professional UI components
 - **Vite** - Fast build tool
-//testing
+
 ## Installation
 
 1. **Install Dependencies**
