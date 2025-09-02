@@ -178,7 +178,7 @@ class AISuggestionService:
         - Never leave placeholders like "improve wording" — always provide final rewritten text.
         - ALWAYS provide a numeric overallScore between 0-100 (never "NA", "N/A", or text).
         - NEVER use "NA", "N/A", "None", "Null", "Unknown", or similar placeholder values - use empty strings or appropriate defaults instead.
-        - NO REPETITIONS: Avoid repeating the Same Words or Sentences in different sections. Instead use synonyms or different words to avoid repetition.
+        - NO REPETITIONS: Avoid repeating the Same Words or Sentences in whole resume or jd. Instead use synonyms or different words to avoid repetition.IF Present in existing content, use synonyms or different words to avoid repetition.
         - SPELLING & GRAMMAR: Ensure all rewritten content has perfect spelling, grammar, and professional language.
     
         OVERALL SCORE CALCULATION RULES:

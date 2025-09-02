@@ -1,4 +1,5 @@
 import React from 'react';
+import { renderHtmlContent } from '@/lib/htmlRenderer';
 
 interface TemplateData {
   personalInfo: {
@@ -205,7 +206,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
           lineHeight: '1.4',
           textAlign: 'justify'
         }}>
-          {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
+          {renderHtmlContent(templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.')}
         </p>
 
       </div>
@@ -244,7 +245,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                     return (
                       <span key={index}>
                         {index > 0 ? ', ' : ' '}
-                        <span>{skill}</span>
+                        <span>{renderHtmlContent(skill)}</span>
                       </span>
                     );
                   })}
@@ -261,7 +262,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                 return (
                   <span key={index}>
                     {index > 0 ? ', ' : ''}
-                    <span>{skill}</span>
+                    <span>{renderHtmlContent(skill)}</span>
                   </span>
                 );
               })}
@@ -300,7 +301,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                         fontSize: '11px',
                         fontWeight: 'bold'
                       }}>
-                        {exp.title}
+                        {renderHtmlContent(exp.title)}
                       </h3>
                       {exp.company && (
                         <p className="text-gray-600 mb-4" style={{ 
@@ -323,14 +324,14 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                       exp.achievements.map((achievement, idx) => (
                         <div key={idx} className="flex items-start" style={{ fontSize: '11px' }}>
                           <span className="mr-2">•</span>
-                          <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{achievement}</span>
+                          <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{renderHtmlContent(achievement)}</span>
                         </div>
                       ))
                     ) : exp.description ? (
                       // Fallback to description if no achievements array
                       <div className="flex items-start" style={{ fontSize: '11px' }}>
                         <span className="mr-2">•</span>
-                        <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{exp.description}</span>
+                        <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{renderHtmlContent(exp.description)}</span>
                       </div>
                     ) : (
                       <div className="text-sm text-gray-500" style={{ 
@@ -380,7 +381,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                          fontSize: '11px',
                          fontWeight: 'bold'
                        }}>
-                         {project.Name}
+                         {renderHtmlContent(project.Name)}
                        </h3>
                        <span className="text-sm" style={{ 
                          fontSize: '10px',
@@ -406,7 +407,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                   {project.Description ? (
                     <div className="flex items-start" style={{ fontSize: '11px' }}>
                       <span className="mr-2">•</span>
-                      <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{project.Description}</span>
+                      <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{renderHtmlContent(project.Description)}</span>
                     </div>
                   ) : (
                     <div className="text-sm text-gray-500" style={{ 
@@ -450,10 +451,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                     fontSize: '11px',
                     fontWeight: 'bold'
                   }}>
-                    {edu.institution}
+                    {renderHtmlContent(edu.institution)}
                   </div>
                   <div style={{ fontSize: '11px' }}>
-                    {edu.degree}
+                    {renderHtmlContent(edu.degree)}
                   </div>
                 </div>
                 <div className="font-bold" style={{ 

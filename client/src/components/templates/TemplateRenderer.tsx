@@ -86,6 +86,7 @@ interface TemplateRendererProps {
 }
 
 const TemplateRenderer: React.FC<TemplateRendererProps> = ({ templateId, data, color }) => {
+  // Template renderer for all resume templates
   const renderTemplate = () => {
     switch (templateId) {
       case 'modern-professional':

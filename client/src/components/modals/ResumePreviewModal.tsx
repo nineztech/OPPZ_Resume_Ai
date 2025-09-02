@@ -82,6 +82,8 @@ interface ResumePreviewModalProps {
     }>;
   };
   color?: string;
+  highlightedChanges?: Set<string>;
+  showHighlights?: boolean;
 }
 
 const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
@@ -89,7 +91,9 @@ const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
   onClose,
   templateId,
   data,
-  color
+  color,
+  highlightedChanges,
+  showHighlights
 }) => {
   const resumeRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -100,14 +104,55 @@ const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
     try {
       setIsGenerating(true);
       
-      // Get the HTML content from the resume
-      const htmlContent = resumeRef.current.outerHTML;
+      // Create clean data without highlighting for PDF generation
+      const cleanData = {
+        ...data,
+        summary: data.summary.replace(/<span[^>]*>|<\/span>/g, ''), // Remove highlighting spans
+        skills: {
+          ...data.skills,
+          technical: typeof data.skills.technical === 'object' && !Array.isArray(data.skills.technical)
+            ? Object.keys(data.skills.technical).reduce((acc, category) => {
+                acc[category] = (data.skills.technical as any)[category].map((skill: string) => 
+                  skill.replace(/<span[^>]*>|<\/span>/g, '')
+                );
+                return acc;
+              }, {} as any)
+            : Array.isArray(data.skills.technical)
+            ? data.skills.technical.map((skill: string) => skill.replace(/<span[^>]*>|<\/span>/g, ''))
+            : data.skills.technical
+        },
+        experience: data.experience.map(exp => ({
+          ...exp,
+          title: exp.title.replace(/<span[^>]*>|<\/span>/g, ''),
+          company: exp.company.replace(/<span[^>]*>|<\/span>/g, ''),
+          achievements: exp.achievements.map(achievement => achievement.replace(/<span[^>]*>|<\/span>/g, ''))
+        })),
+        education: data.education.map(edu => ({
+          ...edu,
+          degree: edu.degree.replace(/<span[^>]*>|<\/span>/g, ''),
+          institution: edu.institution.replace(/<span[^>]*>|<\/span>/g, ''),
+          details: edu.details.map(detail => detail.replace(/<span[^>]*>|<\/span>/g, ''))
+        })),
+        projects: data.projects?.map(project => ({
+          ...project,
+          Name: project.Name.replace(/<span[^>]*>|<\/span>/g, ''),
+          Description: project.Description.replace(/<span[^>]*>|<\/span>/g, '')
+        })),
+        additionalInfo: {
+          ...data.additionalInfo,
+          certifications: data.additionalInfo.certifications?.map(cert => cert.replace(/<span[^>]*>|<\/span>/g, ''))
+        }
+      };
       
-      // Generate PDF using the service
+      // Get the HTML content from the resume element and clean it
+      const htmlContent = resumeRef.current?.outerHTML || '';
+      const cleanHtmlContent = htmlContent.replace(/<span[^>]*class="[^"]*ai-highlight-[^"]*"[^>]*>|<\/span>/g, '');
+      
+      // Generate PDF using the service with clean data
       const blob = await generatePDF({
-        htmlContent,
+        htmlContent: cleanHtmlContent,
         templateId,
-        resumeData: data
+        resumeData: cleanData
       });
 
       // Download the PDF
@@ -147,6 +192,8 @@ const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
               templateId={templateId}
               data={data}
               color={color}
+              highlightedChanges={highlightedChanges}
+              showHighlights={showHighlights}
             />
           </div>
         </div>
