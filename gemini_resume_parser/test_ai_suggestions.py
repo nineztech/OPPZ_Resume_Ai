@@ -95,6 +95,7 @@ def test_ai_suggestions():
                     "description": "Graduated with honors, specialized in software engineering"
                 }
             ]
+            # Note: No projects section - this will test dummy project creation
         }
         
         # Test 4: Test AI suggestions generation
@@ -115,10 +116,82 @@ def test_ai_suggestions():
                 skills = suggestions['skillsAnalysis']
                 print(f"   Matching Skills: {len(skills.get('matchingSkills', []))}")
                 print(f"   Missing Skills: {len(skills.get('missingSkills', []))}")
+            
+            # Test 5: Test project suggestions (dummy project creation)
+            print("\n🚀 Test 5: Project Suggestions")
+            if 'sectionSuggestions' in suggestions and 'projects' in suggestions['sectionSuggestions']:
+                projects = suggestions['sectionSuggestions']['projects']
+                print(f"   Projects found: {len(projects)}")
+                
+                if len(projects) >= 2:
+                    print("✅ Dummy projects created successfully (2 or more projects found)")
+                    for i, project in enumerate(projects[:2]):
+                        if isinstance(project, dict):
+                            name = project.get('name', 'Unnamed')
+                            rewrite = project.get('rewrite', '')
+                            print(f"   Project {i+1}: {name}")
+                            if rewrite:
+                                print(f"      Description: {rewrite[:100]}{'...' if len(rewrite) > 100 else ''}")
+                            else:
+                                print("      Description: (Empty - will be filled by AI)")
+                        else:
+                            print(f"   Project {i+1}: Invalid format")
+                else:
+                    print("❌ Expected 2 dummy projects, but found fewer")
+                    return False
+            else:
+                print("❌ No project suggestions found in response")
+                return False
         else:
             print("❌ AI suggestions generation failed or returned unexpected format")
             print(f"   Type: {type(suggestions)}")
             print(f"   Content: {suggestions}")
+            return False
+        
+        # Test 6: Test existing projects enhancement
+        print("\n🔧 Test 6: Existing Projects Enhancement")
+        print("Testing with resume that has existing projects...")
+        
+        sample_resume_with_projects = sample_resume.copy()
+        sample_resume_with_projects["projects"] = [
+            {
+                "name": "E-commerce Platform",
+                "description": "Built a simple e-commerce website using React and Node.js",
+                "techStack": "React, Node.js, MongoDB"
+            },
+            {
+                "name": "Task Management App",
+                "description": "Created a task management application for team collaboration",
+                "techStack": "Vue.js, Express, PostgreSQL"
+            }
+        ]
+        
+        suggestions_with_projects = ai_service.compare_resume_with_jd(sample_resume_with_projects, job_description)
+        
+        if isinstance(suggestions_with_projects, dict) and 'sectionSuggestions' in suggestions_with_projects:
+            projects_suggestions = suggestions_with_projects['sectionSuggestions'].get('projects', [])
+            print(f"   Existing projects found: {len(projects_suggestions)}")
+            
+            if len(projects_suggestions) >= 2:
+                print("✅ Existing projects enhanced successfully")
+                for i, project in enumerate(projects_suggestions[:2]):
+                    if isinstance(project, dict):
+                        name = project.get('name', 'Unnamed')
+                        existing = project.get('existing', '')
+                        rewrite = project.get('rewrite', '')
+                        print(f"   Project {i+1}: {name}")
+                        print(f"      Original: {existing[:50]}{'...' if len(existing) > 50 else ''}")
+                        if rewrite:
+                            print(f"      Enhanced: {rewrite[:50]}{'...' if len(rewrite) > 50 else ''}")
+                        else:
+                            print("      Enhanced: (No enhancement provided)")
+                    else:
+                        print(f"   Project {i+1}: Invalid format")
+            else:
+                print("❌ Expected 2 enhanced projects, but found fewer")
+                return False
+        else:
+            print("❌ No project enhancement suggestions found")
             return False
         
         print("\n🎉 All tests passed! AI suggestions service is working correctly.")

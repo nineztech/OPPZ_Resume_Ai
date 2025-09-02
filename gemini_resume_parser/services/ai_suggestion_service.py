@@ -211,6 +211,15 @@ class AISuggestionService:
         - If a category has no new skills to add, do NOT include that category in the rewrite at all.
         - Do NOT suggest "New Category: skills" - only use existing categories.
 
+        CRITICAL PROJECTS RULES:
+        - If NO projects exist in the resume, create exactly 2 dummy projects that match the job description requirements.
+        - Each dummy project must have: name, existing (empty), rewrite (detailed project description), and recommendations.
+        - Dummy projects should be relevant to the job role and demonstrate skills mentioned in the job description.
+        - If projects DO exist, enhance their descriptions in the "rewrite" field to better match the job description.
+        - Project descriptions should include: technologies used, achievements, impact, and relevance to the target role.
+        - Use strong action verbs and quantified results where possible.
+        - Ensure project names and descriptions align with the {target_experience} level and job requirements.
+
         RESUME DATA:
         {resume_text}
 
@@ -1793,6 +1802,7 @@ class AISuggestionService:
     def _create_projects_fallback(self, resume_data: Dict[str, Any]) -> list:
         """
         Creates a fallback projects section from the original resume data.
+        If no projects exist, creates 2 dummy projects that match the job description.
         This ensures the projects section is never missing.
         """
         fallback_projects = []
@@ -1836,8 +1846,22 @@ class AISuggestionService:
                 }
                 fallback_projects.append(fallback_item)
         else:
-            logger.warning("🔒 No original projects data found, creating empty fallback")
-            fallback_projects = [{"name": "", "existing": "", "rewrite": "", "recommendations": [""]}]
+            logger.warning("🔒 No original projects data found, creating 2 dummy projects")
+            # Create 2 dummy projects that will be enhanced by AI based on job description
+            fallback_projects = [
+                {
+                    "name": "Project 1",
+                    "existing": "",
+                    "rewrite": "",  # AI will create relevant project description
+                    "recommendations": [""]
+                },
+                {
+                    "name": "Project 2", 
+                    "existing": "",
+                    "rewrite": "",  # AI will create relevant project description
+                    "recommendations": [""]
+                }
+            ]
         
         return fallback_projects
 
