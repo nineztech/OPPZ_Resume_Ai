@@ -24,8 +24,7 @@ import {
   ChevronRight,
   Code,
   Users,
-  Plus,
-  Sparkles
+  Plus
 } from 'lucide-react';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 import { templates as templateData, getTemplateById } from '@/data/templates';
@@ -33,103 +32,6 @@ import type { Template } from '@/data/templates';
 import ResumePreviewModal from '@/components/modals/ResumePreviewModal';
 import AddCustomSectionModal from '@/components/modals/AddCustomSectionModal';
 import { generatePDF, downloadPDF } from '@/services/pdfService';
-
-// Highlighting utility functions
-const highlightText = (text: string, changeType: 'added' | 'modified'): string => {
-  if (!text) return text;
-  
-  const highlightClass = changeType === 'added' 
-    ? 'ai-highlight-added' 
-    : 'ai-highlight-modified';
-  
-  return `<span class="${highlightClass}">${text}</span>`;
-};
-
-const highlightSkills = (skills: any, highlightedChanges: Set<string>): any => {
-  if (!skills || typeof skills !== 'object') return skills;
-  
-  const highlightedSkills = { ...skills };
-  
-  Object.keys(highlightedSkills).forEach(category => {
-    if (Array.isArray(highlightedSkills[category])) {
-      highlightedSkills[category] = highlightedSkills[category].map((skill: string) => {
-        if (highlightedChanges.has(`skill-${skill}`)) {
-          return highlightText(skill, 'added');
-        }
-        return skill;
-      });
-    }
-  });
-  
-  return highlightedSkills;
-};
-
-const highlightExperience = (experience: any[], highlightedChanges: Set<string>): any[] => {
-  return experience.map((exp, index) => {
-    const isHighlighted = highlightedChanges.has(`experience-${index}-ai-rewrite`) || 
-                         highlightedChanges.has(`experience-${index}-ai-enhanced`);
-    
-    if (isHighlighted) {
-      return {
-        ...exp,
-        description: highlightText(exp.description, 'modified'),
-        position: highlightText(exp.position, 'modified'),
-        company: highlightText(exp.company, 'modified'),
-        title: highlightText(exp.position, 'modified'), // Also highlight title field
-        achievements: safeProcessDescription(exp.description).map(achievement => highlightText(achievement, 'modified'))
-      };
-    }
-    return exp;
-  });
-};
-
-const highlightEducation = (education: any[], highlightedChanges: Set<string>): any[] => {
-  return education.map((edu, index) => {
-    const isHighlighted = highlightedChanges.has(`education-${index}-ai-rewrite`);
-    
-    if (isHighlighted) {
-      return {
-        ...edu,
-        description: highlightText(edu.description, 'modified'),
-        degree: highlightText(edu.degree, 'modified'),
-        institution: highlightText(edu.institution, 'modified'),
-        details: safeProcessDescription(edu.description).map(detail => highlightText(detail, 'modified'))
-      };
-    }
-    return edu;
-  });
-};
-
-const highlightProjects = (projects: any[], highlightedChanges: Set<string>): any[] => {
-  return projects.map((project, index) => {
-    const isHighlighted = highlightedChanges.has(`project-${index}-ai-rewrite`);
-    
-    if (isHighlighted) {
-      return {
-        ...project,
-        description: highlightText(project.description, 'added'),
-        name: highlightText(project.name, 'added'),
-        Name: highlightText(project.name, 'added'), // Also highlight Name field for templates
-        Description: highlightText(project.description, 'added') // Also highlight Description field for templates
-      };
-    }
-    return project;
-  });
-};
-
-const highlightCertifications = (certifications: any[], highlightedChanges: Set<string>): any[] => {
-  return certifications.map((cert, index) => {
-    const isHighlighted = highlightedChanges.has(`certification-${index}-ai-rewrite`);
-    
-    if (isHighlighted) {
-      return {
-        ...cert,
-        certificateName: highlightText(cert.certificateName, 'added')
-      };
-    }
-    return cert;
-  });
-};
 
 // Helper function to safely process description text
 const safeProcessDescription = (description: any): string[] => {
@@ -281,7 +183,6 @@ const ResumeBuilderPage = () => {
   const resumeRef = useRef<HTMLDivElement>(null);
   const [appliedSuggestions, setAppliedSuggestions] = useState<any>(null);
   const [highlightedChanges, setHighlightedChanges] = useState<Set<string>>(new Set());
-  const [showHighlights, setShowHighlights] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [resumeId, setResumeId] = useState<number | null>(null);
   const [resumeTitle, setResumeTitle] = useState<string>('');
@@ -979,56 +880,6 @@ const ResumeBuilderPage = () => {
            });
          }
         
-         // Handle sectionSuggestions structure (from the AI suggestions data)
-         if (aiSuggestions.sectionSuggestions) {
-           console.log('Processing sectionSuggestions:', aiSuggestions.sectionSuggestions);
-           
-           // Apply work experience rewrites from sectionSuggestions
-           if (aiSuggestions.sectionSuggestions.workExperience && aiSuggestions.sectionSuggestions.workExperience.rewrite) {
-             const workExpRewrite = aiSuggestions.sectionSuggestions.workExperience.rewrite;
-             if (processedData.experience.length > 0) {
-               processedData.experience[0].description = workExpRewrite;
-               changesSet.add('experience-0-ai-rewrite');
-             }
-           }
-           
-           // Apply projects rewrites from sectionSuggestions
-           if (aiSuggestions.sectionSuggestions.projects && aiSuggestions.sectionSuggestions.projects.rewrite) {
-             const projectRewrite = aiSuggestions.sectionSuggestions.projects.rewrite;
-             if (processedData.projects.length > 0) {
-               processedData.projects[0].description = projectRewrite;
-               changesSet.add('project-0-ai-rewrite');
-             }
-           }
-           
-           // Apply certifications rewrites from sectionSuggestions
-           if (aiSuggestions.sectionSuggestions.certifications && aiSuggestions.sectionSuggestions.certifications.rewrite) {
-             const certRewrite = aiSuggestions.sectionSuggestions.certifications.rewrite;
-             if (processedData.certifications.length > 0) {
-               processedData.certifications[0].certificateName = certRewrite;
-               changesSet.add('certification-0-ai-rewrite');
-             }
-           }
-           
-           // Apply skills rewrites from sectionSuggestions
-           if (aiSuggestions.sectionSuggestions.skills && aiSuggestions.sectionSuggestions.skills.rewrite) {
-             const skillsRewrite = aiSuggestions.sectionSuggestions.skills.rewrite;
-             if (Array.isArray(skillsRewrite) && skillsRewrite.length > 0) {
-               console.log('Applying skills rewrite from sectionSuggestions:', skillsRewrite);
-               skillsRewrite.forEach((skillItem: string) => {
-                 const category = categorizeSkill(skillItem);
-                 if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
-                   processedData.skills[category] = [];
-                 }
-                 if (!processedData.skills[category].includes(skillItem)) {
-                   processedData.skills[category].push(skillItem);
-                   changesSet.add(`skill-${skillItem}`);
-                 }
-               });
-             }
-           }
-         }
-                 
                  // === FALLBACK: Handle current AISuggestionsPage structure ===
          // Apply skills from skillsAnalysis (current structure) - Categorized approach
          if (aiSuggestions.skillsAnalysis?.missingSkills?.length > 0) {
@@ -1486,59 +1337,14 @@ const ResumeBuilderPage = () => {
     try {
       setIsDownloading(true);
       
-      // Create a clean version of the resume data without highlighting for PDF generation
-      const cleanResumeData = {
-        personalInfo: {
-          name: resumeData.basicDetails.fullName,
-          title: resumeData.basicDetails.title,
-          address: resumeData.basicDetails.location,
-          email: resumeData.basicDetails.email,
-          website: resumeData.basicDetails.website,
-          phone: resumeData.basicDetails.phone
-        },
-        summary: resumeData.summary, // Use original summary without highlighting
-        skills: {
-          technical: resumeData.skills, // Use original skills without highlighting
-          professional: resumeData.languages.map(lang => lang.name)
-        },
-        experience: resumeData.experience.map(exp => ({
-          title: exp.position,
-          company: exp.company,
-          dates: exp.duration,
-          achievements: safeProcessDescription(exp.description),
-          description: exp.description,
-          location: exp.location
-        })),
-        education: resumeData.education.map(edu => ({
-          degree: edu.degree,
-          institution: edu.institution,
-          dates: edu.year,
-          details: safeProcessDescription(edu.description)
-        })),
-        projects: resumeData.projects.map(project => ({
-          Name: project.name,
-          Description: project.description,
-          Tech_Stack: project.techStack,
-          Start_Date: project.startDate,
-          End_Date: project.endDate,
-          Link: project.link
-        })),
-        additionalInfo: {
-          languages: resumeData.languages.map(lang => lang.name),
-          certifications: resumeData.certifications.map(cert => cert.certificateName).filter(name => name.length > 0)
-        },
-        customSections: resumeData.customSections
-      };
+      // Get the HTML content from the resume
+      const htmlContent = resumeRef.current.outerHTML;
       
-      // Get the HTML content from the resume element and clean it
-      const htmlContent = resumeRef.current?.outerHTML || '';
-      const cleanHtmlContent = htmlContent.replace(/<span[^>]*class="[^"]*ai-highlight-[^"]*"[^>]*>|<\/span>/g, '');
-      
-      // Generate PDF using the service with clean data (no highlighting)
+      // Generate PDF using the service
       const blob = await generatePDF({
-        htmlContent: cleanHtmlContent,
+        htmlContent,
         templateId: selectedTemplate?.id || 'modern-professional',
-        resumeData: cleanResumeData
+        resumeData: resumeData
       });
 
       // Download the PDF
@@ -1614,29 +1420,6 @@ const ResumeBuilderPage = () => {
           .custom-scrollbar {
             scrollbar-width: thick;
             scrollbar-color: #cbd5e0 #f7fafc;
-          }
-          
-          /* AI Enhancement Highlighting Styles */
-          .ai-highlight-added {
-            background-color: #dcfce7 !important;
-            color: #166534 !important;
-            padding: 2px 4px !important;
-            border-radius: 4px !important;
-            font-weight: 500 !important;
-          }
-          
-          .ai-highlight-modified {
-            background-color: #dbeafe !important;
-            color: #1e40af !important;
-            padding: 2px 4px !important;
-            border-radius: 4px !important;
-            font-weight: 500 !important;
-          }
-          
-          /* Ensure highlighting works in template content */
-          .template-container .ai-highlight-added,
-          .template-container .ai-highlight-modified {
-            display: inline !important;
           }
         `}
       </style>
@@ -1772,17 +1555,6 @@ const ResumeBuilderPage = () => {
             </div>
             
             <div className="flex items-center gap-2">
-              {highlightedChanges.size > 0 && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowHighlights(!showHighlights)}
-                  className={showHighlights ? 'bg-green-50 text-green-700 border-green-200' : ''}
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  {showHighlights ? 'Hide' : 'Show'} AI Highlights
-                </Button>
-              )}
               <Button 
                 variant="outline" 
                 size="sm"
@@ -1831,71 +1603,40 @@ const ResumeBuilderPage = () => {
                     website: resumeData.basicDetails.website,
                     phone: resumeData.basicDetails.phone
                   },
-                  summary: (showHighlights && highlightedChanges.has('summary-ai-rewrite')) || highlightedChanges.has('summary-ai-enhanced') 
-                    ? highlightText(resumeData.summary, 'modified') 
-                    : resumeData.summary,
+                  summary: resumeData.summary,
                   skills: {
-                    technical: (showHighlights && highlightedChanges.size > 0) ? highlightSkills(resumeData.skills, highlightedChanges) : resumeData.skills,
+                    technical: resumeData.skills,
                     professional: resumeData.languages.map(lang => lang.name)
                   },
-                  experience: (showHighlights && highlightedChanges.size > 0) 
-                    ? highlightExperience(resumeData.experience, highlightedChanges).map(exp => ({
-                        title: exp.title || exp.position,
-                        company: exp.company,
-                        dates: exp.duration,
-                        achievements: exp.achievements || safeProcessDescription(exp.description),
-                        description: exp.description, // Keep original description as fallback
-                        location: exp.location // Add location for templates that need it
-                      }))
-                    : resumeData.experience.map(exp => ({
-                        title: exp.position,
-                        company: exp.company,
-                        dates: exp.duration,
-                        achievements: safeProcessDescription(exp.description),
-                        description: exp.description, // Keep original description as fallback
-                        location: exp.location // Add location for templates that need it
-                      })),
-                  education: (showHighlights && highlightedChanges.size > 0) 
-                    ? highlightEducation(resumeData.education, highlightedChanges).map(edu => ({
-                        degree: edu.degree,
-                        institution: edu.institution,
-                        dates: edu.year,
-                        details: edu.details || safeProcessDescription(edu.description)
-                      }))
-                    : resumeData.education.map(edu => ({
-                        degree: edu.degree,
-                        institution: edu.institution,
-                        dates: edu.year,
-                        details: safeProcessDescription(edu.description)
-                      })),
-                  projects: (showHighlights && highlightedChanges.size > 0) 
-                    ? highlightProjects(resumeData.projects, highlightedChanges).map(project => ({
-                        Name: project.Name || project.name,
-                        Description: project.Description || project.description,
-                        Tech_Stack: project.techStack,
-                        Start_Date: project.startDate,
-                        End_Date: project.endDate,
-                        Link: project.link
-                      }))
-                    : resumeData.projects.map(project => ({
-                        Name: project.name,
-                        Description: project.description,
-                        Tech_Stack: project.techStack,
-                        Start_Date: project.startDate,
-                        End_Date: project.endDate,
-                        Link: project.link
-                      })),
+                  experience: resumeData.experience.map(exp => ({
+                    title: exp.position,
+                    company: exp.company,
+                    dates: exp.duration,
+                    achievements: safeProcessDescription(exp.description),
+                    description: exp.description, // Keep original description as fallback
+                    location: exp.location // Add location for templates that need it
+                  })),
+                  education: resumeData.education.map(edu => ({
+                    degree: edu.degree,
+                    institution: edu.institution,
+                    dates: edu.year,
+                    details: safeProcessDescription(edu.description)
+                  })),
+                  projects: resumeData.projects.map(project => ({
+                    Name: project.name,
+                    Description: project.description,
+                    Tech_Stack: project.techStack,
+                    Start_Date: project.startDate,
+                    End_Date: project.endDate,
+                    Link: project.link
+                  })),
                   additionalInfo: {
                     languages: resumeData.languages.map(lang => lang.name),
-                    certifications: (showHighlights && highlightedChanges.size > 0) 
-                      ? highlightCertifications(resumeData.certifications, highlightedChanges).map(cert => cert.certificateName).filter(name => name.length > 0)
-                      : resumeData.certifications.map(cert => cert.certificateName).filter(name => name.length > 0)
+                    certifications: resumeData.certifications.map(cert => cert.certificateName).filter(name => name.length > 0)
                   },
                   customSections: resumeData.customSections
                 }}
                 color={selectedColor}
-                highlightedChanges={highlightedChanges}
-                showHighlights={showHighlights && highlightedChanges.size > 0}
               />
             </div>
           </div>
@@ -2059,71 +1800,40 @@ const ResumeBuilderPage = () => {
             website: resumeData.basicDetails.website,
             phone: resumeData.basicDetails.phone
           },
-          summary: (showHighlights && highlightedChanges.has('summary-ai-rewrite')) || highlightedChanges.has('summary-ai-enhanced') 
-            ? highlightText(resumeData.summary, 'modified') 
-            : resumeData.summary,
+          summary: resumeData.summary,
           skills: {
-            technical: (showHighlights && highlightedChanges.size > 0) ? highlightSkills(resumeData.skills, highlightedChanges) : resumeData.skills,
+            technical: resumeData.skills,
             professional: resumeData.languages.map(lang => lang.name)
           },
-          experience: (showHighlights && highlightedChanges.size > 0) 
-            ? highlightExperience(resumeData.experience, highlightedChanges).map(exp => ({
-                title: exp.title || exp.position,
-                company: exp.company,
-                dates: exp.duration,
-                achievements: exp.achievements || safeProcessDescription(exp.description),
-                description: exp.description, // Keep original description as fallback
-                location: exp.location // Add location for templates that need it
-              }))
-            : resumeData.experience.map(exp => ({
-                title: exp.position,
-                company: exp.company,
-                dates: exp.duration,
-                achievements: safeProcessDescription(exp.description),
-                description: exp.description, // Keep original description as fallback
-                location: exp.location // Add location for templates that need it
-              })),
-          education: (showHighlights && highlightedChanges.size > 0) 
-            ? highlightEducation(resumeData.education, highlightedChanges).map(edu => ({
-                degree: edu.degree,
-                institution: edu.institution,
-                dates: edu.year,
-                details: edu.details || safeProcessDescription(edu.description)
-              }))
-            : resumeData.education.map(edu => ({
-                degree: edu.degree,
-                institution: edu.institution,
-                dates: edu.year,
-                details: safeProcessDescription(edu.description)
-              })),
-          projects: (showHighlights && highlightedChanges.size > 0) 
-            ? highlightProjects(resumeData.projects, highlightedChanges).map(project => ({
-                Name: project.Name || project.name,
-                Description: project.Description || project.description,
-                Tech_Stack: project.techStack,
-                Start_Date: project.startDate,
-                End_Date: project.endDate,
-                Link: project.link
-              }))
-            : resumeData.projects.map(project => ({
-                Name: project.name,
-                Description: project.description,
-                Tech_Stack: project.techStack,
-                Start_Date: project.startDate,
-                End_Date: project.endDate,
-                Link: project.link
-              })),
+                  experience: resumeData.experience.map(exp => ({
+          title: exp.position,
+          company: exp.company,
+          dates: exp.duration,
+          achievements: safeProcessDescription(exp.description),
+          description: exp.description, // Keep original description as fallback
+          location: exp.location // Add location for templates that need it
+        })),
+          education: resumeData.education.map(edu => ({
+            degree: edu.degree,
+            institution: edu.institution,
+            dates: edu.year,
+            details: safeProcessDescription(edu.description)
+          })),
+          projects: resumeData.projects.map(project => ({
+            Name: project.name,
+            Description: project.description,
+            Tech_Stack: project.techStack,
+            Start_Date: project.startDate,
+            End_Date: project.endDate,
+            Link: project.link
+          })),
           additionalInfo: {
             languages: resumeData.languages.map(lang => lang.name),
-            certifications: (showHighlights && highlightedChanges.size > 0) 
-              ? highlightCertifications(resumeData.certifications, highlightedChanges).map(cert => cert.certificateName).filter(name => name.length > 0)
-              : resumeData.certifications.map(cert => cert.certificateName).filter(name => name.length > 0)
+            certifications: resumeData.certifications.map(cert => cert.certificateName).filter(name => name.length > 0)
           },
           customSections: resumeData.customSections
         }}
         color={selectedColor}
-        highlightedChanges={highlightedChanges}
-        showHighlights={showHighlights && highlightedChanges.size > 0}
       />
 
       {/* Add Custom Section Modal */}

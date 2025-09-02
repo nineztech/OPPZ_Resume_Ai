@@ -1,5 +1,4 @@
 import React from 'react';
-import { renderHtmlContent } from '@/lib/htmlRenderer';
 
 interface TemplateData {
   personalInfo: {
@@ -12,7 +11,7 @@ interface TemplateData {
   };
   summary: string;
   skills: {
-    technical: string[] | { [category: string]: string[] };
+    technical: string[];
     professional?: string[];
   };
   experience: Array<{
@@ -125,7 +124,7 @@ const CreativeDesigner: React.FC<CreativeDesignerProps> = ({
           lineHeight: '1.6',
           textAlign: 'justify'
         }}>
-          {renderHtmlContent(templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.')}
+          {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
         </p>
 
       </div>
@@ -165,7 +164,7 @@ const CreativeDesigner: React.FC<CreativeDesignerProps> = ({
                         color: '#374151',
                         fontWeight: '400'
                       }}>
-                        {renderHtmlContent(skill)}
+                        {skill}
                       </span>
                     );
                   })}
@@ -184,7 +183,7 @@ const CreativeDesigner: React.FC<CreativeDesignerProps> = ({
                   color: '#374151',
                   fontWeight: '400'
                 }}>
-                  {renderHtmlContent(skill)}
+                  {skill}
                 </span>
               );
             })}
@@ -215,7 +214,7 @@ const CreativeDesigner: React.FC<CreativeDesignerProps> = ({
                   
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-lg font-bold" style={{ color: color }}>
-                      {renderHtmlContent(exp.title)}
+                      {exp.title}
                     </h3>
                     <span className="text-sm text-gray-600 italic">
                       {exp.dates}
@@ -233,7 +232,7 @@ const CreativeDesigner: React.FC<CreativeDesignerProps> = ({
                     <ul className="list-disc list-inside space-y-1 text-gray-700">
                       {exp.achievements.map((achievement, achievementIndex) => (
                         <li key={achievementIndex} className="leading-relaxed">
-                          {renderHtmlContent(achievement)}
+                          {achievement}
                         </li>
                       ))}
                     </ul>

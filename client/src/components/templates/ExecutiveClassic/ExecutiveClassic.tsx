@@ -1,5 +1,4 @@
 import React from 'react';
-import { renderHtmlContent } from '@/lib/htmlRenderer';
 
 interface TemplateData {
   personalInfo: {
@@ -12,7 +11,7 @@ interface TemplateData {
   };
   summary: string;
   skills: {
-    technical: string[] | { [category: string]: string[] };
+    technical: string[];
     professional?: string[];
   };
   experience: Array<{
@@ -123,7 +122,7 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
           PROFESSIONAL SUMMARY
         </h3>
         <div className="text-lg leading-relaxed text-gray-700">
-          {renderHtmlContent(templateData.summary)}
+          {templateData.summary}
         </div>
       </div>
 
@@ -133,32 +132,7 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
           TECHNICAL SKILLS
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {templateData.skills?.technical && typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
-            // Handle categorized skills structure
-            Object.entries(templateData.skills.technical).map(([category, skills]) => {
-              if (!skills || (Array.isArray(skills) && skills.length === 0)) {
-                return null;
-              }
-              
-              const skillsArray = Array.isArray(skills) ? skills : [skills];
-              
-              return (
-                <div key={category}>
-                  <h4 className="text-lg font-semibold mb-3" style={{ color: '#4a5568' }}>{category}</h4>
-                  <div className="space-y-2">
-                    {skillsArray.map((skill, index) => (
-                      <div 
-                        key={index}
-                        className="text-gray-700"
-                      >
-                        • {renderHtmlContent(skill)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            }).filter(Boolean)
-          ) : Array.isArray(templateData.skills?.technical) && templateData.skills.technical.length > 0 ? (
+          {templateData.skills.technical && templateData.skills.technical.length > 0 && (
             <div>
               <h4 className="text-lg font-semibold mb-3" style={{ color: '#4a5568' }}>Technical Skills</h4>
               <div className="space-y-2">
@@ -167,12 +141,12 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
                     key={index}
                     className="text-gray-700"
                   >
-                    • {renderHtmlContent(skill)}
+                    • {skill}
                   </div>
                 ))}
               </div>
             </div>
-          ) : null}
+          )}
           
           {templateData.skills.professional && templateData.skills.professional.length > 0 && (
             <div>
@@ -183,7 +157,7 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
                     key={index}
                     className="text-gray-700"
                   >
-                    • {renderHtmlContent(skill)}
+                    • {skill}
                   </div>
                 ))}
               </div>
@@ -207,7 +181,7 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
               }}
             >
               <div className="flex justify-between items-start mb-2">
-                <h4 className="text-xl font-bold text-gray-800">{renderHtmlContent(exp.title)}</h4>
+                <h4 className="text-xl font-bold text-gray-800">{exp.title}</h4>
                 <span className="text-gray-600 font-medium">{exp.dates}</span>
               </div>
               <div className="text-lg font-semibold text-gray-700 mb-2">{exp.company}</div>
@@ -215,7 +189,7 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
                 {exp.achievements.map((achievement, achievementIndex) => (
                   <div key={achievementIndex} className="flex items-start">
                     <span className="text-blue-600 mr-2 mt-1">•</span>
-                    <span>{renderHtmlContent(achievement)}</span>
+                    <span>{achievement}</span>
                   </div>
                 ))}
               </div>
