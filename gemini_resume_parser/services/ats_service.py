@@ -61,6 +61,14 @@ class StandardATSService:
             "model_name": self.parser.model_name
         }
 
+    def set_consistent_parameters(self):
+        """
+        Set parameters optimized for consistent ATS analysis results.
+        Uses low temperature and focused top_p for deterministic output.
+        """
+        self.update_generation_parameters(temperature=0.1, top_p=0.8)
+        logger.info("🎯 Set consistent parameters for deterministic ATS analysis")
+
     def analyze_resume(self, resume_text: str) -> Dict[str, Any]:
         """
         Analyze resume for ATS optimization and provide comprehensive feedback
@@ -90,53 +98,77 @@ class StandardATSService:
         
         PRECISE SCORING CRITERIA - APPLY CONSISTENTLY:
         
-        FORMATTING_READABILITY (0-100):
-        - 90-100: Perfect ATS format, clear sections, consistent formatting, no tables/graphics
-        - 80-89: Good format with minor inconsistencies, mostly ATS-friendly
-        - 70-79: Acceptable format but some ATS issues (tables, graphics, complex layouts)
-        - 60-69: Poor formatting with significant ATS problems
-        - 50-59: Major formatting issues that will cause ATS parsing errors
+        KEYWORD_USAGE_PLACEMENT (0-100):
+        - 90-100: Perfect keyword presence and natural placement throughout resume, critical ATS ranking terms included
+        - 80-89: Excellent keyword usage with minor gaps in placement or density
+        - 70-79: Good keyword coverage but some important terms missing or poorly placed
+        - 60-69: Fair keyword usage, missing critical ATS ranking terms
+        - 50-59: Poor keyword placement, limited ATS optimization
+        - 0-49: Very poor keyword usage, minimal ATS ranking potential
+        
+        SKILLS_MATCH_ALIGNMENT (0-100):
+        - 90-100: Perfect alignment of technical and soft skills with industry requirements
+        - 80-89: Excellent skills match with minor gaps in required competencies
+        - 70-79: Good skills alignment but missing some important technical/soft skills
+        - 60-69: Fair skills match, significant gaps in required competencies
+        - 50-59: Poor skills alignment, limited relevant competencies
+        - 0-49: Very poor skills match, minimal relevant skills
+        
+        FORMATTING_LAYOUT_ATS (0-100):
+        - 90-100: Perfect clean, simple, standardized formatting, fully ATS-compatible
+        - 80-89: Excellent formatting with minor ATS compatibility issues
+        - 70-79: Good formatting but some ATS parsing concerns (tables, graphics, complex layouts)
+        - 60-69: Fair formatting with significant ATS problems
+        - 50-59: Poor formatting, major ATS parsing issues
         - 0-49: Critical formatting problems, completely ATS-incompatible
         
-        KEYWORD_COVERAGE_GENERAL (0-100):
-        - 90-100: Excellent keyword density, industry-relevant terms, skills alignment
-        - 80-89: Good keyword coverage with minor gaps
-        - 70-79: Adequate keywords but missing some important terms
-        - 60-69: Poor keyword coverage, missing critical industry terms
-        - 50-59: Very limited keywords, significant gaps
-        - 0-49: Minimal or no relevant keywords
+        SECTION_ORGANIZATION (0-100):
+        - 90-100: All essential sections present with proper labeling (contact, summary, experience, skills, education)
+        - 80-89: Most sections complete with minor organizational issues
+        - 70-79: Basic sections present but some incomplete or poorly organized
+        - 60-69: Missing important sections or significant organizational gaps
+        - 50-59: Major sections missing or severely disorganized
+        - 0-49: Critical sections missing, resume structure incomplete
         
-        SECTION_COMPLETENESS (0-100):
-        - 90-100: All essential sections present and complete (contact, summary, experience, education, skills)
-        - 80-89: Most sections complete with minor gaps
-        - 70-79: Basic sections present but some incomplete
-        - 60-69: Missing important sections or significant gaps
-        - 50-59: Major sections missing or severely incomplete
-        - 0-49: Critical sections missing, resume incomplete
-        
-        ACHIEVEMENTS_METRICS (0-100):
-        - 90-100: Quantified achievements throughout, specific metrics, measurable impact
-        - 80-89: Good use of metrics with some quantified results
-        - 70-79: Some achievements quantified but inconsistent
-        - 60-69: Limited quantified achievements, mostly descriptive
+        ACHIEVEMENTS_IMPACT_METRICS (0-100):
+        - 90-100: Quantified achievements throughout with specific metrics and measurable impact
+        - 80-89: Good use of metrics with some quantified results and clear impact
+        - 70-79: Some achievements quantified but inconsistent impact measurement
+        - 60-69: Limited quantified achievements, mostly descriptive without metrics
         - 50-59: Very few quantified results, mostly vague descriptions
-        - 0-49: No quantified achievements, all descriptions are vague
+        - 0-49: No quantified achievements, all descriptions lack measurable impact
         
-        SPELLING_GRAMMAR (0-100):
+        GRAMMAR_SPELLING_QUALITY (0-100):
         - 90-100: Perfect spelling and grammar, professional language throughout
-        - 80-89: Minor spelling/grammar issues, mostly professional
-        - 70-79: Some spelling/grammar errors but generally acceptable
-        - 60-69: Multiple spelling/grammar issues affecting readability
+        - 80-89: Minor spelling/grammar issues, mostly professional quality
+        - 70-79: Some spelling/grammar errors but generally acceptable quality
+        - 60-69: Multiple spelling/grammar issues affecting professional quality
         - 50-59: Significant spelling/grammar problems
         - 0-49: Critical spelling/grammar errors throughout
         
-        PARSE_ACCURACY (0-100):
-        - 90-100: Perfect ATS parsing, clear structure, standard section headers
-        - 80-89: Good ATS compatibility with minor parsing issues
-        - 70-79: Generally ATS-friendly but some parsing challenges
-        - 60-69: Some ATS parsing issues, non-standard formatting
-        - 50-59: Significant ATS parsing problems
-        - 0-49: Major ATS parsing failures, incompatible format
+        HEADER_CONSISTENCY (0-100):
+        - 90-100: Perfect use of standard section labels, consistent header formatting
+        - 80-89: Excellent header consistency with minor variations
+        - 70-79: Good header usage but some non-standard labels
+        - 60-69: Fair header consistency, some ATS import issues
+        - 50-59: Poor header usage, significant ATS parsing problems
+        - 0-49: Very poor header consistency, major ATS import failures
+        
+        CLARITY_BREVITY (0-100):
+        - 90-100: Perfect clarity and brevity, concise professional language
+        - 80-89: Excellent clarity with minor verbosity issues
+        - 70-79: Good clarity but some run-on sentences or unclear points
+        - 60-69: Fair clarity, some confusing or overly complex language
+        - 50-59: Poor clarity, significant readability issues
+        - 0-49: Very poor clarity, major communication problems
+        
+        REPETITION_AVOIDANCE (0-100):
+        - 90-100: Perfect varied language, no unnecessary repetitions, professional diversity
+        - 80-89: Excellent language variety with minor repetitive elements
+        - 70-79: Good variety but some repetitive action verbs or phrases
+        - 60-69: Fair variety, noticeable repetition affecting quality
+        - 50-59: Poor variety, significant repetitive language
+        - 0-49: Very poor variety, excessive repetition throughout
         
         RESUME TEXT TO ANALYZE:
         {resume_text}
@@ -146,58 +178,85 @@ class StandardATSService:
             "overall_score": <calculate_weighted_average_of_all_category_scores>,
             "analysis_timestamp": "{datetime.datetime.utcnow().isoformat()}Z",
             "category_scores": {{
-                "formatting_readability": <exact_score_based_on_criteria_above>,
-                "keyword_coverage_general": <exact_score_based_on_criteria_above>,
-                "section_completeness": <exact_score_based_on_criteria_above>,
-                "achievements_metrics": <exact_score_based_on_criteria_above>,
-                "spelling_grammar": <exact_score_based_on_criteria_above>,
-                "parse_accuracy": <exact_score_based_on_criteria_above>
+                "keyword_usage_placement": <exact_score_based_on_criteria_above>,
+                "skills_match_alignment": <exact_score_based_on_criteria_above>,
+                "formatting_layout_ats": <exact_score_based_on_criteria_above>,
+                "section_organization": <exact_score_based_on_criteria_above>,
+                "achievements_impact_metrics": <exact_score_based_on_criteria_above>,
+                "grammar_spelling_quality": <exact_score_based_on_criteria_above>,
+                "header_consistency": <exact_score_based_on_criteria_above>,
+                "clarity_brevity": <exact_score_based_on_criteria_above>,
+                "repetition_avoidance": <exact_score_based_on_criteria_above>
             }},
             "detailed_feedback": {{
-                "formatting_readability": {{
+                "keyword_usage_placement": {{
                     "score": <exact_score_based_on_criteria_above>,
-                    "title": "Formatting & Readability",
-                    "description": "Specific analysis of resume formatting, structure, and ATS compatibility",
+                    "title": "Keyword Usage & Placement",
+                    "description": "Analysis of keyword presence, placement, and ATS ranking optimization",
                     "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
                     "negatives": ["Specific issue 1", "Specific issue 2"],
                     "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
                 }},
-                "keyword_coverage_general": {{
+                "skills_match_alignment": {{
                     "score": <exact_score_based_on_criteria_above>,
-                    "title": "Keyword Coverage",
-                    "description": "Detailed analysis of keyword optimization and industry-relevant terms",
+                    "title": "Skills Match & Alignment",
+                    "description": "Analysis of technical and soft skills alignment with industry requirements",
                     "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
                     "negatives": ["Specific issue 1", "Specific issue 2"],
                     "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
                 }},
-                "section_completeness": {{
+                "formatting_layout_ats": {{
                     "score": <exact_score_based_on_criteria_above>,
-                    "title": "Section Completeness",
-                    "description": "Analysis of resume section completeness and organization",
+                    "title": "Formatting & Layout ATS",
+                    "description": "Analysis of clean, simple formatting and ATS compatibility",
                     "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
                     "negatives": ["Specific issue 1", "Specific issue 2"],
                     "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
                 }},
-                "achievements_metrics": {{
+                "section_organization": {{
                     "score": <exact_score_based_on_criteria_above>,
-                    "title": "Achievements & Metrics",
-                    "description": "Analysis of quantified achievements and measurable impact",
+                    "title": "Section Organization",
+                    "description": "Analysis of essential resume sections and proper organization",
                     "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
                     "negatives": ["Specific issue 1", "Specific issue 2"],
                     "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
                 }},
-                "spelling_grammar": {{
+                "achievements_impact_metrics": {{
                     "score": <exact_score_based_on_criteria_above>,
-                    "title": "Spelling & Grammar",
-                    "description": "Analysis of spelling, grammar, and language quality",
+                    "title": "Achievements & Impact Metrics",
+                    "description": "Analysis of quantified achievements and measurable results",
                     "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
                     "negatives": ["Specific issue 1", "Specific issue 2"],
                     "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
                 }},
-                "parse_accuracy": {{
+                "grammar_spelling_quality": {{
                     "score": <exact_score_based_on_criteria_above>,
-                    "title": "Parse Accuracy",
-                    "description": "Analysis of ATS parsing accuracy and compatibility",
+                    "title": "Grammar & Spelling Quality",
+                    "description": "Analysis of error-free professional language and quality",
+                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
+                    "negatives": ["Specific issue 1", "Specific issue 2"],
+                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                }},
+                "header_consistency": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Header Consistency",
+                    "description": "Analysis of standard section labels and header formatting",
+                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
+                    "negatives": ["Specific issue 1", "Specific issue 2"],
+                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                }},
+                "clarity_brevity": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Clarity & Brevity",
+                    "description": "Analysis of clear, concise sentences and professional brevity",
+                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
+                    "negatives": ["Specific issue 1", "Specific issue 2"],
+                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                }},
+                "repetition_avoidance": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Repetition Avoidance",
+                    "description": "Analysis of varied language and minimal unnecessary repetitions",
                     "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
                     "negatives": ["Specific issue 1", "Specific issue 2"],
                     "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
@@ -233,6 +292,10 @@ class StandardATSService:
         - Ensure all feedback is specific to the actual resume content analyzed!
         - Calculate scores based on objective criteria, not subjective opinions!
         - Maintain consistency in scoring methodology across all categories!
+        - Apply the same rigorous standards for each parameter from the CSV criteria!
+        - Ensure consistent evaluation of keyword usage, skills match, formatting, and all other parameters!
+        - Use the exact scoring ranges provided for each category - no deviations!
+        - Provide consistent, professional feedback that matches the scoring criteria exactly!
         """
 
         try:
@@ -245,6 +308,9 @@ class StandardATSService:
             
             # Enforce schema compliance
             ats_response = self._enforce_ats_schema_compliance(ats_response)
+            
+            # Validate CSV parameters
+            ats_response = self._validate_csv_parameters(ats_response)
             
             # Final validation
             ats_response = self._final_ats_validation(ats_response)
@@ -323,20 +389,26 @@ class StandardATSService:
             "overall_score": 0,
             "analysis_timestamp": datetime.datetime.utcnow().isoformat() + "Z",
             "category_scores": {
-                "formatting_readability": 0,
-                "keyword_coverage_general": 0,
-                "section_completeness": 0,
-                "achievements_metrics": 0,
-                "spelling_grammar": 0,
-                "parse_accuracy": 0
+                "keyword_usage_placement": 0,
+                "skills_match_alignment": 0,
+                "formatting_layout_ats": 0,
+                "section_organization": 0,
+                "achievements_impact_metrics": 0,
+                "grammar_spelling_quality": 0,
+                "header_consistency": 0,
+                "clarity_brevity": 0,
+                "repetition_avoidance": 0
             },
             "detailed_feedback": {
-                "formatting_readability": {"score": 0, "title": "Formatting & Readability", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "keyword_coverage_general": {"score": 0, "title": "Keyword Coverage", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "section_completeness": {"score": 0, "title": "Section Completeness", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "achievements_metrics": {"score": 0, "title": "Achievements & Metrics", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "spelling_grammar": {"score": 0, "title": "Spelling & Grammar", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "parse_accuracy": {"score": 0, "title": "Parse Accuracy", "description": "", "positives": [], "negatives": [], "suggestions": []}
+                "keyword_usage_placement": {"score": 0, "title": "Keyword Usage & Placement", "description": "", "positives": [], "negatives": [], "suggestions": []},
+                "skills_match_alignment": {"score": 0, "title": "Skills Match & Alignment", "description": "", "positives": [], "negatives": [], "suggestions": []},
+                "formatting_layout_ats": {"score": 0, "title": "Formatting & Layout ATS", "description": "", "positives": [], "negatives": [], "suggestions": []},
+                "section_organization": {"score": 0, "title": "Section Organization", "description": "", "positives": [], "negatives": [], "suggestions": []},
+                "achievements_impact_metrics": {"score": 0, "title": "Achievements & Impact Metrics", "description": "", "positives": [], "negatives": [], "suggestions": []},
+                "grammar_spelling_quality": {"score": 0, "title": "Grammar & Spelling Quality", "description": "", "positives": [], "negatives": [], "suggestions": []},
+                "header_consistency": {"score": 0, "title": "Header Consistency", "description": "", "positives": [], "negatives": [], "suggestions": []},
+                "clarity_brevity": {"score": 0, "title": "Clarity & Brevity", "description": "", "positives": [], "negatives": [], "suggestions": []},
+                "repetition_avoidance": {"score": 0, "title": "Repetition Avoidance", "description": "", "positives": [], "negatives": [], "suggestions": []}
             },
             "extracted_text": "",
             "strengths": [],
@@ -476,6 +548,46 @@ class StandardATSService:
         except (ValueError, TypeError):
             logger.warning(f"⚠️ Invalid timestamp '{timestamp}' detected, defaulting to current UTC timestamp.")
             return datetime.datetime.utcnow().isoformat() + "Z"
+
+    def _validate_csv_parameters(self, ats_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validates that all CSV parameters are properly evaluated in the ATS response.
+        Ensures consistency with the CSV criteria provided.
+        """
+        logger.info("🔍 Validating CSV parameters compliance")
+        
+        # Define CSV parameters and their corresponding category scores
+        csv_parameters = {
+            "keyword_usage_placement": "Keyword Usage & Placement",
+            "skills_match_alignment": "Skills Match & Alignment", 
+            "formatting_layout_ats": "Formatting & Layout ATS",
+            "section_organization": "Section Organization",
+            "achievements_impact_metrics": "Achievements & Impact Metrics",
+            "grammar_spelling_quality": "Grammar & Spelling Quality",
+            "header_consistency": "Header Consistency",
+            "clarity_brevity": "Clarity & Brevity",
+            "repetition_avoidance": "Repetition Avoidance"
+        }
+        
+        # Validate that all CSV parameters are present and properly scored
+        for param_key, param_name in csv_parameters.items():
+            if param_key not in ats_response.get("category_scores", {}):
+                logger.warning(f"⚠️ Missing CSV parameter: {param_name} ({param_key})")
+                ats_response["category_scores"][param_key] = 0
+            
+            if param_key not in ats_response.get("detailed_feedback", {}):
+                logger.warning(f"⚠️ Missing CSV parameter feedback: {param_name} ({param_key})")
+                ats_response["detailed_feedback"][param_key] = {
+                    "score": 0,
+                    "title": param_name,
+                    "description": f"Analysis of {param_name.lower()}",
+                    "positives": [],
+                    "negatives": [],
+                    "suggestions": []
+                }
+        
+        logger.info("✅ CSV parameters validation completed")
+        return ats_response
 
 
 class JDSpecificATSService:
