@@ -78,7 +78,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increase limit for PDF generation
+app.use(express.urlencoded({ limit: '50mb', extended: true })); // Handle URL-encoded data
 
 // Serve static files from templates directory
 app.use('/templates', express.static('templates'));
