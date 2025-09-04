@@ -169,7 +169,7 @@ class AISuggestionService:
         Compare the following resume with the job description and provide actionable, ready-to-use rewritten improvements.
 
         CRITICAL RULES - NEVER VIOLATE:
-        - Return ONLY valid JSON (no markdown, no code fences, no explanations).
+        - Return ONLY valid JSON (no markdown, no code fences, no explanations,no errors).
         - NEVER omit any section - if no suggestions exist, return empty strings/arrays but keep the section.
         - ALWAYS include ALL required sections: professionalSummary, skills, workExperience, projects, education, certifications.
         - For each section, include: existing content, suggested rewritten version, and recommendations.
@@ -190,6 +190,21 @@ class AISuggestionService:
         - Score 50-59: Poor match - resume lacks many JD requirements, substantial improvements needed
         - Score 0-49: Very poor match - resume significantly misaligned with JD requirements
         
+         REPETITION RULES:
+        - Do NOT repeat strong action verbs (e.g., "implemented", "developed", "managed").
+        - one Strong action verb can be used only once in whole resume. IT IS MANDATORY !IMPORTANT
+        - Use synonyms or varied verbs to avoid repetition while keeping professional tone.
+        - Repetition of common stopwords (e.g., "the", "a", "and", "is", "to") is ALLOWED and should not be flagged.
+        - If multiple sentences start the same way (e.g., "I developed A. I developed B."), MERGE them into a single professionally framed sentence (e.g., "I developed A and B.").
+        
+        SPELLING & GRAMMAR RULES:
+        - All rewritten content MUST have perfect spelling, grammar, and punctuation.
+        - Ensure sentences are professionally framed and concise.
+        - Avoid informal language, filler words, or awkward phrasing.
+        - Merge repetitive sentence structures into smooth, grammatically correct sentences.
+        - Maintain consistent tense (use past tense for completed work, present tense for ongoing responsibilities).
+        - Always use professional, business-appropriate language.
+
         SCORING FACTORS TO CONSIDER:
         - Skills alignment: How well do resume skills match JD requirements?
         - Experience relevance: Does work experience align with job responsibilities?

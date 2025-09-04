@@ -113,7 +113,7 @@ const AISuggestionsPage: React.FC = () => {
       appliedRewrites: {
         professionalSummary: (state.suggestions as any).sectionSuggestions?.professionalSummary?.rewrite || null,
         skills: (state.suggestions as any).sectionSuggestions?.skills?.rewrite || [],
-        workExperience: (state.suggestions as any).sectionSuggestions?.workExperience || [],
+        workExperience: Array.isArray((state.suggestions as any).sectionSuggestions?.workExperience) ? (state.suggestions as any).sectionSuggestions.workExperience : [],
         education: (state.suggestions as any).sectionSuggestions?.education?.rewrite || [],
         projects: (state.suggestions as any).sectionSuggestions?.projects || [],
         certifications: (state.suggestions as any).sectionSuggestions?.certifications?.rewrite || []
@@ -578,7 +578,7 @@ const AISuggestionsPage: React.FC = () => {
 
             {activeTab === 'experience' && (
               <div className="space-y-6">
-                {(suggestions as any).sectionSuggestions?.workExperience && (suggestions as any).sectionSuggestions.workExperience.map((exp: any, index: number) => (
+                {(suggestions as any).sectionSuggestions?.workExperience && Array.isArray((suggestions as any).sectionSuggestions.workExperience) && (suggestions as any).sectionSuggestions.workExperience.map((exp: any, index: number) => (
                   <Card key={index}>
                   <CardHeader>
                       <CardTitle className="flex items-center gap-2">
