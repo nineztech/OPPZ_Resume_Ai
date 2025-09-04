@@ -190,7 +190,7 @@ class AISuggestionService:
         - Score 50-59: Poor match - resume lacks many JD requirements, substantial improvements needed
         - Score 0-49: Very poor match - resume significantly misaligned with JD requirements
         
-         REPETITION RULES:
+        REPETITION RULES:
         - Do NOT repeat strong action verbs (e.g., "implemented", "developed", "managed").
         - one Strong action verb can be used only once in whole resume. IT IS MANDATORY !IMPORTANT
         - Use synonyms or varied verbs to avoid repetition while keeping professional tone.

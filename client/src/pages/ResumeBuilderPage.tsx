@@ -536,135 +536,302 @@ const ResumeBuilderPage = () => {
         }
           
           // Apply Work Experience rewrites
-          if (rewrites.workExperience && Array.isArray(rewrites.workExperience) && rewrites.workExperience.length > 0) {
+          if (rewrites.workExperience && rewrites.workExperience !== null) {
             console.log('Applying work experience rewrites:', rewrites.workExperience);
-            rewrites.workExperience.forEach((expRewrite: any, index: number) => {
-              if (expRewrite.rewrite && processedData.experience[index]) {
-                // Parse the rewrite text to extract structured data
-                const rewriteText = expRewrite.rewrite;
-                const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
-                
-                // Extract title and company from first line
-                const titleLine = lines[0];
-                if (titleLine.includes('|')) {
-                  const parts = titleLine.split('|').map((p: string) => p.trim());
-                  if (parts.length >= 3) {
-                    processedData.experience[index].position = parts[0];
-                    processedData.experience[index].company = parts[1];
-                    processedData.experience[index].duration = parts[2];
-                    if (parts.length >= 4) {
-                      processedData.experience[index].location = parts[3];
-                    }
+            
+            // Handle work experience as a single rewrite string
+            if (typeof rewrites.workExperience === 'string' && rewrites.workExperience.trim()) {
+              const rewriteText = rewrites.workExperience;
+              const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+              
+              // Find the first experience entry to update or create a new one
+              let firstExp;
+              if (processedData.experience.length > 0) {
+                firstExp = processedData.experience[0];
+                console.log('Updating existing experience entry');
+              } else {
+                // Create a new experience entry if none exists
+                firstExp = {
+                  id: `ai-exp-${Date.now()}`,
+                  company: '',
+                  position: '',
+                  duration: '',
+                  description: '',
+                  location: ''
+                };
+                processedData.experience.push(firstExp);
+                console.log('Created new experience entry for AI rewrite');
+              }
+              
+              // Extract title and company from first line if it contains |
+              const titleLine = lines[0];
+              if (titleLine.includes('|')) {
+                const parts = titleLine.split('|').map((p: string) => p.trim());
+                if (parts.length >= 3) {
+                  firstExp.position = parts[0];
+                  firstExp.company = parts[1];
+                  firstExp.duration = parts[2];
+                  if (parts.length >= 4) {
+                    firstExp.location = parts[3];
                   }
                 }
-                
-                // Extract bullet points (lines starting with *)
-                const bulletPoints = lines.filter((line: string) => line.startsWith('*')).map((line: string) => line.substring(1).trim());
-                if (bulletPoints.length > 0) {
-                  processedData.experience[index].description = bulletPoints.join('\n');
-                }
-                
-                changesSet.add(`experience-${index}-ai-rewrite`);
-              } else if (processedData.experience[index]) {
-                // If no rewrite available, preserve existing experience data
-                console.log(`Preserving existing experience data for index ${index}:`, processedData.experience[index]);
               }
-            });
+              
+              // Extract bullet points (lines starting with *)
+              const bulletPoints = lines.filter((line: string) => line.startsWith('*')).map((line: string) => line.substring(1).trim());
+              if (bulletPoints.length > 0) {
+                firstExp.description = bulletPoints.join('\n');
+              } else {
+                // If no bullet points, use the entire rewrite as description
+                firstExp.description = rewriteText;
+              }
+              
+              changesSet.add(`experience-0-ai-rewrite`);
+              console.log('Applied work experience rewrite successfully');
+            }
+            // Handle work experience as array (legacy support)
+            else if (Array.isArray(rewrites.workExperience) && rewrites.workExperience.length > 0) {
+              rewrites.workExperience.forEach((expRewrite: any, index: number) => {
+                if (expRewrite.rewrite && processedData.experience[index]) {
+                  // Parse the rewrite text to extract structured data
+                  const rewriteText = expRewrite.rewrite;
+                  const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+                  
+                  // Extract title and company from first line
+                  const titleLine = lines[0];
+                  if (titleLine.includes('|')) {
+                    const parts = titleLine.split('|').map((p: string) => p.trim());
+                    if (parts.length >= 3) {
+                      processedData.experience[index].position = parts[0];
+                      processedData.experience[index].company = parts[1];
+                      processedData.experience[index].duration = parts[2];
+                      if (parts.length >= 4) {
+                        processedData.experience[index].location = parts[3];
+                      }
+                    }
+                  }
+                  
+                  // Extract bullet points (lines starting with *)
+                  const bulletPoints = lines.filter((line: string) => line.startsWith('*')).map((line: string) => line.substring(1).trim());
+                  if (bulletPoints.length > 0) {
+                    processedData.experience[index].description = bulletPoints.join('\n');
+                  }
+                  
+                  changesSet.add(`experience-${index}-ai-rewrite`);
+                } else if (processedData.experience[index]) {
+                  // If no rewrite available, preserve existing experience data
+                  console.log(`Preserving existing experience data for index ${index}:`, processedData.experience[index]);
+                }
+              });
+            }
           }
           
           // Apply Education rewrites
-          if (rewrites.education && Array.isArray(rewrites.education) && rewrites.education.length > 0) {
+          if (rewrites.education && rewrites.education !== null) {
             console.log('Applying education rewrites:', rewrites.education);
-            rewrites.education.forEach((eduRewrite: string, index: number) => {
-              if (eduRewrite && processedData.education[index]) {
-                // Parse education rewrite
-                const lines = eduRewrite.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
-                const titleLine = lines[0];
-                
-                if (titleLine.includes('|')) {
-                  const parts = titleLine.split('|').map((p: string) => p.trim());
-                  if (parts.length >= 3) {
-                    processedData.education[index].degree = parts[0];
-                    processedData.education[index].institution = parts[1];
-                    processedData.education[index].year = parts[2];
-                  }
-                }
-                
-                // Extract bullet points for description
-                const bulletPoints = lines.filter((line: string) => line.startsWith('*')).map((line: string) => line.substring(1).trim());
-                if (bulletPoints.length > 0) {
-                  processedData.education[index].description = bulletPoints.join('\n');
-                }
-                
-                changesSet.add(`education-${index}-ai-rewrite`);
-              } else if (processedData.education[index]) {
-                // If no rewrite available, preserve existing education data
-                console.log(`Preserving existing education data for index ${index}:`, processedData.education[index]);
+            
+            // Handle education as a single rewrite string
+            if (typeof rewrites.education === 'string' && rewrites.education.trim()) {
+              const rewriteText = rewrites.education;
+              const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+              
+              // Find the first education entry to update or create a new one
+              let firstEdu;
+              if (processedData.education.length > 0) {
+                firstEdu = processedData.education[0];
+                console.log('Updating existing education entry');
+              } else {
+                // Create a new education entry if none exists
+                firstEdu = {
+                  id: `ai-edu-${Date.now()}`,
+                  degree: '',
+                  institution: '',
+                  year: '',
+                  description: ''
+                };
+                processedData.education.push(firstEdu);
+                console.log('Created new education entry for AI rewrite');
               }
-            });
+              
+              // Extract degree and institution from first line if it contains |
+              const titleLine = lines[0];
+              if (titleLine.includes('|')) {
+                const parts = titleLine.split('|').map((p: string) => p.trim());
+                if (parts.length >= 3) {
+                  firstEdu.degree = parts[0];
+                  firstEdu.institution = parts[1];
+                  firstEdu.year = parts[2];
+                }
+              }
+              
+              // Extract bullet points for description
+              const bulletPoints = lines.filter((line: string) => line.startsWith('*')).map((line: string) => line.substring(1).trim());
+              if (bulletPoints.length > 0) {
+                firstEdu.description = bulletPoints.join('\n');
+              } else {
+                // If no bullet points, use the entire rewrite as description
+                firstEdu.description = rewriteText;
+              }
+              
+              changesSet.add(`education-0-ai-rewrite`);
+              console.log('Applied education rewrite successfully');
+            }
+            // Handle education as array (legacy support)
+            else if (Array.isArray(rewrites.education) && rewrites.education.length > 0) {
+              rewrites.education.forEach((eduRewrite: string, index: number) => {
+                if (eduRewrite && processedData.education[index]) {
+                  // Parse education rewrite
+                  const lines = eduRewrite.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+                  const titleLine = lines[0];
+                  
+                  if (titleLine.includes('|')) {
+                    const parts = titleLine.split('|').map((p: string) => p.trim());
+                    if (parts.length >= 3) {
+                      processedData.education[index].degree = parts[0];
+                      processedData.education[index].institution = parts[1];
+                      processedData.education[index].year = parts[2];
+                    }
+                  }
+                  
+                  // Extract bullet points for description
+                  const bulletPoints = lines.filter((line: string) => line.startsWith('*')).map((line: string) => line.substring(1).trim());
+                  if (bulletPoints.length > 0) {
+                    processedData.education[index].description = bulletPoints.join('\n');
+                  }
+                  
+                  changesSet.add(`education-${index}-ai-rewrite`);
+                } else if (processedData.education[index]) {
+                  // If no rewrite available, preserve existing education data
+                  console.log(`Preserving existing education data for index ${index}:`, processedData.education[index]);
+                }
+              });
+            }
           }
           
-          // Apply Projects rewrites (create new projects if they don't exist)
-          if (rewrites.projects && Array.isArray(rewrites.projects) && rewrites.projects.length > 0) {
+          // Apply Projects rewrites
+          if (rewrites.projects && rewrites.projects !== null) {
             console.log('Applying projects rewrites:', rewrites.projects);
-            rewrites.projects.forEach((projectRewrite: any, index: number) => {
-              if (projectRewrite.rewrite) {
-                const rewriteText = projectRewrite.rewrite;
-                const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
-                
-                // Extract project title from first line (usually starts with **)
-                let projectTitle = 'AI Suggested Project';
-                const titleLine = lines.find((line: string) => line.startsWith('**') && line.endsWith('**'));
-                if (titleLine) {
-                  projectTitle = titleLine.replace(/\*\*/g, '').trim();
-                }
-                
-                // Extract bullet points for description
-                const bulletPoints = lines.filter((line: string) => line.startsWith('*') && !line.startsWith('**')).map((line: string) => line.substring(1).trim());
-                
-                const newProject = {
-                  id: `ai-project-${index}-${Date.now()}`,
-                  name: projectTitle,
-                  techStack: 'MERN Stack', // Default for MERN suggestions
-                  startDate: '',
-                  endDate: '',
-                  description: bulletPoints.join('\n'),
-                  link: ''
-                };
-                
-                processedData.projects.push(newProject);
-                changesSet.add(`project-${processedData.projects.length - 1}-ai-rewrite`);
+            
+            // Handle projects as a single rewrite string
+            if (typeof rewrites.projects === 'string' && rewrites.projects.trim()) {
+              const rewriteText = rewrites.projects;
+              const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+              
+              // Extract project title from first line (usually starts with **)
+              let projectTitle = 'AI Suggested Project';
+              const titleLine = lines.find((line: string) => line.startsWith('**') && line.endsWith('**'));
+              if (titleLine) {
+                projectTitle = titleLine.replace(/\*\*/g, '').trim();
               }
-            });
+              
+              // Extract bullet points for description
+              const bulletPoints = lines.filter((line: string) => line.startsWith('*') && !line.startsWith('**')).map((line: string) => line.substring(1).trim());
+              
+              const newProject = {
+                id: `ai-project-${Date.now()}`,
+                name: projectTitle,
+                techStack: 'MERN Stack', // Default for MERN suggestions
+                startDate: '',
+                endDate: '',
+                description: bulletPoints.length > 0 ? bulletPoints.join('\n') : rewriteText,
+                link: ''
+              };
+              
+              processedData.projects.push(newProject);
+              changesSet.add(`project-${processedData.projects.length - 1}-ai-rewrite`);
+              console.log('Applied projects rewrite as new project');
+            }
+            // Handle projects as array (legacy support)
+            else if (Array.isArray(rewrites.projects) && rewrites.projects.length > 0) {
+              rewrites.projects.forEach((projectRewrite: any, index: number) => {
+                if (projectRewrite.rewrite) {
+                  const rewriteText = projectRewrite.rewrite;
+                  const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+                  
+                  // Extract project title from first line (usually starts with **)
+                  let projectTitle = 'AI Suggested Project';
+                  const titleLine = lines.find((line: string) => line.startsWith('**') && line.endsWith('**'));
+                  if (titleLine) {
+                    projectTitle = titleLine.replace(/\*\*/g, '').trim();
+                  }
+                  
+                  // Extract bullet points for description
+                  const bulletPoints = lines.filter((line: string) => line.startsWith('*') && !line.startsWith('**')).map((line: string) => line.substring(1).trim());
+                  
+                  const newProject = {
+                    id: `ai-project-${index}-${Date.now()}`,
+                    name: projectTitle,
+                    techStack: 'MERN Stack', // Default for MERN suggestions
+                    startDate: '',
+                    endDate: '',
+                    description: bulletPoints.join('\n'),
+                    link: ''
+                  };
+                  
+                  processedData.projects.push(newProject);
+                  changesSet.add(`project-${processedData.projects.length - 1}-ai-rewrite`);
+                }
+              });
+            }
           }
           
           // Ensure existing projects are preserved if no AI rewrites
-          if (!rewrites.projects || !Array.isArray(rewrites.projects) || rewrites.projects.length === 0) {
+          if (!rewrites.projects || rewrites.projects === null) {
             console.log('No AI project rewrites available, preserving existing projects:', processedData.projects);
           }
           
-          // Apply Certifications rewrites (create new certifications if they don't exist)
-          if (rewrites.certifications && Array.isArray(rewrites.certifications) && rewrites.certifications.length > 0) {
+          // Apply Certifications rewrites
+          if (rewrites.certifications && rewrites.certifications !== null) {
             console.log('Applying certifications rewrites:', rewrites.certifications);
-            rewrites.certifications.forEach((certRewrite: string, index: number) => {
-              if (certRewrite) {
-                const newCertification = {
-                  id: `ai-cert-${index}-${Date.now()}`,
-                  certificateName: certRewrite,
-                  link: '',
-                  startDate: '',
-                  endDate: '',
-                  instituteName: ''
-                };
-                
-                processedData.certifications.push(newCertification);
-                changesSet.add(`certification-${processedData.certifications.length - 1}-ai-rewrite`);
-              }
-            });
+            
+            // Handle certifications as a single rewrite string
+            if (typeof rewrites.certifications === 'string' && rewrites.certifications.trim()) {
+              const rewriteText = rewrites.certifications;
+              
+              // Split by lines and filter out empty ones
+              const certLines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+              
+              // Create certifications from each line
+              certLines.forEach((certLine: string, index: number) => {
+                if (certLine.trim()) {
+                  const newCertification = {
+                    id: `ai-cert-${index}-${Date.now()}`,
+                    certificateName: certLine,
+                    link: '',
+                    startDate: '',
+                    endDate: '',
+                    instituteName: ''
+                  };
+                  
+                  processedData.certifications.push(newCertification);
+                  changesSet.add(`certification-${processedData.certifications.length - 1}-ai-rewrite`);
+                }
+              });
+              
+              console.log('Applied certifications rewrite as new certifications');
+            }
+            // Handle certifications as array (legacy support)
+            else if (Array.isArray(rewrites.certifications) && rewrites.certifications.length > 0) {
+              rewrites.certifications.forEach((certRewrite: string, index: number) => {
+                if (certRewrite) {
+                  const newCertification = {
+                    id: `ai-cert-${index}-${Date.now()}`,
+                    certificateName: certRewrite,
+                    link: '',
+                    startDate: '',
+                    endDate: '',
+                    instituteName: ''
+                  };
+                  
+                  processedData.certifications.push(newCertification);
+                  changesSet.add(`certification-${processedData.certifications.length - 1}-ai-rewrite`);
+                }
+              });
+            }
           }
           
           // Ensure existing certifications are preserved if no AI rewrites
-          if (!rewrites.certifications || !Array.isArray(rewrites.certifications) || rewrites.certifications.length === 0) {
+          if (!rewrites.certifications || rewrites.certifications === null) {
             console.log('No AI certification rewrites available, preserving existing certifications:', processedData.certifications);
           }
         }
