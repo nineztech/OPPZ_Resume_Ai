@@ -6,7 +6,7 @@ import { Upload, FileText, Sparkles, ArrowLeft, CheckCircle, User } from 'lucide
 
 
 import { geminiParserService } from '@/services/geminiParserService';
-import { getTemplateById } from '@/data/templates';
+import { cleanMinimalTemplateData } from '@/components/templates/ModernProffessional/data';
 
 
 const UseTemplatePage = () => {
@@ -53,9 +53,8 @@ const UseTemplatePage = () => {
 
 
   const handleContinueWithoutResume = async () => {
-    // Get default template data
-    const template = getTemplateById(templateId || 'modern-professional');
-    const defaultData = template?.templateData;
+    // Use the data from data.ts file
+    const defaultData = cleanMinimalTemplateData;
     
     navigate('/resume/builder', { 
       state: { 
