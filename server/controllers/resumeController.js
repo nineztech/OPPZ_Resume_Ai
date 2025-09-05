@@ -200,10 +200,10 @@ export const generatePDF = async (req, res) => {
       format: 'A4',
       printBackground: true,
       margin: {
-        top: '20mm',
-        right: '20mm',
-        bottom: '20mm',
-        left: '20mm'
+        top: '5mm',
+        right: '5mm',
+        bottom: '5mm',
+        left: '5mm'
       }
     });
 
