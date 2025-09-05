@@ -169,7 +169,7 @@ class AISuggestionService:
         Compare the following resume with the job description and provide actionable, ready-to-use rewritten improvements.
 
         CRITICAL RULES - NEVER VIOLATE:
-        - Return ONLY valid JSON (no markdown, no code fences, no explanations).
+        - Return ONLY valid JSON (no markdown, no code fences, no explanations,no errors).
         - NEVER omit any section - if no suggestions exist, return empty strings/arrays but keep the section.
         - ALWAYS include ALL required sections: professionalSummary, skills, workExperience, projects, education, certifications.
         - For each section, include: existing content, suggested rewritten version, and recommendations.
@@ -190,6 +190,21 @@ class AISuggestionService:
         - Score 50-59: Poor match - resume lacks many JD requirements, substantial improvements needed
         - Score 0-49: Very poor match - resume significantly misaligned with JD requirements
         
+        REPETITION RULES:
+        - Do NOT repeat strong action verbs (e.g., "implemented", "developed", "managed").
+        - one Strong action verb can be used only once in whole resume. IT IS MANDATORY !IMPORTANT
+        - Use synonyms or varied verbs to avoid repetition while keeping professional tone.
+        - Repetition of common stopwords (e.g., "the", "a", "and", "is", "to") is ALLOWED and should not be flagged.
+        - If multiple sentences start the same way (e.g., "I developed A. I developed B."), MERGE them into a single professionally framed sentence (e.g., "I developed A and B.").
+        
+        SPELLING & GRAMMAR RULES:
+        - All rewritten content MUST have perfect spelling, grammar, and punctuation.
+        - Ensure sentences are professionally framed and concise.
+        - Avoid informal language, filler words, or awkward phrasing.
+        - Merge repetitive sentence structures into smooth, grammatically correct sentences.
+        - Maintain consistent tense (use past tense for completed work, present tense for ongoing responsibilities).
+        - Always use professional, business-appropriate language.
+
         SCORING FACTORS TO CONSIDER:
         - Skills alignment: How well do resume skills match JD requirements?
         - Experience relevance: Does work experience align with job responsibilities?
@@ -210,6 +225,15 @@ class AISuggestionService:
         - Example: If resume has "Programming Languages: Java, Python" and job needs "JavaScript", suggest "Programming Languages: JavaScript" (not "Programming Languages: Java, Python, JavaScript").
         - If a category has no new skills to add, do NOT include that category in the rewrite at all.
         - Do NOT suggest "New Category: skills" - only use existing categories.
+
+        CRITICAL PROJECTS RULES:
+        - If NO projects exist in the resume, create exactly 2 dummy projects that match the job description requirements.
+        - Each dummy project must have: name, existing (empty), rewrite (detailed project description), and recommendations.
+        - Dummy projects should be relevant to the job role and demonstrate skills mentioned in the job description.
+        - If projects DO exist, enhance their descriptions in the "rewrite" field to better match the job description.
+        - Project descriptions should include: technologies used, achievements, impact, and relevance to the target role.
+        - Use strong action verbs and quantified results where possible.
+        - Ensure project names and descriptions align with the {target_experience} level and job requirements.
 
         RESUME DATA:
         {resume_text}
@@ -1793,6 +1817,7 @@ class AISuggestionService:
     def _create_projects_fallback(self, resume_data: Dict[str, Any]) -> list:
         """
         Creates a fallback projects section from the original resume data.
+        If no projects exist, creates 2 dummy projects that match the job description.
         This ensures the projects section is never missing.
         """
         fallback_projects = []
@@ -1836,8 +1861,22 @@ class AISuggestionService:
                 }
                 fallback_projects.append(fallback_item)
         else:
-            logger.warning("🔒 No original projects data found, creating empty fallback")
-            fallback_projects = [{"name": "", "existing": "", "rewrite": "", "recommendations": [""]}]
+            logger.warning("🔒 No original projects data found, creating 2 dummy projects")
+            # Create 2 dummy projects that will be enhanced by AI based on job description
+            fallback_projects = [
+                {
+                    "name": "Project 1",
+                    "existing": "",
+                    "rewrite": "",  # AI will create relevant project description
+                    "recommendations": [""]
+                },
+                {
+                    "name": "Project 2", 
+                    "existing": "",
+                    "rewrite": "",  # AI will create relevant project description
+                    "recommendations": [""]
+                }
+            ]
         
         return fallback_projects
 

@@ -113,10 +113,10 @@ const AISuggestionsPage: React.FC = () => {
       appliedRewrites: {
         professionalSummary: (state.suggestions as any).sectionSuggestions?.professionalSummary?.rewrite || null,
         skills: (state.suggestions as any).sectionSuggestions?.skills?.rewrite || [],
-        workExperience: (state.suggestions as any).sectionSuggestions?.workExperience || [],
-        education: (state.suggestions as any).sectionSuggestions?.education?.rewrite || [],
-        projects: (state.suggestions as any).sectionSuggestions?.projects || [],
-        certifications: (state.suggestions as any).sectionSuggestions?.certifications?.rewrite || []
+        workExperience: (state.suggestions as any).sectionSuggestions?.workExperience?.rewrite || null,
+        education: (state.suggestions as any).sectionSuggestions?.education?.rewrite || null,
+        projects: (state.suggestions as any).sectionSuggestions?.projects?.rewrite || null,
+        certifications: (state.suggestions as any).sectionSuggestions?.certifications?.rewrite || null
       }
         };
     
@@ -461,7 +461,12 @@ const AISuggestionsPage: React.FC = () => {
                 )}
 
                 {/* Projects Section */}
-                {(suggestions as any).sectionSuggestions?.projects && (suggestions as any).sectionSuggestions.projects.length > 0 && (
+                {(suggestions as any).sectionSuggestions?.projects && (
+                  (suggestions as any).sectionSuggestions.projects.rewrite || 
+                  (suggestions as any).sectionSuggestions.projects.recommendations ||
+                  (suggestions as any).sectionSuggestions.projects.existing ||
+                  (Array.isArray((suggestions as any).sectionSuggestions.projects) && (suggestions as any).sectionSuggestions.projects.length > 0)
+                ) && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -471,30 +476,90 @@ const AISuggestionsPage: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {(suggestions as any).sectionSuggestions.projects.map((project: any, index: number) => (
-                          <div key={index} className="border rounded-lg p-4">
-                            <h4 className="font-medium text-gray-900 mb-2">Project {index + 1}</h4>
-                            <div className="space-y-3">
+                        {(() => {
+                          const projects = (suggestions as any).sectionSuggestions.projects;
+                          
+                          // Handle projects as array (future compatibility)
+                          if (Array.isArray(projects) && projects.length > 0) {
+                            return (
+                              <div className="space-y-4">
+                                {projects.map((project: any, index: number) => (
+                                  <div key={index} className="border rounded-lg p-4">
+                                    <h4 className="font-medium text-gray-900 mb-2">Project {index + 1}</h4>
+                                    <div className="space-y-3">
+                                      <div>
+                                        <h5 className="font-medium text-gray-800 mb-1">Current Project</h5>
+                                        <div className="text-sm text-gray-700 p-3 bg-gray-50 rounded border">
+                                          {project.existing || 'No project details available'}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <h5 className="font-medium text-gray-800 mb-1">Suggested Enhancement</h5>
+                                        <div className="text-sm text-gray-700 p-3 bg-purple-50 rounded border-l-4 border-purple-500 whitespace-pre-line">
+                                          {project.rewrite || 'No specific project suggestions available at this time.'}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <h5 className="font-medium text-gray-800 mb-1">Recommendations</h5>
+                                        <ul className="space-y-1">
+                                          {getSafeArray(project.recommendations).map((rec, recIndex) => (
+                                            <li key={recIndex} className="text-sm text-gray-700 flex items-start gap-2">
+                                              <ArrowRight className="w-3 h-3 text-purple-500 mt-1 flex-shrink-0" />
+                                              {rec}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+                          
+                          // Handle projects as object (current structure)
+                          return (
+                            <>
                               <div>
-                                <h5 className="font-medium text-gray-800 mb-1">Suggested Project</h5>
-                                <div className="text-sm text-gray-700 p-3 bg-purple-50 rounded border-l-4 border-purple-500 whitespace-pre-line">
-                                  {project.rewrite}
+                                <h4 className="font-medium text-gray-900 mb-2">Current Projects</h4>
+                                <div className="text-sm text-gray-700 p-3 bg-gray-50 rounded border">
+                                  {projects.existing || 'No projects currently listed in resume'}
                                 </div>
                               </div>
                               <div>
-                                <h5 className="font-medium text-gray-800 mb-1">Recommendations</h5>
+                                <h4 className="font-medium text-gray-900 mb-2">Suggested Project Enhancements</h4>
+                                <div className="text-sm text-gray-700 p-3 bg-purple-50 rounded border-l-4 border-purple-500">
+                                  {projects.rewrite || 'No specific project suggestions available at this time.'}
+                                </div>
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-gray-900 mb-2">Recommendations</h4>
                                 <ul className="space-y-1">
-                                  {getSafeArray(project.recommendations).map((rec, recIndex) => (
-                                    <li key={recIndex} className="text-sm text-gray-700 flex items-start gap-2">
-                                      <ArrowRight className="w-3 h-3 text-purple-500 mt-1 flex-shrink-0" />
-                                      {rec}
-                                    </li>
-                                  ))}
+                                  {(() => {
+                                    const recommendations = getSafeArray(projects.recommendations);
+                                    console.log('Projects recommendations:', projects.recommendations);
+                                    console.log('Processed recommendations:', recommendations);
+                                    
+                                    if (recommendations.length === 0 || (recommendations.length === 1 && recommendations[0] === '')) {
+                                      return (
+                                        <li className="text-sm text-gray-500 italic">
+                                          No specific recommendations for projects section.
+                                        </li>
+                                      );
+                                    }
+                                    
+                                    return recommendations.map((rec, index) => (
+                                      <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
+                                        <ArrowRight className="w-3 h-3 text-purple-500 mt-1 flex-shrink-0" />
+                                        {rec}
+                                      </li>
+                                    ));
+                                  })()}
                                 </ul>
                               </div>
-                            </div>
-                          </div>
-                        ))}
+                            </>
+                          );
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
@@ -578,43 +643,62 @@ const AISuggestionsPage: React.FC = () => {
 
             {activeTab === 'experience' && (
               <div className="space-y-6">
-                {(suggestions as any).sectionSuggestions?.workExperience && (suggestions as any).sectionSuggestions.workExperience.map((exp: any, index: number) => (
-                  <Card key={index}>
-                  <CardHeader>
+                {(suggestions as any).sectionSuggestions?.workExperience && (
+                  <Card>
+                    <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Briefcase className="w-5 h-5 text-blue-600" />
-                        {exp.role}
+                        Work Experience Enhancement
+                        {(suggestions as any).sectionSuggestions.workExperience.role && (
+                          <span className="text-sm font-normal text-gray-600 ml-2">
+                            - {(suggestions as any).sectionSuggestions.workExperience.role}
+                          </span>
+                        )}
                       </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Current Description</h4>
-                          <div className="text-sm text-gray-700 p-3 bg-gray-50 rounded border max-h-40 overflow-y-auto">
-                            {exp.existing}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Current Experience Description</h4>
+                          <div className="text-sm text-gray-700 p-3 bg-gray-50 rounded border max-h-40 overflow-y-auto whitespace-pre-line">
+                            {(suggestions as any).sectionSuggestions.workExperience.existing || 'No work experience data available'}
+                          </div>
                         </div>
-                      </div>
-                      <div>
+                        <div>
                           <h4 className="font-medium text-gray-900 mb-2">Suggested Rewrite</h4>
-                          <div className="text-sm text-gray-700 p-3 bg-blue-50 rounded border-l-4 border-blue-500 max-h-40 overflow-y-auto">
-                            {exp.rewrite}
+                          <div className="text-sm text-gray-700 p-3 bg-blue-50 rounded border-l-4 border-blue-500 max-h-40 overflow-y-auto whitespace-pre-line">
+                            {(suggestions as any).sectionSuggestions.workExperience.rewrite || 'No specific rewrite suggestions available at this time.'}
+                          </div>
                         </div>
-                      </div>
                         <div>
                           <h4 className="font-medium text-gray-900 mb-2">Key Recommendations</h4>
                           <ul className="space-y-1">
-                            {getSafeArray(exp.recommendations).map((rec, recIndex) => (
-                              <li key={recIndex} className="text-sm text-gray-700 flex items-start gap-2">
-                                <ArrowRight className="w-3 h-3 text-blue-500 mt-1 flex-shrink-0" />
-                                {rec}
-                              </li>
-                            ))}
+                            {(() => {
+                              const recommendations = getSafeArray((suggestions as any).sectionSuggestions.workExperience.recommendations);
+                              console.log('Work experience recommendations:', (suggestions as any).sectionSuggestions.workExperience.recommendations);
+                              console.log('Processed recommendations:', recommendations);
+                              
+                              if (recommendations.length === 0 || (recommendations.length === 1 && recommendations[0] === '')) {
+                                return (
+                                  <li className="text-sm text-gray-500 italic">
+                                    No specific recommendations for work experience section.
+                                  </li>
+                                );
+                              }
+                              
+                              return recommendations.map((rec, recIndex) => (
+                                <li key={recIndex} className="text-sm text-gray-700 flex items-start gap-2">
+                                  <ArrowRight className="w-3 h-3 text-blue-500 mt-1 flex-shrink-0" />
+                                  {rec}
+                                </li>
+                              ));
+                            })()}
                           </ul>
                         </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
 
