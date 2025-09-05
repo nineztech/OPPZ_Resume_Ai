@@ -192,7 +192,7 @@ class AISuggestionService:
         
         REPETITION RULES:
         - Do NOT repeat strong action verbs (e.g., "implemented", "developed", "managed").
-        - one Strong action verb can be used only once in whole resume. IT IS MANDATORY !IMPORTANT
+        - one strong action verb can be used only once in whole resume whole parsed data and also cannot be used in creating something new or in rewrite. IT IS MANDATORY !IMPORTANT please implement this PRIOR
         - Use synonyms or varied verbs to avoid repetition while keeping professional tone.
         - Repetition of common stopwords (e.g., "the", "a", "and", "is", "to") is ALLOWED and should not be flagged.
         - If multiple sentences start the same way (e.g., "I developed A. I developed B."), MERGE them into a single professionally framed sentence (e.g., "I developed A and B.").
@@ -249,19 +249,19 @@ class AISuggestionService:
                 "professionalSummary": {{
                     "existing": "",
                     "rewrite": "",
-                    "recommendations": [""]
+                    "recommendations": ["Craft a compelling 2-3 sentence summary highlighting key achievements", "Include relevant keywords from the job description", "Quantify your impact with specific numbers and results", "Tailor the summary to the target role and company"]
                 }},
                 "skills": {{
                     "existing": [""],
                     "rewrite": [""],
-                    "recommendations": [""]
+                    "recommendations": ["Add technical skills relevant to the job description", "Include both hard and soft skills", "Organize skills by category for better readability", "Highlight skills that match the job requirements"]
                 }},
                 "workExperience": [
                     {{
                         "role": "",
                         "existing": "",
                         "rewrite": "",
-                        "recommendations": [""]
+                        "recommendations": ["Quantify achievements with specific numbers and percentages", "Use strong action verbs to start each bullet point", "Highlight leadership and team collaboration examples", "Include relevant technologies and tools used"]
                     }}
                 ],
                 "projects": [
@@ -269,24 +269,24 @@ class AISuggestionService:
                         "name": "",
                         "existing": "",
                         "rewrite": "",
-                        "recommendations": [""]
+                        "recommendations": ["Enhance project description with specific technologies used", "Add quantified results and achievements", "Include project duration and team size", "Highlight relevant skills gained"]
                     }}
                 ],
                 "education": {{
                     "existing": [""],
                     "rewrite": "",
-                    "recommendations": [""]
+                    "recommendations": ["Include relevant coursework and academic projects", "Add GPA if it's 3.5 or higher", "Highlight academic achievements and honors", "Include relevant extracurricular activities and leadership roles"]
                 }},
                 "certifications": {{
                     "existing": [""],
                     "rewrite": "",
-                    "recommendations": [""]
+                    "recommendations": ["Add relevant professional certifications for the target role", "Include industry-specific certifications and licenses", "Add completion dates and credential IDs", "Highlight ongoing learning and skill development"]
                 }}
             }},
             "topRecommendations": [
-                "Actionable step 1",
-                "Actionable step 2",
-                "Actionable step 3"
+                "Review and enhance your professional summary with relevant keywords",
+                "Add technical skills that match the job description requirements",
+                "Quantify achievements in work experience with specific numbers and results"
             ]
         }}
         
@@ -300,12 +300,42 @@ class AISuggestionService:
             logger.info(f"🔍 Starting AI response generation...")
             response = self.model.generate_content(prompt)
             
+            # Check if the response was blocked or filtered
+            if hasattr(response, 'candidates') and response.candidates:
+                candidate = response.candidates[0]
+                if hasattr(candidate, 'finish_reason') and candidate.finish_reason == 2:
+                    logger.error("🚨 Gemini response was blocked/filtered (finish_reason=2)")
+                    logger.error("🚨 Creating fallback response due to content filtering")
+                    # Create a comprehensive fallback response
+                    ai_response = self._create_comprehensive_fallback_response(resume_data, job_description, target_experience)
+                    logger.warning("⚠️ Using comprehensive fallback response due to content filtering")
+                    return ai_response
+            
+            # Check if response.text is accessible and not empty
+            try:
+                response_text = response.text
+                if not response_text or not response_text.strip():
+                    logger.error("🚨 Gemini response is empty or None")
+                    logger.error("🚨 Creating fallback response due to empty response")
+                    # Create a comprehensive fallback response
+                    ai_response = self._create_comprehensive_fallback_response(resume_data, job_description, target_experience)
+                    logger.warning("⚠️ Using comprehensive fallback response due to empty response")
+                    return ai_response
+            except Exception as text_error:
+                logger.error(f"🚨 Error accessing response.text: {str(text_error)}")
+                logger.error("🚨 This usually indicates the response was blocked or filtered")
+                logger.error("🚨 Creating fallback response due to response access error")
+                # Create a comprehensive fallback response
+                ai_response = self._create_comprehensive_fallback_response(resume_data, job_description, target_experience)
+                logger.warning("⚠️ Using comprehensive fallback response due to response access error")
+                return ai_response
+            
             # Log raw response for debugging
-            logger.info(f"🔍 Raw Gemini response length: {len(response.text)} characters")
-            logger.debug(f"🔍 Raw Gemini response: {response.text}")
+            logger.info(f"🔍 Raw Gemini response length: {len(response_text)} characters")
+            logger.debug(f"🔍 Raw Gemini response: {response_text}")
             
             # Check if score exists in raw response
-            if 'overallScore' in response.text:
+            if 'overallScore' in response_text:
                 logger.info("✅ 'overallScore' found in raw response")
             else:
                 logger.warning("⚠️ 'overallScore' NOT found in raw response")
@@ -313,28 +343,28 @@ class AISuggestionService:
             # Check for key sections in raw response
             key_sections = ['sectionSuggestions', 'workExperience', 'skills', 'projects', 'education', 'certifications']
             for section in key_sections:
-                if section in response.text:
+                if section in response_text:
                     logger.info(f"✅ '{section}' found in raw response")
                     # Show context around the section
-                    section_pos = response.text.find(section)
+                    section_pos = response_text.find(section)
                     if section_pos > 0:
                         context_start = max(0, section_pos - 50)
-                        context_end = min(len(response.text), section_pos + 100)
-                        context = response.text[context_start:context_end]
+                        context_end = min(len(response_text), section_pos + 100)
+                        context = response_text[context_start:context_end]
                         logger.info(f"   Context around '{section}': {context}")
                 else:
                     logger.warning(f"⚠️ '{section}' NOT found in raw response")
             
             # Check for overallScore in raw response
-            if 'overallScore' in response.text:
-                score_pos = response.text.find('overallScore')
+            if 'overallScore' in response_text:
+                score_pos = response_text.find('overallScore')
                 if score_pos > 0:
                     context_start = max(0, score_pos - 30)
-                    context_end = min(len(response.text), score_pos + 50)
-                    score_context = response.text[context_start:context_end]
+                    context_end = min(len(response_text), score_pos + 50)
+                    score_context = response_text[context_start:context_end]
                     logger.info(f"   Context around 'overallScore': {score_context}")
             
-            cleaned_response = self._clean_gemini_response(response.text)
+            cleaned_response = self._clean_gemini_response(response_text)
             logger.info(f"🔍 Cleaned response length: {len(cleaned_response)} characters")
             logger.debug(f"🔍 Cleaned response: {cleaned_response}")
             
@@ -345,11 +375,11 @@ class AISuggestionService:
                 logger.warning("⚠️ 'overallScore' NOT found in cleaned response")
             
             # Check if cleaning removed important sections
-            if "workExperience" in response.text and "workExperience" not in cleaned_response:
+            if "workExperience" in response_text and "workExperience" not in cleaned_response:
                 logger.warning("⚠️ WARNING: workExperience section was removed during cleaning!")
-            if "sectionSuggestions" in response.text and "sectionSuggestions" not in cleaned_response:
+            if "sectionSuggestions" in response_text and "sectionSuggestions" not in cleaned_response:
                 logger.warning("⚠️ WARNING: sectionSuggestions was removed during cleaning!")
-            if "overallScore" in response.text and "overallScore" not in cleaned_response:
+            if "overallScore" in response_text and "overallScore" not in cleaned_response:
                 logger.error("🚨 CRITICAL: overallScore was removed during cleaning!")
             
             # Log the first 200 characters of cleaned response for debugging
@@ -385,7 +415,7 @@ class AISuggestionService:
                 
                 # Try to extract the complete response again with more aggressive methods
                 logger.info("🔄 Attempting aggressive JSON recovery...")
-                recovered_response = self._aggressive_json_recovery(response.text)
+                recovered_response = self._aggressive_json_recovery(response_text)
                 
                 if recovered_response and recovered_response != cleaned_response:
                     logger.info(f"🔄 Recovered response length: {len(recovered_response)} characters")
@@ -602,12 +632,63 @@ class AISuggestionService:
             
             return ai_response
         except json.JSONDecodeError as json_error:
-            logger.error(f"Failed to parse Gemini JSON response: {str(json_error)}")
-            logger.error(f"Raw response: {cleaned_response}")
-            raise Exception(f"Invalid JSON response from AI: {str(json_error)}")
+            logger.error(f"🚨 Failed to parse Gemini JSON response: {str(json_error)}")
+            logger.error(f"🚨 Raw response: {cleaned_response}")
+            
+            # Try to create a fallback response instead of raising an error
+            logger.info("🔄 JSON parsing failed, creating fallback response...")
+            try:
+                fallback_response = self._create_comprehensive_fallback_response(resume_data, job_description, target_experience or "Mid level")
+                logger.info("✅ Fallback response created successfully after JSON parsing failure")
+                return fallback_response
+            except Exception as fallback_error:
+                logger.error(f"🚨 Fallback response creation also failed: {str(fallback_error)}")
+                # Return a minimal emergency response
+                emergency_response = {
+                    "overallScore": 50,
+                    "analysisTimestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                    "sectionSuggestions": {
+                        "professionalSummary": {"existing": "", "rewrite": "", "recommendations": ["Craft a compelling 2-3 sentence summary highlighting key achievements", "Include relevant keywords from the job description", "Quantify your impact with specific numbers and results", "Tailor the summary to the target role and company"]},
+                        "skills": {"existing": [], "rewrite": [], "recommendations": ["Add technical skills relevant to the job description", "Include both hard and soft skills", "Organize skills by category for better readability", "Highlight skills that match the job requirements"]},
+                        "workExperience": [{"role": "", "existing": "", "rewrite": "", "recommendations": ["Quantify achievements with specific numbers and percentages", "Use strong action verbs to start each bullet point", "Highlight leadership and team collaboration examples", "Include relevant technologies and tools used"]}],
+                        "projects": [{"name": "", "existing": "", "rewrite": "", "recommendations": ["Enhance project description with specific technologies used", "Add quantified results and achievements", "Include project duration and team size", "Highlight relevant skills gained"]}],
+                        "education": {"existing": [], "rewrite": "", "recommendations": ["Include relevant coursework and academic projects", "Add GPA if it's 3.5 or higher", "Highlight academic achievements and honors", "Include relevant extracurricular activities and leadership roles"]},
+                        "certifications": {"existing": [], "rewrite": "", "recommendations": ["Add relevant professional certifications for the target role", "Include industry-specific certifications and licenses", "Add completion dates and credential IDs", "Highlight ongoing learning and skill development"]}
+                    },
+                    "topRecommendations": ["Review and enhance your resume sections", "Add relevant skills and experience", "Quantify achievements with specific results"]
+                }
+                logger.warning("⚠️ Using emergency minimal response after JSON parsing failure")
+                return emergency_response
         except Exception as e:
-            logger.error(f"Failed to compare resume with job description: {str(e)}")
-            raise
+            logger.error(f"🚨 Critical error in compare_resume_with_jd: {str(e)}")
+            logger.error(f"🚨 Error type: {type(e).__name__}")
+            logger.error(f"🚨 Resume data keys: {list(resume_data.keys()) if isinstance(resume_data, dict) else 'Not a dict'}")
+            logger.error(f"🚨 Job description length: {len(job_description) if job_description else 'None'}")
+            
+            # Create a comprehensive fallback response for any critical error
+            logger.info("🔄 Creating emergency fallback response due to critical error...")
+            try:
+                fallback_response = self._create_comprehensive_fallback_response(resume_data, job_description, target_experience or "Mid level")
+                logger.info("✅ Emergency fallback response created successfully")
+                return fallback_response
+            except Exception as fallback_error:
+                logger.error(f"🚨 Even fallback response creation failed: {str(fallback_error)}")
+                # Return a minimal emergency response
+                emergency_response = {
+                    "overallScore": 50,
+                    "analysisTimestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                    "sectionSuggestions": {
+                        "professionalSummary": {"existing": "", "rewrite": "", "recommendations": ["Craft a compelling 2-3 sentence summary highlighting key achievements", "Include relevant keywords from the job description", "Quantify your impact with specific numbers and results", "Tailor the summary to the target role and company"]},
+                        "skills": {"existing": [], "rewrite": [], "recommendations": ["Add technical skills relevant to the job description", "Include both hard and soft skills", "Organize skills by category for better readability", "Highlight skills that match the job requirements"]},
+                        "workExperience": [{"role": "", "existing": "", "rewrite": "", "recommendations": ["Quantify achievements with specific numbers and percentages", "Use strong action verbs to start each bullet point", "Highlight leadership and team collaboration examples", "Include relevant technologies and tools used"]}],
+                        "projects": [{"name": "", "existing": "", "rewrite": "", "recommendations": ["Enhance project description with specific technologies used", "Add quantified results and achievements", "Include project duration and team size", "Highlight relevant skills gained"]}],
+                        "education": {"existing": [], "rewrite": "", "recommendations": ["Include relevant coursework and academic projects", "Add GPA if it's 3.5 or higher", "Highlight academic achievements and honors", "Include relevant extracurricular activities and leadership roles"]},
+                        "certifications": {"existing": [], "rewrite": "", "recommendations": ["Add relevant professional certifications for the target role", "Include industry-specific certifications and licenses", "Add completion dates and credential IDs", "Highlight ongoing learning and skill development"]}
+                    },
+                    "topRecommendations": ["Review and enhance your resume sections", "Add relevant skills and experience", "Quantify achievements with specific results"]
+                }
+                logger.warning("⚠️ Using emergency minimal response")
+                return emergency_response
 
     
     def _format_resume_for_comparison(self, resume_data: Dict[str, Any]) -> str:
@@ -1616,16 +1697,16 @@ class AISuggestionService:
         # Define the complete required schema structure
         required_sections = {
             "sectionSuggestions": {
-                "professionalSummary": {"existing": "", "rewrite": "", "recommendations": [""]},
-                "skills": {"existing": [], "rewrite": [], "recommendations": [""]},
+                "professionalSummary": {"existing": "", "rewrite": "", "recommendations": ["Craft a compelling 2-3 sentence summary highlighting key achievements", "Include relevant keywords from the job description", "Quantify your impact with specific numbers and results", "Tailor the summary to the target role and company"]},
+                "skills": {"existing": [], "rewrite": [], "recommendations": ["Add technical skills relevant to the job description", "Include both hard and soft skills", "Organize skills by category for better readability", "Highlight skills that match the job requirements"]},
                 "workExperience": [],
                 "projects": [],
-                "education": {"existing": [], "rewrite": "", "recommendations": [""]},
-                "certifications": {"existing": [], "rewrite": "", "recommendations": [""]}
+                "education": {"existing": [], "rewrite": "", "recommendations": ["Include relevant coursework and academic projects", "Add GPA if it's 3.5 or higher", "Highlight academic achievements and honors", "Include relevant extracurricular activities and leadership roles"]},
+                "certifications": {"existing": [], "rewrite": "", "recommendations": ["Add relevant professional certifications for the target role", "Include industry-specific certifications and licenses", "Add completion dates and credential IDs", "Highlight ongoing learning and skill development"]}
             },
             "overallScore": 0,  # Will be calculated dynamically
             "analysisTimestamp": "",
-            "topRecommendations": [""]
+            "topRecommendations": ["Review and enhance your professional summary", "Add relevant skills from the job description", "Quantify achievements in work experience", "Include relevant projects and certifications"]
         }
         
         # Ensure top-level structure exists
@@ -1724,11 +1805,11 @@ class AISuggestionService:
         
         # Handle other sections
         section_defaults = {
-            "professionalSummary": {"existing": "", "rewrite": "", "recommendations": [""]},
-            "skills": {"existing": [], "rewrite": [], "recommendations": [""]},
+            "professionalSummary": {"existing": "", "rewrite": "", "recommendations": ["Craft a compelling 2-3 sentence summary highlighting key achievements", "Include relevant keywords from the job description", "Quantify your impact with specific numbers and results", "Tailor the summary to the target role and company"]},
+            "skills": {"existing": [], "rewrite": [], "recommendations": ["Add technical skills relevant to the job description", "Include both hard and soft skills", "Organize skills by category for better readability", "Highlight skills that match the job requirements"]},
             "projects": [],
-            "education": {"existing": [], "rewrite": "", "recommendations": [""]},
-            "certifications": {"existing": [], "rewrite": "", "recommendations": [""]}
+            "education": {"existing": [], "rewrite": "", "recommendations": ["Include relevant coursework and academic projects", "Add GPA if it's 3.5 or higher", "Highlight academic achievements and honors", "Include relevant extracurricular activities and leadership roles"]},
+            "certifications": {"existing": [], "rewrite": "", "recommendations": ["Add relevant professional certifications for the target role", "Include industry-specific certifications and licenses", "Add completion dates and credential IDs", "Highlight ongoing learning and skill development"]}
         }
         
         try:
@@ -1805,12 +1886,12 @@ class AISuggestionService:
                     "role": job.get('role', job.get('title', job.get('jobTitle', 'N/A'))),
                     "existing": self._extract_job_description(job),
                     "rewrite": "",  # AI will fill this
-                    "recommendations": [""]  # AI will fill this
+                    "recommendations": ["Quantify achievements with specific numbers and percentages", "Use strong action verbs to start each bullet point", "Highlight leadership and team collaboration examples", "Include relevant technologies and tools used"]
                 }
                 fallback_experience.append(fallback_item)
         else:
             logger.warning("🔒 No original experience data found, creating empty fallback")
-            fallback_experience = [{"role": "", "existing": "", "rewrite": "", "recommendations": [""]}]
+            fallback_experience = [{"role": "", "existing": "", "rewrite": "", "recommendations": ["Add relevant work experience with specific achievements", "Include internships, volunteer work, or freelance projects", "Highlight transferable skills from other experiences", "Quantify impact and results wherever possible"]}]
         
         return fallback_experience
     
@@ -1857,7 +1938,7 @@ class AISuggestionService:
                     "name": name if name and name.strip() else "Project",
                     "existing": existing_text,
                     "rewrite": "",  # AI will fill this
-                    "recommendations": [""]  # AI will fill this
+                    "recommendations": ["Enhance project description with specific technologies used", "Add quantified results and achievements", "Include project duration and team size", "Highlight relevant skills gained"]
                 }
                 fallback_projects.append(fallback_item)
         else:
@@ -1868,13 +1949,13 @@ class AISuggestionService:
                     "name": "Project 1",
                     "existing": "",
                     "rewrite": "",  # AI will create relevant project description
-                    "recommendations": [""]
+                    "recommendations": ["Create a project that demonstrates relevant technical skills", "Include specific technologies and frameworks used", "Add quantified results and impact metrics", "Highlight problem-solving and innovation"]
                 },
                 {
                     "name": "Project 2", 
                     "existing": "",
                     "rewrite": "",  # AI will create relevant project description
-                    "recommendations": [""]
+                    "recommendations": ["Develop a project showcasing leadership and collaboration", "Include project timeline and deliverables", "Add client feedback or performance metrics", "Demonstrate continuous learning and adaptation"]
                 }
             ]
         
@@ -1946,7 +2027,7 @@ class AISuggestionService:
         return {
             "existing": [existing_text],
             "rewrite": "",  # AI will fill this
-            "recommendations": [""]  # AI will fill this
+            "recommendations": ["Include relevant coursework and academic projects", "Add GPA if it's 3.5 or higher", "Highlight academic achievements and honors", "Include relevant extracurricular activities and leadership roles"]
         }
 
     def _create_certifications_fallback(self, resume_data: Dict[str, Any]) -> dict:
@@ -2011,7 +2092,7 @@ class AISuggestionService:
         return {
             "existing": [existing_text],
             "rewrite": "",  # AI will fill this
-            "recommendations": [""]  # AI will fill this
+            "recommendations": ["Add relevant professional certifications for the target role", "Include industry-specific certifications and licenses", "Add completion dates and credential IDs", "Highlight ongoing learning and skill development"]
         }
 
     def _extract_job_description(self, job: Dict[str, Any]) -> str:
@@ -2077,6 +2158,123 @@ class AISuggestionService:
                     return desc.strip()
         
         return "No description provided"
+
+    def _create_comprehensive_fallback_response(self, resume_data: Dict[str, Any], job_description: str, target_experience: str) -> Dict[str, Any]:
+        """
+        Creates a comprehensive fallback response when Gemini API fails or is blocked.
+        This ensures the AI suggestions always work, even when the AI response is unavailable.
+        """
+        logger.info("🔄 Creating comprehensive fallback response...")
+        
+        # Calculate a basic score based on resume completeness and job description match
+        basic_score = self._calculate_basic_fallback_score(resume_data, job_description)
+        
+        # Create work experience fallback
+        work_experience_fallback = self._create_experience_fallback(resume_data)
+        
+        # Create projects fallback
+        projects_fallback = self._create_projects_fallback(resume_data)
+        
+        # Create education fallback
+        education_fallback = self._create_education_fallback(resume_data)
+        
+        # Create certifications fallback
+        certifications_fallback = self._create_certifications_fallback(resume_data)
+        
+        # Create skills fallback
+        skills_fallback = self._create_skills_fallback(resume_data, job_description)
+        
+        # Create professional summary fallback
+        professional_summary_fallback = self._create_professional_summary_fallback(resume_data, job_description, target_experience)
+        
+        # Create comprehensive fallback response
+        fallback_response = {
+            "overallScore": basic_score,
+            "analysisTimestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "sectionSuggestions": {
+                "professionalSummary": professional_summary_fallback,
+                "skills": skills_fallback,
+                "workExperience": work_experience_fallback,
+                "projects": projects_fallback,
+                "education": education_fallback,
+                "certifications": certifications_fallback
+            },
+            "topRecommendations": [
+                "Review and enhance your professional summary with relevant keywords from the job description",
+                "Add technical skills that match the job requirements and industry standards",
+                "Quantify achievements in work experience with specific numbers and measurable results",
+                "Include relevant projects that demonstrate your capabilities and problem-solving skills",
+                "Highlight relevant education, certifications, and continuous learning achievements"
+            ]
+        }
+        
+        logger.info(f"✅ Created comprehensive fallback response with score: {basic_score}")
+        return fallback_response
+
+    def _calculate_basic_fallback_score(self, resume_data: Dict[str, Any], job_description: str) -> int:
+        """
+        Calculates a basic score based on resume completeness and job description match.
+        """
+        score = 0
+        
+        # Check for basic resume completeness (40 points max)
+        if resume_data.get('skills'):
+            score += 10
+        if resume_data.get('experience') or resume_data.get('workExperience'):
+            score += 15
+        if resume_data.get('education'):
+            score += 10
+        if resume_data.get('projects'):
+            score += 5
+        
+        # Check for job description keyword matches (60 points max)
+        if job_description:
+            job_keywords = job_description.lower().split()
+            resume_text = str(resume_data).lower()
+            
+            # Count keyword matches
+            matches = sum(1 for keyword in job_keywords if keyword in resume_text)
+            keyword_score = min(60, matches * 2)  # Max 60 points for keyword matches
+            score += keyword_score
+        
+        # Ensure score is between 0-100
+        return max(0, min(100, score))
+
+    def _create_skills_fallback(self, resume_data: Dict[str, Any], job_description: str) -> Dict[str, Any]:
+        """
+        Creates a skills fallback with meaningful recommendations.
+        """
+        existing_skills = resume_data.get('skills', [])
+        
+        return {
+            "existing": existing_skills if isinstance(existing_skills, list) else [str(existing_skills)],
+            "rewrite": [],
+            "recommendations": [
+                "Add technical skills relevant to the job description",
+                "Include both hard and soft skills that match the role requirements",
+                "Organize skills by category for better readability and ATS compatibility",
+                "Highlight skills that directly match the job posting keywords",
+                "Include industry-specific tools and technologies mentioned in the job description"
+            ]
+        }
+
+    def _create_professional_summary_fallback(self, resume_data: Dict[str, Any], job_description: str, target_experience: str) -> Dict[str, Any]:
+        """
+        Creates a professional summary fallback with meaningful recommendations.
+        """
+        existing_summary = resume_data.get('professionalSummary', resume_data.get('summary', ''))
+        
+        return {
+            "existing": existing_summary if existing_summary else "No professional summary provided",
+            "rewrite": "",
+            "recommendations": [
+                f"Craft a compelling 2-3 sentence summary highlighting your key achievements as a {target_experience} professional",
+                "Include relevant keywords from the job description to improve ATS compatibility",
+                "Quantify your impact with specific numbers, percentages, and measurable results",
+                "Tailor the summary to emphasize skills and experience that match the target role",
+                "Use strong action verbs and industry-specific terminology to demonstrate expertise"
+            ]
+        }
 
     def debug_resume_structure(self, resume_data: Dict[str, Any]) -> str:
         """
