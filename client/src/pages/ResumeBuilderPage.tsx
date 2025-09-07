@@ -88,7 +88,8 @@ interface ResumeData {
     id: string;
     company: string;
     position: string;
-    duration: string;
+    startDate: string;
+    endDate: string;
     description: string;
     location: string;
   }>;
@@ -391,7 +392,38 @@ const ResumeBuilderPage = () => {
           },
         summary: extractedData.summary || '',
         objective: extractedData.objective || '',
-        experience: extractedData.experience || [],
+        experience: (extractedData.experience || []).map((exp: any) => {
+          console.log('Processing experience item:', exp);
+          
+          // Parse duration into start and end dates
+          let startDate = '';
+          let endDate = '';
+          if (exp.duration) {
+            if (exp.duration.includes(' - ')) {
+              const [start, end] = exp.duration.split(' - ').map((d: string) => d.trim());
+              startDate = start;
+              endDate = end;
+            } else {
+              startDate = exp.duration;
+              endDate = '';
+            }
+          } else {
+            startDate = exp['Start Date'] || exp.startDate || '';
+            endDate = exp['End Date'] || exp.endDate || '';
+          }
+          
+          const processedExp = {
+            id: exp.id || `exp-${Date.now()}-${Math.random()}`,
+            company: exp.Company || exp.company || '',
+            position: exp.Role || exp.position || '',
+            startDate: startDate,
+            endDate: endDate,
+            description: exp.Description || exp.description || '',
+            location: exp.Location || exp.location || ''
+          };
+          console.log('Processed experience:', processedExp);
+          return processedExp;
+        }),
         education: extractedData.education || [],
         skills: extractedData.skills || [],
         languages: extractedData.languages || [],
@@ -555,7 +587,8 @@ const ResumeBuilderPage = () => {
                   id: `ai-exp-${Date.now()}`,
                   company: '',
                   position: '',
-                  duration: '',
+                  startDate: '',
+                  endDate: '',
                   description: '',
                   location: ''
                 };
@@ -570,7 +603,16 @@ const ResumeBuilderPage = () => {
                 if (parts.length >= 3) {
                   firstExp.position = parts[0];
                   firstExp.company = parts[1];
-                  firstExp.duration = parts[2];
+                  // Parse duration into start and end dates
+                  const duration = parts[2];
+                  if (duration.includes(' - ')) {
+                    const [start, end] = duration.split(' - ').map((d: string) => d.trim());
+                    firstExp.startDate = start;
+                    firstExp.endDate = end;
+                  } else {
+                    firstExp.startDate = duration;
+                    firstExp.endDate = '';
+                  }
                   if (parts.length >= 4) {
                     firstExp.location = parts[3];
                   }
@@ -604,7 +646,16 @@ const ResumeBuilderPage = () => {
                     if (parts.length >= 3) {
                       processedData.experience[index].position = parts[0];
                       processedData.experience[index].company = parts[1];
-                      processedData.experience[index].duration = parts[2];
+                      // Parse duration into start and end dates
+                      const duration = parts[2];
+                      if (duration.includes(' - ')) {
+                        const [start, end] = duration.split(' - ').map((d: string) => d.trim());
+                        processedData.experience[index].startDate = start;
+                        processedData.experience[index].endDate = end;
+                      } else {
+                        processedData.experience[index].startDate = duration;
+                        processedData.experience[index].endDate = '';
+                      }
                       if (parts.length >= 4) {
                         processedData.experience[index].location = parts[3];
                       }
@@ -1134,7 +1185,8 @@ const ResumeBuilderPage = () => {
           id: Date.now().toString() + Math.random(),
           company: exp.company || '',
           position: exp.title || '',
-          duration: exp.dates || '',
+          startDate: exp.startDate || '',
+          endDate: exp.endDate || '',
           description: exp.achievements?.join('\n') || '',
           location: exp.location || ''
         })) || [],
@@ -1178,7 +1230,8 @@ const ResumeBuilderPage = () => {
       id: Date.now().toString(),
       company: '',
       position: '',
-      duration: '',
+      startDate: '',
+      endDate: '',
       description: '',
       location: ''
     };
@@ -1778,7 +1831,7 @@ const ResumeBuilderPage = () => {
                   experience: resumeData.experience.map(exp => ({
                     title: exp.position,
                     company: exp.company,
-                    dates: exp.duration,
+                    dates: exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || exp.endDate || '',
                     achievements: safeProcessDescription(exp.description),
                     description: exp.description, // Keep original description as fallback
                     location: exp.location // Add location for templates that need it
@@ -1975,7 +2028,7 @@ const ResumeBuilderPage = () => {
                   experience: resumeData.experience.map(exp => ({
           title: exp.position,
           company: exp.company,
-          dates: exp.duration,
+          dates: exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || exp.endDate || '',
           achievements: safeProcessDescription(exp.description),
           description: exp.description, // Keep original description as fallback
           location: exp.location // Add location for templates that need it
@@ -2303,13 +2356,23 @@ const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove }: {
               </div>
             </div>
             
-            <div>
-              <Label>Duration</Label>
-              <Input
-                value={exp.duration}
-                onChange={(e) => onUpdate(exp.id, 'duration', e.target.value)}
-                placeholder="e.g., Jan 2020 - Present"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Start Date</Label>
+                <Input
+                  value={exp.startDate || ''}
+                  onChange={(e) => onUpdate(exp.id, 'startDate', e.target.value)}
+                  placeholder="e.g., Jan 2020"
+                />
+              </div>
+              <div>
+                <Label>End Date</Label>
+                <Input
+                  value={exp.endDate || ''}
+                  onChange={(e) => onUpdate(exp.id, 'endDate', e.target.value)}
+                  placeholder="e.g., Present"
+                />
+              </div>
             </div>
 
             <div>
