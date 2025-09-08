@@ -34,41 +34,102 @@ import AddCustomSectionModal from '@/components/modals/AddCustomSectionModal';
 import { generatePDF, downloadPDF } from '@/services/pdfService';
 
 // Helper function to safely process description text
+// const safeProcessDescription = (description: any): string[] => {
+//   // Handle null, undefined, or non-string values
+//   if (!description || typeof description !== "string") {
+//     return [];
+//   }
+//   if (description.trim().length === 0) {
+//     return [];
+//   }
+//   try {
+//     // Regex to check if any line starts with a bullet, asterisk, dash, or similar
+//     const bulletPattern = /^([.•*]\s+)/m;
+//     if (bulletPattern.test(description)) {
+//       // Split by line, keep only lines starting with a bullet, then remove the bullet marker
+//       return description
+//         .split(/\r?\n/)
+//         .map((line: string) => line.trim())
+//         .filter((line: string) => bulletPattern.test(line))
+//         .map((line: string) => line.replace(bulletPattern, ""))
+//         .filter((line: string) => line.length > 0);
+//     } else {
+//       // Otherwise, split by sentence-ending punctuation, keep only non-empty results
+//       return description
+//         .split(/(?<=[.!?])\s+/)
+//         .map((sent: string) => sent.trim())
+//         .filter((sent: string) => sent.length > 0);
+//     }
+//   } catch (error) {
+//     // Return the original description as array if error occurs
+//     console.warn('Error processing description:', error, 'Description:', description);
+//     return [String(description)];
+//   }
+// };
+// Always returns an array of bullet-ready strings
 const safeProcessDescription = (description: any): string[] => {
-  // Handle null, undefined, or non-string values
-  if (!description || typeof description !== 'string') {
-    return [];
-  }
-  
-  // Handle empty strings
-  if (description.trim().length === 0) {
-    return [];
-  }
-  
+  if (!description || typeof description !== "string") return [];
+  let text = description.trim();
+  if (!text) return [];
+
   try {
-    // Check if description already contains bullet points
-    if (description.includes('•') || description.includes('*') || description.includes('-')) {
-      // Split by bullet characters and filter out empty strings
-      const bullets = description
-        .split(/[•*\-]/)
-        .map(bullet => bullet.trim())
-        .filter(bullet => bullet.length > 0);
-      return bullets.length > 0 ? bullets : [description];
-    } else {
-      // Split by full stops and filter out empty strings, remove trailing dots
-      const bullets = description
-        .split('.')
-        .map(bullet => bullet.trim())
-        .filter(bullet => bullet.length > 0)
-        .map(bullet => bullet.replace(/\.$/, '')); // Remove trailing dots
-      return bullets.length > 0 ? bullets : [description];
+    // Normalize line endings and spaces
+    text = text.replace(/\r\n?/g, "\n").replace(/\u00A0/g, " "); // CRLF -> LF, nbsp -> space
+
+    // 1) Normalize *any* bullet-like glyphs to a single marker "•"
+    //    Includes common MS Word / Wingdings private-use bullets like \uF0B7, etc.
+    const BULLET_CHARS = /[\u2022\u2023\u25CF\u25CB\u25A0\u25AA\u25AB\u00B7\u2219\u2043\u25E6\u2027\u25C9\u25C8\u25D8\uF0B7]/g;
+    text = text.replace(BULLET_CHARS, "•");
+
+    // 2) If bullets exist anywhere, split *on* them robustly.
+    //    Handles cases where "•" is on its own line (Word copy-paste) or inline.
+    if (text.includes("•")) {
+      // Ensure every bullet starts on a new line: turn spaces-before-• into newline + "• "
+      text = text.replace(/(?:^|[ \t]*\n|\s+)•\s*/g, "\n• ");
+      // Now split on "\n• " and drop empties
+      const partsFromBullets = text
+        .split(/\n•\s*/g)
+        .map(s => s.trim())
+        .filter(Boolean);
+      if (partsFromBullets.length > 0) return partsFromBullets;
     }
-  } catch (error) {
-    console.warn('Error processing description:', error, 'Description:', description);
-    // Return the original description as a single item if processing fails
+
+    // 3) Handle dash/asterisk style bullets at start of lines
+    const lines = text
+      .split("\n")
+      .map(l => l.trim())
+      .filter(Boolean);
+
+    const hasDashBullets = lines.some(l => /^[-*–—]\s+/.test(l));
+    if (hasDashBullets) {
+      return lines
+        .map(l => l.replace(/^[-*–—]\s+/, "").trim())
+        .filter(Boolean);
+    }
+
+    // 4) Sentence splitting even when there's NO space after punctuation.
+    //    Insert a newline after ., ?, ! if the next char is a letter/(
+    //    e.g., "compliance.Managed" -> "compliance.\nManaged"
+    text = text.replace(/([.!?])(?=[A-Za-z(])/g, "$1\n");
+    // Optionally treat semicolons as soft breaks:
+    text = text.replace(/;(?=\S)/g, ";\n");
+
+    const sentences = text
+      .split(/\n+/g)
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    if (sentences.length > 1) return sentences;
+
+    // 5) Absolute fallback: single bullet
+    return [text.trim()];
+  } catch (err) {
+    console.warn("Error processing description:", err, "Description:", description);
     return [String(description)];
   }
 };
+
+
 
 interface ResumeData {
   basicDetails: {
@@ -1821,6 +1882,8 @@ const ResumeBuilderPage = () => {
                     address: resumeData.basicDetails.location,
                     email: resumeData.basicDetails.email,
                     website: resumeData.basicDetails.website,
+                    github: resumeData.basicDetails.github,
+                    linkedin: resumeData.basicDetails.linkedin,
                     phone: resumeData.basicDetails.phone
                   },
                   summary: resumeData.summary,
@@ -2018,6 +2081,8 @@ const ResumeBuilderPage = () => {
             address: resumeData.basicDetails.location,
             email: resumeData.basicDetails.email,
             website: resumeData.basicDetails.website,
+            github: resumeData.basicDetails.github,
+            linkedin: resumeData.basicDetails.linkedin,
             phone: resumeData.basicDetails.phone
           },
           summary: resumeData.summary,

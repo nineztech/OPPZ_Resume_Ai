@@ -7,6 +7,8 @@ interface TemplateData {
     address: string;
     email: string;
     website: string;
+    github?: string;
+    linkedin?: string;
     phone?: string;
   };
   summary: string;
@@ -186,7 +188,16 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
           {templateData.personalInfo?.title || 'Your Title'}
         </div>
         <div className="text-sm" style={{ fontSize: '11px' }}>
-          {templateData.personalInfo?.address || 'Your Address'} | {templateData.personalInfo?.phone || 'Your Phone'} | {templateData.personalInfo?.email || 'your.email@example.com'} | {templateData.personalInfo?.website || 'your-website.com'}
+          {templateData.personalInfo?.address || 'Your Address'} | {templateData.personalInfo?.phone || 'Your Phone'} | {templateData.personalInfo?.email || 'your.email@example.com'}
+          {templateData.personalInfo?.linkedin && (
+            <> | <a href={templateData.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>LinkedIn</a></>
+          )}
+          {templateData.personalInfo?.github && (
+            <> | <a href={templateData.personalInfo.github} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>GitHub</a></>
+          )}
+          {templateData.personalInfo?.website && !templateData.personalInfo?.linkedin && !templateData.personalInfo?.github && (
+            <> | {templateData.personalInfo.website}</>
+          )}
         </div>
       </div>
 
@@ -200,14 +211,25 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         }}>
           SUMMARY
         </h2>
-        <p className="text-justify leading-relaxed" style={{ 
-          fontSize: '11px',
-          lineHeight: '1.4',
-          textAlign: 'justify'
-        }}>
-          {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
-        </p>
-
+        <div className="space-y-0 ml-0 mt-1">
+          {templateData.summary ? (
+            // Split summary into bullet points
+            templateData.summary.split(/[.!?]+/).filter(sentence => sentence.trim().length > 0).map((sentence, index) => (
+              <div key={index} className="flex items-start" style={{ fontSize: '11px' }}>
+                <span className="mr-2">•</span>
+                <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{sentence.trim()}</span>
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-gray-500" style={{ 
+              fontSize: '11px',
+              lineHeight: '1.3',
+              fontStyle: 'italic'
+            }}>
+              No summary provided yet. Please add your professional summary in the sidebar.
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Technical Skills */}

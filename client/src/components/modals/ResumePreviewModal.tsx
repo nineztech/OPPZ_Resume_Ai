@@ -15,6 +15,8 @@ interface ResumePreviewModalProps {
       address: string;
       email: string;
       website: string;
+      github?: string;
+      linkedin?: string;
       phone?: string;
     };
     summary: string;

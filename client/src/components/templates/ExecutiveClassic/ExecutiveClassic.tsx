@@ -7,11 +7,13 @@ interface TemplateData {
     address: string;
     email: string;
     website: string;
+    github?: string;
+    linkedin?: string;
     phone?: string;
   };
   summary: string;
   skills: {
-    technical: string[];
+    technical: string[] | { [category: string]: string[] };
     professional?: string[];
   };
   experience: Array<{
