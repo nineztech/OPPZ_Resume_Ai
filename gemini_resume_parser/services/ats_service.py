@@ -123,12 +123,12 @@ class StandardATSService:
         - 0-49: Critical formatting problems, completely ATS-incompatible
         
         SECTION_ORGANIZATION (0-100):
-        - 90-100: All essential sections present with proper labeling (contact, summary, experience, skills, education)
-        - 80-89: Most sections complete with minor organizational issues
-        - 70-79: Basic sections present but some incomplete or poorly organized
-        - 60-69: Missing important sections or significant organizational gaps
-        - 50-59: Major sections missing or severely disorganized
-        - 0-49: Critical sections missing, resume structure incomplete
+        - 90-100: All essential sections present with proper labeling (contact, summary, experience, skills, education, projects, certificates)
+        - 80-89: Most sections complete with minor organizational issues, may be missing projects or certificates
+        - 70-79: Basic sections present but some incomplete or poorly organized, missing important sections like projects
+        - 60-69: Missing important sections (projects, certificates) or significant organizational gaps
+        - 50-59: Major sections missing (projects, certificates) or severely disorganized
+        - 0-49: Critical sections missing, resume structure incomplete, no projects or certificates
         
         ACHIEVEMENTS_IMPACT_METRICS (0-100):
         - 90-100: Quantified achievements throughout with specific metrics and measurable impact
@@ -172,6 +172,13 @@ class StandardATSService:
         
         RESUME TEXT TO ANALYZE:
         {resume_text}
+        
+        SECTION DETECTION REQUIREMENTS:
+        - Check for PROJECTS section: Look for "Projects", "Personal Projects", "Portfolio", "Key Projects", "Project Experience"
+        - Check for CERTIFICATES section: Look for "Certifications", "Certificates", "Professional Certifications", "Licenses", "Credentials"
+        - If projects section is missing, reduce SECTION_ORGANIZATION score by 15-20 points
+        - If certificates section is missing, reduce SECTION_ORGANIZATION score by 10-15 points
+        - Include specific feedback about missing sections in weaknesses and recommendations
         
         REQUIRED OUTPUT SCHEMA (MUST INCLUDE ALL SECTIONS):
         {{
@@ -726,6 +733,13 @@ class JDSpecificATSService:
         
         JOB DESCRIPTION TO MATCH AGAINST:
         {job_description}
+        
+        SECTION DETECTION REQUIREMENTS:
+        - Check for PROJECTS section: Look for "Projects", "Personal Projects", "Portfolio", "Key Projects", "Project Experience"
+        - Check for CERTIFICATES section: Look for "Certifications", "Certificates", "Professional Certifications", "Licenses", "Credentials"
+        - If projects section is missing, reduce FORMATTING_STRUCTURE score by 15-20 points
+        - If certificates section is missing, reduce FORMATTING_STRUCTURE score by 10-15 points
+        - Include specific feedback about missing sections in weaknesses and recommendations
         
         REQUIRED OUTPUT SCHEMA (MUST INCLUDE ALL SECTIONS):
         {{

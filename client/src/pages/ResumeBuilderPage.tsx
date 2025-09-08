@@ -134,7 +134,7 @@ const safeProcessDescription = (description: any): string[] => {
 interface ResumeData {
   basicDetails: {
     fullName: string;
-    title: string;
+    professionalTitle: string;
     phone: string;
     email: string;
     location: string;
@@ -362,7 +362,7 @@ const ResumeBuilderPage = () => {
   const [resumeData, setResumeData] = useState<ResumeData>({
     basicDetails: {
       fullName: '',
-      title: '',
+      professionalTitle: '',
       phone: '',
       email: '',
       location: '',
@@ -443,7 +443,7 @@ const ResumeBuilderPage = () => {
       const processedData = {
         basicDetails: {
           fullName: basicDetailsData.fullName || basicDetailsData['Full Name'] || '',
-          title: basicDetailsData.title || basicDetailsData['Professional Title'] || '',
+          professionalTitle: basicDetailsData.professionalTitle || basicDetailsData.title || basicDetailsData['Professional Title'] || '',
           phone: basicDetailsData.phone || basicDetailsData.Phone || '',
           email: basicDetailsData.email || basicDetailsData.Email || '',
           location: basicDetailsData.location || basicDetailsData.Location || '',
@@ -550,16 +550,16 @@ const ResumeBuilderPage = () => {
         
         // Ensure all required fields are present with proper defaults
         const processedData = {
-          basicDetails: {
-            fullName: basicDetailsData.fullName || '',
-            title: basicDetailsData.title || basicDetailsData.professionalTitle || '',
-            phone: basicDetailsData.phone || '',
-            email: basicDetailsData.email || '',
-            location: basicDetailsData.location || '',
-            website: basicDetailsData.website || '',
-            github: basicDetailsData.github || basicDetailsData.gitHub || '',
-            linkedin: basicDetailsData.linkedin || basicDetailsData.linkedIn || ''
-          },
+        basicDetails: {
+          fullName: basicDetailsData.fullName || '',
+          professionalTitle: basicDetailsData.professionalTitle || basicDetailsData.title || '',
+          phone: basicDetailsData.phone || '',
+          email: basicDetailsData.email || '',
+          location: basicDetailsData.location || '',
+          website: basicDetailsData.website || '',
+          github: basicDetailsData.github || basicDetailsData.gitHub || '',
+          linkedin: basicDetailsData.linkedin || basicDetailsData.linkedIn || ''
+        },
         summary: extractedData.summary || '',
         objective: extractedData.objective || '',
         experience: (extractedData.experience || []).map((exp: any) => {
@@ -1341,7 +1341,7 @@ const ResumeBuilderPage = () => {
       setResumeData({
         basicDetails: {
           fullName: defaultData.personalInfo.name || '',
-          title: defaultData.personalInfo.title || '',
+          professionalTitle: defaultData.personalInfo.title || '',
           phone: defaultData.personalInfo.phone || '',
           email: defaultData.personalInfo.email || '',
           location: defaultData.personalInfo.address || '',
@@ -2000,7 +2000,7 @@ const ResumeBuilderPage = () => {
                 data={{
                   personalInfo: {
                     name: resumeData.basicDetails.fullName,
-                    title: resumeData.basicDetails.title,
+                    title: resumeData.basicDetails.professionalTitle,
                     address: resumeData.basicDetails.location,
                     email: resumeData.basicDetails.email,
                     website: resumeData.basicDetails.website,
@@ -2199,7 +2199,7 @@ const ResumeBuilderPage = () => {
         data={{
           personalInfo: {
             name: resumeData.basicDetails.fullName,
-            title: resumeData.basicDetails.title,
+            title: resumeData.basicDetails.professionalTitle,
             address: resumeData.basicDetails.location,
             email: resumeData.basicDetails.email,
             website: resumeData.basicDetails.website,
@@ -2268,11 +2268,11 @@ const BasicDetailsSection = ({ data, onChange }: { data: any; onChange: (data: a
       </div>
 
       <div>
-        <Label htmlFor="title">Professional Title</Label>
+        <Label htmlFor="professionalTitle">Professional Title</Label>
         <Input
-          id="title"
-          value={data.title}
-          onChange={(e) => onChange({ ...data, title: e.target.value })}
+          id="professionalTitle"
+          value={data.professionalTitle}
+          onChange={(e) => onChange({ ...data, professionalTitle: e.target.value })}
           placeholder="e.g., Frontend Developer"
         />
       </div>

@@ -89,6 +89,37 @@ class ResumeImprovementService:
         
         return suggestions
     
+    def _detect_missing_sections(self, parsed_resume_data: Dict[str, Any]) -> Dict[str, bool]:
+        """
+        Detect which important sections are missing from the resume
+        
+        Args:
+            parsed_resume_data: Parsed resume data
+            
+        Returns:
+            Dictionary indicating which sections are missing
+        """
+        missing_sections = {
+            "projects": True,
+            "certificates": True
+        }
+        
+        # Check for projects section
+        projects_keywords = ["projects", "project", "portfolio", "personal_projects", "key_projects"]
+        for key in projects_keywords:
+            if key in parsed_resume_data and parsed_resume_data[key]:
+                missing_sections["projects"] = False
+                break
+        
+        # Check for certificates section
+        cert_keywords = ["certificates", "certifications", "certificate", "certification", "licenses", "credentials"]
+        for key in cert_keywords:
+            if key in parsed_resume_data and parsed_resume_data[key]:
+                missing_sections["certificates"] = False
+                break
+        
+        return missing_sections
+    
     def _generate_improved_resume(self, parsed_resume_data: Dict[str, Any], suggestions: Dict[str, List[str]], ats_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate an improved resume by applying ATS suggestions
@@ -101,8 +132,11 @@ class ResumeImprovementService:
         Returns:
             Improved resume data
         """
+        # Detect missing sections
+        missing_sections = self._detect_missing_sections(parsed_resume_data)
+        
         # Create a comprehensive prompt for resume improvement
-        prompt = self._create_improvement_prompt(parsed_resume_data, suggestions, ats_analysis)
+        prompt = self._create_improvement_prompt(parsed_resume_data, suggestions, ats_analysis, missing_sections)
         
         try:
             logger.info("Generating improved resume with Gemini API")
@@ -125,7 +159,7 @@ class ResumeImprovementService:
             logger.error(f"Failed to generate improved resume: {str(e)}")
             raise
     
-    def _create_improvement_prompt(self, parsed_resume_data: Dict[str, Any], suggestions: Dict[str, List[str]], ats_analysis: Dict[str, Any]) -> str:
+    def _create_improvement_prompt(self, parsed_resume_data: Dict[str, Any], suggestions: Dict[str, List[str]], ats_analysis: Dict[str, Any], missing_sections: Dict[str, bool]) -> str:
         """
         Create a comprehensive prompt for resume improvement
         
@@ -169,6 +203,10 @@ class ResumeImprovementService:
         - Overall Score: {ats_analysis.get('overall_score', 'N/A')}
         - Strengths: {', '.join(ats_analysis.get('strengths', [])[:3])}
         - Weaknesses: {', '.join(ats_analysis.get('weaknesses', [])[:3])}
+        
+        MISSING SECTIONS DETECTED:
+        - Projects Section Missing: {missing_sections.get('projects', False)}
+        - Certificates Section Missing: {missing_sections.get('certificates', False)}
 
         IMPROVEMENT GUIDELINES:
         1. ACHIEVEMENTS & IMPACT METRICS:
@@ -201,6 +239,35 @@ class ResumeImprovementService:
            - Use professional language throughout
            - Maintain consistent tense and formatting
 
+        7. MISSING SECTIONS - ADD DUMMY DATA:
+           - If PROJECTS section is missing, add 2-3 realistic projects with:
+             * Project name and detailed description (8-10 lines)
+             * Technologies used (based on their skills/experience)
+             * Key achievements or outcomes with specific metrics
+             * Start date and end date (format: "Aug 2020 - Sep 2020")
+             * Detailed project description including:
+               - Project overview and objectives
+               - Technical challenges faced and solutions implemented
+               - Specific features developed
+               - Performance improvements achieved
+               - User impact and business value
+               - Lessons learned and skills gained
+             * Make projects relevant to their field and experience level
+           - If CERTIFICATES section is missing, add 2-3 relevant certifications with:
+             * Certification name and issuing organization
+             * Date obtained or expiration date
+             * Brief description of skills gained
+             * Choose certifications relevant to their industry and role
+           - Generate realistic, professional dummy data that matches the person's field/experience
+           - Ensure dummy data is relevant to their industry and skill level
+           - Make the dummy data sound authentic and professional
+           - Base dummy data on their existing skills, experience, and job titles
+           - Use appropriate project types and certification names for their field
+           - For project dates: Use realistic timeframes (1-6 months duration)
+           - Ensure project dates don't overlap with their work experience dates
+           - Make project descriptions comprehensive and detailed (8-10 lines each)
+           - Include specific technical details and business impact in descriptions
+
         REQUIRED OUTPUT FORMAT:
         Return the improved resume data in the exact same JSON structure as the input, but with enhanced content that addresses the ATS suggestions.
 
@@ -211,8 +278,19 @@ class ResumeImprovementService:
         - Better keyword integration
         - More concise and impactful language
         - ATS-optimized formatting and structure
+        - NEW SECTIONS: Add "projects" and "certificates" arrays if they were missing
+        - Projects array should contain objects with: 
+          * name: Project title
+          * description: Detailed 8-10 line description covering objectives, challenges, solutions, features, impact
+          * technologies: Array of technologies used
+          * achievements: Key outcomes with specific metrics
+          * startDate: Start date in "Aug 2020" format
+          * endDate: End date in "Sep 2020" format
+          * duration: Total duration (e.g., "2 months", "6 months")
+        - Certificates array should contain objects with: name, organization, date, description
 
         Focus on making specific, measurable improvements while maintaining the professional tone and authenticity of the original resume.
+        Ensure all dummy data is realistic and relevant to the person's field and experience level.
         """
 
         return prompt
@@ -303,12 +381,26 @@ class ResumeImprovementService:
                 improved_resume[key] = value
                 logger.warning(f"Missing field in improved resume: {key}, using original")
         
+        # Ensure projects section exists (add empty array if missing)
+        if "projects" not in improved_resume:
+            improved_resume["projects"] = []
+            logger.info("Added missing projects section")
+        
+        # Ensure certificates section exists (add empty array if missing)
+        if "certificates" not in improved_resume:
+            improved_resume["certificates"] = []
+            logger.info("Added missing certificates section")
+        
         # Add metadata about the improvement
         improved_resume["_improvement_metadata"] = {
             "improved_at": datetime.datetime.utcnow().isoformat() + "Z",
             "improvement_service": "ResumeImprovementService",
             "original_fields_preserved": len(original_resume),
-            "improvement_applied": True
+            "improvement_applied": True,
+            "sections_added": {
+                "projects": "projects" not in original_resume,
+                "certificates": "certificates" not in original_resume
+            }
         }
         
         return improved_resume
