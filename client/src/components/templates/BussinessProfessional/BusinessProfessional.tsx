@@ -226,18 +226,13 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
           {templateData.skills?.technical && typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
             // Handle nested skills structure with categories - display as "Category: skills"
             Object.entries(templateData.skills.technical).map(([category, skills]) => {
-              // Clean up malformed skills data by removing extra characters and fixing spacing
-              let cleanSkills: string | string[] = skills as string | string[];
-              if (typeof skills === 'string') {
-                // Fix malformed skills like "A, W, S, , (, I, d, e, n, t, i, t, y, , a, n, d, , A, c, c, e, s, s, , M, a, n, a, g, e, m, e, n, t, ,, , E, C, 2, ,, , S, 3, ,, , V, P, C, ,, , C, l, o, u, d, T, r, a, i, l, ,, , C, l, o, u, d, W, a, t, c, h, ,, , S, e, c, u, r, i, t, y, , H, u, b, ), ,, , C, l, o, u, d, , S, e, c, u, r, i, t, y, , P, o, s, t, u, r, e, , M, a, n, a, g, e, m, e, n, t, , (, C, S, P, M, )"
-                cleanSkills = skills
-                  .replace(/,\s*,/g, ',') // Remove double commas
-                  .replace(/,\s*\(/g, ' (') // Fix spacing before parentheses
-                  .replace(/\)\s*,/g, ') ') // Fix spacing after parentheses
-                  .replace(/,\s*\)/g, ')') // Remove commas before closing parentheses
-                  .replace(/\s+/g, ' ') // Normalize multiple spaces
-                  .trim();
+              // Skip empty categories
+              if (!skills || (Array.isArray(skills) && skills.length === 0)) {
+                return null;
               }
+              
+              // Ensure skills is an array
+              const skillsArray = Array.isArray(skills) ? skills : [skills];
               
               return (
                 <div key={category} className="text-sm" style={{ 
@@ -245,16 +240,15 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                   lineHeight: '1.3'
                 }}>
                   <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> 
-                  {Array.isArray(cleanSkills) ? cleanSkills.map((skill, index) => {
+                  {skillsArray.map((skill, index) => {
+                    if (!skill || typeof skill !== 'string') return null;
                     return (
                       <span key={index}>
                         {index > 0 ? ', ' : ' '}
                         <span>{skill}</span>
                       </span>
                     );
-                  }) : (
-                    <span>{cleanSkills}</span>
-                  )}
+                  })}
                 </div>
               );
             })
@@ -265,6 +259,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
               lineHeight: '1.3'
             }}>
               {templateData.skills.technical.map((skill, index) => {
+                if (!skill || typeof skill !== 'string') return null;
                 return (
                   <span key={index}>
                     {index > 0 ? ', ' : ''}

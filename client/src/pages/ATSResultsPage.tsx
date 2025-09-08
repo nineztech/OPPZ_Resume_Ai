@@ -6,11 +6,14 @@ import {
   CheckCircle, 
   AlertCircle, 
   Download,
-  RotateCcw
+  RotateCcw,
+  Wand2,
+  Loader2
 } from 'lucide-react';
 import PDFViewer from '@/components/ui/pdf-viewer';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { atsService } from '@/services/atsService';
 import type { ATSAnalysisResult, JDSpecificATSResult } from '@/services/atsService';
 
 
@@ -20,6 +23,7 @@ interface LocationState {
   fileName: string;
   fileContent?: string;
   originalFile: File;
+  parsedResumeData?: any;
 }
 
 const ATSResultsPage: React.FC = () => {
@@ -27,9 +31,13 @@ const ATSResultsPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeSection, setActiveSection] = useState<string>('');
+  const [isApplyingSuggestions, setIsApplyingSuggestions] = useState<boolean>(false);
   const state = location.state as LocationState;
 
   useEffect(() => {
+    console.log('ATSResultsPage - location.state:', location.state);
+    console.log('ATSResultsPage - parsedResumeData:', state?.parsedResumeData);
+    
     if (!state || !state.results) {
       toast({
         title: 'No Results Found',
@@ -59,6 +67,73 @@ const ATSResultsPage: React.FC = () => {
   const selectSection = (section: string) => {
     setActiveSection(section);
   };
+
+  const applyATSSuggestions = async () => {
+    if (!state.parsedResumeData && !state.fileContent) {
+      toast({
+        title: 'No Resume Data Available',
+        description: 'Neither parsed resume data nor extracted text is available to apply suggestions.',
+        variant: 'destructive'
+      } as any);
+      return;
+    }
+
+    setIsApplyingSuggestions(true);
+    
+    try {
+      // Use parsed resume data if available, otherwise create a basic structure from extracted text
+      let resumeDataToUse = state.parsedResumeData;
+      
+      if (!resumeDataToUse && state.fileContent) {
+        // Create a basic resume structure from extracted text
+        resumeDataToUse = {
+          basicDetails: {
+            fullName: '',
+            title: '',
+            phone: '',
+            email: '',
+            location: '',
+            website: '',
+            github: '',
+            linkedin: ''
+          },
+          summary: '',
+          experience: [],
+          education: [],
+          skills: [],
+          extractedText: state.fileContent
+        };
+      }
+
+      const response = await atsService.applyATSSuggestions(resumeDataToUse, state.results);
+      
+      if (response.success && response.data) {
+        // Navigate directly to resume builder with improved data and changes popup
+        navigate('/resume/builder', {
+          state: {
+            improvedResumeData: response.data,
+            improvementSummary: (response as any).improvement_summary,
+            fromATS: true,
+            originalFile: state.originalFile,
+            showChangesPopup: true,
+            atsResults: state.results
+          }
+        });
+      } else {
+        throw new Error(response.error || 'Failed to apply suggestions');
+      }
+    } catch (error) {
+      console.error('Failed to apply ATS suggestions:', error);
+      toast({
+        title: 'Failed to Apply Suggestions',
+        description: error instanceof Error ? error.message : 'An error occurred while applying suggestions.',
+        variant: 'destructive'
+      } as any);
+    } finally {
+      setIsApplyingSuggestions(false);
+    }
+  };
+
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return '#059669'; // green-600
@@ -170,6 +245,21 @@ const ATSResultsPage: React.FC = () => {
             <div className="text-sm text-gray-500">Resume Worded</div>
           </div>
           <div className="flex items-center space-x-3">
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              onClick={applyATSSuggestions}
+              disabled={isApplyingSuggestions || (!state.parsedResumeData && !state.fileContent)}
+              title={(!state.parsedResumeData && !state.fileContent) ? 'No resume data available - cannot apply suggestions' : 'Apply ATS suggestions to improve resume'}
+            >
+              {isApplyingSuggestions ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Wand2 className="w-4 h-4 mr-2" />
+              )}
+              {isApplyingSuggestions ? 'Applying...' : 'Apply Suggestions'}
+            </Button>
             <Button variant="outline" size="sm" className="text-sm">
               <Download className="w-4 h-4 mr-2" />
               Download PDF
@@ -424,6 +514,7 @@ const ATSResultsPage: React.FC = () => {
                 </Button>
               </div>
             )}
+
 
             {/* Recommendations Section */}
             {results.recommendations.length > 0 && (

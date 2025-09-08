@@ -224,6 +224,40 @@ class ATSService {
   }
 
   /**
+   * Apply ATS suggestions to improve resume
+   * @param parsedResumeData - The structured resume data from parsing
+   * @param atsAnalysis - The ATS analysis results with suggestions
+   * @returns Promise with improved resume data
+   */
+  async applyATSSuggestions(parsedResumeData: any, atsAnalysis: ATSAnalysisResult | JDSpecificATSResult): Promise<ATSResponse<any>> {
+    try {
+      const response = await fetch(`${this.baseUrl}/improve-resume`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          parsed_resume_data: parsedResumeData,
+          ats_analysis: atsAnalysis
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Resume improvement failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  /**
    * Get score interpretation based on score value
    * @param score - Score from 0-100
    * @returns Object with score interpretation

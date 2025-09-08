@@ -280,6 +280,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
               lineHeight: '1.3'
             }}>
               {templateData.skills.technical.map((skill, index) => {
+                if (!skill || typeof skill !== 'string') return null;
                 return (
                   <span key={index}>
                     {index > 0 ? ', ' : ''}

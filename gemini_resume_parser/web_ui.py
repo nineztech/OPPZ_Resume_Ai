@@ -18,6 +18,7 @@ import logging
 from services.gemini_parser_service import GeminiResumeParser
 from services.ats_service import StandardATSService, JDSpecificATSService
 from services.ai_suggestion_service import AISuggestionService
+from services.resume_improvement_service import ResumeImprovementService
 from utils.pdf_extractor import DocumentExtractor
 
 # Configure logging
@@ -2051,6 +2052,64 @@ def ai_suggestions():
             'success': False,
             'error': str(e)
         })
+
+@app.route('/improve-resume', methods=['POST'])
+def improve_resume():
+    """Apply ATS suggestions to improve resume"""
+    try:
+        # Check if request has JSON data
+        if not request.is_json:
+            return jsonify({
+                "success": False,
+                "error": "Request must be JSON"
+            }), 400
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        if 'parsed_resume_data' not in data:
+            return jsonify({
+                "success": False,
+                "error": "parsed_resume_data is required"
+            }), 400
+        
+        if 'ats_analysis' not in data:
+            return jsonify({
+                "success": False,
+                "error": "ats_analysis is required"
+            }), 400
+        
+        parsed_resume_data = data['parsed_resume_data']
+        ats_analysis = data['ats_analysis']
+        
+        # Initialize improvement service
+        improvement_service = ResumeImprovementService()
+        
+        # Apply ATS suggestions
+        logger.info("Applying ATS suggestions to improve resume")
+        improved_resume = improvement_service.apply_ats_suggestions(parsed_resume_data, ats_analysis)
+        
+        # Generate improvement summary
+        improvement_summary = improvement_service.get_improvement_summary(parsed_resume_data, improved_resume)
+        
+        # Add summary to the result
+        improved_resume["_improvement_summary"] = improvement_summary
+        
+        logger.info("Successfully applied ATS suggestions to resume")
+        
+        return jsonify({
+            "success": True,
+            "data": improved_resume,
+            "improvement_summary": improvement_summary,
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to improve resume: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"Failed to improve resume: {str(e)}"
+        }), 500
 
 @app.route('/health')
 def health():

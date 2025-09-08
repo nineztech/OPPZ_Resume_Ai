@@ -176,6 +176,7 @@ const CreativeDesigner: React.FC<CreativeDesignerProps> = ({
           // Handle flat skills array (fallback)
           <div className="flex flex-wrap gap-2">
             {templateData.skills.technical.map((skill, index) => {
+              if (!skill || typeof skill !== 'string') return null;
               return (
                 <span key={index} className="px-3 py-1 rounded-full text-sm" style={{
                   background: '#f3f4f6',

@@ -138,14 +138,17 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
             <div>
               <h4 className="text-lg font-semibold mb-3" style={{ color: '#4a5568' }}>Technical Skills</h4>
               <div className="space-y-2">
-                {templateData.skills.technical.map((skill, index) => (
-                  <div 
-                    key={index}
-                    className="text-gray-700"
-                  >
-                    • {skill}
-                  </div>
-                ))}
+                {templateData.skills.technical.map((skill, index) => {
+                  if (!skill || typeof skill !== 'string') return null;
+                  return (
+                    <div 
+                      key={index}
+                      className="text-gray-700"
+                    >
+                      • {skill}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -154,14 +157,17 @@ const ExecutiveClassic: React.FC<ExecutiveClassicProps> = ({
             <div>
               <h4 className="text-lg font-semibold mb-3" style={{ color: '#4a5568' }}>Professional Skills</h4>
               <div className="space-y-2">
-                {templateData.skills.professional.map((skill, index) => (
-                  <div 
-                    key={index}
-                    className="text-gray-700"
-                  >
-                    • {skill}
-                  </div>
-                ))}
+                {templateData.skills.professional.map((skill, index) => {
+                  if (!skill || typeof skill !== 'string') return null;
+                  return (
+                    <div 
+                      key={index}
+                      className="text-gray-700"
+                    >
+                      • {skill}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

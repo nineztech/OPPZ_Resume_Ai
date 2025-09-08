@@ -425,6 +425,115 @@ const ResumeBuilderPage = () => {
       setResumeTitle(defaultTitle);
     }
     
+    // Handle improved resume data from ATS results
+    if (location.state?.improvedResumeData && location.state?.fromATS) {
+      console.log('Setting resume data from ATS improved data:', location.state.improvedResumeData);
+      console.log('Improvement summary:', location.state.improvementSummary);
+      
+      // Store applied suggestions info for highlighting
+      if (location.state?.improvementSummary) {
+        setAppliedSuggestions(location.state.improvementSummary);
+        console.log('Applied ATS improvements detected:', location.state.improvementSummary);
+      }
+      
+      // Handle both basicDetails and basic_details formats from ATS
+      const basicDetailsData = location.state.improvedResumeData.basicDetails || location.state.improvedResumeData.basic_details || {};
+      
+      // Ensure all required fields are present with proper defaults
+      const processedData = {
+        basicDetails: {
+          fullName: basicDetailsData.fullName || basicDetailsData['Full Name'] || '',
+          title: basicDetailsData.title || basicDetailsData['Professional Title'] || '',
+          phone: basicDetailsData.phone || basicDetailsData.Phone || '',
+          email: basicDetailsData.email || basicDetailsData.Email || '',
+          location: basicDetailsData.location || basicDetailsData.Location || '',
+          website: basicDetailsData.website || basicDetailsData.Website || '',
+          github: basicDetailsData.github || basicDetailsData.GitHub || '',
+          linkedin: basicDetailsData.linkedin || basicDetailsData.LinkedIn || ''
+        },
+        summary: location.state.improvedResumeData.summary || '',
+        objective: location.state.improvedResumeData.objective || '',
+        experience: (location.state.improvedResumeData.experience || []).map((exp: any) => {
+          console.log('Processing ATS experience item:', exp);
+          
+          const processedExp = {
+            id: exp.id || `exp-${Date.now()}-${Math.random()}`,
+            company: exp.Company || exp.company || '',
+            position: exp.Role || exp.position || exp.jobTitle || exp.title || exp.Job_Title || exp.Position || '',
+            startDate: exp['Start Date'] || exp.startDate || '',
+            endDate: exp['End Date'] || exp.endDate || '',
+            description: exp.Description || exp.description || '',
+            location: exp.Location || exp.location || ''
+          };
+          console.log('Processed ATS experience:', processedExp);
+          return processedExp;
+        }),
+        education: (location.state.improvedResumeData.education || []).map((edu: any) => ({
+          id: edu.id || `edu-${Date.now()}-${Math.random()}`,
+          institution: edu.Institution || edu.institution || '',
+          degree: edu.Degree || edu.degree || '',
+          year: edu['End Date'] || edu.year || '',
+          description: edu.Description || edu.description || '',
+          grade: edu.Grade || edu.grade || '',
+          location: edu.Location || edu.location || ''
+        })),
+        skills: location.state.improvedResumeData.skills || {
+          "Languages": [],
+          "Frameworks/Libraries": [],
+          "Database": [],
+          "Cloud": [],
+          "Version Control Tools": [],
+          "IDEs": [],
+          "Web-Technologies": [],
+          "Web Server": [],
+          "Methodologies": [],
+          "Operating Systems": [],
+          "Professional Skills": [],
+          "Testing": [],
+          "Build Tools": [],
+          "Other Tools": []
+        },
+        languages: location.state.improvedResumeData.languages || [],
+        activities: location.state.improvedResumeData.activities || [],
+        projects: (location.state.improvedResumeData.projects || []).map((project: any) => ({
+          id: project.id || `project-${Date.now()}-${Math.random()}`,
+          name: project.Name || project.name || '',
+          techStack: project['Tech Stack'] || project.techStack || '',
+          startDate: project['Start Date'] || project.startDate || '',
+          endDate: project['End Date'] || project.endDate || '',
+          description: project.Description || project.description || '',
+          link: project.Link || project.link || ''
+        })),
+        certifications: (location.state.improvedResumeData.certifications || []).map((cert: any) => ({
+          id: cert.id || `cert-${Date.now()}-${Math.random()}`,
+          certificateName: cert.certificateName || cert.CertificateName || '',
+          link: cert.link || cert.Link || '',
+          startDate: cert.startDate || cert['Start Date'] || '',
+          endDate: cert.endDate || cert['End Date'] || '',
+          instituteName: cert.instituteName || cert.InstituteName || cert.institueName || ''
+        })),
+        references: location.state.improvedResumeData.references || [],
+        customSections: location.state.improvedResumeData.customSections || []
+      };
+      
+      // Track specific changes for highlighting
+      const changesSet = new Set<string>();
+      
+      // Add all improved fields to changes set
+      if (location.state.improvementSummary?.fields_improved) {
+        location.state.improvementSummary.fields_improved.forEach((field: string) => {
+          changesSet.add(`${field}-ats-improved`);
+        });
+      }
+      
+      // Set highlighted changes
+      setHighlightedChanges(changesSet);
+      
+      console.log('Processed ATS improved resume data:', processedData);
+      setResumeData(processedData);
+      return;
+    }
+    
           if (location.state?.extractedData && (location.state?.mode === 'raw' || location.state?.mode === 'ai' || location.state?.mode === 'ai-enhanced' || location.state?.mode === 'edit')) {
         // Handle Gemini parsed data directly
         const extractedData = location.state.extractedData;
@@ -476,7 +585,7 @@ const ResumeBuilderPage = () => {
           const processedExp = {
             id: exp.id || `exp-${Date.now()}-${Math.random()}`,
             company: exp.Company || exp.company || '',
-            position: exp.Role || exp.position || '',
+            position: exp.Role || exp.position || exp.jobTitle || exp.title || exp.Job_Title || exp.Position || '',
             startDate: startDate,
             endDate: endDate,
             description: exp.Description || exp.description || '',
@@ -1713,7 +1822,7 @@ const ResumeBuilderPage = () => {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium text-green-800">
-                  AI suggestions applied successfully!
+                  {location.state?.fromATS ? 'ATS improvements applied successfully!' : 'AI suggestions applied successfully!'}
                 </span>
                 <span className="text-xs text-green-600 ml-2">
                   {highlightedChanges.size} enhancements applied
@@ -1733,13 +1842,14 @@ const ResumeBuilderPage = () => {
               <p className="text-xs text-green-700 mt-1">
                 {highlightedChanges.size > 0 
                   ? `Enhanced elements are highlighted in yellow. Applied changes include: ${Array.from(highlightedChanges).map(change => {
-                      if (change.includes('summary-ai-rewrite')) return 'Professional Summary';
-                      if (change.includes('skills-ai-rewrite')) return 'Skills Section';
-                      if (change.includes('experience') && change.includes('ai-rewrite')) return 'Work Experience';
-                      if (change.includes('education') && change.includes('ai-rewrite')) return 'Education';
-                      if (change.includes('project') && change.includes('ai-rewrite')) return 'Projects';
-                      if (change.includes('certification') && change.includes('ai-rewrite')) return 'Certifications';
+                      if (change.includes('summary-ai-rewrite') || change.includes('summary-ats-improved')) return 'Professional Summary';
+                      if (change.includes('skills-ai-rewrite') || change.includes('skills-ats-improved')) return 'Skills Section';
+                      if (change.includes('experience') && (change.includes('ai-rewrite') || change.includes('ats-improved'))) return 'Work Experience';
+                      if (change.includes('education') && (change.includes('ai-rewrite') || change.includes('ats-improved'))) return 'Education';
+                      if (change.includes('project') && (change.includes('ai-rewrite') || change.includes('ats-improved'))) return 'Projects';
+                      if (change.includes('certification') && (change.includes('ai-rewrite') || change.includes('ats-improved'))) return 'Certifications';
                       if (change.includes('skill-')) return 'Individual Skills';
+                      if (change.includes('ats-improved')) return change.replace('-ats-improved', '');
                       return change;
                     }).filter((value, index, self) => self.indexOf(value) === index).join(', ')}.`
                   : 'AI analysis completed. Check the console for detailed logs of applied changes.'
@@ -1764,6 +1874,18 @@ const ResumeBuilderPage = () => {
                     {Array.from(highlightedChanges).filter(change => change.includes('skill-')).length > 5 && 
                       ` and ${Array.from(highlightedChanges).filter(change => change.includes('skill-')).length - 5} more...`
                     }
+                  </div>
+                </div>
+              )}
+              
+              {/* Show ATS improvement summary if available */}
+              {location.state?.fromATS && location.state?.improvementSummary && (
+                <div className="mt-2 p-2 bg-blue-50 rounded border-l-4 border-blue-500">
+                  <p className="text-xs text-blue-800 font-medium mb-1">ATS Improvements Applied:</p>
+                  <div className="text-xs text-blue-700">
+                    <p>• {location.state.improvementSummary.total_changes} total improvements</p>
+                    <p>• Areas improved: {location.state.improvementSummary.improvement_areas?.join(', ') || 'Multiple sections'}</p>
+                    <p>• Fields enhanced: {location.state.improvementSummary.fields_improved?.join(', ') || 'Various fields'}</p>
                   </div>
                 </div>
               )}

@@ -327,6 +327,25 @@ const ATSScorePage: React.FC = () => {
         console.log('Could not extract file content for preview:', error);
       }
 
+      // Parse resume first to get structured data
+      console.log('Starting resume parsing...');
+      const parseResponse = await atsService.parseResume(selectedFile);
+      let parsedResumeData = null;
+      
+      console.log('Parse response:', parseResponse);
+      
+      if (parseResponse.success && parseResponse.data) {
+        parsedResumeData = parseResponse.data;
+        console.log('Resume parsed successfully:', parsedResumeData);
+      } else {
+        console.error('Resume parsing failed:', parseResponse.error);
+        toast({
+          title: 'Resume Parsing Warning',
+          description: 'Could not parse resume for suggestions. Apply Suggestions will be disabled.',
+          variant: 'destructive'
+        } as any);
+      }
+
       if (analysisType === 'standard') {
         const response = await atsService.analyzeResumeStandard(selectedFile);
         if (response.success && response.data) {
@@ -339,7 +358,8 @@ const ATSScorePage: React.FC = () => {
               analysisType: 'standard',
               fileName: selectedFile.name,
               fileContent: response.data.extracted_text || fileContent,
-              originalFile: selectedFile
+              originalFile: selectedFile,
+              parsedResumeData: parsedResumeData
             }
           });
         } else {
@@ -364,6 +384,7 @@ const ATSScorePage: React.FC = () => {
               fileName: selectedFile.name,
               fileContent: response.data.extracted_text || fileContent,
               originalFile: selectedFile,
+              parsedResumeData: parsedResumeData,
               jdInputType: jdInputType,
               jdFileName: jdInputType === 'file' ? jobDescriptionFile?.name : undefined
             }
@@ -1324,7 +1345,7 @@ const ATSScorePage: React.FC = () => {
                       name="jdInputType"
                       value="text"
                       checked={jdInputType === 'text'}
-                      onChange={(e) => {
+                      onChange={() => {
                         setJdInputType('text');
                         setJobDescriptionFile(null);
                       }}
@@ -1338,7 +1359,7 @@ const ATSScorePage: React.FC = () => {
                       name="jdInputType"
                       value="file"
                       checked={jdInputType === 'file'}
-                      onChange={(e) => {
+                      onChange={() => {
                         setJdInputType('file');
                         setJobDescription('');
                       }}
