@@ -19,7 +19,7 @@ class AISuggestionService:
     - Extended token limits for complete responses
     """
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-2.5-flash", temperature: float = 0.1, top_p: float = 0.8):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-2.5-flash", temperature: float = 0.3, top_p: float = 0.8):
         """
         Initialize the AI Suggestion Service
         
@@ -33,6 +33,9 @@ class AISuggestionService:
         self.model = self.parser.model
         self.temperature = temperature
         self.top_p = top_p
+        
+        # Set consistent parameters for reliable output
+        self.set_consistent_parameters()
     
     def update_generation_parameters(self, temperature: float = None, top_p: float = None):
         """
@@ -47,9 +50,6 @@ class AISuggestionService:
         if top_p is not None:
             self.top_p = top_p
             
-        # Update the model's generation config
-        self.model.generation_config.temperature = self.temperature
-        self.model.generation_config.top_p = self.top_p
         logger.info(f"Updated generation parameters: temperature={self.temperature}, top_p={self.top_p}")
     
     def get_generation_settings(self) -> Dict[str, float]:
@@ -60,11 +60,22 @@ class AISuggestionService:
             "model_name": self.parser.model_name
         }
 
+    def set_consistent_parameters(self):
+        """
+        Set parameters optimized for consistent AI suggestion results.
+        Uses moderate temperature and focused top_p for balanced output.
+        """
+        self.update_generation_parameters(temperature=0.3, top_p=0.8)
+        logger.info("🎯 Set consistent parameters for deterministic AI suggestions")
+
     def generate_job_description(self, sector: str, country: str, designation: str, resume_data: Optional[Dict[str, Any]] = None, experience_level: Optional[str] = None) -> Dict[str, Any]:
         """
         Generate a job description tailored to the role, sector, country, and experience level.
         If experience_level not provided, infer it from resume_data.
         """
+        # Ensure consistent parameters for reliable output
+        self.set_consistent_parameters()
+        
         # Infer experience level if not provided
         if experience_level:
             target_experience = experience_level
@@ -132,7 +143,14 @@ class AISuggestionService:
 
         try:
             logger.info(f"Generating job description with temperature={self.temperature}, top_p={self.top_p}")
-            response = self.model.generate_content(prompt)
+            generation_config = {
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+                "top_k": 40,
+                "max_output_tokens": 8192,
+                "candidate_count": 1
+            }
+            response = self.model.generate_content(prompt, generation_config=generation_config)
             cleaned_response = self._clean_gemini_response(response.text)
             return json.loads(cleaned_response)
         except json.JSONDecodeError as json_error:
@@ -149,6 +167,9 @@ class AISuggestionService:
         Compare resume with job description and generate actionable improvement suggestions.
         Includes rewritten sections ready to be pasted into the resume.
         """
+        # Ensure consistent parameters for reliable output
+        self.set_consistent_parameters()
+        
         logger.info(f"Starting resume comparison with data keys: {list(resume_data.keys())}")
         logger.info(f"Skills data in resume: {resume_data.get('skills', 'NOT_FOUND')}")
         
@@ -298,7 +319,14 @@ class AISuggestionService:
         try:
             logger.info(f"Comparing resume with JD using temperature={self.temperature}, top_p={self.top_p}")
             logger.info(f"🔍 Starting AI response generation...")
-            response = self.model.generate_content(prompt)
+            generation_config = {
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+                "top_k": 40,
+                "max_output_tokens": 8192,
+                "candidate_count": 1
+            }
+            response = self.model.generate_content(prompt, generation_config=generation_config)
             
             # Check if the response was blocked or filtered
             if hasattr(response, 'candidates') and response.candidates:
