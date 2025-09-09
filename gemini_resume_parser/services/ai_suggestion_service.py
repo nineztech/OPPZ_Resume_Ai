@@ -1716,28 +1716,181 @@ class AISuggestionService:
         """
         Enforces schema compliance for the AI response.
         Ensures all required sections are present, even if the AI skips them.
+        Also guarantees: when resume has no projects, we ALWAYS return exactly two JD-based dummy projects
+        (rather than wiping them during enforcement/fallback).
         """
+        import json, re
+
         logger.info("🔒 Enforcing schema compliance for AI response")
         logger.info(f"🔍 AI response keys: {list(ai_response.keys())}")
         logger.info(f"🔍 AI response overallScore: {ai_response.get('overallScore', 'NOT_FOUND')}")
         logger.info(f"🔍 AI response type: {type(ai_response.get('overallScore', 'NOT_FOUND'))}")
-        
+
+        # ---------------------------
+        # Internal helpers
+        # ---------------------------
+        def _safe_list(v):
+            return v if isinstance(v, list) else []
+
+        def _normalize_projects_list(projects: Any) -> list:
+            """Normalize project objects and drop non-dict entries; never return None."""
+            out = []
+            if isinstance(projects, list):
+                for p in projects:
+                    if not isinstance(p, dict):
+                        continue
+                    name = p.get("name", "") or ""
+                    existing = p.get("existing", "") or ""
+                    rewrite = p.get("rewrite", "") or ""
+                    recs = p.get("recommendations", [])
+                    if not isinstance(recs, list):
+                        recs = _safe_list(recs)
+                    out.append({
+                        "name": name,
+                        "existing": existing,
+                        "rewrite": rewrite,
+                        "recommendations": recs
+                    })
+            return out
+
+        def _extract_jd_anchors(jd_text_or_json: str) -> list:
+            """
+            Try to pull useful anchors from JD JSON (requiredSkills.*) or fallback to keyword extraction from plain text.
+            """
+            anchors = []
+            # Attempt JSON parse (your JD generator often returns JSON)
+            if isinstance(jd_text_or_json, str) and jd_text_or_json.strip().startswith("{"):
+                try:
+                    jd_obj = json.loads(jd_text_or_json)
+                    req = jd_obj.get("requiredSkills", {})
+                    if isinstance(req, dict):
+                        for k in ("technical", "programming", "tools"):
+                            anchors.extend([s for s in _safe_list(req.get(k)) if isinstance(s, str)])
+                except Exception:
+                    pass
+
+            if not anchors:
+                # Fallback: simple keyword pick from plain text
+                text = jd_text_or_json if isinstance(jd_text_or_json, str) else ""
+                # Keep alnum words length>=3; drop very common stopwords
+                tokens = re.findall(r"[A-Za-z0-9\-\+#\.]{3,}", text)
+                stop = set({
+                    "and","the","with","for","you","are","will","our","your","this","that","from","have","has","not",
+                    "any","all","job","role","must","able","into","onto","per","via","use","using","used","over","under",
+                    "work","team","data","data.","data-","skills","skill","experience","years","year","plus","more",
+                    "etc","such","like","good","great","nice","basic","strong","solid","cloud","cloud.","api","apis"
+                })
+                uniq = []
+                for t in tokens:
+                    tl = t.lower()
+                    if tl not in stop and t not in uniq:
+                        uniq.append(t)
+                anchors = uniq[:12]
+
+            # Final fallback anchors if still empty
+            if not anchors:
+                anchors = ["Core Platform", "Data Pipeline", "Automation", "API Integration", "Dashboard", "ETL", "Monitoring", "Optimization"]
+            return anchors
+
+        def _generate_dummy_projects_from_jd(jd: str, target_experience: str, how_many: int = 2) -> list:
+            """
+            Build exactly `how_many` realistic dummy projects aligned to JD keywords.
+            """
+            anchors = _extract_jd_anchors(jd)
+            # Create stable pairs of 2–3 anchors per project
+            buckets = []
+            step = max(3, min(4, max(3, (len(anchors) // max(1, how_many)))))  # heuristic spread
+            for i in range(how_many):
+                s = i * step
+                chunk = anchors[s:s+3] or anchors[:3]
+                title = f"{(chunk[0] if chunk else 'JD')}: Implementation"
+                tech_used = ", ".join(chunk)
+                rewrite = (
+                    f"Designed and delivered a {target_experience.lower()}-appropriate {title} aligned to the job description. "
+                    f"Implemented features mapped to JD responsibilities, integrating {tech_used}. "
+                    f"Outcome: improved reliability, performance, and stakeholder visibility with measurable impact."
+                )
+                buckets.append({
+                    "name": title,
+                    "existing": "",
+                    "rewrite": rewrite,
+                    "recommendations": [
+                        "Add exact metrics (%, time saved, cost reduced) once available",
+                        "Specify team size, role, and duration",
+                        "Mirror key JD keywords in 3–5 bullets",
+                        "List primary stack and tooling explicitly"
+                    ]
+                })
+            return buckets
+
+        def _resume_has_projects(resume: Dict[str, Any]) -> bool:
+            try:
+                pr = resume.get("projects")
+                return bool(pr) and isinstance(pr, list) and len(pr) > 0
+            except Exception:
+                return False
+
+        # ---------------------------
         # Define the complete required schema structure
+        # ---------------------------
         required_sections = {
             "sectionSuggestions": {
-                "professionalSummary": {"existing": "", "rewrite": "", "recommendations": ["Craft a compelling 2-3 sentence summary highlighting key achievements", "Include relevant keywords from the job description", "Quantify your impact with specific numbers and results", "Tailor the summary to the target role and company"]},
-                "skills": {"existing": [], "rewrite": [], "recommendations": ["Add technical skills relevant to the job description", "Include both hard and soft skills", "Organize skills by category for better readability", "Highlight skills that match the job requirements"]},
+                "professionalSummary": {
+                    "existing": "",
+                    "rewrite": "",
+                    "recommendations": [
+                        "Craft a compelling 2-3 sentence summary highlighting key achievements",
+                        "Include relevant keywords from the job description",
+                        "Quantify your impact with specific numbers and results",
+                        "Tailor the summary to the target role and company"
+                    ]
+                },
+                "skills": {
+                    "existing": [],
+                    "rewrite": [],
+                    "recommendations": [
+                        "Add technical skills relevant to the job description",
+                        "Include both hard and soft skills",
+                        "Organize skills by category for better readability",
+                        "Highlight skills that match the job requirements"
+                    ]
+                },
                 "workExperience": [],
-                "projects": [],
-                "education": {"existing": [], "rewrite": "", "recommendations": ["Include relevant coursework and academic projects", "Add GPA if it's 3.5 or higher", "Highlight academic achievements and honors", "Include relevant extracurricular activities and leadership roles"]},
-                "certifications": {"existing": [], "rewrite": "", "recommendations": ["Add relevant professional certifications for the target role", "Include industry-specific certifications and licenses", "Add completion dates and credential IDs", "Highlight ongoing learning and skill development"]}
+                "projects": [],  # (we will overwrite later if needed)
+                "education": {
+                    "existing": [],
+                    "rewrite": "",
+                    "recommendations": [
+                        "Include relevant coursework and academic projects",
+                        "Add GPA if it's 3.5 or higher",
+                        "Highlight academic achievements and honors",
+                        "Include relevant extracurricular activities and leadership roles"
+                    ]
+                },
+                "certifications": {
+                    "existing": [],
+                    "rewrite": "",
+                    "recommendations": [
+                        "Add relevant professional certifications for the target role",
+                        "Include industry-specific certifications and licenses",
+                        "Add completion dates and credential IDs",
+                        "Highlight ongoing learning and skill development"
+                    ]
+                }
             },
             "overallScore": 0,  # Will be calculated dynamically
             "analysisTimestamp": "",
-            "topRecommendations": ["Review and enhance your professional summary", "Add relevant skills from the job description", "Quantify achievements in work experience", "Include relevant projects and certifications"]
+            "topRecommendations": [
+                "Review and enhance your professional summary",
+                "Add relevant skills from the job description",
+                "Quantify achievements in work experience",
+                "Include relevant projects and certifications"
+            ]
         }
-        
+
+        # ---------------------------
         # Ensure top-level structure exists
+        # ---------------------------
         try:
             for key, default_value in required_sections.items():
                 if key not in ai_response:
@@ -1748,45 +1901,96 @@ class AISuggestionService:
             logger.error(f"🚨 required_sections type: {type(required_sections)}")
             logger.error(f"🚨 ai_response type: {type(ai_response)}")
             raise
-        
+
         # Ensure sectionSuggestions structure exists
         if "sectionSuggestions" not in ai_response:
             ai_response["sectionSuggestions"] = required_sections["sectionSuggestions"]
             logger.warning("🔒 Enforced missing sectionSuggestions structure")
-        
-        # Validate and fix the overall score
+
+        # ---------------------------
+        # Score validation
+        # ---------------------------
         original_score = ai_response.get("overallScore", 0)
         logger.info(f"🔍 Original overall score: {original_score} (type: {type(original_score)})")
-        
+
         validated_score = self._validate_overall_score(original_score)
         ai_response["overallScore"] = validated_score
-        
         logger.info(f"✅ Validated overall score: {validated_score} (type: {type(validated_score)})")
-        
-        # Validate and fix the analysis timestamp
+
+        # Timestamp validation
         ai_response["analysisTimestamp"] = self._validate_timestamp(ai_response.get("analysisTimestamp", ""))
-        
+
+        # ---------------------------
+        # PRE-ENFORCEMENT PROJECTS SAFEGUARD
+        # If resume has no projects and AI didn't provide any, generate 2 JD-based dummy projects NOW.
+        # This snapshot will be re-applied after section enforcement to avoid accidental wiping.
+        # ---------------------------
+        no_resume_projects = not _resume_has_projects(resume_data)
+        ss = ai_response.setdefault("sectionSuggestions", {})
+        pre_projects = ss.get("projects")
+        if (not pre_projects or (isinstance(pre_projects, list) and len(pre_projects) == 0)) and no_resume_projects:
+            try:
+                target_level = self._analyze_experience_level(resume_data)
+            except Exception:
+                target_level = "Mid level"
+            generated = _generate_dummy_projects_from_jd(job_description, target_level, how_many=2)
+            ss["projects"] = generated
+            logger.info("🧩 Inserted 2 JD-based dummy projects (pre-enforcement).")
+        else:
+            # Normalize existing if any
+            ss["projects"] = _normalize_projects_list(ss.get("projects", []))
+
+        # ---------------------------
         # Enforce each section with fallback to original resume data
+        # (This may overwrite projects; we will restore/normalize right after.)
+        # ---------------------------
         ai_response["sectionSuggestions"] = self._enforce_section_compliance(
-            ai_response["sectionSuggestions"], 
+            ai_response["sectionSuggestions"],
             resume_data
         )
-        
+
+        # ---------------------------
+        # POST-ENFORCEMENT PROJECTS RESTORE / REBUILD
+        # ---------------------------
+        post_ss = ai_response.setdefault("sectionSuggestions", {})
+        post_projects = post_ss.get("projects")
+
+        if no_resume_projects:
+            if not post_projects or (isinstance(post_projects, list) and len(post_projects) == 0):
+                # Either restore what we created pre-enforcement or rebuild again deterministically
+                logger.warning("🛡️ Projects were empty after enforcement; restoring/generating dummy projects.")
+                if pre_projects and isinstance(pre_projects, list) and len(pre_projects) > 0:
+                    post_ss["projects"] = _normalize_projects_list(pre_projects)
+                else:
+                    try:
+                        target_level = self._analyze_experience_level(resume_data)
+                    except Exception:
+                        target_level = "Mid level"
+                    post_ss["projects"] = _generate_dummy_projects_from_jd(job_description, target_level, how_many=2)
+            else:
+                # Normalize whatever exists to ensure schema conformity
+                post_ss["projects"] = _normalize_projects_list(post_projects)
+        else:
+            # Resume already has projects; just normalize whatever the AI produced.
+            post_ss["projects"] = _normalize_projects_list(post_projects)
+
+        # ---------------------------
         # Final validation - ensure score is never "NA" or invalid
+        # ---------------------------
         final_score = ai_response.get("overallScore", 0)
         logger.info(f"🔍 Final score before validation: '{final_score}' (type: {type(final_score)})")
-        
+
         if isinstance(final_score, str) and final_score.strip().upper() in ['NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE']:
             logger.error(f"🚨 CRITICAL: Score still 'NA' after validation: '{final_score}', forcing to 0")
             ai_response["overallScore"] = 0
         elif not isinstance(final_score, (int, float)) or final_score < 0 or final_score > 100:
             logger.error(f"🚨 CRITICAL: Invalid score after validation: '{final_score}' (type: {type(final_score)}), forcing to 0")
             ai_response["overallScore"] = 0
-        
+
         # AGGRESSIVE OVERRIDE: Force any remaining "NA" values to be 0
         score_str = str(ai_response.get("overallScore", "")).strip().upper()
         na_variations = [
-            'NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE', 
+            'NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE',
             'NOT APPLICABLE', 'NOT AVAILABLE', 'NONE', 'NULL', 'UNDEFINED',
             'UNKNOWN', 'TBD', 'TO BE DETERMINED', 'PENDING', 'INVALID',
             'ERROR', 'FAILED', 'MISSING', 'EMPTY', 'BLANK'
@@ -1794,34 +1998,28 @@ class AISuggestionService:
         if score_str in na_variations:
             logger.error(f"🚨 AGGRESSIVE OVERRIDE: Score still contains 'NA': '{ai_response.get('overallScore')}', forcing to 0")
             ai_response["overallScore"] = 0
-        
+
         logger.info(f"🔍 Final validated score: {ai_response['overallScore']} (type: {type(ai_response['overallScore'])})")
-        
+
         # If score is still 0 (default), calculate a reasonable score based on resume completeness and job description match
         if ai_response['overallScore'] == 0:
             calculated_score = self._calculate_dynamic_score_with_jd(resume_data, job_description)
             ai_response['overallScore'] = calculated_score
             logger.info(f"🔄 Calculated dynamic fallback score based on resume-JD match: {calculated_score}")
-        
+
         # FINAL CHECK: Ensure the score is absolutely never "NA"
         final_score_str = str(ai_response['overallScore']).strip().upper()
-        na_variations = [
-            'NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE', 
-            'NOT APPLICABLE', 'NOT AVAILABLE', 'NONE', 'NULL', 'UNDEFINED',
-            'UNKNOWN', 'TBD', 'TO BE DETERMINED', 'PENDING', 'INVALID',
-            'ERROR', 'FAILED', 'MISSING', 'EMPTY', 'BLANK'
-        ]
         if final_score_str in na_variations:
             logger.error(f"🚨 FINAL OVERRIDE: Score still 'NA' at the very end: '{ai_response['overallScore']}', forcing to 50")
             ai_response['overallScore'] = 50
-        
+
         # ULTIMATE NA CLEANUP: Clean any remaining "NA" values in all sections
         ai_response = self._clean_all_na_values(ai_response)
-        
+
         logger.info(f"🎯 ULTIMATE FINAL SCORE: {ai_response['overallScore']} (type: {type(ai_response['overallScore'])})")
         logger.info("✅ Schema compliance enforcement completed")
         return ai_response
-    
+        
     def _enforce_section_compliance(self, section_suggestions: Dict[str, Any], resume_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Enforces compliance for individual sections, with fallback to original resume data.
@@ -1922,7 +2120,56 @@ class AISuggestionService:
             fallback_experience = [{"role": "", "existing": "", "rewrite": "", "recommendations": ["Add relevant work experience with specific achievements", "Include internships, volunteer work, or freelance projects", "Highlight transferable skills from other experiences", "Quantify impact and results wherever possible"]}]
         
         return fallback_experience
-    
+    def _generate_dummy_projects_from_jd(self, job_description: str, target_experience: str) -> list:
+        """
+        Build exactly 2 realistic dummy projects using only the JD content.
+        No dependency on resume presence; used when resume has no projects.
+        """
+        def safe_get_list(d, k):
+            try:
+                v = d.get(k, [])
+                return v if isinstance(v, list) else []
+            except Exception:
+                return []
+
+        # Try to parse JD (it should be JSON per your JD generator)
+        jd_obj = {}
+        if isinstance(job_description, str) and job_description.strip().startswith("{"):
+            try:
+                jd_obj = json.loads(job_description)
+            except Exception:
+                jd_obj = {}
+
+        req = jd_obj.get("requiredSkills", {}) if isinstance(jd_obj, dict) else {}
+        technical = safe_get_list(req, "technical")
+        programming = safe_get_list(req, "programming")
+        tools = safe_get_list(req, "tools")
+
+        # Pick a few keywords to anchor the projects
+        anchors = [s for s in (technical + programming + tools) if isinstance(s, str)]
+        anchors = anchors[:6] if anchors else ["Core Platform", "Data Pipeline", "Automation", "API", "Dashboard", "Integration"]
+
+        def mk(name_idx: int):
+            title = f"{anchors[name_idx]} Implementation" if name_idx < len(anchors) else f"Project {name_idx+1}"
+            tech_used = ", ".join(anchors[name_idx:name_idx+3]) if anchors else ""
+            rewrite = (
+                f"Led a {target_experience.lower()}-appropriate {title} aligned to JD requirements; "
+                f"delivered features mapped to responsibilities and ATS keywords from the JD. "
+                f"Technologies: {tech_used}. Impact: improved reliability/performance, with measurable outcome."
+            )
+            return {
+                "name": title,
+                "existing": "",
+                "rewrite": rewrite,
+                "recommendations": [
+                    "Add exact metrics once available",
+                    "Reference JD keywords in bullet points",
+                    "List team size and duration"
+                ],
+            }
+
+        return [mk(0), mk(3)]
+
     def _create_projects_fallback(self, resume_data: Dict[str, Any]) -> list:
         """
         Creates a fallback projects section from the original resume data.
@@ -1972,20 +2219,8 @@ class AISuggestionService:
         else:
             logger.warning("🔒 No original projects data found, creating 2 dummy projects")
             # Create 2 dummy projects that will be enhanced by AI based on job description
-            fallback_projects = [
-                {
-                    "name": "Project 1",
-                    "existing": "",
-                    "rewrite": "",  # AI will create relevant project description
-                    "recommendations": ["Create a project that demonstrates relevant technical skills", "Include specific technologies and frameworks used", "Add quantified results and impact metrics", "Highlight problem-solving and innovation"]
-                },
-                {
-                    "name": "Project 2", 
-                    "existing": "",
-                    "rewrite": "",  # AI will create relevant project description
-                    "recommendations": ["Develop a project showcasing leadership and collaboration", "Include project timeline and deliverables", "Add client feedback or performance metrics", "Demonstrate continuous learning and adaptation"]
-                }
-            ]
+            fallback_projects : self._generate_dummy_projects_from_jd(job_description, target_experience or "Mid level")
+            
         
         return fallback_projects
 
@@ -3158,6 +3393,7 @@ class AISuggestionService:
         return int(match_percentage * 10)
     
     def _calculate_keyword_match(self, resume_data: Dict[str, Any], jd_lower: str) -> int:
+
         """Calculate keyword match score (0-5 points)"""
         # Extract key terms from resume
         resume_text = self._format_resume_for_comparison(resume_data).lower()
