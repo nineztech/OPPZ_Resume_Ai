@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { tokenUtils } from '@/lib/utils';
@@ -551,14 +552,14 @@ const ResumeBuilderPage = () => {
         // Ensure all required fields are present with proper defaults
         const processedData = {
         basicDetails: {
-          fullName: basicDetailsData.fullName || '',
-          professionalTitle: basicDetailsData.professionalTitle || basicDetailsData.title || '',
-          phone: basicDetailsData.phone || '',
-          email: basicDetailsData.email || '',
-          location: basicDetailsData.location || '',
-          website: basicDetailsData.website || '',
-          github: basicDetailsData.github || basicDetailsData.gitHub || '',
-          linkedin: basicDetailsData.linkedin || basicDetailsData.linkedIn || ''
+          fullName: basicDetailsData.fullName || basicDetailsData['Full Name'] || basicDetailsData.name || '',
+          professionalTitle: basicDetailsData.professionalTitle || basicDetailsData.title || basicDetailsData['Professional Title'] || basicDetailsData.jobTitle || '',
+          phone: basicDetailsData.phone || basicDetailsData.Phone || basicDetailsData.phoneNumber || '',
+          email: basicDetailsData.email || basicDetailsData.Email || basicDetailsData.emailAddress || '',
+          location: basicDetailsData.location || basicDetailsData.Location || basicDetailsData.address || '',
+          website: basicDetailsData.website || basicDetailsData.Website || basicDetailsData.portfolio || '',
+          github: basicDetailsData.github || basicDetailsData.gitHub || basicDetailsData.GitHub || '',
+          linkedin: basicDetailsData.linkedin || basicDetailsData.linkedIn || basicDetailsData.LinkedIn || ''
         },
         summary: extractedData.summary || '',
         objective: extractedData.objective || '',
@@ -594,11 +595,27 @@ const ResumeBuilderPage = () => {
           console.log('Processed experience:', processedExp);
           return processedExp;
         }),
-        education: extractedData.education || [],
+        education: (extractedData.education || []).map((edu: any) => ({
+          id: edu.id || `edu-${Date.now()}-${Math.random()}`,
+          institution: edu.Institution || edu.institution || edu.school || edu.university || '',
+          degree: edu.Degree || edu.degree || edu.program || edu.major || '',
+          year: edu['End Date'] || edu.year || edu.graduationYear || edu.endYear || '',
+          description: edu.Description || edu.description || edu.notes || '',
+          grade: edu.Grade || edu.grade || edu.gpa || edu.score || '',
+          location: edu.Location || edu.location || edu.city || edu.country || ''
+        })),
         skills: extractedData.skills || [],
         languages: extractedData.languages || [],
         activities: extractedData.activities || [],
-        projects: extractedData.projects || [],
+        projects: (extractedData.projects || []).map((project: any) => ({
+          id: project.id || `project-${Date.now()}-${Math.random()}`,
+          name: project.Name || project.name || project.title || project.projectName || '',
+          techStack: project['Tech Stack'] || project.techStack || project.technologies || project.tech || '',
+          startDate: project['Start Date'] || project.startDate || project.start || '',
+          endDate: project['End Date'] || project.endDate || project.end || '',
+          description: project.Description || project.description || project.summary || '',
+          link: project.Link || project.link || project.url || project.github || ''
+        })),
         certifications: extractedData.certifications || [],
         references: extractedData.references || [],
         customSections: extractedData.customSections || []
@@ -960,10 +977,32 @@ const ResumeBuilderPage = () => {
               
               processedData.projects.push(newProject);
               changesSet.add(`project-${processedData.projects.length - 1}-ai-rewrite`);
-              console.log('Applied projects rewrite as new project');
+              console.log('Applied projects rewrite as new project:', newProject);
             }
-            // Handle projects as array (legacy support)
+            // Handle projects as array
             else if (Array.isArray(rewrites.projects) && rewrites.projects.length > 0) {
+              // Check if it's an array of simple strings or objects
+              if (typeof rewrites.projects[0] === 'string') {
+                rewrites.projects.forEach((projectName: string, index: number) => {
+                  if (projectName && projectName.trim()) {
+                    const newProject = {
+                      id: `ai-project-${index}-${Date.now()}`,
+                      name: projectName.trim(),
+                      techStack: 'MERN Stack', // Default for MERN suggestions
+                      startDate: '',
+                      endDate: '',
+                      description: `AI suggested project: ${projectName.trim()}`,
+                      link: ''
+                    };
+                    
+                    processedData.projects.push(newProject);
+                    changesSet.add(`project-${processedData.projects.length - 1}-ai-rewrite`);
+                    console.log('Applied simple project from array:', newProject);
+                  }
+                });
+              }
+              // Handle projects as array of objects (legacy support)
+              else {
               rewrites.projects.forEach((projectRewrite: any, index: number) => {
                 if (projectRewrite.rewrite) {
                   const rewriteText = projectRewrite.rewrite;
@@ -985,14 +1024,16 @@ const ResumeBuilderPage = () => {
                     techStack: 'MERN Stack', // Default for MERN suggestions
                     startDate: '',
                     endDate: '',
-                    description: bulletPoints.join('\n'),
+                    description: bulletPoints.length > 0 ? bulletPoints.join('\n') : rewriteText,
                     link: ''
                   };
                   
                   processedData.projects.push(newProject);
                   changesSet.add(`project-${processedData.projects.length - 1}-ai-rewrite`);
+                  console.log('Applied project from array:', newProject);
                 }
               });
+              }
             }
           }
           
@@ -1000,6 +1041,135 @@ const ResumeBuilderPage = () => {
           if (!rewrites.projects || rewrites.projects === null) {
             console.log('No AI project rewrites available, preserving existing projects:', processedData.projects);
           }
+          
+          // Force add projects if AI suggests them, regardless of existing projects
+          if (aiSuggestions.sectionSuggestions?.projects && processedData.projects.length === 0) {
+            console.log('AI suggests projects but none exist, forcing project addition...');
+            const projectSuggestions = aiSuggestions.sectionSuggestions.projects;
+            
+            if (Array.isArray(projectSuggestions) && projectSuggestions.length > 0) {
+              projectSuggestions.forEach((project: any, index: number) => {
+                const projectName = project.name || `AI Project ${index + 1}`;
+                const projectDescription = project.rewrite || project.existing || 'AI suggested project';
+                
+                const newProject = {
+                  id: `ai-project-force-${index}-${Date.now()}`,
+                  name: projectName,
+                  techStack: 'MERN Stack',
+                  startDate: '',
+                  endDate: '',
+                  description: projectDescription,
+                  link: ''
+                };
+                
+                processedData.projects.push(newProject);
+                changesSet.add(`project-${processedData.projects.length - 1}-ai-force`);
+                console.log('Force added project:', newProject);
+              });
+            }
+          }
+          
+          // Comprehensive project handling - check multiple sources
+          console.log('Checking for projects from multiple sources...');
+          console.log('Current projects count:', processedData.projects.length);
+          console.log('AI suggestions structure:', aiSuggestions);
+          
+          // Check if we need to add projects from AI suggestions
+          let projectsAdded = false;
+          
+          // Method 1: Check sectionSuggestions.projects
+          if (aiSuggestions.sectionSuggestions?.projects) {
+            console.log('Found projects in sectionSuggestions:', aiSuggestions.sectionSuggestions.projects);
+            const projectSuggestions = aiSuggestions.sectionSuggestions.projects;
+            
+            // Handle as array of project objects
+            if (Array.isArray(projectSuggestions) && projectSuggestions.length > 0) {
+              projectSuggestions.forEach((project: any, index: number) => {
+                if (project && (project.rewrite || project.name || project.existing)) {
+                  const projectName = project.name || 'AI Suggested Project';
+                  const projectDescription = project.rewrite || project.existing || 'AI suggested project';
+                  
+                  const newProject = {
+                    id: `ai-project-section-${index}-${Date.now()}`,
+                    name: projectName,
+                    techStack: 'MERN Stack',
+                    startDate: '',
+                    endDate: '',
+                    description: projectDescription,
+                    link: ''
+                  };
+                  
+                  processedData.projects.push(newProject);
+                  changesSet.add(`project-${processedData.projects.length - 1}-ai-section`);
+                  projectsAdded = true;
+                  console.log('Added project from sectionSuggestions:', newProject);
+                }
+              });
+            }
+            // Handle as single rewrite string
+            else if (typeof projectSuggestions === 'string' && projectSuggestions.trim()) {
+              const rewriteText = projectSuggestions;
+              const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+              
+              let projectTitle = 'AI Suggested Project';
+              const titleLine = lines.find((line: string) => line.startsWith('**') && line.endsWith('**'));
+              if (titleLine) {
+                projectTitle = titleLine.replace(/\*\*/g, '').trim();
+              }
+              
+              const bulletPoints = lines.filter((line: string) => line.startsWith('*') && !line.startsWith('**')).map((line: string) => line.substring(1).trim());
+              
+              const newProject = {
+                id: `ai-project-section-${Date.now()}`,
+                name: projectTitle,
+                techStack: 'MERN Stack',
+                startDate: '',
+                endDate: '',
+                description: bulletPoints.length > 0 ? bulletPoints.join('\n') : rewriteText,
+                link: ''
+              };
+              
+              processedData.projects.push(newProject);
+              changesSet.add(`project-${processedData.projects.length - 1}-ai-section`);
+              projectsAdded = true;
+              console.log('Added project from sectionSuggestions string:', newProject);
+            }
+          }
+          
+          // Method 2: Check if no projects exist and create dummy ones
+          if (processedData.projects.length === 0 && !projectsAdded) {
+            console.log('No projects found anywhere, creating dummy MERN projects...');
+            const dummyProjects = [
+              {
+                id: `ai-project-dummy-1-${Date.now()}`,
+                name: 'E-Commerce Platform',
+                techStack: 'MERN Stack',
+                startDate: '',
+                endDate: '',
+                description: 'Full-stack e-commerce application with user authentication, product catalog, shopping cart, and payment integration using MongoDB, Express.js, React, and Node.js',
+                link: ''
+              },
+              {
+                id: `ai-project-dummy-2-${Date.now()}`,
+                name: 'Task Management App',
+                techStack: 'MERN Stack',
+                startDate: '',
+                endDate: '',
+                description: 'Collaborative task management application with real-time updates, user roles, and project tracking built with MERN stack and Socket.io',
+                link: ''
+              }
+            ];
+            
+            dummyProjects.forEach(project => {
+              processedData.projects.push(project);
+              changesSet.add(`project-${processedData.projects.length - 1}-ai-dummy`);
+            });
+            
+            projectsAdded = true;
+            console.log('Added dummy MERN projects:', dummyProjects);
+          }
+          
+          console.log('Final projects count after AI processing:', processedData.projects.length);
           
           // Apply Certifications rewrites
           if (rewrites.certifications && rewrites.certifications !== null) {

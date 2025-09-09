@@ -262,7 +262,7 @@ class GeminiParserService {
     return {
       basicDetails: {
         fullName: basicDetails.fullName || basicDetails.full_name || basicDetails.name || basicDetails.Full_Name || basicDetails['Full Name'] || '',
-        title: basicDetails.professionalTitle || basicDetails.professional_title || basicDetails.title || basicDetails.Title || basicDetails['Professional Title'] || '',
+        professionalTitle: basicDetails.professionalTitle || basicDetails.professional_title || basicDetails.title || basicDetails.Title || basicDetails['Professional Title'] || '',
         phone: basicDetails.phone || basicDetails.Phone || basicDetails['Phone'] || '',
         email: basicDetails.email || basicDetails.Email || basicDetails['Email'] || '',
         location: basicDetails.location || basicDetails.Location || basicDetails['Location'] || basicDetails.address || basicDetails.Address || '',
@@ -276,7 +276,8 @@ class GeminiParserService {
         id: Date.now().toString() + Math.random(),
         company: exp.company || exp.Company || exp.company_name || exp['Company Name'] || '',
         position: exp.role || exp.Role || exp.position || exp.Position || exp.title || exp.Title || exp['Job Title'] || '',
-        duration: `${exp.startDate || exp.start_date || exp.Start_Date || exp['Start Date'] || ''} - ${exp.endDate || exp.end_date || exp.End_Date || exp['End Date'] || ''}`.trim(),
+        startDate: exp.startDate || exp.start_date || exp.Start_Date || exp['Start Date'] || '',
+        endDate: exp.endDate || exp.end_date || exp.End_Date || exp['End Date'] || '',
         description: exp.description || exp.Description || exp.responsibilities || exp.Responsibilities || exp.achievements || exp.Achievements || '',
         location: exp.location || exp.Location || exp['Location'] || ''
       })),
@@ -284,7 +285,7 @@ class GeminiParserService {
         id: Date.now().toString() + Math.random(),
         institution: edu.institution || edu.Institution || edu.school || edu.School || edu.university || edu.University || edu['Institution Name'] || '',
         degree: edu.degree || edu.Degree || edu.qualification || edu.Qualification || edu['Degree Name'] || '',
-        year: `${edu.startDate || edu.start_date || edu.Start_Date || edu['Start Date'] || ''} - ${edu.endDate || edu.end_date || edu.End_Date || edu['End Date'] || ''}`.trim(),
+        year: edu.year || edu.graduationYear || edu.endDate || edu.end_date || edu.End_Date || edu['End Date'] || '',
         description: edu.description || edu.Description || edu.details || edu.Details || '',
         grade: edu.grade || edu.Grade || edu['Grade'] || '',
         location: edu.location || edu.Location || edu['Location'] || ''
@@ -330,7 +331,7 @@ class GeminiParserService {
     const convertedData = {
       basicDetails: {
         fullName: basicDetails.fullName || basicDetails.full_name || basicDetails.name || basicDetails.Full_Name || basicDetails['Full Name'] || '',
-        title: basicDetails.professionalTitle || basicDetails.professional_title || basicDetails.title || basicDetails.Title || basicDetails['Professional Title'] || '',
+        professionalTitle: basicDetails.professionalTitle || basicDetails.professional_title || basicDetails.title || basicDetails.Title || basicDetails['Professional Title'] || '',
         phone: basicDetails.phone || basicDetails.Phone || basicDetails['Phone'] || '',
         email: basicDetails.email || basicDetails.Email || basicDetails['Email'] || '',
         location: basicDetails.location || basicDetails.Location || basicDetails['Location'] || basicDetails.address || basicDetails.Address || '',
@@ -344,7 +345,8 @@ class GeminiParserService {
         id: Date.now().toString() + Math.random(),
         company: exp.company || exp.Company || exp.company_name || exp['Company Name'] || '',
         position: exp.role || exp.Role || exp.position || exp.Position || exp.title || exp.Title || exp['Job Title'] || '',
-        duration: `${exp.startDate || exp.start_date || exp.Start_Date || exp['Start Date'] || ''} - ${exp.endDate || exp.end_date || exp.End_Date || exp['End Date'] || ''}`.trim(),
+        startDate: exp.startDate || exp.start_date || exp.Start_Date || exp['Start Date'] || '',
+        endDate: exp.endDate || exp.end_date || exp.End_Date || exp['End Date'] || '',
         description: exp.description || exp.Description || exp.responsibilities || exp.Responsibilities || exp.achievements || exp.Achievements || '',
         location: exp.location || exp.Location || exp['Location'] || ''
       })),
@@ -352,7 +354,7 @@ class GeminiParserService {
         id: Date.now().toString() + Math.random(),
         institution: edu.institution || edu.Institution || edu.school || edu.School || edu.university || edu.University || edu['Institution Name'] || '',
         degree: edu.degree || edu.Degree || edu.qualification || edu.Qualification || edu['Degree Name'] || '',
-        year: `${edu.startDate || edu.start_date || edu.Start_Date || edu['Start Date'] || ''} - ${edu.endDate || edu.end_date || edu.End_Date || edu['End Date'] || ''}`.trim(),
+        year: edu.year || edu.graduationYear || edu.endDate || edu.end_date || edu.End_Date || edu['End Date'] || '',
         description: edu.description || edu.Description || edu.details || edu.Details || '',
         grade: edu.grade || edu.Grade || edu['Grade'] || '',
         location: edu.location || edu.Location || edu['Location'] || ''
