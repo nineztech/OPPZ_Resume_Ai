@@ -953,31 +953,9 @@ const ResumeBuilderPage = () => {
             // Handle projects as a single rewrite string
             if (typeof rewrites.projects === 'string' && rewrites.projects.trim()) {
               const rewriteText = rewrites.projects;
-              const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
-              
-              // Extract project title from first line (usually starts with **)
-              let projectTitle = 'AI Suggested Project';
-              const titleLine = lines.find((line: string) => line.startsWith('**') && line.endsWith('**'));
-              if (titleLine) {
-                projectTitle = titleLine.replace(/\*\*/g, '').trim();
-              }
-              
-              // Extract bullet points for description
-              const bulletPoints = lines.filter((line: string) => line.startsWith('*') && !line.startsWith('**')).map((line: string) => line.substring(1).trim());
-              
-              const newProject = {
-                id: `ai-project-${Date.now()}`,
-                name: projectTitle,
-                techStack: 'MERN Stack', // Default for MERN suggestions
-                startDate: '',
-                endDate: '',
-                description: bulletPoints.length > 0 ? bulletPoints.join('\n') : rewriteText,
-                link: ''
-              };
-              
-              processedData.projects.push(newProject);
-              changesSet.add(`project-${processedData.projects.length - 1}-ai-rewrite`);
-              console.log('Applied projects rewrite as new project:', newProject);
+              console.log('Project suggestion from AI:', rewriteText);
+              // Let backend handle project creation with proper structure
+              // Don't create hardcoded projects - let backend handle this
             }
             // Handle projects as array
             else if (Array.isArray(rewrites.projects) && rewrites.projects.length > 0) {
@@ -985,19 +963,9 @@ const ResumeBuilderPage = () => {
               if (typeof rewrites.projects[0] === 'string') {
                 rewrites.projects.forEach((projectName: string, index: number) => {
                   if (projectName && projectName.trim()) {
-                    const newProject = {
-                      id: `ai-project-${index}-${Date.now()}`,
-                      name: projectName.trim(),
-                      techStack: 'MERN Stack', // Default for MERN suggestions
-                      startDate: '',
-                      endDate: '',
-                      description: `AI suggested project: ${projectName.trim()}`,
-                      link: ''
-                    };
-                    
-                    processedData.projects.push(newProject);
-                    changesSet.add(`project-${processedData.projects.length - 1}-ai-rewrite`);
-                    console.log('Applied simple project from array:', newProject);
+                    // Let backend handle project creation with proper structure
+                    console.log('Project suggestion from AI:', projectName.trim());
+                    // Don't create hardcoded projects - let backend handle this
                   }
                 });
               }
@@ -1006,31 +974,9 @@ const ResumeBuilderPage = () => {
               rewrites.projects.forEach((projectRewrite: any, index: number) => {
                 if (projectRewrite.rewrite) {
                   const rewriteText = projectRewrite.rewrite;
-                  const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
-                  
-                  // Extract project title from first line (usually starts with **)
-                  let projectTitle = 'AI Suggested Project';
-                  const titleLine = lines.find((line: string) => line.startsWith('**') && line.endsWith('**'));
-                  if (titleLine) {
-                    projectTitle = titleLine.replace(/\*\*/g, '').trim();
-                  }
-                  
-                  // Extract bullet points for description
-                  const bulletPoints = lines.filter((line: string) => line.startsWith('*') && !line.startsWith('**')).map((line: string) => line.substring(1).trim());
-                  
-                  const newProject = {
-                    id: `ai-project-${index}-${Date.now()}`,
-                    name: projectTitle,
-                    techStack: 'MERN Stack', // Default for MERN suggestions
-                    startDate: '',
-                    endDate: '',
-                    description: bulletPoints.length > 0 ? bulletPoints.join('\n') : rewriteText,
-                    link: ''
-                  };
-                  
-                  processedData.projects.push(newProject);
-                  changesSet.add(`project-${processedData.projects.length - 1}-ai-rewrite`);
-                  console.log('Applied project from array:', newProject);
+                  console.log('Project suggestion from AI:', rewriteText);
+                  // Let backend handle project creation with proper structure
+                  // Don't create hardcoded projects - let backend handle this
                 }
               });
               }
@@ -1042,31 +988,10 @@ const ResumeBuilderPage = () => {
             console.log('No AI project rewrites available, preserving existing projects:', processedData.projects);
           }
           
-          // Force add projects if AI suggests them, regardless of existing projects
+          // Let backend handle project suggestions - don't force add projects here
           if (aiSuggestions.sectionSuggestions?.projects && processedData.projects.length === 0) {
-            console.log('AI suggests projects but none exist, forcing project addition...');
-            const projectSuggestions = aiSuggestions.sectionSuggestions.projects;
-            
-            if (Array.isArray(projectSuggestions) && projectSuggestions.length > 0) {
-              projectSuggestions.forEach((project: any, index: number) => {
-                const projectName = project.name || `AI Project ${index + 1}`;
-                const projectDescription = project.rewrite || project.existing || 'AI suggested project';
-                
-                const newProject = {
-                  id: `ai-project-force-${index}-${Date.now()}`,
-                  name: projectName,
-                  techStack: 'MERN Stack',
-                  startDate: '',
-                  endDate: '',
-                  description: projectDescription,
-                  link: ''
-                };
-                
-                processedData.projects.push(newProject);
-                changesSet.add(`project-${processedData.projects.length - 1}-ai-force`);
-                console.log('Force added project:', newProject);
-              });
-            }
+            console.log('AI suggests projects but none exist, letting backend handle project creation...');
+            // Don't force add projects - let the backend AI service handle this properly
           }
           
           // Comprehensive project handling - check multiple sources
@@ -1136,37 +1061,11 @@ const ResumeBuilderPage = () => {
             }
           }
           
-          // Method 2: Check if no projects exist and create dummy ones
+          // Method 2: Check if no projects exist - let backend handle project creation
           if (processedData.projects.length === 0 && !projectsAdded) {
-            console.log('No projects found anywhere, creating dummy MERN projects...');
-            const dummyProjects = [
-              {
-                id: `ai-project-dummy-1-${Date.now()}`,
-                name: 'E-Commerce Platform',
-                techStack: 'MERN Stack',
-                startDate: '',
-                endDate: '',
-                description: 'Full-stack e-commerce application with user authentication, product catalog, shopping cart, and payment integration using MongoDB, Express.js, React, and Node.js',
-                link: ''
-              },
-              {
-                id: `ai-project-dummy-2-${Date.now()}`,
-                name: 'Task Management App',
-                techStack: 'MERN Stack',
-                startDate: '',
-                endDate: '',
-                description: 'Collaborative task management application with real-time updates, user roles, and project tracking built with MERN stack and Socket.io',
-                link: ''
-              }
-            ];
-            
-            dummyProjects.forEach(project => {
-              processedData.projects.push(project);
-              changesSet.add(`project-${processedData.projects.length - 1}-ai-dummy`);
-            });
-            
+            console.log('No projects found anywhere, letting backend handle project creation...');
+            // Don't create dummy projects - let the backend AI service handle this
             projectsAdded = true;
-            console.log('Added dummy MERN projects:', dummyProjects);
           }
           
           console.log('Final projects count after AI processing:', processedData.projects.length);

@@ -2065,8 +2065,9 @@ class AISuggestionService:
                             section_suggestions[section_name] = self._create_projects_fallback(resume_data)
                         elif section_name == "workExperience":
                             section_suggestions[section_name] = self._create_experience_fallback(resume_data)
-                    elif isinstance(default_structure, dict):
+                    elif isinstance(default_structure, dict) and not section_suggestions[section_name]:
                         # If default_structure is a dict but section is a list, convert to proper format
+                        # Only create fallback if section is empty to prevent duplication
                         logger.warning(f"🔒 Section {section_name} is list but default_structure is dict, converting to list format")
                         if section_name == "projects":
                             section_suggestions[section_name] = self._create_projects_fallback(resume_data)
