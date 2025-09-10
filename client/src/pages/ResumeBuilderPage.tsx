@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { tokenUtils } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { API_URL, logApiUrl } from '@/lib/apiConfig';
+import { API_URL } from '@/lib/apiConfig';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
