@@ -280,36 +280,50 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                   fontSize: '11px',
                   lineHeight: '1.3'
                 }}>
-                  <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> 
-                  {skillsArray.map((skill, index) => {
-                    if (!skill || typeof skill !== 'string') return null;
-                    
-                    return (
-                      <span key={index}>
-                        {index > 0 ? ', ' : ' '}
-                        <span>{skill}</span>
-                      </span>
-                    );
-                  })}
+                  <div className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</div>
+                  <div className="ml-2" style={{ marginLeft: '8px' }}>
+                    {skillsArray.map((skill, index) => {
+                      if (!skill || typeof skill !== 'string') return null;
+                      
+                      return (
+                        <span key={index}>
+                          {index > 0 ? ', ' : ''}
+                          <span>{skill}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             }).filter(Boolean) // Remove null entries
           ) : Array.isArray(templateData.skills?.technical) && templateData.skills.technical.length > 0 ? (
-            // Handle flat skills array (fallback)
-            <div className="text-sm" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3'
-            }}>
-              {templateData.skills.technical.map((skill, index) => {
-                if (!skill || typeof skill !== 'string') return null;
+            // Handle flat skills array - parse key-value pairs
+            templateData.skills.technical.map((skill, index) => {
+              if (!skill || typeof skill !== 'string') return null;
+              
+              // Check if skill contains a colon (key-value format)
+              if (skill.includes(':')) {
+                const [key, value] = skill.split(':', 2);
                 return (
-                  <span key={index}>
-                    {index > 0 ? ', ' : ''}
-                    <span>{skill}</span>
-                  </span>
+                  <div key={index} className="text-sm" style={{ 
+                    fontSize: '11px',
+                    lineHeight: '1.3'
+                  }}>
+                    <span className="font-bold" style={{ fontWeight: 'bold' }}>{key.trim()}:</span> {value.trim()}
+                  </div>
                 );
-              })}
-            </div>
+              } else {
+                // Fallback for skills without colon
+                return (
+                  <div key={index} className="text-sm" style={{ 
+                    fontSize: '11px',
+                    lineHeight: '1.3'
+                  }}>
+                    {skill}
+                  </div>
+                );
+              }
+            })
           ) : (
             <div className="text-sm text-gray-500" style={{ 
               fontSize: '11px',
