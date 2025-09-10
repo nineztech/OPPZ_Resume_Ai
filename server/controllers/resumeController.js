@@ -1,6 +1,6 @@
 import Resume from "../models/resumeModel.js";
 import User from "../models/userModel.js";
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 import fs from 'fs';
 import path from 'path';
 
