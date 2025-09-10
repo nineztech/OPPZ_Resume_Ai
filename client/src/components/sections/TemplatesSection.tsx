@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Download } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { tokenUtils } from '@/lib/utils';
@@ -204,14 +204,14 @@ const TemplatesSection = () => {
          template={selectedTemplate}
          isOpen={isModalOpen}
          onClose={() => setIsModalOpen(false)}
-         onDownload={(templateId, selectedColor) => {
-           const template = templateData.find(t => t.id === templateId);
+         onDownload={(_templateId, _selectedColor) => {
+           const template = templateData.find(t => t.id === _templateId);
            if (template) {
              console.log('Download template:', template.name);
              // Handle download logic here
            }
          }}
-         onUseTemplate={(templateId, selectedColor) => {
+         onUseTemplate={(_templateId, _selectedColor) => {
            navigate('/resume/templates');
          }}
        />

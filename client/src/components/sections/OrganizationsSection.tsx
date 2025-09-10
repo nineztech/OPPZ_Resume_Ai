@@ -1,16 +1,16 @@
-import { motion } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
+// import { motion } from 'framer-motion';
+// import { useInView } from 'react-intersection-observer';
 import { LogoSlider } from './LogoSlider';
 
 const OrganizationsSection = () => {
-  const [ref, inView] = useInView({
-    triggerOnce: true,
-    threshold: 0.1,
-  });
+  // const [ref, inView] = useInView({
+  //   triggerOnce: true,
+  //   threshold: 0.1,
+  // });
 
-  const organizations = [
+  // const organizations = [
     
-  ];
+  // ];
 
   return (
     // <section className="py-12 bg-white">

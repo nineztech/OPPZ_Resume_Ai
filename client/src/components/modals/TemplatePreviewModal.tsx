@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, Download, Eye, Heart, Share2, X, Palette } from 'lucide-react';
-import { templates, getTemplateById, type Template } from '@/data/templates';
+import { type Template } from '@/data/templates';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 
 interface TemplatePreviewModalProps {

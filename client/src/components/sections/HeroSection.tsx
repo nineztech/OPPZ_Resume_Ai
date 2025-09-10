@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, MapPin, Phone, Mail, Brain, Briefcase, FileText, Sparkles, Zap, Star, Award } from 'lucide-react';
+import { ArrowRight, Phone, Mail, FileText, Sparkles, Star, Award } from 'lucide-react';
 
 const HeroSection = () => {
   // const stats = [

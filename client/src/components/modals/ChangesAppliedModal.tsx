@@ -36,12 +36,12 @@ const ChangesAppliedModal: React.FC<ChangesAppliedModalProps> = ({
     ? atsResults.recommendations 
     : [];
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 65) return 'text-blue-600';
-    if (score >= 45) return 'text-yellow-600';
-    return 'text-red-600';
-  };
+  // const getScoreColor = (score: number) => {
+  //   if (score >= 80) return 'text-green-600';
+  //   if (score >= 65) return 'text-blue-600';
+  //   if (score >= 45) return 'text-yellow-600';
+  //   return 'text-red-600';
+  // };
 
   const getScoreBadgeColor = (score: number) => {
     if (score >= 80) return 'bg-green-100 text-green-800';

@@ -131,7 +131,7 @@ class SuggestionApplierService {
         const originalExp = resumeData.experience[0]?.description || 'Developed web applications using modern technologies';
         const improvedExp = this.improveClarity(originalExp);
         
-        const originalTitle = resumeData.basic_details?.professional_title || resumeData.basic_details?.title || 'Software Developer';
+        const originalTitle = resumeData.basic_details?.professional_title || 'Software Developer';
         const improvedTitle = this.improveClarity(originalTitle);
         
         appliedSuggestions.push(

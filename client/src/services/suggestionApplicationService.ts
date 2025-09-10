@@ -228,7 +228,7 @@ class SuggestionApplicationService {
           // Apply formatting improvements with context
           if (suggestion.originalText.includes('|') && suggestion.improvedText.includes('\n')) {
             // Handle contact information formatting
-            const originalValue = resumeData.basicDetails.phone + ' | ' + resumeData.basicDetails.email + ' | ' + resumeData.basicDetails.linkedin;
+            // const originalValue = resumeData.basicDetails.phone + ' | ' + resumeData.basicDetails.email + ' | ' + resumeData.basicDetails.linkedin;
             // This would require updating the display logic, but we can note the change
             return {
               suggestionId: suggestion.id,
@@ -317,12 +317,12 @@ class SuggestionApplicationService {
    * Convert parsed resume data to the format expected by ResumeBuilderPage
    */
   convertParsedDataToResumeData(parsedData: ParsedResumeData): ResumeData {
-    const basicDetailsData = parsedData.basic_details || parsedData.basicDetails || {};
+    const basicDetailsData = parsedData.basic_details || {};
     
     return {
       basicDetails: {
-        fullName: basicDetailsData.name || basicDetailsData.fullName || '',
-        title: basicDetailsData.professional_title || basicDetailsData.title || '',
+        fullName: basicDetailsData.name || '',
+        title: basicDetailsData.professional_title || '',
         phone: basicDetailsData.phone || '',
         email: basicDetailsData.email || '',
         location: basicDetailsData.location || '',
@@ -331,7 +331,7 @@ class SuggestionApplicationService {
         linkedin: basicDetailsData.linkedin || ''
       },
       summary: parsedData.summary || '',
-      objective: parsedData.objective || '',
+      objective: '',
       experience: (parsedData.experience || []).map((exp: any, index: number) => ({
         id: exp.id || `exp-${Date.now()}-${index}`,
         company: exp.company || '',
@@ -369,7 +369,7 @@ class SuggestionApplicationService {
         endDate: cert.endDate || cert.end_date || '',
         link: cert.link || ''
       })),
-      languages: (parsedData.languages || []).map((lang: any, index: number) => ({
+      languages: (parsedData.languages || []).map((lang: any, _index: number) => ({
         name: lang.name || '',
         proficiency: lang.proficiency || ''
       })),

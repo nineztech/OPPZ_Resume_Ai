@@ -10,7 +10,6 @@ import {
   CheckCircle, 
   AlertCircle, 
   XCircle,
-  TrendingUp,
   Award,
   Target
 } from 'lucide-react';

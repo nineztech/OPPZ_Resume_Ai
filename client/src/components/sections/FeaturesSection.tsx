@@ -7,11 +7,11 @@ import {
   Shield, 
   TrendingUp, 
   Users, 
-  Award
+ 
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useEffect, useState } from 'react';
+import {  useState } from 'react';
 import { tokenUtils } from '@/lib/utils';
 import LoginPromptModal from '@/components/modals/LoginPromptModal';
 

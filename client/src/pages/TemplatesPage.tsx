@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Filter, Star, Download, Eye, FileText } from 'lucide-react';
+// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Search, Filter, Eye } from 'lucide-react';
 import TemplatePreviewModal from '@/components/modals/TemplatePreviewModal';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
-import { templates as templateData, getTemplateById } from '@/data/templates';
+import { templates as templateData } from '@/data/templates';
 import type { Template } from '@/data/templates';
 import { generatePDF, downloadPDF } from '@/services/pdfService';
 import { createRoot } from 'react-dom/client';

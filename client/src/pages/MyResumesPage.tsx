@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import {
   Plus,
   Edit,
-  Eye,
   Trash2,
   Calendar,
   FileText,
