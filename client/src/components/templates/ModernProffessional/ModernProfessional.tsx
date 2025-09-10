@@ -157,6 +157,24 @@ const cleanMinimalTemplateData: TemplateData = {
       details: []
     }
   ],
+  projects: [
+    {
+      Name: 'Supply Chain Optimization Dashboard',
+      Description: 'Developed a comprehensive Power BI dashboard integrating SAP and WMS data to provide real-time visibility into inventory levels, demand forecasting, and supplier performance metrics. The dashboard features interactive visualizations for inventory turnover rates, supplier lead times, and demand variability analysis. Implemented automated data refresh mechanisms connecting to multiple ERP systems including SAP MM, WM, and PP modules. Created custom DAX measures for calculating key performance indicators such as inventory carrying costs, stockout frequency, and supplier reliability scores. The solution includes mobile-responsive design enabling field managers to access critical supply chain metrics on-the-go. Integrated advanced analytics capabilities using Python scripts for predictive demand forecasting and anomaly detection. Developed user-specific security roles ensuring data confidentiality across different organizational levels. The dashboard processes over 2 million data points daily and has reduced manual reporting time by 85%. Successfully deployed across 15+ manufacturing facilities with 200+ active users. The project resulted in 20% improvement in inventory accuracy and 15% reduction in carrying costs.',
+      Tech_Stack: 'Power BI, SQL Server, SAP, Python, DAX, Azure Data Factory',
+      Start_Date: 'Jan 2023',
+      End_Date: 'Mar 2023',
+      Link: 'https://github.com/example/supply-chain-dashboard'
+    },
+    {
+      Name: 'Inventory Management System',
+      Description: 'Built an automated inventory tracking system using RFID technology and machine learning algorithms to optimize stock levels and reduce carrying costs by 15%. The system integrates with existing WMS and ERP platforms to provide real-time inventory visibility across multiple warehouse locations. Implemented RFID readers and sensors at strategic points throughout the supply chain to capture item-level data automatically. Developed machine learning models using Python and scikit-learn to predict demand patterns and optimize reorder points based on historical consumption data. Created a web-based dashboard using React and Node.js for inventory managers to monitor stock levels, set alerts, and generate automated purchase orders. The system includes barcode scanning capabilities for mobile devices enabling warehouse staff to update inventory counts in real-time. Integrated with supplier APIs to enable automated replenishment and reduce manual procurement processes. Implemented data validation rules and exception handling to ensure data integrity and system reliability. The solution processes over 50,000 inventory transactions daily and has improved inventory accuracy from 78% to 96%. Successfully reduced stockout incidents by 40% and excess inventory by 25% across all managed locations.',
+      Tech_Stack: 'Python, Machine Learning, RFID, SQL, React, Node.js, MongoDB',
+      Start_Date: 'Jun 2022',
+      End_Date: 'Dec 2022',
+      Link: 'https://github.com/example/inventory-ml'
+    }
+  ],
   additionalInfo: {
     languages: [],
     certifications: [],
@@ -169,74 +187,82 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
   const templateData = data || cleanMinimalTemplateData;
 
   return (
-    <>
-
-      <div className="max-w-4xl mx-auto p-6 bg-white" style={{ 
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '11px',
-        lineHeight: '1.3',
-        padding: '15px',
-        margin: '0',
-        maxWidth: '100%'
-      }}>
+    <div className="max-w-4xl mx-auto p-2 -mt-4 bg-white" style={{ 
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '11px',
+      lineHeight: '1.3'
+    }}>
       {/* Header */}
-      <div className="text-center mb-3">
-        <h1 className="text-2xl font-bold mb-1" style={{ 
+      <div className="text-center mb-1">
+        <h1 className="text-2xl font-bold mb-0" style={{ 
           fontSize: '22px',
           fontWeight: 'bold',
           letterSpacing: '1px',
-          color: color || '#1f2937',
-          marginTop: '0',
-          marginBottom: '4px'
+          color: color || '#1f2937'
         }}>
           {templateData.personalInfo?.name || 'Your Name'}
         </h1>
-        <div className="text-lg font-semibold mb-1" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151', marginBottom: '4px' }}>
+        <div className="text-lg font-semibold mb-1" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
           {templateData.personalInfo?.title || 'Your Title'}
         </div>
-        <div className="text-sm" style={{ fontSize: '11px', marginBottom: '0' }}>
-          {templateData.personalInfo?.address || 'Your Address'} | {templateData.personalInfo?.phone || 'Your Phone'} | {templateData.personalInfo?.email || 'your.email@example.com'} | {templateData.personalInfo?.website || 'your-website.com'}
+        <div className="text-sm" style={{ fontSize: '11px' }}>
+          {templateData.personalInfo?.address || 'Your Address'} | {templateData.personalInfo?.phone || 'Your Phone'} | {templateData.personalInfo?.email || 'your.email@example.com'}
+          {templateData.personalInfo?.linkedin && (
+            <> | <a href={templateData.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>LinkedIn</a></>
+          )}
+          {templateData.personalInfo?.github && (
+            <> | <a href={templateData.personalInfo.github} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>GitHub</a></>
+          )}
+          {templateData.personalInfo?.website && !templateData.personalInfo?.linkedin && !templateData.personalInfo?.github && (
+            <> | {templateData.personalInfo.website}</>
+          )}
         </div>
       </div>
 
       {/* Summary */}
-      <div className="mb-2">
-        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
+      <div className="mb-1" style={{ position: 'relative' }}>
+        <h2 className="text-left font-bold mb-1 uppercase border-b-2 pb-1" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '2px',
-          marginBottom: '4px',
           color: color || '#1f2937',
-          borderBottom: `2px solid ${color || '#d1d5db'}`
+          borderBottomColor: color || '#1f2937'
         }}>
           SUMMARY
         </h2>
-        <p className="text-justify leading-relaxed" style={{ 
-          fontSize: '11px',
-          lineHeight: '1.3',
-          textAlign: 'justify',
-          marginBottom: '0'
-        }}>
-          {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
-        </p>
-
+        <div className="space-y-0 ml-0 mt-1">
+          {templateData.summary ? (
+            // Split summary into bullet points
+            templateData.summary.split(/[.!?]+/).filter(sentence => sentence.trim().length > 0).map((sentence, index) => (
+              <div key={index} className="flex items-start" style={{ fontSize: '11px' }}>
+                <span className="mr-2">•</span>
+                <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{sentence.trim()}</span>
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-gray-500" style={{ 
+              fontSize: '11px',
+              lineHeight: '1.3',
+              fontStyle: 'italic'
+            }}>
+              No summary provided yet. Please add your professional summary in the sidebar.
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Technical Skills */}
-      <div className="mb-2">
-        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
+      <div className="mb-1">
+        <h2 className="text-left font-bold mb-1 uppercase border-b-2 pb-1" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '2px',
-          marginBottom: '4px',
           color: color || '#1f2937',
-          borderBottom: `2px solid ${color || '#d1d5db'}`
+          borderBottomColor: color || '#1f2937'
         }}>
           TECHNICAL SKILLS
         </h2>
-        <div className="space-y-0">
+        <div className="space-y-1">
           {templateData.skills?.technical && typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
             // Handle categorized skills structure - display as "Category: skills"
             Object.entries(templateData.skills.technical).map(([category, skills]) => {
@@ -251,8 +277,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
               return (
                 <div key={category} className="text-sm" style={{ 
                   fontSize: '11px',
-                  lineHeight: '1.3',
-                  marginBottom: '4px'
+                  lineHeight: '1.3'
                 }}>
                   <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> 
                   {skillsArray.map((skill, index) => {
@@ -297,25 +322,23 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       </div>
 
       {/* Professional Experience */}
-      <div className="mb-2">
-        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
+      <div className="mb-1 mt-0">
+        <h2 className="text-left font-bold mb-1 mt-0 uppercase border-b-2 pb-1" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '2px',
-          marginBottom: '4px',
           color: color || '#1f2937',
-          borderBottom: `2px solid ${color || '#d1d5db'}`
+          borderBottomColor: color || '#1f2937'
         }}>
           PROFESSIONAL EXPERIENCE
         </h2>
-        <div className="space-y-0">
+        <div className="space-y-1">
           {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
             templateData.experience.map((exp, index) => {
               return (
                 <div key={index}>
                   
-                  <div className="flex justify-between items-start mb-1">
+                  <div className="flex justify-between items-start -mb-2">
                     <div className="flex-1">
                       <h3 className="font-bold" style={{ 
                         fontSize: '11px',
@@ -324,11 +347,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                         {exp.title}
                       </h3>
                       {exp.company && (
-                        <p className="text-gray-600" style={{ 
+                        <p className="text-gray-600 mb-4" style={{ 
                           fontSize: '10px',
                           fontWeight: '500'
                         }}>
-                          {exp.company}
+                          <b>{exp.company}</b>
                         </p>
                       )}
                     </div>
@@ -339,10 +362,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                       {exp.dates}
                     </div>
                   </div>
-                  <div className="space-y-0 ml-0">
+                  <div className="space-y-0 ml-0 mt-1">
                     {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
                       exp.achievements.map((achievement, idx) => (
-                        <div key={idx} className="flex items-start" style={{ fontSize: '11px', marginBottom: '2px' }}>
+                        <div key={idx} className="flex items-start" style={{ fontSize: '11px' }}>
                           <span className="mr-2">•</span>
                           <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{achievement}</span>
                         </div>
@@ -382,23 +405,20 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
 
       {/* Projects */}
       <div className="mb-2">
-        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
+        <h2 className="text-left font-bold mb-1 uppercase border-b-2 pb-1" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '2px',
-          marginBottom: '4px',
           color: color || '#1f2937',
-          borderBottom: `2px solid ${color || '#d1d5db'}`
+          borderBottomColor: color || '#1f2937'
         }}>
           PROJECTS
         </h2>
-        <div className="space-y-0">
+        <div className="space-y-1">
           {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
-            templateData.projects.map((project, index) => {
-              return (
+            templateData.projects.map((project, index) => (
               <div key={index}>
-                                 <div className="mb-1">
+                                 <div className="mb-0">
                    <div className="flex justify-between items-center">
                      <div className="flex items-center gap-2">
                        <h3 className="font-bold" style={{ 
@@ -427,7 +447,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                       )}
                    </div>
                  </div>
-                <div className="space-y-0 ml-0">
+                <div className="space-y-0 ml-0 mt-1">
                   {project.Description ? (
                     <div className="flex items-start" style={{ fontSize: '11px' }}>
                       <span className="mr-2">•</span>
@@ -443,10 +463,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                     </div>
                   )}
                 </div>
-
               </div>
-              );
-            })
+            ))
           ) : (
             <div className="text-sm text-gray-500" style={{ 
               fontSize: '11px',
@@ -460,21 +478,18 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       </div>
              {/* Education */}
       <div className="mb-2">
-        <h2 className="text-left font-bold mb-1 uppercase" style={{ 
+        <h2 className="text-left font-bold mb-1 uppercase border-b-2 pb-1" style={{ 
           fontSize: '13px',
           fontWeight: 'bold',
           letterSpacing: '0.5px',
-          paddingBottom: '2px',
-          marginBottom: '4px',
           color: color || '#1f2937',
-          borderBottom: `2px solid ${color || '#d1d5db'}`
+          borderBottomColor: color || '#1f2937'
         }}>
           EDUCATION
         </h2>
         <div className="space-y-1">
           {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
-            templateData.education.map((edu, index) => {
-              return (
+            templateData.education.map((edu, index) => (
               <div key={index} className="flex justify-between items-start">
                 <div>
                   <div className="font-bold" style={{ 
@@ -493,10 +508,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                 }}>
                   {edu.dates}
                   </div>
-
               </div>
-              );
-            })
+            ))
           ) : (
             <div className="text-sm text-gray-500" style={{ 
               fontSize: '11px',
@@ -508,36 +521,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
           )}
         </div>
       </div>
-      
-      {/* Certifications */}
-      {Array.isArray(templateData.additionalInfo.certifications) && templateData.additionalInfo.certifications.length > 0 && (
-        <div className="mb-3">
-          <h2 className="text-left font-bold mb-2 uppercase" style={{ 
-            fontSize: '12px',
-            fontWeight: 'bold',
-            color: color || '#374151',
-            borderBottom: `2px solid ${color || '#d1d5db'}`
-          }}>
-            CERTIFICATIONS
-          </h2>
-          <div className="space-y-2">
-            {templateData.additionalInfo.certifications.map((cert, index) => {
-              return (
-                <div key={index}>
-                  <div className="font-bold" style={{ 
-                    fontSize: '11px',
-                    fontWeight: 'bold'
-                  }}>
-                    {cert}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      </div>
-    </>
+    </div>
   );
 };
 

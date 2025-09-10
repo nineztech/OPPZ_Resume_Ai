@@ -1441,7 +1441,15 @@ const ResumeBuilderPage = () => {
         skills: defaultData.skills?.technical || [],
         languages: defaultData.additionalInfo?.languages || [],
         activities: [],
-        projects: [],
+        projects: defaultData.projects?.map((project: any) => ({
+          id: Date.now().toString() + Math.random(),
+          name: project.Name || '',
+          techStack: project.Tech_Stack || '',
+          startDate: project.Start_Date || '',
+          endDate: project.End_Date || '',
+          description: project.Description || '',
+          link: project.Link || ''
+        })) || [],
         certifications: [],
         references: [],
         customSections: []

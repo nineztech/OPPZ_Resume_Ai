@@ -157,6 +157,24 @@ const cleanMinimalTemplateData: TemplateData = {
       details: []
     }
   ],
+  projects: [
+    {
+      Name: 'Supply Chain Optimization Dashboard',
+      Description: 'Developed a comprehensive Power BI dashboard integrating SAP and WMS data to provide real-time visibility into inventory levels, demand forecasting, and supplier performance metrics. The dashboard features interactive visualizations for inventory turnover rates, supplier lead times, and demand variability analysis. Implemented automated data refresh mechanisms connecting to multiple ERP systems including SAP MM, WM, and PP modules. Created custom DAX measures for calculating key performance indicators such as inventory carrying costs, stockout frequency, and supplier reliability scores. The solution includes mobile-responsive design enabling field managers to access critical supply chain metrics on-the-go. Integrated advanced analytics capabilities using Python scripts for predictive demand forecasting and anomaly detection. Developed user-specific security roles ensuring data confidentiality across different organizational levels. The dashboard processes over 2 million data points daily and has reduced manual reporting time by 85%. Successfully deployed across 15+ manufacturing facilities with 200+ active users. The project resulted in 20% improvement in inventory accuracy and 15% reduction in carrying costs.',
+      Tech_Stack: 'Power BI, SQL Server, SAP, Python, DAX, Azure Data Factory',
+      Start_Date: 'Jan 2023',
+      End_Date: 'Mar 2023',
+      Link: 'https://github.com/example/supply-chain-dashboard'
+    },
+    {
+      Name: 'Inventory Management System',
+      Description: 'Built an automated inventory tracking system using RFID technology and machine learning algorithms to optimize stock levels and reduce carrying costs by 15%. The system integrates with existing WMS and ERP platforms to provide real-time inventory visibility across multiple warehouse locations. Implemented RFID readers and sensors at strategic points throughout the supply chain to capture item-level data automatically. Developed machine learning models using Python and scikit-learn to predict demand patterns and optimize reorder points based on historical consumption data. Created a web-based dashboard using React and Node.js for inventory managers to monitor stock levels, set alerts, and generate automated purchase orders. The system includes barcode scanning capabilities for mobile devices enabling warehouse staff to update inventory counts in real-time. Integrated with supplier APIs to enable automated replenishment and reduce manual procurement processes. Implemented data validation rules and exception handling to ensure data integrity and system reliability. The solution processes over 50,000 inventory transactions daily and has improved inventory accuracy from 78% to 96%. Successfully reduced stockout incidents by 40% and excess inventory by 25% across all managed locations.',
+      Tech_Stack: 'Python, Machine Learning, RFID, SQL, React, Node.js, MongoDB',
+      Start_Date: 'Jun 2022',
+      End_Date: 'Dec 2022',
+      Link: 'https://github.com/example/inventory-ml'
+    }
+  ],
   additionalInfo: {
     languages: [],
     certifications: [],
