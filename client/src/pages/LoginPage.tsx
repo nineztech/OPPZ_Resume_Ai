@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { tokenUtils } from '@/lib/utils';
+import { API_URL, logApiUrl } from '@/lib/apiConfig';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -43,7 +44,10 @@ const LoginPage = () => {
     setIsLoading(true);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user/login`, {
+      // Log API URL for debugging
+      logApiUrl();
+      
+      const response = await fetch(`${API_URL}/user/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
