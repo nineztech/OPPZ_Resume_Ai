@@ -1712,7 +1712,7 @@ class AISuggestionService:
         logger.warning("Could not extract valid JSON from AI response, returning fallback structure")
         return '{"error": "Invalid JSON response", "message": "Could not parse AI response"}'
 
-    def _enforce_schema_compliance(self, ai_response: Dict[str, Any], resume_data: Dict[str, Any], job_description: str) -> Dict[str, Any]:
+    def _enforce_schema_compliance(self, ai_response: Dict[str, Any], resume_data: Dict[str, Any], job_description: str, target_experience: str = "Mid level") -> Dict[str, Any]:
         """
         Enforces schema compliance for the AI response.
         Ensures all required sections are present, even if the AI skips them.
@@ -2171,7 +2171,7 @@ class AISuggestionService:
 
         return [mk(0), mk(3)]
 
-    def _create_projects_fallback(self, resume_data: Dict[str, Any]) -> list:
+    def _create_projects_fallback(self, resume_data: Dict[str, Any], job_description: str = "", target_experience: str = "Mid level") -> list:
         """
         Creates a fallback projects section from the original resume data.
         If no projects exist, creates 2 dummy projects that match the job description.
@@ -2220,7 +2220,7 @@ class AISuggestionService:
         else:
             logger.warning("🔒 No original projects data found, creating 2 dummy projects")
             # Create 2 dummy projects that will be enhanced by AI based on job description
-            fallback_projects : self._generate_dummy_projects_from_jd(job_description, target_experience or "Mid level")
+            fallback_projects = self._generate_dummy_projects_from_jd(job_description, target_experience or "Mid level")
             
         
         return fallback_projects
