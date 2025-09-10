@@ -279,19 +279,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                   fontSize: '11px',
                   lineHeight: '1.3'
                 }}>
-                  <div className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</div>
-                  <div className="ml-2" style={{ marginLeft: '8px' }}>
-                    {skillsArray.map((skill, index) => {
-                      if (!skill || typeof skill !== 'string') return null;
-                      
-                      return (
-                        <span key={index}>
-                          {index > 0 ? ', ' : ''}
-                          <span>{skill}</span>
-                        </span>
-                      );
-                    })}
-                  </div>
+                  <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
                 </div>
               );
             }).filter(Boolean) // Remove null entries
