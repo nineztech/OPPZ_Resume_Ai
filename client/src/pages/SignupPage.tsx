@@ -47,7 +47,7 @@ const SignupPage = () => {
     setIsLoading(true);
     
     try {
-      const response = await fetch(`${process.env.VITE_API_URL}/user/register`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/user/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ const SignupPage = () => {
         } as any);
         
         // Redirect to login page
-        window.location.href = '/signin';
+        window.location.href = '/resume/login';
       } else {
         toast({
           title: "Registration failed",

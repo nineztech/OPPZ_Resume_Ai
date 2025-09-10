@@ -168,7 +168,7 @@ class GeminiParserService {
 
   constructor() {
     // Use the parse service backend URL
-    this.baseUrl = `${process.env.PYTHON_URL}`;
+    this.baseUrl = `${import.meta.env.PYTHON_URL}`;
   }
 
   async parseResume(file: File): Promise<GeminiParsedData> {

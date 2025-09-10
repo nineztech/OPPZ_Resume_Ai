@@ -1758,7 +1758,7 @@ const ResumeBuilderPage = () => {
       let response;
       if (resumeId) {
         // Update existing resume
-        response = await fetch(`${process.env.VITE_API_URL}/resume/${resumeId}`, {
+        response = await fetch(`${import.meta.env.VITE_API_URL}/resume/${resumeId}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -1768,7 +1768,7 @@ const ResumeBuilderPage = () => {
         });
       } else {
         // Create new resume
-        response = await fetch(`${process.env.VITE_API_URL}/resume`, {
+        response = await fetch(`${import.meta.env.VITE_API_URL}/resume`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
