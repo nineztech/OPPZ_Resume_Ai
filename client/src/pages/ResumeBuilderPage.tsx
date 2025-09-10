@@ -251,6 +251,7 @@ const ResumeBuilderPage = () => {
   const [resumeTitle, setResumeTitle] = useState<string>('');
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<string>('blue');
   
   // Helper function to categorize skills into appropriate categories
   const categorizeSkill = (skill: string): string => {
@@ -405,13 +406,17 @@ const ResumeBuilderPage = () => {
   }, [resumeData]);
 
   const templateId = location.state?.templateId || 'modern-professional';
-  const selectedColor = location.state?.selectedColor || 'blue';
 
   useEffect(() => {
     // Initialize selected template
     const currentTemplate = getTemplateById(templateId);
-    setSelectedTemplate(currentTemplate || templateData[0]);
-  }, [templateId]);
+    const template = currentTemplate || templateData[0];
+    setSelectedTemplate(template);
+    
+    // Set default color from template or location state
+    const defaultColor = location.state?.selectedColor || template?.colors?.[0] || 'blue';
+    setSelectedColor(defaultColor);
+  }, [templateId, location.state?.selectedColor]);
 
   useEffect(() => {
     console.log('ResumeBuilderPage useEffect - location.state:', location.state);
@@ -961,7 +966,7 @@ const ResumeBuilderPage = () => {
             else if (Array.isArray(rewrites.projects) && rewrites.projects.length > 0) {
               // Check if it's an array of simple strings or objects
               if (typeof rewrites.projects[0] === 'string') {
-                rewrites.projects.forEach((projectName: string, index: number) => {
+                rewrites.projects.forEach((projectName: string, _: number) => {
                   if (projectName && projectName.trim()) {
                     // Let backend handle project creation with proper structure
                     console.log('Project suggestion from AI:', projectName.trim());
@@ -971,7 +976,7 @@ const ResumeBuilderPage = () => {
               }
               // Handle projects as array of objects (legacy support)
               else {
-              rewrites.projects.forEach((projectRewrite: any, index: number) => {
+              rewrites.projects.forEach((projectRewrite: any, _: number) => {
                 if (projectRewrite.rewrite) {
                   const rewriteText = projectRewrite.rewrite;
                   console.log('Project suggestion from AI:', rewriteText);
@@ -1714,6 +1719,10 @@ const ResumeBuilderPage = () => {
 
   const handleTemplateChange = (template: Template) => {
     setSelectedTemplate(template);
+    // Set the template's default color (first color in the colors array)
+    if (template.colors && template.colors.length > 0) {
+      setSelectedColor(template.colors[0]);
+    }
   };
 
   const scrollTemplates = (direction: 'left' | 'right') => {
@@ -2033,6 +2042,28 @@ const ResumeBuilderPage = () => {
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
+            
+            {/* Color Picker */}
+            {selectedTemplate && selectedTemplate.colors && selectedTemplate.colors.length > 0 && (
+              <div className="flex items-center gap-2 ml-4">
+                <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Color:</span>
+                <div className="flex items-center gap-1">
+                  {selectedTemplate.colors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setSelectedColor(color)}
+                      className={`w-6 h-6 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                        selectedColor === color
+                          ? 'border-gray-800 scale-110 shadow-md ring-2 ring-gray-300'
+                          : 'border-gray-300 hover:border-gray-500'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      title={`Select ${color}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             
             <div className="flex items-center gap-2">
               <Button 
