@@ -1,6 +1,6 @@
 // import React from 'react';
 import { tokenUtils } from '@/lib/utils';
-import { API_URL, logApiUrl } from '@/lib/apiConfig'; // make sure this is working
+import { API_URL } from '@/lib/apiConfig'; // make sure this is working
 import { Button } from '@/components/ui/button';
 
 const ResumeCreator = () => {

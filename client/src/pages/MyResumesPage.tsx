@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { tokenUtils } from '@/lib/utils';
-import { API_URL, logApiUrl } from '@/lib/apiConfig';
+import { API_URL } from '@/lib/apiConfig';
 
 interface Resume {
   id: number;
