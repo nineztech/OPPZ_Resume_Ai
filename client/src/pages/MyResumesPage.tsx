@@ -65,7 +65,7 @@ const MyResumesPage = () => {
         throw new Error(`Cannot connect to backend server. Please ensure the server is running on port 5006. Error: ${healthErr instanceof Error ? healthErr.message : 'Unknown error'}`);
       }
 
-      const response = await fetch('http://localhost:5006/api/resume', {
+      const response = await fetch(`${process.env.VITE_APP_URL}/resume`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -118,7 +118,7 @@ const MyResumesPage = () => {
         return;
       }
 
-      const response = await fetch(`http://localhost:5006/api/resume/${resumeId}`, {
+      const response = await fetch(`${process.env.VITE_API_URL}/resume/${resumeId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -171,7 +171,7 @@ const MyResumesPage = () => {
         resumeData: resume.resumeData
       };
 
-      const response = await fetch('http://localhost:5006/api/resume', {
+      const response = await fetch(`${process.env.VITE_API_URL}/resume`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

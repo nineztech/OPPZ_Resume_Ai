@@ -69,7 +69,7 @@ export interface ATSResponse<T> {
 class ATSService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://localhost:5000') {
+  constructor(baseUrl: string = `${process.env.PYTHON_URL}`) {
     this.baseUrl = baseUrl;
   }
 

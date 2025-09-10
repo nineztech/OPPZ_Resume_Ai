@@ -175,7 +175,7 @@ export const generatePDF = async (request: PDFGenerationRequest): Promise<Blob> 
       htmlContent: completeHtml
     };
 
-    const response = await axios.post('http://localhost:5006/api/resume/generate-pdf', updatedRequest, {
+    const response = await axios.post(`${process.env.VITE_API_URL}/resume/generate-pdf`, updatedRequest, {
       responseType: 'blob',
       headers: {
         'Authorization': `Bearer ${tokenUtils.getToken()}`,

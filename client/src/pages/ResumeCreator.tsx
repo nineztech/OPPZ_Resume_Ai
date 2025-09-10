@@ -34,7 +34,7 @@ const ResumeCreator = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:5006/api/resume', {
+      const response = await fetch(`${process.env.VITE_API_URL}/resume`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

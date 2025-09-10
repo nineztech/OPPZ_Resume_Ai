@@ -43,7 +43,7 @@ const LoginPage = () => {
     setIsLoading(true);
     
     try {
-      const response = await fetch('http://localhost:5006/api/user/login', {
+      const response = await fetch(`${process.env.VITE_API_URL}/user/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
