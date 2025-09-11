@@ -14,6 +14,7 @@ export default defineConfig({
     port: 3000,
   },
   define: {
-    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'https://oppzresumeai-production.up.railway.app/api')
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'https://oppzresumeai-production.up.railway.app/api'),
+    'import.meta.env.PYTHON_URL': JSON.stringify(process.env.PYTHON_URL || 'http://localhost:5000')
   }
 })
