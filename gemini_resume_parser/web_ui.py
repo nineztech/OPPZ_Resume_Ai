@@ -34,7 +34,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
 # Enable CORS for all routes - read URLs from environment variables
-frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 backend_url = os.getenv('BACKEND_URL', 'http://localhost:5006')
 cors_origins = [frontend_url, backend_url]
 CORS(app, origins=cors_origins, supports_credentials=True)
