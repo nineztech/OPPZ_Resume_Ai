@@ -1,6 +1,6 @@
 import Resume from "../models/resumeModel.js";
 import User from "../models/userModel.js";
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
 
@@ -193,7 +193,7 @@ export const generatePDF = async (req, res) => {
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
     
     // Wait for any dynamic content to load
-    await page.waitForTimeout(1000);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Generate PDF
     const pdfBuffer = await page.pdf({
