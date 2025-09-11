@@ -6,7 +6,7 @@ import { Upload, FileText, Sparkles, ArrowLeft, CheckCircle, User } from 'lucide
 
 
 import { geminiParserService } from '@/services/geminiParserService';
-import { cleanMinimalTemplateData } from '@/components/templates/ModernProffessional/data';
+import { cleanMinimalTemplateData } from '@/components/templates/CleanMinimal/data';
 
 
 const UseTemplatePage = () => {

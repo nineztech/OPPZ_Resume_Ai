@@ -103,7 +103,7 @@ export const templates: Template[] = [
     downloads: 1247,
     isPopular: true,
     features: ['Clean Layout', 'Professional Design', 'Easy Customization', 'ATS Friendly'],
-    colors: ['#2563eb', '#1e40af', '#1e3a8a', '#1e293b'],
+    colors: ['#1e293b', '#374154', '#1e3a8a', '#1e40af'],
     formats: ['PDF', 'DOCX', 'HTML'],
     templateData: {
       personalInfo: {
@@ -184,7 +184,7 @@ export const templates: Template[] = [
     rating: 4.6,
     downloads: 892,
     features: ['Minimal Design', 'Easy to Read', 'Professional', 'Clean Layout'],
-    colors: ['#374151', '#6b7280', '#9ca3af', '#d1d5db'],
+    colors: ['#1e293b', '#374154', '#1e3a8a', '#1e40af'],
     formats: ['PDF', 'DOCX', 'HTML'],
     templateData: {
       personalInfo: {
@@ -258,7 +258,7 @@ export const templates: Template[] = [
     downloads: 756,
     isNew: true,
     features: ['Creative Layout', 'Bold Design', 'Visual Impact', 'Designer Friendly'],
-    colors: ['#ec4899', '#be185d', '#9d174d', '#831843'],
+    colors: ['#1e293b', '#374154', '#1e3a8a', '#1e40af'],
     formats: ['PDF', 'DOCX', 'HTML'],
     templateData: {
       personalInfo: {
@@ -332,7 +332,7 @@ export const templates: Template[] = [
     downloads: 1103,
     isPopular: true,
     features: ['Executive Style', 'Professional Layout', 'Traditional Design', 'Senior Level'],
-    colors: ['#1e293b', '#334155', '#475569', '#64748b'],
+    colors: ['#1e293b', '#374154', '#1e3a8a', '#1e40af'],
     formats: ['PDF', 'DOCX', 'HTML'],
     templateData: {
       personalInfo: {
@@ -414,7 +414,7 @@ export const templates: Template[] = [
     downloads: 856,
     isNew: true,
     features: ['Professional Layout', 'Modern Design', 'Business Focus', 'Clean Typography'],
-    colors: ['#1e40af', '#1e3a8a', '#1e293b', '#334155'],
+    colors: ['#1e293b', '#374154', '#1e3a8a', '#1e40af'],
     formats: ['PDF', 'DOCX', 'HTML'],
     templateData: {
       personalInfo: {

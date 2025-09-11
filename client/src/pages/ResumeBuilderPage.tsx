@@ -1456,7 +1456,14 @@ const ResumeBuilderPage = () => {
           description: project.Description || '',
           link: project.Link || ''
         })) || [],
-        certifications: [],
+        certifications: defaultData.certifications?.map((cert: any) => ({
+          id: Date.now().toString() + Math.random(),
+          certificateName: cert.certificateName || '',
+          instituteName: cert.instituteName || '',
+          startDate: cert.startDate || '',
+          endDate: cert.endDate || '',
+          link: cert.link || ''
+        })) || [],
         references: [],
         customSections: []
       });
@@ -2144,12 +2151,19 @@ const ResumeBuilderPage = () => {
                     End_Date: project.endDate,
                     Link: project.link
                   })),
+                  certifications: resumeData.certifications.map(cert => ({
+                    certificateName: cert.certificateName,
+                    instituteName: cert.instituteName,
+                    startDate: cert.startDate,
+                    endDate: cert.endDate,
+                    link: cert.link
+                  })),
                   additionalInfo: {
                     languages: resumeData.languages.map(lang => lang.name),
-                    certifications: resumeData.certifications.map(cert => cert.certificateName).filter(name => name.length > 0)
+                    awards: []
                   },
                   customSections: resumeData.customSections
-                }}
+                } as any}
                 color={selectedColor}
               />
             </div>
@@ -2343,12 +2357,19 @@ const ResumeBuilderPage = () => {
             End_Date: project.endDate,
             Link: project.link
           })),
+          certifications: resumeData.certifications.map(cert => ({
+            certificateName: cert.certificateName,
+            instituteName: cert.instituteName,
+            startDate: cert.startDate,
+            endDate: cert.endDate,
+            link: cert.link
+          })),
           additionalInfo: {
             languages: resumeData.languages.map(lang => lang.name),
-            certifications: resumeData.certifications.map(cert => cert.certificateName).filter(name => name.length > 0)
+            awards: []
           },
           customSections: resumeData.customSections
-        }}
+        } as any}
         color={selectedColor}
       />
 
