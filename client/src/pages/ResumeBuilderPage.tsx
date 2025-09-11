@@ -1908,7 +1908,7 @@ const ResumeBuilderPage = () => {
   }>;
 
   // Filter sections based on visibility
-  const visibleSectionsList = allSections.filter(section => visibleSections.has(section.id));
+  // const visibleSectionsList = allSections.filter(section => visibleSections.has(section.id));
 
   // Get visible custom sections for template rendering
   const visibleCustomSections = resumeData.customSections.filter(section => 
