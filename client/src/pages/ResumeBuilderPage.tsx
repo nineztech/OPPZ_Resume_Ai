@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { tokenUtils } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { API_URL } from '@/lib/apiConfig';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -1455,7 +1456,14 @@ const ResumeBuilderPage = () => {
           description: project.Description || '',
           link: project.Link || ''
         })) || [],
-        certifications: [],
+        certifications: defaultData.certifications?.map((cert: any) => ({
+          id: Date.now().toString() + Math.random(),
+          certificateName: cert.certificateName || '',
+          instituteName: cert.instituteName || '',
+          startDate: cert.startDate || '',
+          endDate: cert.endDate || '',
+          link: cert.link || ''
+        })) || [],
         references: [],
         customSections: []
       });
@@ -1758,7 +1766,7 @@ const ResumeBuilderPage = () => {
       let response;
       if (resumeId) {
         // Update existing resume
-        response = await fetch(`${process.env.VITE_API_URL}/resume/${resumeId}`, {
+        response = await fetch(`${API_URL}/resume/${resumeId}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -1768,7 +1776,7 @@ const ResumeBuilderPage = () => {
         });
       } else {
         // Create new resume
-        response = await fetch(`${process.env.VITE_API_URL}/resume`, {
+        response = await fetch(`${API_URL}/resume`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -2143,12 +2151,19 @@ const ResumeBuilderPage = () => {
                     End_Date: project.endDate,
                     Link: project.link
                   })),
+                  certifications: resumeData.certifications.map(cert => ({
+                    certificateName: cert.certificateName,
+                    instituteName: cert.instituteName,
+                    startDate: cert.startDate,
+                    endDate: cert.endDate,
+                    link: cert.link
+                  })),
                   additionalInfo: {
                     languages: resumeData.languages.map(lang => lang.name),
-                    certifications: resumeData.certifications.map(cert => cert.certificateName).filter(name => name.length > 0)
+                    awards: []
                   },
                   customSections: resumeData.customSections
-                }}
+                } as any}
                 color={selectedColor}
               />
             </div>
@@ -2342,12 +2357,19 @@ const ResumeBuilderPage = () => {
             End_Date: project.endDate,
             Link: project.link
           })),
+          certifications: resumeData.certifications.map(cert => ({
+            certificateName: cert.certificateName,
+            instituteName: cert.instituteName,
+            startDate: cert.startDate,
+            endDate: cert.endDate,
+            link: cert.link
+          })),
           additionalInfo: {
             languages: resumeData.languages.map(lang => lang.name),
-            certifications: resumeData.certifications.map(cert => cert.certificateName).filter(name => name.length > 0)
+            awards: []
           },
           customSections: resumeData.customSections
-        }}
+        } as any}
         color={selectedColor}
       />
 

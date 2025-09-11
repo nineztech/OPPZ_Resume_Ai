@@ -37,9 +37,15 @@ interface TemplateData {
     End_Date?: string;
     Link?: string;
   }>;
+  certifications?: Array<{
+    certificateName: string;
+    instituteName: string;
+    startDate?: string;
+    endDate?: string;
+    link?: string;
+  }>;
   additionalInfo: {
     languages?: string[];
-    certifications?: string[];
     awards?: string[];
   };
   customSections?: Array<{
@@ -175,9 +181,28 @@ const cleanMinimalTemplateData: TemplateData = {
       Link: 'https://github.com/example/inventory-ml'
     }
   ],
+  certifications: [
+    {
+      certificateName: 'Introduction to Data Analytics',
+      instituteName: 'IBM',
+      startDate: '2023',
+      endDate: '2023'
+    },
+    {
+      certificateName: 'Analyzing and Visualizing Data with Microsoft Power BI',
+      instituteName: 'Microsoft',
+      startDate: '2023',
+      endDate: '2023'
+    },
+    {
+      certificateName: 'Lean Six Sigma Green Belt',
+      instituteName: 'ASQ (American Society for Quality)',
+      startDate: '2022',
+      endDate: '2022'
+    }
+  ],
   additionalInfo: {
     languages: [],
-    certifications: [],
     awards: []
   }
 };
@@ -517,6 +542,56 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
               fontStyle: 'italic'
             }}>
               No education added yet
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Certifications */}
+      <div className="mb-2">
+        <h2 className="text-center font-bold mb-0 uppercase" style={{ 
+          fontSize: '13px',
+          fontWeight: 'bold',
+          letterSpacing: '0.5px',
+          color: color || '#1f2937'
+        }}>
+          CERTIFICATIONS
+        </h2>
+        <div className="space-y-1">
+          {Array.isArray(templateData.certifications) && templateData.certifications.length > 0 ? (
+            templateData.certifications.map((cert, index) => (
+              <div key={index} className="flex justify-between items-start">
+                <div>
+                  <div className="font-bold" style={{ 
+                    fontSize: '11px',
+                    fontWeight: 'bold'
+                  }}>
+                    {cert.certificateName}
+                  </div>
+                  <div style={{ fontSize: '11px' }}>
+                    {cert.instituteName}
+                  </div>
+                </div>
+                {(cert.startDate || cert.endDate) && (
+                  <div className="font-bold" style={{ 
+                    fontSize: '11px',
+                    fontWeight: 'bold'
+                  }}>
+                    {cert.startDate && cert.endDate 
+                      ? `${cert.startDate} - ${cert.endDate}`
+                      : cert.startDate || cert.endDate
+                    }
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-gray-500" style={{ 
+              fontSize: '11px',
+              lineHeight: '1.3',
+              fontStyle: 'italic'
+            }}>
+              No certifications added yet
             </div>
           )}
         </div>

@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { tokenUtils } from '@/lib/utils';
+import { API_URL } from '@/lib/apiConfig';
 
 interface Resume {
   id: number;
@@ -57,7 +58,7 @@ const MyResumesPage = () => {
 
       // First check if the backend is reachable
       try {
-        const healthCheck = await fetch('http://localhost:5006/', { method: 'GET' });
+        const healthCheck = await fetch(`${API_URL}/`, { method: 'GET' });
         if (!healthCheck.ok) {
           throw new Error(`Backend health check failed: ${healthCheck.status} ${healthCheck.statusText}`);
         }
@@ -65,7 +66,7 @@ const MyResumesPage = () => {
         throw new Error(`Cannot connect to backend server. Please ensure the server is running on port 5006. Error: ${healthErr instanceof Error ? healthErr.message : 'Unknown error'}`);
       }
 
-      const response = await fetch(`${process.env.VITE_APP_URL}/resume`, {
+      const response = await fetch(`${API_URL}/resume`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -118,7 +119,7 @@ const MyResumesPage = () => {
         return;
       }
 
-      const response = await fetch(`${process.env.VITE_API_URL}/resume/${resumeId}`, {
+      const response = await fetch(`${API_URL}/resume/${resumeId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -171,7 +172,7 @@ const MyResumesPage = () => {
         resumeData: resume.resumeData
       };
 
-      const response = await fetch(`${process.env.VITE_API_URL}/resume`, {
+      const response = await fetch(`${API_URL}/resume`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -234,7 +235,7 @@ const MyResumesPage = () => {
   // Check backend status
   const checkBackendStatus = async () => {
     try {
-      const response = await fetch('http://localhost:5006/', { method: 'GET' });
+      const response = await fetch(`${API_URL}/`, { method: 'GET' });
       if (response.ok) {
         const data = await response.json();
         toast({
@@ -359,7 +360,7 @@ const MyResumesPage = () => {
             <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left">
               <p className="text-sm text-gray-700">
                 <strong>Debug Info:</strong><br />
-                • Backend URL: http://localhost:5006<br />
+                • Backend URL: ${API_URL}<br />
                 • Token exists: {tokenUtils.getToken() ? 'Yes' : 'No'}<br />
                 • Error: {error}
               </p>

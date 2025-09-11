@@ -34,9 +34,15 @@ export interface TemplateData {
     End_Date?: string;
     Link?: string;
   }>;
+  certifications?: Array<{
+    certificateName: string;
+    instituteName: string;
+    startDate?: string;
+    endDate?: string;
+    link?: string;
+  }>;
   additionalInfo: {
     languages?: string[];
-    certifications?: string[];
     awards?: string[];
   };
   customSections?: Array<{
@@ -167,9 +173,28 @@ export const cleanMinimalTemplateData: TemplateData = {
       Link: 'https://github.com/example/inventory-ml'
     }
   ],
+  certifications: [
+    {
+      certificateName: 'Introduction to Data Analytics',
+      instituteName: 'IBM',
+      startDate: '2023',
+      endDate: '2023'
+    },
+    {
+      certificateName: 'Analyzing and Visualizing Data with Microsoft Power BI',
+      instituteName: 'Microsoft',
+      startDate: '2023',
+      endDate: '2023'
+    },
+    {
+      certificateName: 'Lean Six Sigma Green Belt',
+      instituteName: 'ASQ (American Society for Quality)',
+      startDate: '2022',
+      endDate: '2022'
+    }
+  ],
   additionalInfo: {
     languages: [],
-    certifications: [],
     awards: []
   }
 };

@@ -1,5 +1,6 @@
 // import React from 'react';
-import { tokenUtils } from '@/lib/utils'; // make sure this is working
+import { tokenUtils } from '@/lib/utils';
+import { API_URL } from '@/lib/apiConfig'; // make sure this is working
 import { Button } from '@/components/ui/button';
 
 const ResumeCreator = () => {
@@ -34,7 +35,7 @@ const ResumeCreator = () => {
     };
 
     try {
-      const response = await fetch(`${process.env.VITE_API_URL}/resume`, {
+      const response = await fetch(`${API_URL}/resume`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

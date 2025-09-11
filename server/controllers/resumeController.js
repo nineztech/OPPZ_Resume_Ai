@@ -193,7 +193,7 @@ export const generatePDF = async (req, res) => {
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
     
     // Wait for any dynamic content to load
-    await page.waitForTimeout(1000);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Generate PDF
     const pdfBuffer = await page.pdf({

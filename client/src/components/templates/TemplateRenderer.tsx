@@ -41,9 +41,15 @@ interface TemplateData {
     End_Date?: string;
     Link?: string;
   }>;
+  certifications?: Array<{
+    certificateName: string;
+    instituteName: string;
+    startDate?: string;
+    endDate?: string;
+    link?: string;
+  }>;
   additionalInfo: {
     languages?: string[];
-    certifications?: string[];
     awards?: string[];
   };
   customSections?: Array<{
