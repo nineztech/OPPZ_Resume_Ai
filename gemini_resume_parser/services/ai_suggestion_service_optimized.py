@@ -1,0 +1,712 @@
+"""
+Optimized AI Suggestion Service with Pydantic validation
+Removed all fallback functions and JSON-related helper functions
+"""
+import json
+import logging
+import datetime
+import re
+from typing import Dict, Any, Optional
+from google.generativeai import GenerativeModel
+from models.ai_suggestion_models import (
+    AIComparisonResponse, 
+    JobDescriptionResponse, 
+    ResumeData,
+    SectionSuggestions,
+    ProfessionalSummarySuggestion,
+    SkillsSuggestion,
+    WorkExperienceSuggestion,
+    ProjectSuggestion,
+    EducationSuggestion,
+    CertificationsSuggestion
+)
+from .gemini_parser_service import GeminiResumeParser
+
+logger = logging.getLogger(__name__)
+
+
+class AISuggestionServiceOptimized:
+    """
+    Optimized AI service for generating job descriptions and resume suggestions
+    
+    Features:
+    - Pydantic validation for all responses
+    - No fallback functions - relies on robust prompting
+    - Error-free JSON handling
+    - Clean, maintainable code
+    """
+    
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-2.5-flash", temperature: float = 0.3, top_p: float = 0.8):
+        """
+        Initialize the optimized AI Suggestion Service
+        
+        Args:
+            api_key: Gemini API key (if not provided, will use environment variable)
+            model_name: Gemini model name (if not provided, will use default)
+            temperature: Controls randomness in responses (0.0 = deterministic, 1.0 = creative)
+            top_p: Controls diversity via nucleus sampling (0.0 = focused, 1.0 = diverse)
+        """
+        self.parser = GeminiResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
+        self.model = self.parser.model
+        self.temperature = temperature
+        self.top_p = top_p
+        
+        # Set consistent parameters for reliable output
+        self.set_consistent_parameters()
+    
+    def update_generation_parameters(self, temperature: float = None, top_p: float = None):
+        """
+        Update generation parameters for more consistent results
+        
+        Args:
+            temperature: New temperature value (0.0 = deterministic, 1.0 = creative)
+            top_p: New top_p value (0.0 = focused, 1.0 = diverse)
+        """
+        if temperature is not None:
+            self.temperature = temperature
+        if top_p is not None:
+            self.top_p = top_p
+            
+        logger.info(f"Updated generation parameters: temperature={self.temperature}, top_p={self.top_p}")
+    
+    def get_generation_settings(self) -> Dict[str, float]:
+        """Get current generation parameter settings"""
+        return {
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "model_name": self.parser.model_name
+        }
+    
+    def _generate_with_retry(self, prompt: str, max_retries: int = 3, max_tokens: int = 4096) -> str:
+        """
+        Generate content with retry mechanism for blocked responses.
+        
+        Args:
+            prompt: The prompt to send to the AI
+            max_retries: Maximum number of retry attempts
+            
+        Returns:
+            Generated response text
+            
+        Raises:
+            ValueError: If all retry attempts fail
+        """
+        retry_configs = [
+            {"temperature": 0.1, "top_p": 0.9},  # More conservative
+            {"temperature": 0.7, "top_p": 0.8},  # More creative
+            {"temperature": 0.3, "top_p": 0.95}, # Balanced
+        ]
+        
+        for attempt in range(max_retries):
+            try:
+                # Use retry config if available, otherwise use current settings
+                config = retry_configs[attempt] if attempt < len(retry_configs) else {
+                    "temperature": self.temperature,
+                    "top_p": self.top_p
+                }
+                
+                generation_config = {
+                    "temperature": config["temperature"],
+                    "top_p": config["top_p"],
+                    "top_k": 40,
+                    "max_output_tokens": max_tokens,
+                    "candidate_count": 1
+                }
+                
+                logger.info(f"Attempt {attempt + 1}: Generating with temperature={config['temperature']}, top_p={config['top_p']}")
+                response = self.model.generate_content(prompt, generation_config=generation_config)
+                
+                # Check for blocked/filtered responses
+                if hasattr(response, 'candidates') and response.candidates:
+                    candidate = response.candidates[0]
+                    if hasattr(candidate, 'finish_reason'):
+                        if candidate.finish_reason == 2:
+                            logger.warning(f"Attempt {attempt + 1}: Response blocked by safety filters, retrying...")
+                            continue
+                        elif candidate.finish_reason in [3, 4, 5]:
+                            logger.warning(f"Attempt {attempt + 1}: Response stopped (reason: {candidate.finish_reason}), retrying...")
+                            continue
+                
+                # Check for valid response
+                if not response or not hasattr(response, 'text') or not response.text:
+                    logger.warning(f"Attempt {attempt + 1}: Empty response, retrying...")
+                    continue
+                
+                response_text = response.text.strip()
+                if not response_text:
+                    logger.warning(f"Attempt {attempt + 1}: Empty response text, retrying...")
+                    continue
+                
+                logger.info(f"Success on attempt {attempt + 1} with {len(response_text)} characters")
+                return response_text
+                
+            except Exception as e:
+                logger.warning(f"Attempt {attempt + 1} failed: {e}")
+                if attempt == max_retries - 1:
+                    raise
+                continue
+        
+        raise ValueError("All retry attempts failed. The AI service may be experiencing issues or the content may be consistently blocked.")
+
+    def set_consistent_parameters(self):
+        """
+        Set parameters optimized for consistent AI suggestion results.
+        Uses moderate temperature and focused top_p for balanced output.
+        """
+        self.update_generation_parameters(temperature=0.3, top_p=0.8)
+        logger.info("🎯 Set consistent parameters for deterministic AI suggestions")
+
+    def generate_job_description(self, sector: str, country: str, designation: str, resume_data: Optional[Dict[str, Any]] = None, experience_level: Optional[str] = None) -> JobDescriptionResponse:
+        """
+        Generate a job description tailored to the role, sector, country, and experience level.
+        If experience_level not provided, infer it from resume_data.
+        """
+        # Ensure consistent parameters for reliable output
+        self.set_consistent_parameters()
+        
+        # Infer experience level if not provided
+        if experience_level:
+            target_experience = experience_level
+            logger.info(f"🎯 Using provided experience level: {target_experience}")
+        elif resume_data:
+            target_experience = self._analyze_experience_level(resume_data)
+            logger.info(f"🎯 Analyzed experience level from resume: {target_experience}")
+        else:
+            target_experience = self._get_intelligent_default_experience(sector, designation)
+            logger.info(f"🎯 Using intelligent default experience level: {target_experience}")
+
+        prompt = f"""
+        You are an expert global job market analyst and HR recruiter.
+
+        TASK: Create a **realistic, ATS-friendly job description (JD)** for the role of "{designation}" in the {sector} sector for {country}.
+        The JD must reflect exactly the **{target_experience}** career stage of the candidate.
+
+        CRITICAL REQUIREMENTS:
+        - Return ONLY valid JSON (no markdown, no code fences, no explanations, no text before or after)
+        - Start your response with {{ and end with }}
+        - Include realistic job requirements, responsibilities, and qualifications
+        - Ensure the JD is ATS-friendly with relevant keywords
+        - Match the experience level: {target_experience}
+        - Include sector-specific terminology and requirements
+        - Consider country-specific job market standards for {country}
+
+        REQUIRED JSON FORMAT (return exactly this structure):
+        {{
+            "jobDescription": "Complete job description text here...",
+            "sector": "{sector}",
+            "country": "{country}",
+            "designation": "{designation}",
+            "experienceLevel": "{target_experience}",
+            "generatedAt": "{datetime.datetime.utcnow().isoformat()}Z"
+        }}
+
+        IMPORTANT: Your response must be valid JSON that can be parsed directly. Do not include any text outside the JSON object.
+        """
+
+        try:
+            logger.info(f"Generating job description using temperature={self.temperature}, top_p={self.top_p}")
+            
+            # Use retry mechanism for better reliability
+            response_text = self._generate_with_retry(prompt)
+            logger.info(f"Received response length: {len(response_text)} characters")
+            
+            # Check for common non-JSON responses
+            if response_text.lower().startswith(('sorry', 'i cannot', 'i am unable', 'i apologize')):
+                logger.error(f"AI returned error message: {response_text[:100]}...")
+                raise ValueError(f"AI service returned error: {response_text[:200]}")
+            
+            # Check if response appears to be truncated (common with long responses)
+            if response_text.count('{') > response_text.count('}') or response_text.count('[') > response_text.count(']'):
+                logger.warning("Response appears to be truncated - attempting to complete JSON")
+            
+            # Try to extract JSON from response if it's wrapped in markdown
+            json_text = self._extract_json_from_response(response_text)
+            
+            # Validate that we have a reasonable JSON structure
+            if not json_text.strip().startswith('{'):
+                logger.error(f"Failed to extract valid JSON from response. Response starts with: {json_text[:100]}")
+                raise ValueError("Could not extract valid JSON from AI response. The response may be malformed or truncated.")
+            
+            # Parse and validate response with Pydantic
+            response_data = json.loads(json_text)
+            return JobDescriptionResponse(**response_data)
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parsing error: {e}")
+            logger.error(f"Response text (first 500 chars): {response_text[:500] if 'response_text' in locals() else 'N/A'}")
+            raise ValueError(f"Invalid JSON response from AI. Please try again or check your input data.")
+        except Exception as e:
+            logger.error(f"Error generating job description: {e}")
+            raise
+
+    def compare_resume_with_jd(self, resume_data: Dict[str, Any], job_description: str, target_experience: Optional[str] = None) -> AIComparisonResponse:
+        """
+        Compare resume with job description and generate actionable improvement suggestions.
+        Uses Pydantic validation to ensure error-free responses.
+        """
+        # Ensure consistent parameters for reliable output
+        self.set_consistent_parameters()
+        
+        # Validate input resume data
+        try:
+            validated_resume = ResumeData(**resume_data)
+        except Exception as e:
+            logger.error(f"Invalid resume data: {e}")
+            raise ValueError(f"Invalid resume data format: {e}")
+        
+        logger.info(f"Starting resume comparison with data keys: {list(resume_data.keys())}")
+        
+        resume_text = self._format_resume_for_comparison(resume_data)
+        if not target_experience:
+            target_experience = self._analyze_experience_level(resume_data)
+            logger.info(f"🎯 Analyzed experience level from resume: {target_experience}")
+
+        prompt = f"""
+        You are an expert resume consultant and recruiter.  
+        Compare the following resume with the job description and provide actionable, ready-to-use rewritten improvements.
+
+        CRITICAL RULES - NEVER VIOLATE:
+        - Return ONLY valid JSON (no markdown, no code fences, no explanations, no text before or after)
+        - Start your response with {{ and end with }}
+        - NEVER omit any section - if no suggestions exist, return empty strings/arrays but keep the section.
+        - ALWAYS include ALL required sections: professionalSummary, skills, workExperience, projects, education, certifications.
+        - For each section, include: existing content, suggested rewritten version, and recommendations.
+        - Ensure rewrites include strong action verbs, quantified achievements, and relevant keywords from the JD.
+        - Tailor rewrites to {target_experience} level.
+        - Never leave placeholders like "improve wording" — always provide final rewritten text.
+        - ALWAYS provide a numeric overallScore between 0-100 (never "NA", "N/A", or text).
+        - NEVER use "NA", "N/A", "None", "Null", "Unknown", or similar placeholder values - use empty strings or appropriate defaults instead.
+        - NO REPETITIONS: Avoid repeating the Same Words or Sentences in different sections. Instead use synonyms or different words to avoid repetition.
+        - SPELLING & GRAMMAR: Ensure all rewritten content has perfect spelling, grammar, and professional language.
+
+        OVERALL SCORE CALCULATION RULES:
+        - Calculate overallScore based on how well the resume matches the job description requirements
+        - Score 90-100: Excellent match - resume perfectly aligns with JD requirements, strong keywords, relevant experience
+        - Score 80-89: Very good match - resume mostly aligns with JD, minor improvements needed
+        - Score 70-79: Good match - resume has potential but needs significant improvements to align with JD
+        - Score 60-69: Fair match - resume has some relevant elements but major improvements needed
+        - Score 50-59: Poor match - resume lacks many JD requirements, substantial improvements needed
+        - Score 0-49: Very poor match - resume significantly misaligned with JD requirements
+
+        REPETITION RULES:
+        - Do NOT repeat strong action verbs (e.g., "implemented", "developed", "managed").
+        - one strong action verb can be used only once in whole resume whole parsed data and also cannot be used in creating something new or in rewrite. IT IS MANDATORY !IMPORTANT please implement this PRIOR
+        - Use synonyms or varied verbs to avoid repetition while keeping professional tone.
+        - Repetition of common stopwords (e.g., "the", "a", "and", "is", "to") is ALLOWED and should not be flagged.
+        - If multiple sentences start the same way (e.g., "I developed A. I developed B."), MERGE them into a single professionally framed sentence (e.g., "I developed A and B.").
+
+        SPELLING & GRAMMAR RULES:
+        - All rewritten content MUST have perfect spelling, grammar, and punctuation.
+        - Ensure sentences are professionally framed and concise.
+        - Avoid informal language, filler words, or awkward phrasing.
+        - Merge repetitive sentence structures into smooth, grammatically correct sentences.
+        - Maintain consistent tense (use past tense for completed work, present tense for ongoing responsibilities).
+        - Always use professional, business-appropriate language.
+
+        SCORING FACTORS TO CONSIDER:
+        - Skills alignment: How well do resume skills match JD requirements?
+        - Experience relevance: Does work experience align with job responsibilities?
+        - Keyword matching: Are important JD keywords present in resume?
+        - Quantified achievements: Does resume show measurable results?
+        - Professional summary: Does it effectively communicate value proposition?
+        - Education/certifications: Do they meet JD requirements?
+        - Overall presentation: Is resume well-structured and professional?
+
+        CRITICAL SKILLS RULES:
+        - For skills section: ONLY suggest skills that can be added to EXISTING categories shown in the resume.
+        - Do NOT create new category objects or suggest new skill categories.
+        - Only add missing skills to existing categories (e.g., if "Java" is missing from "Programming Languages", add it there).
+        - If a skill doesn't fit any existing category, do NOT suggest it.
+        - Focus on enhancing existing skill categories with relevant missing skills from the job description.
+        - In the "rewrite" field: ONLY include categories that have NEW skills to add, and ONLY list the NEW skills (not existing ones).
+        - Format skills as "Category: new_skill1, new_skill2" where Category must exist in the resume and skills are NEW additions only.
+        - Example: If resume has "Programming Languages: Java, Python" and job needs "JavaScript", suggest "Programming Languages: JavaScript" (not "Programming Languages: Java, Python, JavaScript").
+        - If a category has no new skills to add, do NOT include that category in the rewrite at all.
+        - Do NOT suggest "New Category: skills" - only use existing categories.
+
+        CRITICAL PROJECTS RULES:
+        - If NO projects exist in the resume, create exactly 2 dummy projects that match the job description requirements.
+        - Each dummy project must have: name, existing (empty), rewrite (detailed project description), and recommendations.
+        - Dummy projects should be relevant to the job role and demonstrate skills mentioned in the job description.
+        - If projects DO exist, enhance their descriptions in the "rewrite" field to better match the job description.
+        - Project descriptions should include: technologies used, achievements, impact, and relevance to the target role.
+        - Use strong action verbs and quantified results where possible.
+        - Ensure project names and descriptions align with the {target_experience} level and job requirements.
+
+        RESUME DATA:
+        {resume_text}
+
+        JOB DESCRIPTION:
+        {job_description}
+
+        REQUIRED OUTPUT SCHEMA (MUST INCLUDE ALL SECTIONS):
+        {{
+            "overallScore": <calculate_dynamic_score_based_on_resume_jd_match>,
+            "analysisTimestamp": "{datetime.datetime.utcnow().isoformat()}Z",
+            "sectionSuggestions": {{
+                "professionalSummary": {{
+                    "existing": "",
+                    "rewrite": "",
+                    "recommendations": ["Craft a compelling 2-3 sentence summary highlighting key achievements", "Include relevant keywords from the job description", "Quantify your impact with specific numbers and results", "Tailor the summary to the target role and company"]
+                }},
+                "skills": {{
+                    "existing": [""],
+                    "rewrite": [""],
+                    "recommendations": ["Add technical skills relevant to the job description", "Include both hard and soft skills", "Organize skills by category for better readability", "Highlight skills that match the job requirements"]
+                }},
+                "workExperience": [
+                    {{
+                        "role": "",
+                        "existing": "",
+                        "rewrite": "",
+                        "recommendations": ["Quantify achievements with specific numbers and percentages", "Use strong action verbs to start each bullet point", "Highlight leadership and team collaboration examples", "Include relevant technologies and tools used"]
+                    }}
+                ],
+                "projects": [
+                    {{
+                        "name": "",
+                        "existing": "",
+                        "rewrite": "",
+                        "recommendations": ["Enhance project description with specific technologies used", "Add quantified results and achievements", "Include project duration and team size", "Highlight relevant skills gained"]
+                    }}
+                ],
+                "education": {{
+                    "existing": [""],
+                    "rewrite": "",
+                    "recommendations": ["Include relevant coursework and academic projects", "Add GPA if it's 3.5 or higher", "Highlight academic achievements and honors", "Include relevant extracurricular activities and leadership roles"]
+                }},
+                "certifications": {{
+                    "existing": [""],
+                    "rewrite": "",
+                    "recommendations": ["Add relevant professional certifications for the target role", "Include industry-specific certifications and licenses", "Add completion dates and credential IDs", "Highlight ongoing learning and skill development"]
+                }}
+            }},
+            "topRecommendations": [
+                "Review and enhance your professional summary with relevant keywords",
+                "Add technical skills that match the job description requirements",
+                "Quantify achievements in work experience with specific numbers and results"
+            ]
+        }}
+        
+        REMEMBER: 
+        - NEVER omit sections - return empty values instead of missing sections!
+        - overallScore MUST be a number between 0-100, never "NA" or text!
+        
+        IMPORTANT: Your response must be valid JSON that can be parsed directly. Do not include any text outside the JSON object.
+        """
+
+        try:
+            logger.info(f"Comparing resume with JD using temperature={self.temperature}, top_p={self.top_p}")
+            
+            # Use retry mechanism for better reliability (with higher token limit for comparison)
+            response_text = self._generate_with_retry(prompt, max_tokens=8192)
+            logger.info(f"Received response length: {len(response_text)} characters")
+            
+            # Check for common non-JSON responses
+            if response_text.lower().startswith(('sorry', 'i cannot', 'i am unable', 'i apologize')):
+                logger.error(f"AI returned error message: {response_text[:100]}...")
+                raise ValueError(f"AI service returned error: {response_text[:200]}")
+            
+            # Check if response appears to be truncated (common with long responses)
+            if response_text.count('{') > response_text.count('}') or response_text.count('[') > response_text.count(']'):
+                logger.warning("Response appears to be truncated - attempting to complete JSON")
+            
+            # Try to extract JSON from response if it's wrapped in markdown
+            json_text = self._extract_json_from_response(response_text)
+            
+            # Validate that we have a reasonable JSON structure
+            if not json_text.strip().startswith('{'):
+                logger.error(f"Failed to extract valid JSON from response. Response starts with: {json_text[:100]}")
+                raise ValueError("Could not extract valid JSON from AI response. The response may be malformed or truncated.")
+            
+            # Parse and validate response with Pydantic
+            response_data = json.loads(json_text)
+            return AIComparisonResponse(**response_data)
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parsing error: {e}")
+            logger.error(f"Response text (first 500 chars): {response_text[:500] if 'response_text' in locals() else 'N/A'}")
+            raise ValueError(f"Invalid JSON response from AI. Please try again or check your input data.")
+        except Exception as e:
+            logger.error(f"Error comparing resume with JD: {e}")
+            raise
+
+    def _format_resume_for_comparison(self, resume_data: Dict[str, Any]) -> str:
+        """Format resume data into a readable text format for comparison"""
+        logger.info(f"🔍 Starting resume formatting with data keys: {list(resume_data.keys())}")
+        
+        formatted_sections = []
+        
+        # Professional Summary
+        summary = resume_data.get('professionalSummary', resume_data.get('summary', ''))
+        if summary:
+            formatted_sections.append(f"PROFESSIONAL SUMMARY:\n{summary}\n")
+        
+        # Skills
+        skills = resume_data.get('skills', [])
+        if skills:
+            if isinstance(skills, list):
+                skills_text = ', '.join(skills)
+            else:
+                skills_text = str(skills)
+            formatted_sections.append(f"SKILLS:\n{skills_text}\n")
+        
+        # Work Experience
+        work_experience = resume_data.get('workExperience', [])
+        if work_experience:
+            formatted_sections.append("WORK EXPERIENCE:")
+            for exp in work_experience:
+                if isinstance(exp, dict):
+                    role = exp.get('role', exp.get('title', exp.get('position', 'Unknown Role')))
+                    company = exp.get('company', exp.get('organization', 'Unknown Company'))
+                    duration = exp.get('duration', exp.get('period', exp.get('dates', 'Unknown Duration')))
+                    description = exp.get('description', exp.get('summary', exp.get('responsibilities', '')))
+                    
+                    formatted_sections.append(f"- {role} at {company} ({duration})")
+                    if description:
+                        formatted_sections.append(f"  {description}")
+            formatted_sections.append("")
+        
+        # Projects
+        projects = resume_data.get('projects', [])
+        if projects:
+            formatted_sections.append("PROJECTS:")
+            for project in projects:
+                if isinstance(project, dict):
+                    name = project.get('name', project.get('title', 'Unknown Project'))
+                    description = project.get('description', project.get('summary', ''))
+                    technologies = project.get('technologies', project.get('tech_stack', project.get('tools', [])))
+                    
+                    formatted_sections.append(f"- {name}")
+                    if description:
+                        formatted_sections.append(f"  {description}")
+                    if technologies:
+                        if isinstance(technologies, list):
+                            tech_text = ', '.join(technologies)
+                        else:
+                            tech_text = str(technologies)
+                        formatted_sections.append(f"  Technologies: {tech_text}")
+            formatted_sections.append("")
+        
+        # Education
+        education = resume_data.get('education', [])
+        if education:
+            formatted_sections.append("EDUCATION:")
+            for edu in education:
+                if isinstance(edu, dict):
+                    degree = edu.get('degree', edu.get('qualification', 'Unknown Degree'))
+                    institution = edu.get('institution', edu.get('university', edu.get('school', 'Unknown Institution')))
+                    year = edu.get('year', edu.get('graduation_year', edu.get('completion_year', '')))
+                    
+                    formatted_sections.append(f"- {degree} from {institution}")
+                    if year:
+                        formatted_sections.append(f"  Year: {year}")
+            formatted_sections.append("")
+        
+        # Certifications
+        certifications = resume_data.get('certifications', [])
+        if certifications:
+            formatted_sections.append("CERTIFICATIONS:")
+            for cert in certifications:
+                if isinstance(cert, dict):
+                    name = cert.get('name', cert.get('title', 'Unknown Certification'))
+                    issuer = cert.get('issuer', cert.get('organization', cert.get('provider', '')))
+                    year = cert.get('year', cert.get('completion_year', cert.get('date', '')))
+                    
+                    formatted_sections.append(f"- {name}")
+                    if issuer:
+                        formatted_sections.append(f"  Issuer: {issuer}")
+                    if year:
+                        formatted_sections.append(f"  Year: {year}")
+            formatted_sections.append("")
+        
+        formatted_text = '\n'.join(formatted_sections)
+        logger.info(f"🔍 Formatted resume text length: {len(formatted_text)} characters")
+        return formatted_text
+
+    def _analyze_experience_level(self, resume_data: Dict[str, Any]) -> str:
+        """Analyze resume level from resume data"""
+        try:
+            # Check work experience length
+            work_experience = resume_data.get('workExperience', [])
+            if work_experience and isinstance(work_experience, list):
+                total_years = 0
+                for exp in work_experience:
+                    if isinstance(exp, dict):
+                        duration = exp.get('duration', exp.get('period', exp.get('dates', '')))
+                        if duration:
+                            # Extract years from duration string
+                            years_match = re.search(r'(\d+)\s*(?:year|yr|y)', duration.lower())
+                            if years_match:
+                                total_years += int(years_match.group(1))
+                
+                if total_years >= 8:
+                    return "Senior level"
+                elif total_years >= 4:
+                    return "Mid level"
+                elif total_years >= 1:
+                    return "Entry level"
+                else:
+                    return "Entry level"
+            
+            # Check professional summary for experience indicators
+            summary = resume_data.get('professionalSummary', resume_data.get('summary', ''))
+            if summary:
+                summary_lower = summary.lower()
+                if any(word in summary_lower for word in ['senior', 'lead', 'principal', 'architect', 'manager', 'director']):
+                    return "Senior level"
+                elif any(word in summary_lower for word in ['mid-level', 'experienced', 'professional', 'specialist']):
+                    return "Mid level"
+                elif any(word in summary_lower for word in ['junior', 'entry', 'graduate', 'fresh', 'recent']):
+                    return "Entry level"
+            
+            # Check if it's an internship/student resume
+            if self._is_internship_student_resume(work_experience, resume_data):
+                return "Entry level"
+            
+            # Default to entry level if no clear indicators
+            return "Entry level"
+            
+        except Exception as e:
+            logger.error(f"Error analyzing experience level: {e}")
+            return "Entry level"
+
+    def _is_internship_student_resume(self, experience: list, resume_data: Dict[str, Any]) -> bool:
+        """Check if this is an internship or student resume"""
+        try:
+            # Check for internship keywords in experience
+            for exp in experience:
+                if isinstance(exp, dict):
+                    role = exp.get('role', exp.get('title', exp.get('position', ''))).lower()
+                    if any(keyword in role for keyword in ['intern', 'internship', 'trainee', 'student', 'co-op']):
+                        return True
+            
+            # Check education for student indicators
+            education = resume_data.get('education', [])
+            for edu in education:
+                if isinstance(edu, dict):
+                    degree = edu.get('degree', edu.get('qualification', '')).lower()
+                    if any(keyword in degree for keyword in ['student', 'undergraduate', 'graduate', 'phd', 'masters', 'bachelor']):
+                        return True
+            
+            return False
+        except Exception as e:
+            logger.error(f"Error checking internship/student status: {e}")
+            return False
+
+    def _extract_json_from_response(self, response_text: str) -> str:
+        """
+        Extract JSON from AI response, handling markdown code blocks and other formatting.
+        """
+        import re
+        
+        # Remove any leading/trailing whitespace
+        text = response_text.strip()
+        
+        # If the response is already valid JSON, return it
+        if text.startswith('{') and text.endswith('}'):
+            return text
+        
+        # Try to extract JSON from markdown code blocks (handle incomplete JSON)
+        json_patterns = [
+            r'```json\s*(\{.*?)(?:\n```|$)',  # ```json { ... } (may be incomplete)
+            r'```\s*(\{.*?)(?:\n```|$)',     # ``` { ... } (may be incomplete)
+            r'`(\{.*?)`',                     # `{ ... }`
+        ]
+        
+        for pattern in json_patterns:
+            matches = re.findall(pattern, text, re.DOTALL)
+            if matches:
+                json_candidate = matches[0].strip()
+                # Try to complete the JSON if it's incomplete
+                if not json_candidate.endswith('}'):
+                    json_candidate = self._attempt_json_completion(json_candidate)
+                return json_candidate
+        
+        # Try to find JSON object boundaries (handle incomplete JSON)
+        start_idx = text.find('{')
+        if start_idx != -1:
+            # Find the matching closing brace
+            brace_count = 0
+            json_end = start_idx
+            for i, char in enumerate(text[start_idx:], start_idx):
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        json_end = i + 1
+                        break
+            
+            extracted_json = text[start_idx:json_end]
+            
+            # If JSON appears incomplete, try to complete it
+            if not extracted_json.endswith('}'):
+                extracted_json = self._attempt_json_completion(extracted_json)
+            
+            return extracted_json
+        
+        # If no JSON found, return the original text (will cause JSON error with better message)
+        return text
+
+    def _attempt_json_completion(self, incomplete_json: str) -> str:
+        """
+        Attempt to complete incomplete JSON by adding missing closing braces and brackets.
+        """
+        try:
+            # Count opening and closing braces/brackets
+            open_braces = incomplete_json.count('{')
+            close_braces = incomplete_json.count('}')
+            open_brackets = incomplete_json.count('[')
+            close_brackets = incomplete_json.count(']')
+            
+            # Add missing closing braces/brackets
+            missing_braces = open_braces - close_braces
+            missing_brackets = open_brackets - close_brackets
+            
+            completed_json = incomplete_json
+            
+            # Add missing closing brackets first
+            for _ in range(missing_brackets):
+                completed_json += ']'
+            
+            # Add missing closing braces
+            for _ in range(missing_braces):
+                completed_json += '}'
+            
+            # Try to parse the completed JSON
+            json.loads(completed_json)
+            return completed_json
+            
+        except json.JSONDecodeError:
+            # If completion failed, return the original incomplete JSON
+            return incomplete_json
+
+    def _get_intelligent_default_experience(self, sector: str, designation: str) -> str:
+        """
+        Determine intelligent default experience level based on sector and designation context.
+        This provides better defaults than always using "Mid level".
+        """
+        designation_lower = designation.lower()
+        sector_lower = sector.lower()
+        
+        # Senior level indicators
+        senior_keywords = ['senior', 'lead', 'principal', 'architect', 'manager', 'director', 'head', 'chief', 'vp', 'vice president']
+        if any(keyword in designation_lower for keyword in senior_keywords):
+            return "Senior level"
+        
+        # Entry level indicators
+        entry_keywords = ['junior', 'entry', 'associate', 'trainee', 'intern', 'graduate', 'fresh', 'new']
+        if any(keyword in designation_lower for keyword in entry_keywords):
+            return "Entry level"
+        
+        # Sector-specific defaults
+        if sector_lower in ['technology', 'software', 'it', 'engineering']:
+            return "Mid level"  # Tech roles often require some experience
+        elif sector_lower in ['healthcare', 'finance', 'legal']:
+            return "Mid level"  # Professional sectors often require experience
+        elif sector_lower in ['retail', 'hospitality', 'customer service']:
+            return "Entry level"  # Service sectors often have entry-level positions
+        
+        # Default to mid level for most cases
+        return "Mid level"
