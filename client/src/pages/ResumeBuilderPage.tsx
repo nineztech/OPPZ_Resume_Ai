@@ -2113,7 +2113,7 @@ const ResumeBuilderPage = () => {
                 onClick={() => setIsPreviewModalOpen(true)}
               >
                 <Eye className="w-4 h-4 mr-2" />
-                Preview
+              
               </Button>
               <Button 
                 variant="outline" 
@@ -2130,7 +2130,7 @@ const ResumeBuilderPage = () => {
                 disabled={isSaving}
               >
                 <Save className="w-4 h-4 mr-2" />
-                {isSaving ? 'Saving...' : 'Save'}
+                {/* {isSaving ? 'Saving...' : 'Save'} */}
               </Button>
               <Button size="sm" onClick={handleDownloadPDF} disabled={isDownloading}>
                 <Download className="w-4 h-4 mr-2" />
