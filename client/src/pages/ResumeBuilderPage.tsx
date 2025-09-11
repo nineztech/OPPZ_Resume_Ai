@@ -253,6 +253,17 @@ const ResumeBuilderPage = () => {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string>('blue');
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set([
+    'basic-details',
+    'summary',
+    'skills',
+    'education',
+    'experience',
+    'activities',
+    'projects',
+    'certifications',
+    'references'
+  ]));
   
   // Helper function to categorize skills into appropriate categories
   const categorizeSkill = (skill: string): string => {
@@ -1686,6 +1697,8 @@ const ResumeBuilderPage = () => {
       ...prev,
       customSections: [...prev.customSections, newSection]
     }));
+    // Automatically make the new custom section visible
+    setVisibleSections(prev => new Set([...prev, `custom-${newSection.id}`]));
     setIsCustomSectionModalOpen(false);
   };
 
@@ -1722,6 +1735,18 @@ const ResumeBuilderPage = () => {
       });
       
       return { ...prev, customSections: sections };
+    });
+  };
+
+  const toggleSectionVisibility = (sectionId: string) => {
+    setVisibleSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionId)) {
+        newSet.delete(sectionId);
+      } else {
+        newSet.add(sectionId);
+      }
+      return newSet;
     });
   };
 
@@ -1881,6 +1906,14 @@ const ResumeBuilderPage = () => {
     isCustom?: boolean;
     customData?: any;
   }>;
+
+  // Filter sections based on visibility
+  const visibleSectionsList = allSections.filter(section => visibleSections.has(section.id));
+
+  // Get visible custom sections for template rendering
+  const visibleCustomSections = resumeData.customSections.filter(section => 
+    visibleSections.has(`custom-${section.id}`)
+  );
 
   return (
     <>
@@ -2114,7 +2147,7 @@ const ResumeBuilderPage = () => {
               <TemplateRenderer
                 templateId={selectedTemplate?.id || templateId}
                 data={{
-                  personalInfo: {
+                  personalInfo: visibleSections.has('basic-details') ? {
                     name: resumeData.basicDetails.fullName,
                     title: resumeData.basicDetails.professionalTitle,
                     address: resumeData.basicDetails.location,
@@ -2123,46 +2156,46 @@ const ResumeBuilderPage = () => {
                     github: resumeData.basicDetails.github,
                     linkedin: resumeData.basicDetails.linkedin,
                     phone: resumeData.basicDetails.phone
-                  },
-                  summary: resumeData.summary,
-                  skills: {
+                  } : null,
+                  summary: visibleSections.has('summary') ? resumeData.summary : '',
+                  skills: visibleSections.has('skills') ? {
                     technical: resumeData.skills,
                     professional: resumeData.languages.map(lang => lang.name)
-                  },
-                  experience: resumeData.experience.map(exp => ({
+                  } : null,
+                  experience: visibleSections.has('experience') ? resumeData.experience.map(exp => ({
                     title: exp.position,
                     company: exp.company,
                     dates: exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || exp.endDate || '',
                     achievements: safeProcessDescription(exp.description),
                     description: exp.description, // Keep original description as fallback
                     location: exp.location // Add location for templates that need it
-                  })),
-                  education: resumeData.education.map(edu => ({
+                  })) : [],
+                  education: visibleSections.has('education') ? resumeData.education.map(edu => ({
                     degree: edu.degree,
                     institution: edu.institution,
                     dates: edu.year,
                     details: safeProcessDescription(edu.description)
-                  })),
-                  projects: resumeData.projects.map(project => ({
+                  })) : [],
+                  projects: visibleSections.has('projects') ? resumeData.projects.map(project => ({
                     Name: project.name,
                     Description: project.description,
                     Tech_Stack: project.techStack,
                     Start_Date: project.startDate,
                     End_Date: project.endDate,
                     Link: project.link
-                  })),
-                  certifications: resumeData.certifications.map(cert => ({
+                  })) : [],
+                  certifications: visibleSections.has('certifications') ? resumeData.certifications.map(cert => ({
                     certificateName: cert.certificateName,
                     instituteName: cert.instituteName,
                     startDate: cert.startDate,
                     endDate: cert.endDate,
                     link: cert.link
-                  })),
+                  })) : [],
                   additionalInfo: {
-                    languages: resumeData.languages.map(lang => lang.name),
+                    languages: visibleSections.has('skills') ? resumeData.languages.map(lang => lang.name) : [],
                     awards: []
                   },
-                  customSections: resumeData.customSections
+                  customSections: visibleCustomSections
                 } as any}
                 color={selectedColor}
               />
@@ -2188,22 +2221,31 @@ const ResumeBuilderPage = () => {
                 <div className="space-y-1">
                   {allSections.map((section) => {
                     const Icon = section.icon;
+                    const isVisible = visibleSections.has(section.id);
                     return (
                       <div key={section.id}>
-                        <button
-                          onClick={() => setActiveSection(activeSection === section.id ? '' : section.id)}
-                          className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
-                            activeSection === section.id
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : 'hover:bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Icon className="w-4 h-4" />
-                            <span className="font-medium">{section.label}</span>
-                          </div>
-                          <div className={`w-4 h-4 transition-transform ${activeSection === section.id ? 'rotate-90' : ''}`}>→</div>
-                        </button>
+                        <div className="flex items-center gap-2 p-3 rounded-lg">
+                          <input
+                            type="checkbox"
+                            checked={isVisible}
+                            onChange={() => toggleSectionVisibility(section.id)}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <button
+                            onClick={() => setActiveSection(activeSection === section.id ? '' : section.id)}
+                            className={`flex-1 flex items-center justify-between p-2 rounded-lg text-left transition-colors ${
+                              activeSection === section.id
+                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                : 'hover:bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Icon className="w-4 h-4" />
+                              <span className={`font-medium ${!isVisible ? 'opacity-50' : ''}`}>{section.label}</span>
+                            </div>
+                            <div className={`w-4 h-4 transition-transform ${activeSection === section.id ? 'rotate-90' : ''}`}>→</div>
+                          </button>
+                        </div>
                         
                         {/* Dropdown Content */}
                         {activeSection === section.id && (
@@ -2320,7 +2362,7 @@ const ResumeBuilderPage = () => {
         onClose={() => setIsPreviewModalOpen(false)}
         templateId={selectedTemplate?.id || templateId}
         data={{
-          personalInfo: {
+          personalInfo: visibleSections.has('basic-details') ? {
             name: resumeData.basicDetails.fullName,
             title: resumeData.basicDetails.professionalTitle,
             address: resumeData.basicDetails.location,
@@ -2329,46 +2371,46 @@ const ResumeBuilderPage = () => {
             github: resumeData.basicDetails.github,
             linkedin: resumeData.basicDetails.linkedin,
             phone: resumeData.basicDetails.phone
-          },
-          summary: resumeData.summary,
-          skills: {
+          } : null,
+          summary: visibleSections.has('summary') ? resumeData.summary : '',
+          skills: visibleSections.has('skills') ? {
             technical: resumeData.skills,
             professional: resumeData.languages.map(lang => lang.name)
-          },
-                  experience: resumeData.experience.map(exp => ({
-          title: exp.position,
-          company: exp.company,
-          dates: exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || exp.endDate || '',
-          achievements: safeProcessDescription(exp.description),
-          description: exp.description, // Keep original description as fallback
-          location: exp.location // Add location for templates that need it
-        })),
-          education: resumeData.education.map(edu => ({
+          } : null,
+          experience: visibleSections.has('experience') ? resumeData.experience.map(exp => ({
+            title: exp.position,
+            company: exp.company,
+            dates: exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || exp.endDate || '',
+            achievements: safeProcessDescription(exp.description),
+            description: exp.description, // Keep original description as fallback
+            location: exp.location // Add location for templates that need it
+          })) : [],
+          education: visibleSections.has('education') ? resumeData.education.map(edu => ({
             degree: edu.degree,
             institution: edu.institution,
             dates: edu.year,
             details: safeProcessDescription(edu.description)
-          })),
-          projects: resumeData.projects.map(project => ({
+          })) : [],
+          projects: visibleSections.has('projects') ? resumeData.projects.map(project => ({
             Name: project.name,
             Description: project.description,
             Tech_Stack: project.techStack,
             Start_Date: project.startDate,
             End_Date: project.endDate,
             Link: project.link
-          })),
-          certifications: resumeData.certifications.map(cert => ({
+          })) : [],
+          certifications: visibleSections.has('certifications') ? resumeData.certifications.map(cert => ({
             certificateName: cert.certificateName,
             instituteName: cert.instituteName,
             startDate: cert.startDate,
             endDate: cert.endDate,
             link: cert.link
-          })),
+          })) : [],
           additionalInfo: {
-            languages: resumeData.languages.map(lang => lang.name),
+            languages: visibleSections.has('skills') ? resumeData.languages.map(lang => lang.name) : [],
             awards: []
           },
-          customSections: resumeData.customSections
+          customSections: visibleCustomSections
         } as any}
         color={selectedColor}
       />

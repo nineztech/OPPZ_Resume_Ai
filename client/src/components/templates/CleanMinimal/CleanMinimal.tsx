@@ -212,367 +212,334 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
   const templateData = data || cleanMinimalTemplateData;
 
   return (
-    <div className="max-w-4xl mx-auto p-2 -mt-4 bg-white" style={{ 
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '11px',
+    <div className="max-w-4xl mx-auto px-2 -mt-5 bg-white" style={{ 
+      fontFamily: 'Arial, Helvetica, Calibri, sans-serif',
+      fontSize: '10px',
       lineHeight: '1.3'
     }}>
       {/* Header */}
-      <div className="text-center mb-1">
-        <h1 className="text-2xl font-bold mb-0" style={{ 
-          fontSize: '22px',
-          fontWeight: 'bold',
-          letterSpacing: '1px',
-          color: color || '#1f2937'
-        }}>
-          {templateData.personalInfo?.name || 'Your Name'}
-        </h1>
-        <div className="text-lg font-semibold mb-1" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
-          {templateData.personalInfo?.title || 'Your Title'}
-        </div>
-        <div className="text-sm" style={{ fontSize: '11px' }}>
-          {templateData.personalInfo?.address || 'Your Address'} | {templateData.personalInfo?.phone || 'Your Phone'} | {templateData.personalInfo?.email || 'your.email@example.com'}
-          {templateData.personalInfo?.linkedin && (
-            <> | <a href={templateData.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>LinkedIn</a></>
-          )}
-          {templateData.personalInfo?.github && (
-            <> | <a href={templateData.personalInfo.github} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>GitHub</a></>
-          )}
-          {templateData.personalInfo?.website && !templateData.personalInfo?.linkedin && !templateData.personalInfo?.github && (
-            <> | {templateData.personalInfo.website}</>
-          )}
-        </div>
+      <div className="text-center mb-0">
+        {templateData.personalInfo?.name && (
+          <h1 className="text-2xl -mb-1 font-bold" style={{ 
+            fontSize: '22px',
+            fontWeight: 'bold',
+            letterSpacing: '1px',
+            color: color || '#1f2937'
+          }}>
+            {templateData.personalInfo.name}
+          </h1>
+        )}
+        {templateData.personalInfo?.title && (
+          <div className="text-lg font-semibold mb-0" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
+            {templateData.personalInfo.title}
+          </div>
+        )}
+        {(templateData.personalInfo?.address || templateData.personalInfo?.phone || templateData.personalInfo?.email) && (
+          <div className="text-sm" style={{ fontSize: '11px' }}>
+            {templateData.personalInfo?.address && templateData.personalInfo.address}
+            {templateData.personalInfo?.address && (templateData.personalInfo?.phone || templateData.personalInfo?.email) && ' | '}
+            {templateData.personalInfo?.phone && templateData.personalInfo.phone}
+            {templateData.personalInfo?.phone && templateData.personalInfo?.email && ' | '}
+            {templateData.personalInfo?.email && templateData.personalInfo.email}
+            {templateData.personalInfo?.linkedin && (
+              <> | <a href={templateData.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>LinkedIn</a></>
+            )}
+            {templateData.personalInfo?.github && (
+              <> | <a href={templateData.personalInfo.github} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>GitHub</a></>
+            )}
+            {templateData.personalInfo?.website && !templateData.personalInfo?.linkedin && !templateData.personalInfo?.github && (
+              <> | {templateData.personalInfo.website}</>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Summary */}
-      <div className="mb-1" style={{ position: 'relative' }}>
-        <h2 className="text-center font-bold -mb-2 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          color: color || '#1f2937'
-        }}>
-          SUMMARY
-        </h2>
-        <div className="space-y-0 ml-0 mt-1">
-          {templateData.summary ? (
-            // Split summary into bullet points
-            templateData.summary.split(/[.!?]+/).filter(sentence => sentence.trim().length > 0).map((sentence, index) => (
-              <div key={index} className="flex items-start" style={{ fontSize: '11px' }}>
-                <span className="mr-2">•</span>
-                <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{sentence.trim()}</span>
-              </div>
-            ))
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
+      {templateData.summary && (
+        <div className="mb-0 -mt-1" style={{ position: 'relative' }}>
+          <h2 className="text-center font-bold -mb-1 uppercase" style={{ 
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '0.5px',
+            color: color || '#1f2937'
+          }}>
+            SUMMARY
+          </h2>
+          <div className="ml-0 mt-0">
+            <div className="text-sm" style={{ 
+              fontSize: '12px',
+              lineHeight: '1.4',
+              textAlign: 'justify',
+              color: '#000000',
+              fontWeight: '500'
             }}>
-              No summary provided yet. Please add your professional summary in the sidebar.
+              {templateData.summary}
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Technical Skills */}
-      <div className="mb-1">
-        <h2 className="text-center font-bold -mb-2 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          color: color || '#1f2937'
-        }}>
-          TECHNICAL SKILLS
-        </h2>
-        <div className="space-y-1">
-          {templateData.skills?.technical && typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
-            // Handle categorized skills structure - display as "Category: skills"
-            Object.entries(templateData.skills.technical).map(([category, skills]) => {
-              // Skip empty categories
-              if (!skills || (Array.isArray(skills) && skills.length === 0)) {
-                return null;
-              }
-              
-              // Ensure skills is an array
-              const skillsArray = Array.isArray(skills) ? skills : [skills];
-              
-              return (
-                <div key={category} className="text-sm" style={{ 
-                  fontSize: '11px',
-                  lineHeight: '1.3'
-                }}>
-                  <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
-                </div>
-              );
-            }).filter(Boolean) // Remove null entries
-          ) : Array.isArray(templateData.skills?.technical) && templateData.skills.technical.length > 0 ? (
-            // Handle flat skills array - parse key-value pairs
-            templateData.skills.technical.map((skill, index) => {
-              if (!skill || typeof skill !== 'string') return null;
-              
-              // Check if skill contains a colon (key-value format)
-              if (skill.includes(':')) {
-                const [key, value] = skill.split(':', 2);
+      {templateData.skills?.technical && (
+        <div className="mb-0 -mt-1">
+          <h2 className="text-center font-bold -mb-1 uppercase" style={{ 
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '0.5px',
+            color: color || '#1f2937'
+          }}>
+            TECHNICAL SKILLS
+          </h2>
+          <div className="space-y-0">
+            {typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
+              // Handle categorized skills structure - display as "Category: skills"
+              Object.entries(templateData.skills.technical).map(([category, skills]) => {
+                // Skip empty categories
+                if (!skills || (Array.isArray(skills) && skills.length === 0)) {
+                  return null;
+                }
+                
+                // Ensure skills is an array
+                const skillsArray = Array.isArray(skills) ? skills : [skills];
+                
                 return (
-                  <div key={index} className="text-sm" style={{ 
+                  <div key={category} className="text-sm" style={{ 
                     fontSize: '11px',
-                    lineHeight: '1.3'
+                    lineHeight: '1.3',
+                    color: '#000000'
                   }}>
-                    <span className="font-bold" style={{ fontWeight: 'bold' }}>{key.trim()}:</span> {value.trim()}
+                    <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
                   </div>
                 );
-              } else {
-                // Fallback for skills without colon
-                return (
-                  <div key={index} className="text-sm" style={{ 
-                    fontSize: '11px',
-                    lineHeight: '1.3'
-                  }}>
-                    {skill}
-                  </div>
-                );
-              }
-            })
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
-            }}>
-              No technical skills added yet
-            </div>
-          )}
+              }).filter(Boolean) // Remove null entries
+            ) : Array.isArray(templateData.skills.technical) && templateData.skills.technical.length > 0 ? (
+              // Handle flat skills array - parse key-value pairs
+              templateData.skills.technical.map((skill, index) => {
+                if (!skill || typeof skill !== 'string') return null;
+                
+                // Check if skill contains a colon (key-value format)
+                if (skill.includes(':')) {
+                  const [key, value] = skill.split(':', 2);
+                  return (
+                    <div key={index} className="text-sm" style={{ 
+                      fontSize: '11px',
+                      lineHeight: '1.3',
+                      color: '#000000'
+                    }}>
+                      <span className="font-bold" style={{ fontWeight: 'bold' }}>{key.trim()}:</span> {value.trim()}
+                    </div>
+                  );
+                } else {
+                  // Fallback for skills without colon
+                  return (
+                    <div key={index} className="text-sm" style={{ 
+                      fontSize: '11px',
+                      lineHeight: '1.3',
+                      color: '#000000'
+                    }}>
+                      {skill}
+                    </div>
+                  );
+                }
+              })
+            ) : null}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Professional Experience */}
-      <div className="mb-1 mt-0">
-        <h2 className="text-center font-bold -mb-2 mt-0 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          color: color || '#1f2937'
-        }}>
-          PROFESSIONAL EXPERIENCE
-        </h2>
-        <div className="space-y-1">
-          {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
-            templateData.experience.map((exp, index) => {
+      {Array.isArray(templateData.experience) && templateData.experience.length > 0 && (
+        <div className="-mb-2 -mt-1">
+          <h2 className="text-center font-bold -mb-3 mt-1 uppercase" style={{ 
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '0.5px',
+            color: color || '#1f2937'
+          }}>
+            PROFESSIONAL EXPERIENCE
+          </h2>
+          <div className="-space-y-2">
+            {templateData.experience.map((exp, index) => {
               return (
-                <div key={index}>
+                <div key={index} >
                   
-                  <div className="flex justify-between items-start -mb-2">
+                  <div className="flex justify-between items-start ">
                     <div className="flex-1">
                       <h3 className="font-bold" style={{ 
                         fontSize: '11px',
-                        fontWeight: 'bold'
+                        fontWeight: 'bold',
+                        letterSpacing: '0.3px'
                       }}>
                         {exp.title}
                       </h3>
                       {exp.company && (
-                        <p className="text-gray-600 mb-4" style={{ 
+                        <p className="text-gray-600 -mt-2 mb-1" style={{ 
                           fontSize: '10px',
-                          fontWeight: '500'
+                          fontWeight: '500',
+                           letterSpacing: '0.2px'
                         }}>
                           <b>{exp.company}</b>
                         </p>
                       )}
                     </div>
-                    <div className="font-bold text-right" style={{ 
+                    <div className="font-bold text-right mt-2" style={{ 
                       fontSize: '11px',
-                      fontWeight: 'bold'
+                      fontWeight: 'bold',
+                      letterSpacing: '0.2px'
                     }}>
                       {exp.dates}
                     </div>
                   </div>
-                  <div className="space-y-0 ml-0 mt-1">
+                  <div className="space-y-0 ml-0 mt-0">
                     {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
                       exp.achievements.map((achievement, idx) => (
-                        <div key={idx} className="flex items-start" style={{ fontSize: '11px' }}>
-                          <span className="mr-2">•</span>
-                          <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{achievement}</span>
+                        <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                          <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
+                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{achievement}</span>
                         </div>
                       ))
                     ) : exp.description ? (
                       // Fallback to description if no achievements array
-                      <div className="flex items-start" style={{ fontSize: '11px' }}>
-                        <span className="mr-2">•</span>
-                        <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{exp.description}</span>
+                      <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                        <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
+                        <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{exp.description}</span>
                       </div>
-                    ) : (
-                      <div className="text-sm text-gray-500" style={{ 
-                        fontSize: '11px',
-                        lineHeight: '1.3',
-                        fontStyle: 'italic'
-                      }}>
-                        No achievements listed
-                      </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               );
-            })
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
-            }}>
-              No experience added yet
-            </div>
-          )}
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
      
 
       {/* Projects */}
-      <div className="mb-2">
-        <h2 className="text-center font-bold mb-0 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          color: color || '#1f2937'
-        }}>
-          PROJECTS
-        </h2>
-        <div className="space-y-1">
-          {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
-            templateData.projects.map((project, index) => (
-              <div key={index}>
-                                 <div className="mb-0">
-                   <div className="flex justify-between items-center">
-                     <div className="flex items-center gap-2">
-                       <h3 className="font-bold" style={{ 
-                         fontSize: '11px',
-                         fontWeight: 'bold'
-                       }}>
-                         {project.Name}
-                       </h3>
-                       <span className="text-sm" style={{ 
-                         fontSize: '10px',
-                         color: '#666'
-                       }}>
-                         {project.Tech_Stack}
-                       </span>
+      {Array.isArray(templateData.projects) && templateData.projects.length > 0 && (
+        <div className="-mb-3 -mt-1">
+          <h2 className="text-center font-bold -mb-1  uppercase" style={{ 
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '0.5px',
+            color: color || '#1f2937'
+          }}>
+            PROJECTS
+          </h2>
+          <div className="-space-y-2 -mt-4">
+            {templateData.projects.map((project, index) => (
+              <div key={index} style={{ marginBottom: '-10px' }}>
+                                   <div className="-mb-1.5">
+                     <div className="flex justify-between items-center">
+                       <div className="flex items-center gap-2">
+                         <h3 className="font-bold" style={{ 
+                           fontSize: '11px',
+                           fontWeight: 'bold',
+                           letterSpacing: '0.3px'
+                         }}>
+                           {project.Name}
+                         </h3>
+                         <span className="text-sm" style={{ 
+                           fontSize: '10px',
+                           color: '#666',
+                           letterSpacing: '0.2px'
+                         }}>
+                           {project.Tech_Stack}
+                         </span>
+                       </div>
+                                             {(project.Start_Date || project.End_Date) && (
+                          <div className="font-bold" style={{ 
+                            fontSize: '11px',
+                            fontWeight: 'bold'
+                          }}>
+                            {project.Start_Date && project.End_Date 
+                              ? `${project.Start_Date} - ${project.End_Date}`
+                              : project.Start_Date || project.End_Date
+                            }
+                          </div>
+                        )}
                      </div>
-                                           {(project.Start_Date || project.End_Date) && (
-                        <div className="font-bold" style={{ 
-                          fontSize: '11px',
-                          fontWeight: 'bold'
-                        }}>
-                          {project.Start_Date && project.End_Date 
-                            ? `${project.Start_Date} - ${project.End_Date}`
-                            : project.Start_Date || project.End_Date
-                          }
-                        </div>
-                      )}
                    </div>
-                 </div>
-                <div className="space-y-0 ml-0 mt-1">
-                  {project.Description ? (
-                    <div className="flex items-start" style={{ fontSize: '11px' }}>
-                      <span className="mr-2">•</span>
-                      <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{project.Description}</span>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-500" style={{ 
-                      fontSize: '11px',
-                      lineHeight: '1.3',
-                      fontStyle: 'italic'
-                    }}>
-                      No project description available
-                    </div>
-                  )}
+                  <div className="space-y-0 ml-0 mt-0">
+                    {project.Description ? (
+                      <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                        <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
+                        <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{project.Description}</span>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
-            }}>
-              No projects added yet
-            </div>
-          )}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
              {/* Education */}
-      <div className="mb-2">
-        <h2 className="text-center font-bold mb-0 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          color: color || '#1f2937'
-        }}>
-          EDUCATION
-        </h2>
-        <div className="space-y-1">
-          {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
-            templateData.education.map((edu, index) => (
-              <div key={index} className="flex justify-between items-start">
+      {Array.isArray(templateData.education) && templateData.education.length > 0 && (
+        <div className="mb-0 -mt-1">
+          <h2 className="text-center font-bold -mb-1 mt-2 uppercase" style={{ 
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '0.5px',
+            color: color || '#1f2937'
+          }}>
+            EDUCATION
+          </h2>
+          <div className="space-y-0">
+            {templateData.education.map((edu, index) => (
+              <div key={index} className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
                 <div>
                   <div className="font-bold" style={{ 
                     fontSize: '11px',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    letterSpacing: '0.3px'
                   }}>
                     {edu.institution}
                   </div>
-                  <div style={{ fontSize: '11px' }}>
+                  <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#000000' }}>
                     {edu.degree}
                   </div>
                 </div>
                 <div className="font-bold" style={{ 
                   fontSize: '11px',
-                  fontWeight: 'bold'
+                  fontWeight: 'bold',
+                  letterSpacing: '0.2px'
                 }}>
                   {edu.dates}
                   </div>
               </div>
-            ))
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
-            }}>
-              No education added yet
-            </div>
-          )}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Certifications */}
-      <div className="mb-2">
-        <h2 className="text-center font-bold mb-0 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          color: color || '#1f2937'
-        }}>
-          CERTIFICATIONS
-        </h2>
-        <div className="space-y-1">
-          {Array.isArray(templateData.certifications) && templateData.certifications.length > 0 ? (
-            templateData.certifications.map((cert, index) => (
-              <div key={index} className="flex justify-between items-start">
+      {Array.isArray(templateData.certifications) && templateData.certifications.length > 0 && (
+        <div className="-mb-30 -mt-1">
+          <h2 className="text-center font-bold -mb-1 uppercase" style={{ 
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '0.5px',
+            color: color || '#1f2937'
+          }}>
+            CERTIFICATIONS
+          </h2>
+          <div className="space-y-0">
+            {templateData.certifications.map((cert, index) => (
+              <div key={index} className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
                 <div>
-                  <div className="font-bold" style={{ 
+                  <div style={{ 
                     fontSize: '11px',
-                    fontWeight: 'bold'
+                    letterSpacing: '0.2px',
+                    color: '#000000'
                   }}>
-                    {cert.certificateName}
-                  </div>
-                  <div style={{ fontSize: '11px' }}>
-                    {cert.instituteName}
+                    <span style={{ fontWeight: 'bold' }}>{cert.certificateName}</span> - <span style={{ color: '#000000' }}>{cert.instituteName}</span>
                   </div>
                 </div>
                 {(cert.startDate || cert.endDate) && (
                   <div className="font-bold" style={{ 
                     fontSize: '11px',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    letterSpacing: '0.2px'
                   }}>
                     {cert.startDate && cert.endDate 
                       ? `${cert.startDate} - ${cert.endDate}`
@@ -581,18 +548,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                   </div>
                 )}
               </div>
-            ))
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
-            }}>
-              No certifications added yet
-            </div>
-          )}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

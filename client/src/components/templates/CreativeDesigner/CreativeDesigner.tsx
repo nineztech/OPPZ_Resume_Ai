@@ -559,14 +559,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
             templateData.certifications.map((cert, index) => (
               <div key={index} className="flex justify-between items-start">
                 <div>
-                  <div className="font-bold" style={{ 
-                    fontSize: '11px',
-                    fontWeight: 'bold'
+                  <div style={{ 
+                    fontSize: '11px'
                   }}>
-                    {cert.certificateName}
-                  </div>
-                  <div style={{ fontSize: '11px' }}>
-                    {cert.instituteName}
+                    <span style={{ fontWeight: 'bold' }}>{cert.certificateName}</span> - <span style={{ color: '#6b7280' }}>{cert.instituteName}</span>
                   </div>
                 </div>
                 {(cert.startDate || cert.endDate) && (
