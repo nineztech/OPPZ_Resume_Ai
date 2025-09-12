@@ -1913,6 +1913,32 @@ const ResumeBuilderPage = () => {
             scrollbar-width: thick;
             scrollbar-color: #cbd5e0 #f7fafc;
           }
+          
+          /* PDF Link Styling */
+          @media print {
+            a {
+              color: #0077b5 !important;
+              text-decoration: underline !important;
+            }
+            a:visited {
+              color: #0077b5 !important;
+            }
+            a:hover {
+              color: #005885 !important;
+            }
+          }
+          
+          /* Ensure links are blue in PDF generation */
+          .resume-pdf a {
+            color: #0077b5 !important;
+            text-decoration: underline !important;
+          }
+          .resume-pdf a:visited {
+            color: #0077b5 !important;
+          }
+          .resume-pdf a:hover {
+            color: #005885 !important;
+          }
         `}
       </style>
       <div className="min-h-screen bg-gray-50 mt-14">
@@ -2145,7 +2171,7 @@ const ResumeBuilderPage = () => {
         <div className="flex h-[calc(100vh-140px)]">
           {/* Left Panel - Resume Preview */}
           <div className="w-[60%] bg-white border-r border-gray-200 overflow-auto custom-scrollbar">
-            <div className="p-6" ref={resumeRef}>
+            <div className="p-6 resume-pdf" ref={resumeRef}>
               <TemplateRenderer
                 templateId={selectedTemplate?.id || templateId}
                 visibleSections={visibleSections}
