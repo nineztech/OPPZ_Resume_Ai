@@ -646,6 +646,15 @@ const ResumeBuilderPage = () => {
         customSections: extractedData.customSections || []
       };
       
+      // Update professional title with most recent role from experience
+      if (processedData.experience && processedData.experience.length > 0) {
+        const mostRecentExp = processedData.experience[0]; // Assuming experience is sorted by most recent first
+        if (mostRecentExp.position && mostRecentExp.position.trim()) {
+          processedData.basicDetails.professionalTitle = mostRecentExp.position;
+          console.log('Updated professional title to most recent role:', mostRecentExp.position);
+        }
+      }
+      
       // Track specific changes for highlighting
       const changesSet = new Set<string>();
       
@@ -664,7 +673,7 @@ const ResumeBuilderPage = () => {
           }
           
                   // Apply Skills rewrite - Merge with existing skills instead of replacing
-        if (rewrites.skills && Array.isArray(rewrites.skills) && rewrites.skills.length > 0) {
+        if (rewrites.skills && rewrites.skills !== null) {
           console.log('Processing skills rewrite:', rewrites.skills);
           
           // Start with existing skills structure, don't replace completely
@@ -685,98 +694,148 @@ const ResumeBuilderPage = () => {
             return [];
           };
           
-          // Ensure all default categories exist
-          const defaultCategories = {
-            "Languages": [],
-            "Frameworks/Libraries": [],
-            "Database": [],
-            "Cloud": [],
-            "Version Control Tools": [],
-            "IDEs": [],
-            "Web-Technologies": [],
-            "Web Server": [],
-            "Methodologies": [],
-            "Operating Systems": [],
-            "Professional Skills": [],
-            "Testing": [],
-            "Build Tools": [],
-            "Other Tools": []
-          };
-          
-          // Merge existing skills with default categories and ensure all are arrays
-          const mergedSkills: { [key: string]: string[] } = { ...defaultCategories };
-          
-          // Process existing skills and ensure they are arrays
-          Object.keys(defaultCategories).forEach(category => {
-            mergedSkills[category] = ensureCategoryIsArray(existingSkills, category);
-          });
-          
-          // Add any additional categories from existing skills that aren't in defaults
-          Object.keys(existingSkills).forEach(category => {
-            if (!mergedSkills.hasOwnProperty(category)) {
-              mergedSkills[category] = ensureCategoryIsArray(existingSkills, category);
-            }
-          });
-          
-          console.log('Merged skills structure:', mergedSkills);
-          
-          // Process each skill from the rewrite and add only missing skills
-          rewrites.skills.forEach((skillLine: string) => {
-            try {
-              if (skillLine && typeof skillLine === 'string') {
-                console.log('Processing skill line:', skillLine);
+          // Handle skills as object (AI response structure)
+          if (typeof rewrites.skills === 'object' && !Array.isArray(rewrites.skills)) {
+            console.log('Processing skills as object structure');
+            
+            // Merge existing skills with AI suggested skills
+            const mergedSkills = { ...existingSkills };
+            
+            // Process each category from AI suggestions
+            Object.entries(rewrites.skills).forEach(([category, skillsValue]) => {
+              if (skillsValue && typeof skillsValue === 'string') {
+                // Convert string to array
+                const newSkills = skillsValue.split(',').map(s => s.trim()).filter(s => s.length > 0);
                 
-                if (skillLine.includes(':')) {
-                  const [category, skillsString] = skillLine.split(':', 2);
-                  const categoryName = category.trim();
-                  const newSkills = skillsString.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                console.log(`Processing category "${category}" with skills:`, newSkills);
+                
+                // Ensure the category exists and is an array
+                if (!mergedSkills[category]) {
+                  mergedSkills[category] = [];
+                } else if (typeof mergedSkills[category] === 'string') {
+                  mergedSkills[category] = [mergedSkills[category]];
+                }
+                
+                // Add new skills that don't already exist
+                newSkills.forEach(skill => {
+                  const existingSkillsInCategory = Array.isArray(mergedSkills[category]) 
+                    ? mergedSkills[category] 
+                    : [mergedSkills[category]];
                   
-                  console.log(`Category: "${categoryName}", Skills:`, newSkills);
-                  
-                  // Ensure the category exists and is an array
-                  if (!mergedSkills[categoryName]) {
-                    mergedSkills[categoryName] = [];
+                  if (!existingSkillsInCategory.some(existingSkill => 
+                    existingSkill.toLowerCase().trim() === skill.toLowerCase().trim()
+                  )) {
+                    mergedSkills[category].push(skill);
+                    changesSet.add(`skill-${skill}`);
+                    console.log(`Added new skill "${skill}" to category "${category}"`);
                   } else {
-                    mergedSkills[categoryName] = ensureCategoryIsArray(mergedSkills, categoryName);
+                    console.log(`Skill "${skill}" already exists in category "${category}"`);
                   }
+                });
+              }
+            });
+            
+            processedData.skills = mergedSkills;
+            changesSet.add('skills-ai-rewrite');
+            console.log('Final merged skills:', mergedSkills);
+          }
+          // Handle skills as array (legacy format)
+          else if (Array.isArray(rewrites.skills) && rewrites.skills.length > 0) {
+            console.log('Processing skills as array structure');
+            
+            // Ensure all default categories exist
+            const defaultCategories = {
+              "Languages": [],
+              "Frameworks/Libraries": [],
+              "Database": [],
+              "Cloud": [],
+              "Version Control Tools": [],
+              "IDEs": [],
+              "Web-Technologies": [],
+              "Web Server": [],
+              "Methodologies": [],
+              "Operating Systems": [],
+              "Professional Skills": [],
+              "Testing": [],
+              "Build Tools": [],
+              "Other Tools": []
+            };
+            
+            // Merge existing skills with default categories and ensure all are arrays
+            const mergedSkills: { [key: string]: string[] } = { ...defaultCategories };
+            
+            // Process existing skills and ensure they are arrays
+            Object.keys(defaultCategories).forEach(category => {
+              mergedSkills[category] = ensureCategoryIsArray(existingSkills, category);
+            });
+            
+            // Add any additional categories from existing skills that aren't in defaults
+            Object.keys(existingSkills).forEach(category => {
+              if (!mergedSkills.hasOwnProperty(category)) {
+                mergedSkills[category] = ensureCategoryIsArray(existingSkills, category);
+              }
+            });
+            
+            console.log('Merged skills structure:', mergedSkills);
+            
+            // Process each skill from the rewrite and add only missing skills
+            rewrites.skills.forEach((skillLine: string) => {
+              try {
+                if (skillLine && typeof skillLine === 'string') {
+                  console.log('Processing skill line:', skillLine);
                   
-                  // Add only skills that don't already exist in that category
-                  newSkills.forEach(skill => {
-                    if (!mergedSkills[categoryName].includes(skill)) {
-                      mergedSkills[categoryName].push(skill);
+                  if (skillLine.includes(':')) {
+                    const [category, skillsString] = skillLine.split(':', 2);
+                    const categoryName = category.trim();
+                    const newSkills = skillsString.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                    
+                    console.log(`Category: "${categoryName}", Skills:`, newSkills);
+                    
+                    // Ensure the category exists and is an array
+                    if (!mergedSkills[categoryName]) {
+                      mergedSkills[categoryName] = [];
+                    } else {
+                      mergedSkills[categoryName] = ensureCategoryIsArray(mergedSkills, categoryName);
+                    }
+                    
+                    // Add only skills that don't already exist in that category
+                    newSkills.forEach(skill => {
+                      if (!mergedSkills[categoryName].includes(skill)) {
+                        mergedSkills[categoryName].push(skill);
+                        // Track individual skill additions for highlighting
+                        changesSet.add(`skill-${skill}`);
+                        console.log(`Added skill "${skill}" to category "${categoryName}"`);
+                      } else {
+                        console.log(`Skill "${skill}" already exists in category "${categoryName}"`);
+                      }
+                    });
+                  } else {
+                    // If no colon found, treat as a single skill and add to "Other Tools" if not already present
+                    const skill = skillLine.trim();
+                    
+                    // Ensure "Other Tools" is an array
+                    mergedSkills["Other Tools"] = ensureCategoryIsArray(mergedSkills, "Other Tools");
+                    
+                    if (!mergedSkills["Other Tools"].includes(skill)) {
+                      mergedSkills["Other Tools"].push(skill);
                       // Track individual skill additions for highlighting
                       changesSet.add(`skill-${skill}`);
-                      console.log(`Added skill "${skill}" to category "${categoryName}"`);
+                      console.log(`Added skill "${skill}" to "Other Tools"`);
                     } else {
-                      console.log(`Skill "${skill}" already exists in category "${categoryName}"`);
+                      console.log(`Skill "${skill}" already exists in "Other Tools"`);
                     }
-                  });
-                } else {
-                  // If no colon found, treat as a single skill and add to "Other Tools" if not already present
-                  const skill = skillLine.trim();
-                  
-                  // Ensure "Other Tools" is an array
-                  mergedSkills["Other Tools"] = ensureCategoryIsArray(mergedSkills, "Other Tools");
-                  
-                  if (!mergedSkills["Other Tools"].includes(skill)) {
-                    mergedSkills["Other Tools"].push(skill);
-                    // Track individual skill additions for highlighting
-                    changesSet.add(`skill-${skill}`);
-                    console.log(`Added skill "${skill}" to "Other Tools"`);
-                  } else {
-                    console.log(`Skill "${skill}" already exists in "Other Tools"`);
                   }
                 }
+              } catch (error) {
+                console.error('Error processing skill line:', skillLine, error);
+                // Continue processing other skills even if one fails
               }
-            } catch (error) {
-              console.error('Error processing skill line:', skillLine, error);
-              // Continue processing other skills even if one fails
-            }
-          });
-          
-          processedData.skills = mergedSkills;
-          changesSet.add('skills-ai-rewrite');
-          console.log('Final merged skills:', mergedSkills);
+            });
+            
+            processedData.skills = mergedSkills;
+            changesSet.add('skills-ai-rewrite');
+            console.log('Final merged skills:', mergedSkills);
+          }
         }
           
           // Apply Work Experience rewrites
@@ -975,46 +1034,42 @@ const ResumeBuilderPage = () => {
           if (rewrites.projects && rewrites.projects !== null) {
             console.log('Applying projects rewrites:', rewrites.projects);
             
-            // Handle projects as a single rewrite string (for new projects)
-            if (typeof rewrites.projects === 'string' && rewrites.projects.trim()) {
+            // Handle projects as array of objects (AI response structure)
+            if (Array.isArray(rewrites.projects) && rewrites.projects.length > 0) {
+              console.log('Processing AI suggested projects');
+              
+              // Convert AI project suggestions to resume format
+              const aiProjects = rewrites.projects.map((aiProject: any) => ({
+                id: `project-${Date.now()}-${Math.random()}`,
+                name: aiProject.name || 'Untitled Project',
+                techStack: '', // AI doesn't provide tech stack in this format
+                startDate: aiProject.startDate || '',
+                endDate: aiProject.endDate || '',
+                description: aiProject.rewrite || aiProject.existing || '',
+                link: ''
+              }));
+              
+              // If no existing projects, use AI projects
+              if (processedData.projects.length === 0) {
+                console.log('No existing projects, using AI suggested projects');
+                processedData.projects = aiProjects;
+              } else {
+                // Merge existing projects with AI suggestions
+                console.log('Merging existing projects with AI suggestions');
+                processedData.projects = [...processedData.projects, ...aiProjects];
+              }
+            }
+            // Handle projects as a single rewrite string (legacy format)
+            else if (typeof rewrites.projects === 'string' && rewrites.projects.trim()) {
               const rewriteText = rewrites.projects;
               console.log('Project suggestion from AI:', rewriteText);
               // This is for new projects - let backend handle project creation
-            }
-            // Handle projects as array of objects (for existing project enhancements)
-            else if (Array.isArray(rewrites.projects) && rewrites.projects.length > 0) {
-              console.log('Processing project enhancements for existing projects');
-              
-              // Apply enhancements to existing projects
-              processedData.projects = processedData.projects.map((existingProject: any) => {
-                // Find matching AI suggestion for this project
-                const aiProject = rewrites.projects.find((aiProj: any) => 
-                  aiProj.name && existingProject.name && 
-                  aiProj.name.toLowerCase().trim() === existingProject.name.toLowerCase().trim()
-                );
-                
-                if (aiProject && aiProject.rewrite) {
-                  console.log(`Enhancing project "${existingProject.name}" with AI suggestions`);
-                  return {
-                    ...existingProject,
-                    description: aiProject.rewrite // Replace description with enhanced version
-                  };
-                }
-                
-                return existingProject; // Keep original if no enhancement found
-              });
             }
           }
           
           // Ensure existing projects are preserved if no AI rewrites
           if (!rewrites.projects || rewrites.projects === null) {
             console.log('No AI project rewrites available, preserving existing projects:', processedData.projects);
-          }
-          
-          // Let backend handle project suggestions - don't force add projects here
-          if (aiSuggestions.sectionSuggestions?.projects && processedData.projects.length === 0) {
-            console.log('AI suggests projects but none exist, letting backend handle project creation...');
-            // Don't force add projects - let the backend AI service handle this properly
           }
           
           // Comprehensive project handling - check multiple sources
@@ -2980,7 +3035,7 @@ const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove }: {
                <div>
                  <Label>Start Date</Label>
                  <Input
-                   value={project.startDate}
+                   value={project.startDate || ''}
                    onChange={(e) => onUpdate(project.id, 'startDate', e.target.value)}
                    placeholder="e.g., Jan 2022"
                  />
@@ -2988,7 +3043,7 @@ const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove }: {
                <div>
                  <Label>End Date</Label>
                  <Input
-                   value={project.endDate}
+                   value={project.endDate || ''}
                    onChange={(e) => onUpdate(project.id, 'endDate', e.target.value)}
                    placeholder="e.g., Dec 2022"
                  />

@@ -200,7 +200,7 @@ const AISuggestionsPage: React.FC = () => {
                 </div>
                 <div>
                   <h1 className="text-xl font-semibold text-gray-900">AI Resume Analysis</h1>
-                  <p className="text-sm text-gray-600">Personalized suggestions for {jobDescription.jobTitle}</p>
+                  <p className="text-sm text-gray-600">Personalized suggestions for {state.designation}</p>
                 </div>
               </div>
             </div>
@@ -945,7 +945,7 @@ const AISuggestionsPage: React.FC = () => {
             <div className="space-y-4 max-h-96 overflow-y-auto">
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Job Title</h4>
-                <p className="text-sm text-gray-700">{jobDescription.jobTitle}</p>
+                <p className="text-sm text-gray-700">{state.designation}</p>
               </div>
               
               <div>
