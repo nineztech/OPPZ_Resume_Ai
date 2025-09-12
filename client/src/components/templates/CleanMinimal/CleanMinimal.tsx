@@ -219,43 +219,41 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
     }}>
       {/* Header */}
       <div className="text-center mb-0">
-        {templateData.personalInfo?.name && (
-          <h1 className="text-2xl -mb-1 font-bold" style={{ 
-            fontSize: '22px',
-            fontWeight: 'bold',
-            letterSpacing: '1px',
-            color: color || '#1f2937'
-          }}>
-            {templateData.personalInfo.name}
-          </h1>
-        )}
-        {templateData.personalInfo?.title && (
-          <div className="text-lg font-semibold mb-0" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
-            {templateData.personalInfo.title}
-          </div>
-        )}
-        {(templateData.personalInfo?.address || templateData.personalInfo?.phone || templateData.personalInfo?.email) && (
-          <div className="text-sm" style={{ fontSize: '11px' }}>
-            {templateData.personalInfo?.address && templateData.personalInfo.address}
-            {templateData.personalInfo?.address && (templateData.personalInfo?.phone || templateData.personalInfo?.email) && ' | '}
-            {templateData.personalInfo?.phone && templateData.personalInfo.phone}
-            {templateData.personalInfo?.phone && templateData.personalInfo?.email && ' | '}
-            {templateData.personalInfo?.email && templateData.personalInfo.email}
-            {templateData.personalInfo?.linkedin && (
-              <> | <a href={templateData.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>LinkedIn</a></>
-            )}
-            {templateData.personalInfo?.github && (
-              <> | <a href={templateData.personalInfo.github} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>GitHub</a></>
-            )}
-            {templateData.personalInfo?.website && !templateData.personalInfo?.linkedin && !templateData.personalInfo?.github && (
-              <> | {templateData.personalInfo.website}</>
-            )}
-          </div>
+        {templateData.personalInfo && (
+          <>
+            <h1 className="text-2xl -mb-1 font-bold" style={{ 
+              fontSize: '22px',
+              fontWeight: 'bold',
+              letterSpacing: '1px',
+              color: color || '#1f2937'
+            }}>
+              {templateData.personalInfo.name || 'Your Full Name'}
+            </h1>
+            <div className="text-lg font-semibold mb-0" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
+              {templateData.personalInfo.title || 'Your Professional Title'}
+            </div>
+            <div className="text-sm" style={{ fontSize: '11px' }}>
+              {templateData.personalInfo.address || 'Your Location'}
+              {(templateData.personalInfo.address || templateData.personalInfo.phone || templateData.personalInfo.email) && ' | '}
+              {templateData.personalInfo.phone || 'Your Phone'}
+              {(templateData.personalInfo.phone || templateData.personalInfo.email) && ' | '}
+              {templateData.personalInfo.email || 'your.email@example.com'}
+              {templateData.personalInfo.linkedin && (
+                <> | <a href={templateData.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>LinkedIn</a></>
+              )}
+              {templateData.personalInfo.github && (
+                <> | <a href={templateData.personalInfo.github} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>GitHub</a></>
+              )}
+              {templateData.personalInfo.website && !templateData.personalInfo.linkedin && !templateData.personalInfo.github && (
+                <> | {templateData.personalInfo.website}</>
+              )}
+            </div>
+          </>
         )}
       </div>
 
       {/* Summary */}
-      {templateData.summary && (
+      {templateData.summary !== null && templateData.summary !== undefined && (
         <div className="mb-0 -mt-1" style={{ position: 'relative' }}>
           <h2 className="text-center font-bold -mb-1 uppercase" style={{ 
             fontSize: '13px',
@@ -273,14 +271,14 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
               color: '#000000',
               fontWeight: '500'
             }}>
-              {templateData.summary}
+              {templateData.summary || 'Write a compelling summary of your professional background and key strengths...'}
             </div>
           </div>
         </div>
       )}
 
       {/* Technical Skills */}
-      {templateData.skills?.technical && (
+      {templateData.skills?.technical !== null && templateData.skills?.technical !== undefined && (
         <div className="mb-0 -mt-1">
           <h2 className="text-center font-bold -mb-1 uppercase" style={{ 
             fontSize: '13px',
@@ -342,13 +340,23 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
                   );
                 }
               })
-            ) : null}
+            ) : (
+              // Show placeholder when no skills are present
+              <div className="text-sm" style={{ 
+                fontSize: '11px',
+                lineHeight: '1.3',
+                color: '#666666',
+                fontStyle: 'italic'
+              }}>
+                Add your technical skills here...
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Professional Experience */}
-      {Array.isArray(templateData.experience) && templateData.experience.length > 0 && (
+      {Array.isArray(templateData.experience) && (
         <div className="-mb-2 -mt-1">
           <h2 className="text-center font-bold -mb-3 mt-1 uppercase" style={{ 
             fontSize: '13px',
@@ -359,56 +367,68 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
             PROFESSIONAL EXPERIENCE
           </h2>
           <div className="-space-y-2">
-            {templateData.experience.map((exp, index) => {
-              return (
-                <div key={index} >
-                  
-                  <div className="flex justify-between items-start ">
-                    <div className="flex-1">
-                      <h3 className="font-bold" style={{ 
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        letterSpacing: '0.3px'
-                      }}>
-                        {exp.title}
-                      </h3>
-                      {exp.company && (
+            {templateData.experience.length > 0 ? (
+              templateData.experience.map((exp, index) => {
+                return (
+                  <div key={index} >
+                    
+                    <div className="flex justify-between items-start ">
+                      <div className="flex-1">
+                        <h3 className="font-bold" style={{ 
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          letterSpacing: '0.3px'
+                        }}>
+                          {exp.title || 'Job Title'}
+                        </h3>
                         <p className="text-gray-600 -mt-2 mb-1" style={{ 
                           fontSize: '10px',
                           fontWeight: '500',
                            letterSpacing: '0.2px'
                         }}>
-                          <b>{exp.company}</b>
+                          <b>{exp.company || 'Company Name'}</b>
                         </p>
+                      </div>
+                      <div className="font-bold text-right mt-2" style={{ 
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        letterSpacing: '0.2px'
+                      }}>
+                        {exp.dates || 'Start Date - End Date'}
+                      </div>
+                    </div>
+                    <div className="space-y-0 ml-0 mt-0">
+                      {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
+                        exp.achievements.map((achievement, idx) => (
+                          <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                            <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
+                            <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{achievement}</span>
+                          </div>
+                        ))
+                      ) : exp.description ? (
+                        // Fallback to description if no achievements array
+                        <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                          <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
+                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{exp.description}</span>
+                        </div>
+                      ) : (
+                        // Show placeholder when no content
+                        <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                          <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
+                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#666666', fontWeight: '500', fontStyle: 'italic' }}>Describe your key responsibilities and achievements...</span>
+                        </div>
                       )}
                     </div>
-                    <div className="font-bold text-right mt-2" style={{ 
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                      letterSpacing: '0.2px'
-                    }}>
-                      {exp.dates}
-                    </div>
                   </div>
-                  <div className="space-y-0 ml-0 mt-0">
-                    {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
-                      exp.achievements.map((achievement, idx) => (
-                        <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                          <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
-                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{achievement}</span>
-                        </div>
-                      ))
-                    ) : exp.description ? (
-                      // Fallback to description if no achievements array
-                      <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                        <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
-                        <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{exp.description}</span>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              // Show placeholder when no experience entries
+              <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
+                <span className="leading-tight" style={{ lineHeight: '1.2', color: '#666666', fontWeight: '500', fontStyle: 'italic' }}>Add your work experience here...</span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -416,7 +436,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
      
 
       {/* Projects */}
-      {Array.isArray(templateData.projects) && templateData.projects.length > 0 && (
+      {Array.isArray(templateData.projects) && (
         <div className="-mb-3 -mt-1">
           <h2 className="text-center font-bold -mb-1  uppercase" style={{ 
             fontSize: '13px',
@@ -427,54 +447,76 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
             PROJECTS
           </h2>
           <div className="-space-y-2 -mt-4">
-            {templateData.projects.map((project, index) => (
-              <div key={index} style={{ marginBottom: '-10px' }}>
-                                   <div className="-mb-1.5">
-                     <div className="flex justify-between items-center">
-                       <div className="flex items-center gap-2">
-                         <h3 className="font-bold" style={{ 
-                           fontSize: '11px',
-                           fontWeight: 'bold',
-                           letterSpacing: '0.3px'
-                         }}>
-                           {project.Name}
-                         </h3>
-                         <span className="text-sm" style={{ 
-                           fontSize: '10px',
-                           color: '#666',
-                           letterSpacing: '0.2px'
-                         }}>
-                           {project.Tech_Stack}
-                         </span>
+            {templateData.projects.length > 0 ? (
+              templateData.projects.map((project, index) => (
+                <div key={index} style={{ marginBottom: '-10px' }}>
+                                     <div className="-mb-1.5">
+                       <div className="flex justify-between items-center">
+                         <div className="flex items-center gap-2">
+                           <h3 className="font-bold" style={{ 
+                             fontSize: '11px',
+                             fontWeight: 'bold',
+                             letterSpacing: '0.3px'
+                           }}>
+                             {project.Name || 'Project Name'}
+                           </h3>
+                           <span className="text-sm" style={{ 
+                             fontSize: '10px',
+                             color: '#666',
+                             letterSpacing: '0.2px'
+                           }}>
+                             {project.Tech_Stack || 'Tech Stack'}
+                           </span>
+                         </div>
+                                               {(project.Start_Date || project.End_Date) ? (
+                            <div className="font-bold" style={{ 
+                              fontSize: '11px',
+                              fontWeight: 'bold'
+                            }}>
+                              {project.Start_Date && project.End_Date 
+                                ? `${project.Start_Date} - ${project.End_Date}`
+                                : project.Start_Date || project.End_Date
+                              }
+                            </div>
+                          ) : (
+                            <div className="font-bold" style={{ 
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              color: '#666666',
+                              fontStyle: 'italic'
+                            }}>
+                              Start Date - End Date
+                            </div>
+                          )}
                        </div>
-                                             {(project.Start_Date || project.End_Date) && (
-                          <div className="font-bold" style={{ 
-                            fontSize: '11px',
-                            fontWeight: 'bold'
-                          }}>
-                            {project.Start_Date && project.End_Date 
-                              ? `${project.Start_Date} - ${project.End_Date}`
-                              : project.Start_Date || project.End_Date
-                            }
-                          </div>
-                        )}
                      </div>
-                   </div>
-                  <div className="space-y-0 ml-0 mt-0">
-                    {project.Description ? (
-                      <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                        <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
-                        <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{project.Description}</span>
-                      </div>
-                    ) : null}
+                    <div className="space-y-0 ml-0 mt-0">
+                      {project.Description ? (
+                        <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                          <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
+                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{project.Description}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                          <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
+                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#666666', fontWeight: '500', fontStyle: 'italic' }}>Describe your project details...</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-            ))}
+              ))
+            ) : (
+              // Show placeholder when no projects
+              <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
+                <span className="leading-tight" style={{ lineHeight: '1.2', color: '#666666', fontWeight: '500', fontStyle: 'italic' }}>Add your projects here...</span>
+              </div>
+            )}
           </div>
         </div>
       )}
              {/* Education */}
-      {Array.isArray(templateData.education) && templateData.education.length > 0 && (
+      {Array.isArray(templateData.education) && (
         <div className="mb-0 -mt-1">
           <h2 className="text-center font-bold -mb-1 mt-2 uppercase" style={{ 
             fontSize: '13px',
@@ -485,35 +527,64 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
             EDUCATION
           </h2>
           <div className="space-y-0">
-            {templateData.education.map((edu, index) => (
-              <div key={index} className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
+            {templateData.education.length > 0 ? (
+              templateData.education.map((edu, index) => (
+                <div key={index} className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
+                  <div>
+                    <div className="font-bold" style={{ 
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      letterSpacing: '0.3px'
+                    }}>
+                      {edu.institution || 'Institution Name'}
+                    </div>
+                    <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#000000' }}>
+                      {edu.degree || 'Degree/Program'}
+                    </div>
+                  </div>
+                  <div className="font-bold" style={{ 
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    letterSpacing: '0.2px'
+                  }}>
+                    {edu.dates || 'Graduation Year'}
+                    </div>
+                </div>
+              ))
+            ) : (
+              // Show placeholder when no education entries
+              <div className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
                 <div>
                   <div className="font-bold" style={{ 
                     fontSize: '11px',
                     fontWeight: 'bold',
-                    letterSpacing: '0.3px'
+                    letterSpacing: '0.3px',
+                    color: '#666666',
+                    fontStyle: 'italic'
                   }}>
-                    {edu.institution}
+                    Institution Name
                   </div>
-                  <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#000000' }}>
-                    {edu.degree}
+                  <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#666666', fontStyle: 'italic' }}>
+                    Degree/Program
                   </div>
                 </div>
                 <div className="font-bold" style={{ 
                   fontSize: '11px',
                   fontWeight: 'bold',
-                  letterSpacing: '0.2px'
+                  letterSpacing: '0.2px',
+                  color: '#666666',
+                  fontStyle: 'italic'
                 }}>
-                  {edu.dates}
+                  Graduation Year
                   </div>
               </div>
-            ))}
+            )}
           </div>
         </div>
       )}
 
       {/* Certifications */}
-      {Array.isArray(templateData.certifications) && templateData.certifications.length > 0 && (
+      {Array.isArray(templateData.certifications) && (
         <div className="-mb-30 -mt-1">
           <h2 className="text-center font-bold -mb-1 uppercase" style={{ 
             fontSize: '13px',
@@ -524,31 +595,66 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
             CERTIFICATIONS
           </h2>
           <div className="space-y-0">
-            {templateData.certifications.map((cert, index) => (
-              <div key={index} className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
+            {templateData.certifications.length > 0 ? (
+              templateData.certifications.map((cert, index) => (
+                <div key={index} className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
+                  <div>
+                    <div style={{ 
+                      fontSize: '11px',
+                      letterSpacing: '0.2px',
+                      color: '#000000'
+                    }}>
+                      <span style={{ fontWeight: 'bold' }}>{cert.certificateName || 'Certificate Name'}</span> - <span style={{ color: '#000000' }}>{cert.instituteName || 'Issuing Organization'}</span>
+                    </div>
+                  </div>
+                  {(cert.startDate || cert.endDate) ? (
+                    <div className="font-bold" style={{ 
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      letterSpacing: '0.2px'
+                    }}>
+                      {cert.startDate && cert.endDate 
+                        ? `${cert.startDate} - ${cert.endDate}`
+                        : cert.startDate || cert.endDate
+                      }
+                    </div>
+                  ) : (
+                    <div className="font-bold" style={{ 
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      letterSpacing: '0.2px',
+                      color: '#666666',
+                      fontStyle: 'italic'
+                    }}>
+                      Issue Date
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              // Show placeholder when no certifications
+              <div className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
                 <div>
                   <div style={{ 
                     fontSize: '11px',
                     letterSpacing: '0.2px',
-                    color: '#000000'
+                    color: '#666666',
+                    fontStyle: 'italic'
                   }}>
-                    <span style={{ fontWeight: 'bold' }}>{cert.certificateName}</span> - <span style={{ color: '#000000' }}>{cert.instituteName}</span>
+                    <span style={{ fontWeight: 'bold' }}>Certificate Name</span> - <span style={{ color: '#666666' }}>Issuing Organization</span>
                   </div>
                 </div>
-                {(cert.startDate || cert.endDate) && (
-                  <div className="font-bold" style={{ 
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    letterSpacing: '0.2px'
-                  }}>
-                    {cert.startDate && cert.endDate 
-                      ? `${cert.startDate} - ${cert.endDate}`
-                      : cert.startDate || cert.endDate
-                    }
-                  </div>
-                )}
+                <div className="font-bold" style={{ 
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  letterSpacing: '0.2px',
+                  color: '#666666',
+                  fontStyle: 'italic'
+                }}>
+                  Issue Date
+                </div>
               </div>
-            ))}
+            )}
           </div>
         </div>
       )}

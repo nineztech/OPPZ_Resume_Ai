@@ -56,15 +56,15 @@ const MyResumesPage = () => {
         return;
       }
 
-      // First check if the backend is reachable
-      try {
-        const healthCheck = await fetch(`${API_URL}/`, { method: 'GET' });
-        if (!healthCheck.ok) {
-          throw new Error(`Backend health check failed: ${healthCheck.status} ${healthCheck.statusText}`);
-        }
-      } catch (healthErr) {
-        throw new Error(`Cannot connect to backend server. Please ensure the server is running on port 5006. Error: ${healthErr instanceof Error ? healthErr.message : 'Unknown error'}`);
-      }
+      // // First check if the backend is reachable
+      // try {
+      //   const healthCheck = await fetch(`${API_URL}/`, { method: 'GET' });
+      //   if (!healthCheck.ok) {
+      //     throw new Error(`Backend health check failed: ${healthCheck.status} ${healthCheck.statusText}`);
+      //   }
+      // } catch (healthErr) {
+      //   throw new Error(`Cannot connect to backend server. Please ensure the server is running on port 5006. Error: ${healthErr instanceof Error ? healthErr.message : 'Unknown error'}`);
+      // }
 
       const response = await fetch(`${API_URL}/resume`, {
         method: 'GET',
