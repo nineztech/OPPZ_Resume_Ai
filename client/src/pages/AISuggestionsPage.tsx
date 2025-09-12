@@ -121,8 +121,8 @@ const AISuggestionsPage: React.FC = () => {
       }
         };
     
-    // Check if we came from UseTemplatePage (has templateId and extractedData)
-    if (state.templateId && state.extractedData) {
+    // Check if we came from UseTemplatePage (has templateId and selectedColor)
+    if (state.templateId && state.selectedColor) {
       // Navigate back to resume builder with AI suggestions and parsed data
       navigate('/resume/builder', {
         state: {

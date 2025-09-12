@@ -11,6 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   ArrowLeft, 
   Save, 
@@ -26,7 +32,8 @@ import {
   ChevronRight,
   Code,
   Users,
-  Plus
+  Plus,
+  File
 } from 'lucide-react';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 import { templates as templateData, getTemplateById } from '@/data/templates';
@@ -34,6 +41,7 @@ import type { Template } from '@/data/templates';
 import ResumePreviewModal from '@/components/modals/ResumePreviewModal';
 import AddCustomSectionModal from '@/components/modals/AddCustomSectionModal';
 import { generatePDF, downloadPDF } from '@/services/pdfService';
+import { generateWord, downloadWord } from '@/services/wordService';
 
 // Helper function to safely process description text
 // const safeProcessDescription = (description: any): string[] => {
@@ -1691,7 +1699,7 @@ const ResumeBuilderPage = () => {
   const scrollTemplates = (direction: 'left' | 'right') => {
     if (direction === 'left' && templateScrollIndex > 0) {
       setTemplateScrollIndex(templateScrollIndex - 1);
-    } else if (direction === 'right' && templateScrollIndex < templateData.length - 4) {
+    } else if (direction === 'right' && templateScrollIndex < templateData.length - 3) {
       setTemplateScrollIndex(templateScrollIndex + 1);
     }
   };
@@ -1807,15 +1815,52 @@ const ResumeBuilderPage = () => {
     }
   };
 
+  const handleDownloadWord = async () => {
+    if (!resumeRef.current) return;
+
+    try {
+      setIsDownloading(true);
+      
+      // Get the HTML content from the resume
+      const htmlContent = resumeRef.current.outerHTML;
+      
+      // Generate Word document using the service
+      const blob = await generateWord({
+        htmlContent,
+        templateId: selectedTemplate?.id || 'modern-professional',
+        resumeData: resumeData
+      });
+
+      // Download the Word document
+      const filename = `${resumeData.basicDetails.fullName.replace(/\s+/g, '_')}_Resume.docx`;
+      downloadWord(blob, filename);
+
+      toast({
+        title: 'Success',
+        description: 'Word document generated and downloaded successfully!',
+      });
+
+    } catch (error) {
+      console.error('Error generating Word document:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate Word document. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const sections = [
     { id: 'basic-details', label: 'Basic details', icon: User },
     { id: 'summary', label: 'Summary & Objective', icon: FileText },
     { id: 'skills', label: 'Skills and expertise', icon: Award },
-    { id: 'education', label: 'Education', icon: GraduationCap },
     { id: 'experience', label: 'Experience', icon: Briefcase },
-    { id: 'activities', label: 'Activities', icon: Activity },
     { id: 'projects', label: 'Projects', icon: Code },
+    { id: 'education', label: 'Education', icon: GraduationCap },
     { id: 'certifications', label: 'Certifications', icon: Award },
+    { id: 'activities', label: 'Activities', icon: Activity },
     { id: 'references', label: 'References', icon: Users }
   ];
 
@@ -1867,6 +1912,32 @@ const ResumeBuilderPage = () => {
           .custom-scrollbar {
             scrollbar-width: thick;
             scrollbar-color: #cbd5e0 #f7fafc;
+          }
+          
+          /* PDF Link Styling */
+          @media print {
+            a {
+              color: #0077b5 !important;
+              text-decoration: underline !important;
+            }
+            a:visited {
+              color: #0077b5 !important;
+            }
+            a:hover {
+              color: #005885 !important;
+            }
+          }
+          
+          /* Ensure links are blue in PDF generation */
+          .resume-pdf a {
+            color: #0077b5 !important;
+            text-decoration: underline !important;
+          }
+          .resume-pdf a:visited {
+            color: #0077b5 !important;
+          }
+          .resume-pdf a:hover {
+            color: #005885 !important;
           }
         `}
       </style>
@@ -2023,7 +2094,7 @@ const ResumeBuilderPage = () => {
                     <button
                       key={color}
                       onClick={() => setSelectedColor(color)}
-                      className={`w-6 h-6 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                      className={`w-5 h-5 rounded-full border-2 transition-all duration-200 hover:scale-90 ${
                         selectedColor === color
                           ? 'border-gray-800 scale-110 shadow-md ring-2 ring-gray-300'
                           : 'border-gray-300 hover:border-gray-500'
@@ -2042,7 +2113,7 @@ const ResumeBuilderPage = () => {
                 size="sm"
                 onClick={() => setIsPreviewModalOpen(true)}
               >
-                <Eye className="w-4 h-4 mr-2" />
+                <Eye className="w-4 h-4" />
               
               </Button>
               <Button 
@@ -2059,13 +2130,40 @@ const ResumeBuilderPage = () => {
                 onClick={handleSaveResume}
                 disabled={isSaving}
               >
-                <Save className="w-4 h-4 mr-2" />
+                <Save className="w-4 h-4 " />
                 {/* {isSaving ? 'Saving...' : 'Save'} */}
               </Button>
-              <Button size="sm" onClick={handleDownloadPDF} disabled={isDownloading}>
-                <Download className="w-4 h-4 mr-2" />
-                {isDownloading ? 'Generating...' : 'Download'}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    size="sm" 
+                    disabled={isDownloading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm transition-all duration-200 hover:shadow-md"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    {isDownloading ? 'Generating...' : 'Download'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent 
+                  align="end" 
+                  className="w-48 bg-white border border-gray-200 rounded-lg shadow-lg p-1 mt-2"
+                >
+                  <DropdownMenuItem 
+                    onClick={handleDownloadPDF}
+                    className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md cursor-pointer transition-colors duration-150"
+                  >
+                    <FileText className="w-4 h-4 mr-3 text-blue-600" />
+                    <span className="font-medium">Download as PDF</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={handleDownloadWord}
+                    className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md cursor-pointer transition-colors duration-150"
+                  >
+                    <File className="w-4 h-4 mr-3 text-blue-600" />
+                    <span className="font-medium">Download as Doc</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -2073,9 +2171,10 @@ const ResumeBuilderPage = () => {
         <div className="flex h-[calc(100vh-140px)]">
           {/* Left Panel - Resume Preview */}
           <div className="w-[60%] bg-white border-r border-gray-200 overflow-auto custom-scrollbar">
-            <div className="p-6" ref={resumeRef}>
+            <div className="p-6 resume-pdf" ref={resumeRef}>
               <TemplateRenderer
                 templateId={selectedTemplate?.id || templateId}
+                visibleSections={visibleSections}
                 data={{
                   personalInfo: visibleSections.has('basic-details') ? {
                     name: resumeData.basicDetails.fullName,
@@ -2206,6 +2305,14 @@ const ResumeBuilderPage = () => {
                                 onRemove={removeExperience}
                               />
                             )}
+                            {section.id === 'projects' && (
+                              <ProjectsSection
+                                projects={resumeData.projects}
+                                onAdd={addProject}
+                                onUpdate={updateProject}
+                                onRemove={removeProject}
+                              />
+                            )}
 
                             {section.id === 'education' && (
                               <EducationSection
@@ -2225,14 +2332,7 @@ const ResumeBuilderPage = () => {
                               />
                             )}
 
-                            {section.id === 'projects' && (
-                              <ProjectsSection
-                                projects={resumeData.projects}
-                                onAdd={addProject}
-                                onUpdate={updateProject}
-                                onRemove={removeProject}
-                              />
-                            )}
+                            
 
                             {section.id === 'certifications' && (
                               <CertificationsSection
@@ -2291,6 +2391,7 @@ const ResumeBuilderPage = () => {
         isOpen={isPreviewModalOpen}
         onClose={() => setIsPreviewModalOpen(false)}
         templateId={selectedTemplate?.id || templateId}
+        visibleSections={visibleSections}
         data={{
           personalInfo: visibleSections.has('basic-details') ? {
             name: resumeData.basicDetails.fullName,
