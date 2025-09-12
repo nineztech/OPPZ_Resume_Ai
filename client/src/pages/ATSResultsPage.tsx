@@ -533,7 +533,7 @@ const ATSResultsPage: React.FC = () => {
         </div>
 
         {/* Right Sidebar - Resume Preview with Highlights */}
-        <div className="w-[600px] border-l border-gray-200 bg-white min-h-screen">
+        <div className="w-[450px] border-l border-gray-200 bg-white min-h-screen">
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-gray-900">Your Resume</h3>
