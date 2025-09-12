@@ -145,6 +145,40 @@ export const getResumeById = async (req, res) => {
   }
 };
 
+// Update resume title only
+export const updateResumeTitle = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title } = req.body;
+    const userId = req.user.id;
+
+    if (!title) {
+      return res.status(400).json({ message: "Title is required" });
+    }
+
+    const resume = await Resume.findOne({
+      where: { id, userId }
+    });
+
+    if (!resume) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    await resume.update({
+      title,
+      lastEdited: new Date()
+    });
+
+    res.status(200).json({ 
+      message: "Resume title updated successfully", 
+      resume 
+    });
+  } catch (error) {
+    console.error("Update resume title error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 // Delete resume (soft delete)
 export const deleteResume = async (req, res) => {
   try {

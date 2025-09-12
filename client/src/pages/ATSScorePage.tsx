@@ -1189,66 +1189,7 @@ const ATSScorePage: React.FC = () => {
           </p>
         </motion.div>
 
-        {/* ATS Requirements Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mb-8"
-        >
-          <Card className="bg-blue-50 border-blue-200">
-            <CardHeader>
-              <CardTitle className="flex items-center text-blue-800">
-                <AlertCircle className="w-5 h-5 mr-2" />
-                ATS Requirements Checklist
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Complete Name</span>
-                  </div>
-                  <p className="text-blue-700 ml-6">Must include first AND last name</p>
-                  
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Contact Information</span>
-                  </div>
-                  <p className="text-blue-700 ml-6">Email OR phone number required</p>
-                  
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Standard Sections</span>
-                  </div>
-                  <p className="text-blue-700 ml-6">Experience, Education, Skills clearly defined</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Keywords</span>
-                  </div>
-                  <p className="text-blue-700 ml-6">Relevant industry terms and skills</p>
-                  
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Formatting</span>
-                  </div>
-                  <p className="text-blue-700 ml-6">Clean, readable structure</p>
-                  
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Achievements</span>
-                  </div>
-                  <p className="text-blue-700 ml-6">Quantified results and metrics</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
+        
         {/* Analysis Type Selection */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -1298,10 +1239,19 @@ const ATSScorePage: React.FC = () => {
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
               >
-                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                {!selectedFile && <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />}
                 <div className="space-y-2">
                   <p className="text-lg font-medium text-gray-700">
-                    {selectedFile ? selectedFile.name : 'Drop your resume here or click to browse'}
+                  {selectedFile ? (
+                    <div className="text-green-600">
+                      <CheckCircle className="w-6 h-6 mx-auto mb-1" />
+                      <p className="font-medium text-sm">{selectedFile.name}</p>
+                    </div>
+                  ) : (
+                    <p className="text-lg font-medium text-gray-700">
+                      Drop your resume here or click to browse
+                    </p>
+                  )}
                   </p>
                   <p className="text-sm text-gray-500">
                     Supports PDF, DOCX, and TXT files (max 10MB)
@@ -1449,6 +1399,65 @@ const ATSScorePage: React.FC = () => {
               </>
             )}
           </Button>
+        </motion.div>
+{/* ATS Requirements Info */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mb-8"
+        >
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader>
+              <CardTitle className="flex items-center text-blue-800">
+                <AlertCircle className="w-5 h-5 mr-2" />
+                ATS Requirements Checklist
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="font-medium">Complete Name</span>
+                  </div>
+                  <p className="text-blue-700 ml-6">Must include first AND last name</p>
+                  
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="font-medium">Contact Information</span>
+                  </div>
+                  <p className="text-blue-700 ml-6">Email OR phone number required</p>
+                  
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="font-medium">Standard Sections</span>
+                  </div>
+                  <p className="text-blue-700 ml-6">Experience, Education, Skills clearly defined</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="font-medium">Keywords</span>
+                  </div>
+                  <p className="text-blue-700 ml-6">Relevant industry terms and skills</p>
+                  
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="font-medium">Formatting</span>
+                  </div>
+                  <p className="text-blue-700 ml-6">Clean, readable structure</p>
+                  
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="font-medium">Achievements</span>
+                  </div>
+                  <p className="text-blue-700 ml-6">Quantified results and metrics</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
 
         {/* Results */}

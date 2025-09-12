@@ -545,10 +545,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
           </div>
         </div>
       )}
-             {/* Education */}
+      
+      {/* Education */}
       {sections.has('education') && (
-        <div className="mb-0 mt-0">
-          <h2 className="text-center font-bold mb-0 mt-0 uppercase" style={{ 
+        <div className="mb-0 ">
+          <h2 className="text-center font-bold mt-4 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
             lineHeight: '2.5',  

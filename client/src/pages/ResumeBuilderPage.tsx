@@ -1856,11 +1856,11 @@ const ResumeBuilderPage = () => {
     { id: 'basic-details', label: 'Basic details', icon: User },
     { id: 'summary', label: 'Summary & Objective', icon: FileText },
     { id: 'skills', label: 'Skills and expertise', icon: Award },
-    { id: 'education', label: 'Education', icon: GraduationCap },
     { id: 'experience', label: 'Experience', icon: Briefcase },
-    { id: 'activities', label: 'Activities', icon: Activity },
     { id: 'projects', label: 'Projects', icon: Code },
+    { id: 'education', label: 'Education', icon: GraduationCap },
     { id: 'certifications', label: 'Certifications', icon: Award },
+    { id: 'activities', label: 'Activities', icon: Activity },
     { id: 'references', label: 'References', icon: Users }
   ];
 
@@ -2094,7 +2094,7 @@ const ResumeBuilderPage = () => {
                     <button
                       key={color}
                       onClick={() => setSelectedColor(color)}
-                      className={`w-6 h-6 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                      className={`w-5 h-5 rounded-full border-2 transition-all duration-200 hover:scale-90 ${
                         selectedColor === color
                           ? 'border-gray-800 scale-110 shadow-md ring-2 ring-gray-300'
                           : 'border-gray-300 hover:border-gray-500'
@@ -2305,6 +2305,14 @@ const ResumeBuilderPage = () => {
                                 onRemove={removeExperience}
                               />
                             )}
+                            {section.id === 'projects' && (
+                              <ProjectsSection
+                                projects={resumeData.projects}
+                                onAdd={addProject}
+                                onUpdate={updateProject}
+                                onRemove={removeProject}
+                              />
+                            )}
 
                             {section.id === 'education' && (
                               <EducationSection
@@ -2324,14 +2332,7 @@ const ResumeBuilderPage = () => {
                               />
                             )}
 
-                            {section.id === 'projects' && (
-                              <ProjectsSection
-                                projects={resumeData.projects}
-                                onAdd={addProject}
-                                onUpdate={updateProject}
-                                onRemove={removeProject}
-                              />
-                            )}
+                            
 
                             {section.id === 'certifications' && (
                               <CertificationsSection

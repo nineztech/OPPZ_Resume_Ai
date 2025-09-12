@@ -7,7 +7,9 @@ import {
   Trash2,
   Calendar,
   FileText,
-  Copy
+  Copy,
+  Check,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +44,8 @@ const MyResumesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<number | null>(null);
+  const [editingResumeId, setEditingResumeId] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>('');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -153,6 +157,83 @@ const MyResumesPage = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  // Update resume title
+  const updateResumeTitle = async (resumeId: number, newTitle: string) => {
+    try {
+      const token = tokenUtils.getToken();
+
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/resume/${resumeId}/title`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: newTitle }),
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to update resume title';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          errorMessage = `${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const updatedResume = await response.json();
+
+      // Update the resume in the state
+      setResumes(prev => prev.map(resume => 
+        resume.id === resumeId 
+          ? { ...resume, title: updatedResume.title, lastEdited: updatedResume.lastEdited }
+          : resume
+      ));
+
+      toast({
+        title: 'Success',
+        description: 'Resume title updated successfully.',
+      });
+    } catch (err) {
+      console.error('Error updating resume title:', err);
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to update resume title. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Start editing title
+  const startEditingTitle = (resume: Resume) => {
+    setEditingResumeId(resume.id);
+    setEditingTitle(resume.title);
+  };
+
+  // Save title edit
+  const saveTitleEdit = async () => {
+    if (!editingResumeId || !editingTitle.trim()) {
+      cancelTitleEdit();
+      return;
+    }
+
+    await updateResumeTitle(editingResumeId, editingTitle.trim());
+    setEditingResumeId(null);
+    setEditingTitle('');
+  };
+
+  // Cancel title edit
+  const cancelTitleEdit = () => {
+    setEditingResumeId(null);
+    setEditingTitle('');
   };
 
   // Duplicate resume
@@ -463,9 +544,54 @@ const MyResumesPage = () => {
                   <div className="p-6 pt-16">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-gray-900 truncate mb-2 mt-2">
-                          {resume.title}
-                        </h3>
+                        {editingResumeId === resume.id ? (
+                          <div className="flex items-center gap-2 mb-2 mt-2">
+                            <input
+                              type="text"
+                              value={editingTitle}
+                              onChange={(e) => setEditingTitle(e.target.value)}
+                              className="text-xl font-semibold text-gray-900 bg-transparent border-b border-gray-300 focus:border-blue-500 focus:outline-none flex-1"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  saveTitleEdit();
+                                } else if (e.key === 'Escape') {
+                                  cancelTitleEdit();
+                                }
+                              }}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={saveTitleEdit}
+                              className="p-1 h-6 w-6 text-green-600 hover:text-green-700"
+                            >
+                              <Check className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={cancelTitleEdit}
+                              className="p-1 h-6 w-6 text-red-600 hover:text-red-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 mb-2 mt-2">
+                            <h3 className="text-xl font-semibold text-gray-900 truncate flex-1">
+                              {resume.title}
+                            </h3>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => startEditingTitle(resume)}
+                              className="p-1 h-6 w-6 text-gray-400 hover:text-gray-600"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
 
                         {/* Template and Color Badge */}
                         <div className="flex gap-2 mb-2">
@@ -517,6 +643,7 @@ const MyResumesPage = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => duplicateResume(resume)}
+                        title="Copy"
                       >
                         <Copy className="w-4 h-4" />
                       </Button>
@@ -527,6 +654,7 @@ const MyResumesPage = () => {
                             variant="outline"
                             size="sm"
                             className="text-red-600 hover:text-red-700"
+                            title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
