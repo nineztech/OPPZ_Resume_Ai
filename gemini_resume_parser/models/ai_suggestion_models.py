@@ -8,17 +8,21 @@ from datetime import datetime
 
 class WorkExperienceSuggestion(BaseModel):
     """Model for work experience suggestions"""
-    role: str = Field(..., description="Job role/title")
+    role: str = Field(default="", description="Job role/title")
     existing: str = Field(default="", description="Existing work experience content")
     rewrite: str = Field(default="", description="Suggested rewritten content")
+    startDate: str = Field(default="", description="Start date")
+    endDate: str = Field(default="", description="End date")
     recommendations: List[str] = Field(default_factory=list, description="Recommendations for improvement")
 
 
 class ProjectSuggestion(BaseModel):
     """Model for project suggestions"""
-    name: str = Field(..., description="Project name")
+    name: str = Field(default="", description="Project name")
     existing: str = Field(default="", description="Existing project content")
     rewrite: str = Field(default="", description="Suggested rewritten content")
+    startDate: str = Field(default="", description="Start date")
+    endDate: str = Field(default="", description="End date")
     recommendations: List[str] = Field(default_factory=list, description="Recommendations for improvement")
 
 
@@ -86,22 +90,12 @@ class EducationSuggestion(BaseModel):
 
 class CertificationsSuggestion(BaseModel):
     """Model for certifications suggestions"""
-    existing: List[str] = Field(default_factory=list, description="Existing certifications")
+    name: str = Field(default="", description="Certification name")
+    existing: str = Field(default="", description="Existing certification content")
     rewrite: str = Field(default="", description="Suggested rewritten content")
+    startDate: str = Field(default="", description="Start date")
+    endDate: str = Field(default="", description="End date")
     recommendations: List[str] = Field(default_factory=list, description="Recommendations for improvement")
-
-    @validator('existing', pre=True)
-    def validate_existing_certifications(cls, v):
-        """Handle both string and list formats for existing certifications"""
-        if v is None:
-            return []
-        if isinstance(v, str):
-            # Split by newlines and clean up
-            items = [item.strip() for item in v.split('\n') if item.strip()]
-            return items
-        if isinstance(v, list):
-            return [str(item) for item in v if item]
-        return []
 
     @validator('recommendations', pre=True)
     def validate_recommendations(cls, v):
@@ -129,7 +123,7 @@ class SectionSuggestions(BaseModel):
     workExperience: List[WorkExperienceSuggestion] = Field(default_factory=list)
     projects: List[ProjectSuggestion] = Field(default_factory=list)
     education: EducationSuggestion = Field(default_factory=EducationSuggestion)
-    certifications: CertificationsSuggestion = Field(default_factory=CertificationsSuggestion)
+    certifications: List[CertificationsSuggestion] = Field(default_factory=list)
 
 
 class AIComparisonResponse(BaseModel):

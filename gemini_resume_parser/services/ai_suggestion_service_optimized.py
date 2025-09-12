@@ -318,22 +318,46 @@ class AISuggestionServiceOptimized:
         - Only add missing skills to existing categories (e.g., if "Java" is missing from "Programming Languages", add it there).
         - If a skill doesn't fit any existing category, do NOT suggest it.
         - Focus on enhancing existing skill categories with relevant missing skills from the job description.
-        - In the "rewrite" field: ONLY include categories that have NEW skills to add, and ONLY list the NEW skills (not existing ones).
-        - Format skills as "Category: new_skill1, new_skill2" where Category must exist in the resume and skills are NEW additions only.
-        - Example: If resume has "Programming Languages: Java, Python" and job needs "JavaScript", suggest "Programming Languages: JavaScript" (not "Programming Languages: Java, Python, JavaScript").
+        - In the "rewrite" field: Return skills as a DIRECT object with category names as keys, NOT wrapped in "General".
+        - CRITICAL: In rewrite, ONLY include the NEW skills being added, NOT the existing skills.
+        - Format: If existing has "Languages: JavaScript" and you need to add "Java", rewrite should be {{"Languages": "Java"}} NOT {{"Languages": "JavaScript, Java"}}.
+        - NEVER include existing skills in the rewrite - only show the new skills being added.
+        - NEVER use "General" wrapper - return skills directly as category: skills pairs.
+        - Example: If resume has "Languages: Java, Python" and job needs "JavaScript", suggest {{"Languages": "JavaScript"}}.
         - If a category has no new skills to add, do NOT include that category in the rewrite at all.
         - Do NOT suggest "New Category: skills" - only use existing categories.
+        - NEVER suggest "General" as a skill category - avoid generic categories.
 
         CRITICAL PROJECTS RULES:
         - If NO projects exist in the resume, create exactly 2 dummy projects that match the job description requirements.
-        - Each dummy project must have: name, existing (empty), rewrite (detailed project description), and recommendations.
+        - Each dummy project must have: name, existing (empty), rewrite (detailed project description), startDate, endDate, and recommendations.
         - Dummy projects should be relevant to the job role and demonstrate skills mentioned in the job description.
         - If projects DO exist, ONLY enhance the descriptions of existing projects in the "rewrite" field to better match the job description.
         - DO NOT create new projects when projects already exist - only enhance existing ones.
         - For existing projects, keep the same project names and only improve the descriptions.
+        - ALWAYS include startDate and endDate in project responses - if missing from existing resume, add realistic dummy dates.
         - Project descriptions should include: technologies used, achievements, impact, and relevance to the target role.
         - Use strong action verbs and quantified results where possible.
         - Ensure project names and descriptions align with the {target_experience} level and job requirements.
+
+        CRITICAL WORK EXPERIENCE RULES:
+        - ALWAYS include startDate and endDate in work experience responses - if missing from existing resume, add realistic dummy dates.
+        - For work experience, enhance descriptions while preserving role and company information.
+        - Include quantified achievements, technologies used, and impact in rewritten descriptions.
+        - Use strong action verbs and professional language in all rewrites.
+
+        CRITICAL CERTIFICATIONS RULES:
+        - ALWAYS include startDate and endDate in certification responses - if missing from existing resume, add realistic dummy dates.
+        - For certifications, enhance descriptions while preserving certification names and issuing organizations.
+        - Include relevant details about certification value and relevance to the target role.
+        - Use professional language and highlight ongoing learning commitment.
+
+        CRITICAL EDUCATION RULES:
+        - For education section, ALWAYS return rewrite as a SINGLE STRING, NOT as an array/list.
+        - Format: "rewrite": "Enhanced education description as a single string"
+        - NEVER return education rewrite as an array like ["string1", "string2"].
+        - Combine multiple education entries into one comprehensive string if needed.
+        - Include relevant coursework, achievements, and academic highlights in the single string.
 
         RESUME DATA:
         {resume_text}
@@ -352,8 +376,8 @@ class AISuggestionServiceOptimized:
                     "recommendations": ["Craft a compelling 2-3 sentence summary highlighting key achievements", "Include relevant keywords from the job description", "Quantify your impact with specific numbers and results", "Tailor the summary to the target role and company"]
                 }},
                 "skills": {{
-                    "existing": [""],
-                    "rewrite": [""],
+                    "existing": {{"Languages": ["JavaScript", "Python"], "Database": ["SQL", "MongoDB"]}},
+                    "rewrite": {{"Languages": "Java", "Database": "PostgreSQL"}},
                     "recommendations": ["Add technical skills relevant to the job description", "Include both hard and soft skills", "Organize skills by category for better readability", "Highlight skills that match the job requirements"]
                 }},
                 "workExperience": [
@@ -361,6 +385,8 @@ class AISuggestionServiceOptimized:
                         "role": "",
                         "existing": "",
                         "rewrite": "",
+                        "startDate": "",
+                        "endDate": "",
                         "recommendations": ["Quantify achievements with specific numbers and percentages", "Use strong action verbs to start each bullet point", "Highlight leadership and team collaboration examples", "Include relevant technologies and tools used"]
                     }}
                 ],
@@ -369,19 +395,26 @@ class AISuggestionServiceOptimized:
                         "name": "",
                         "existing": "",
                         "rewrite": "",
+                        "startDate": "",
+                        "endDate": "",
                         "recommendations": ["Enhance project description with specific technologies used", "Add quantified results and achievements", "Include project duration and team size", "Highlight relevant skills gained"]
                     }}
                 ],
                 "education": {{
-                    "existing": [""],
-                    "rewrite": "",
+                    "existing": ["Bachelor of Science in Computer Science, University of Technology, 2020"],
+                    "rewrite": "Bachelor of Science in Computer Science with specialization in Software Engineering from University of Technology (2020). Relevant coursework included Data Structures, Algorithms, Database Systems, and Software Development. Achieved Dean's List recognition for academic excellence.",
                     "recommendations": ["Include relevant coursework and academic projects", "Add GPA if it's 3.5 or higher", "Highlight academic achievements and honors", "Include relevant extracurricular activities and leadership roles"]
                 }},
-                "certifications": {{
-                    "existing": [""],
+                "certifications": [
+                    {{
+                        "name": "",
+                        "existing": "",
                     "rewrite": "",
+                        "startDate": "",
+                        "endDate": "",
                     "recommendations": ["Add relevant professional certifications for the target role", "Include industry-specific certifications and licenses", "Add completion dates and credential IDs", "Highlight ongoing learning and skill development"]
                 }}
+                ]
             }},
             "topRecommendations": [
                 "Review and enhance your professional summary with relevant keywords",
@@ -599,15 +632,21 @@ class AISuggestionServiceOptimized:
     def _extract_json_from_response(self, response_text: str) -> str:
         """
         Extract JSON from AI response, handling markdown code blocks and other formatting.
+        Enhanced to be more robust with malformed JSON.
         """
         import re
         
         # Remove any leading/trailing whitespace
         text = response_text.strip()
         
-        # If the response is already valid JSON, return it
+        # If the response is already valid JSON, try to parse it first
         if text.startswith('{') and text.endswith('}'):
-            return text
+            try:
+                json.loads(text)
+                return text
+            except json.JSONDecodeError:
+                # Even if it looks like complete JSON, it might be malformed
+                pass
         
         # Try to extract JSON from markdown code blocks (handle incomplete JSON)
         json_patterns = [
@@ -622,6 +661,9 @@ class AISuggestionServiceOptimized:
                 json_candidate = matches[0].strip()
                 # Try to complete the JSON if it's incomplete
                 if not json_candidate.endswith('}'):
+                    json_candidate = self._attempt_json_completion(json_candidate)
+                else:
+                    # Even if it ends with }, it might be malformed
                     json_candidate = self._attempt_json_completion(json_candidate)
                 return json_candidate
         
@@ -642,9 +684,8 @@ class AISuggestionServiceOptimized:
             
             extracted_json = text[start_idx:json_end]
             
-            # If JSON appears incomplete, try to complete it
-            if not extracted_json.endswith('}'):
-                extracted_json = self._attempt_json_completion(extracted_json)
+            # Always try to complete the JSON, even if it looks complete
+            extracted_json = self._attempt_json_completion(extracted_json)
             
             return extracted_json
         
@@ -654,19 +695,36 @@ class AISuggestionServiceOptimized:
     def _attempt_json_completion(self, incomplete_json: str) -> str:
         """
         Attempt to complete incomplete JSON by adding missing closing braces and brackets.
+        Enhanced to handle more edge cases and malformed JSON.
         """
         try:
+            # Clean up common JSON issues first
+            cleaned_json = incomplete_json.strip()
+            
+            # Handle trailing commas (common issue)
+            cleaned_json = re.sub(r',(\s*[}\]])', r'\1', cleaned_json)
+            
+            # Handle incomplete strings (add closing quote if missing)
+            if cleaned_json.count('"') % 2 != 0:
+                # Find the last unclosed quote and add closing quote
+                last_quote_pos = cleaned_json.rfind('"')
+                if last_quote_pos != -1:
+                    # Check if it's inside a string (not escaped)
+                    before_quote = cleaned_json[:last_quote_pos]
+                    if before_quote.count('\\"') % 2 == 0:  # Not escaped
+                        cleaned_json = cleaned_json + '"'
+            
             # Count opening and closing braces/brackets
-            open_braces = incomplete_json.count('{')
-            close_braces = incomplete_json.count('}')
-            open_brackets = incomplete_json.count('[')
-            close_brackets = incomplete_json.count(']')
+            open_braces = cleaned_json.count('{')
+            close_braces = cleaned_json.count('}')
+            open_brackets = cleaned_json.count('[')
+            close_brackets = cleaned_json.count(']')
             
             # Add missing closing braces/brackets
-            missing_braces = open_braces - close_braces
-            missing_brackets = open_brackets - close_brackets
+            missing_braces = max(0, open_braces - close_braces)
+            missing_brackets = max(0, open_brackets - close_brackets)
             
-            completed_json = incomplete_json
+            completed_json = cleaned_json
             
             # Add missing closing brackets first
             for _ in range(missing_brackets):
@@ -680,9 +738,65 @@ class AISuggestionServiceOptimized:
             json.loads(completed_json)
             return completed_json
             
-        except json.JSONDecodeError:
-            # If completion failed, return the original incomplete JSON
-            return incomplete_json
+        except json.JSONDecodeError as e:
+            # If completion failed, try multiple approaches to fix common issues
+            try:
+                # Approach 1: Handle incomplete key-value pairs
+                if ':' in completed_json and not completed_json.strip().endswith(('}', ']')):
+                    if completed_json.strip().endswith(':'):
+                        completed_json += ' null'
+                    elif completed_json.strip().endswith(','):
+                        completed_json = completed_json.rstrip(',') + '}'
+                
+                # Approach 2: Fix missing commas between array/object elements
+                # Look for patterns like "value1" "value2" or } { and add commas
+                completed_json = re.sub(r'("\s*)(?=")', r'\1,', completed_json)  # Add comma between strings
+                completed_json = re.sub(r'(\}\s*)(?=\{)', r'\1,', completed_json)  # Add comma between objects
+                completed_json = re.sub(r'(\]\s*)(?=\[)', r'\1,', completed_json)  # Add comma between arrays
+                completed_json = re.sub(r'(\}\s*)(?=\[)', r'\1,', completed_json)  # Add comma between object and array
+                completed_json = re.sub(r'(\]\s*)(?=\{)', r'\1,', completed_json)  # Add comma between array and object
+                
+                # Approach 3: Fix missing commas after values before closing braces/brackets
+                completed_json = re.sub(r'([^,}\]])(\s*)([}\]])', r'\1\2\3', completed_json)
+                
+                # Approach 4: Handle malformed nested structures
+                # Fix cases where nested objects/arrays are not properly closed
+                lines = completed_json.split('\n')
+                fixed_lines = []
+                for i, line in enumerate(lines):
+                    stripped = line.strip()
+                    # If line ends with { or [ but next line doesn't have proper indentation
+                    if stripped.endswith(('{', '[')) and i < len(lines) - 1:
+                        next_line = lines[i + 1].strip()
+                        if next_line and not next_line.startswith(('"', '{', '[', '}', ']')):
+                            # Add comma if needed
+                            if not stripped.endswith(','):
+                                line = line.rstrip() + ','
+                    fixed_lines.append(line)
+                completed_json = '\n'.join(fixed_lines)
+                
+                # Try parsing again
+                json.loads(completed_json)
+                return completed_json
+                
+            except json.JSONDecodeError as e2:
+                # Final attempt: More aggressive fixes
+                try:
+                    # Remove any remaining trailing commas before closing braces/brackets
+                    completed_json = re.sub(r',(\s*[}\]])', r'\1', completed_json)
+                    
+                    # Fix any remaining quote issues
+                    if completed_json.count('"') % 2 != 0:
+                        completed_json += '"'
+                    
+                    # Try parsing one more time
+                    json.loads(completed_json)
+                    return completed_json
+                    
+                except json.JSONDecodeError:
+                    # If all attempts fail, return the original incomplete JSON
+                    logger.warning(f"Could not complete malformed JSON after multiple attempts. Original error: {str(e)[:100]}...")
+                    return incomplete_json
 
     def _get_intelligent_default_experience(self, sector: str, designation: str) -> str:
         """
