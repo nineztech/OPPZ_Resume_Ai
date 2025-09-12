@@ -1699,7 +1699,7 @@ const ResumeBuilderPage = () => {
   const scrollTemplates = (direction: 'left' | 'right') => {
     if (direction === 'left' && templateScrollIndex > 0) {
       setTemplateScrollIndex(templateScrollIndex - 1);
-    } else if (direction === 'right' && templateScrollIndex < templateData.length - 4) {
+    } else if (direction === 'right' && templateScrollIndex < templateData.length - 3) {
       setTemplateScrollIndex(templateScrollIndex + 1);
     }
   };
@@ -2109,19 +2109,32 @@ const ResumeBuilderPage = () => {
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="sm" disabled={isDownloading}>
+                  <Button 
+                    size="sm" 
+                    disabled={isDownloading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm transition-all duration-200 hover:shadow-md"
+                  >
                     <Download className="w-4 h-4 mr-2" />
                     {isDownloading ? 'Generating...' : 'Download'}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleDownloadPDF}>
-                    <FileText className="w-4 h-4 mr-2" />
-                    Download as PDF
+                <DropdownMenuContent 
+                  align="end" 
+                  className="w-48 bg-white border border-gray-200 rounded-lg shadow-lg p-1 mt-2"
+                >
+                  <DropdownMenuItem 
+                    onClick={handleDownloadPDF}
+                    className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md cursor-pointer transition-colors duration-150"
+                  >
+                    <FileText className="w-4 h-4 mr-3 text-blue-600" />
+                    <span className="font-medium">Download as PDF</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDownloadWord}>
-                    <File className="w-4 h-4 mr-2" />
-                    Download as Word
+                  <DropdownMenuItem 
+                    onClick={handleDownloadWord}
+                    className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md cursor-pointer transition-colors duration-150"
+                  >
+                    <File className="w-4 h-4 mr-3 text-blue-600" />
+                    <span className="font-medium">Download as Doc</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

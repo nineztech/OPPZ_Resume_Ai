@@ -224,16 +224,16 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
   ]);
 
   return (
-    <div className="max-w-4xl mx-auto px-2 -mt-5 bg-white" style={{ 
+    <div className="max-w-4xl mx-auto px-2 mt-0 bg-white" style={{ 
       fontFamily: 'Arial, Helvetica, Calibri, sans-serif',
-      fontSize: '10px',
+      fontSize: '11px',
       lineHeight: '1.3'
     }}>
       {/* Header */}
       <div className="text-center mb-0">
         {templateData.personalInfo && (
           <>
-            <h1 className="text-2xl -mb-1 font-bold" style={{ 
+            <h1 className="text-2xl py-0 my-0 mb-0 font-bold" style={{ 
               fontSize: '22px',
               fontWeight: 'bold',
               letterSpacing: '1px',
@@ -266,16 +266,17 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
 
       {/* Summary */}
       {sections.has('summary') && (
-        <div className="mb-0 -mt-1" style={{ position: 'relative' }}>
-          <h2 className="text-center font-bold -mb-1 uppercase" style={{ 
+        <div className="mb-0 mt-0" style={{ position: 'relative' }}>
+          <h2 className="text-center font-bold mb-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
             letterSpacing: '0.5px',
+            lineHeight: '2.5',
             color: color || '#1f2937'
           }}>
             SUMMARY
           </h2>
-          <div className="ml-0 mt-0">
+          <div className="ml-0 mt-0 mb-0 p-0" >
             <div className="text-sm" style={{ 
               fontSize: '12px',
               lineHeight: '1.4',
@@ -293,11 +294,12 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
 
       {/* Technical Skills */}
       {sections.has('skills') && (
-        <div className="mb-0 -mt-1">
-          <h2 className="text-center font-bold -mb-1 uppercase" style={{ 
+        <div className="mb-0 mt-0">
+          <h2 className="text-center font-bold mb-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
             letterSpacing: '0.5px',
+              lineHeight: '2.5',
             color: color || '#1f2937'
           }}>
             TECHNICAL SKILLS
@@ -383,10 +385,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
 
       {/* Professional Experience */}
       {sections.has('experience') && (
-        <div className="-mb-2 -mt-1">
-          <h2 className="text-center font-bold -mb-3 mt-1 uppercase" style={{ 
+        <div className="mb-0 ">
+          <h2 className="text-center font-bold mt-2 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
+            lineHeight: '2.5',  
             letterSpacing: '0.5px',
             color: color || '#1f2937'
           }}>
@@ -463,11 +466,12 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
 
       {/* Projects */}
       {sections.has('projects') && (
-        <div className="-mb-3 -mt-1">
-          <h2 className="text-center font-bold -mb-1  uppercase" style={{ 
+        <div className="mb-0 mt-0">
+          <h2 className="text-center font-bold mb-0  uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
             letterSpacing: '0.5px',
+            lineHeight: '2.5',  
             color: color || '#1f2937'
           }}>
             PROJECTS
@@ -543,10 +547,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
       )}
              {/* Education */}
       {sections.has('education') && (
-        <div className="mb-0 -mt-1">
-          <h2 className="text-center font-bold -mb-1 mt-2 uppercase" style={{ 
+        <div className="mb-0 mt-0">
+          <h2 className="text-center font-bold mb-0 mt-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
+            lineHeight: '2.5',  
             letterSpacing: '0.5px',
             color: color || '#1f2937'
           }}>
@@ -611,11 +616,12 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
 
       {/* Certifications */}
       {sections.has('certifications') && (
-        <div className="-mb-30 -mt-1">
-          <h2 className="text-center font-bold -mb-1 uppercase" style={{ 
+        <div className="mb-0 mt-0">
+          <h2 className="text-center font-bold mb-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
             letterSpacing: '0.5px',
+            lineHeight: '2.5',  
             color: color || '#1f2937'
           }}>
             CERTIFICATIONS
