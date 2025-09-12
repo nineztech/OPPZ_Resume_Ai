@@ -8,6 +8,7 @@ interface ResumePreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   templateId: string;
+  visibleSections?: Set<string>;
   data: {
     personalInfo: {
       name: string;
@@ -90,6 +91,7 @@ const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
   isOpen,
   onClose,
   templateId,
+  visibleSections,
   data,
   color
 }) => {
@@ -149,6 +151,7 @@ const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
               templateId={templateId}
               data={data}
               color={color}
+              visibleSections={visibleSections}
             />
           </div>
         </div>

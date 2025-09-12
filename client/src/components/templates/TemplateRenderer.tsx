@@ -91,23 +91,24 @@ interface TemplateRendererProps {
   templateId: string;
   data?: TemplateData;
   color?: string;
+  visibleSections?: Set<string>;
 }
 
-const TemplateRenderer: React.FC<TemplateRendererProps> = ({ templateId, data, color }) => {
+const TemplateRenderer: React.FC<TemplateRendererProps> = ({ templateId, data, color, visibleSections }) => {
   const renderTemplate = () => {
     switch (templateId) {
       case 'modern-professional':
-        return <ModernProfessional data={data} color={color} />;
+        return <ModernProfessional data={data} color={color} visibleSections={visibleSections} />;
       case 'clean-minimal':
-        return <CleanMinimal data={data} color={color} />;
+        return <CleanMinimal data={data} color={color} visibleSections={visibleSections} />;
       case 'creative-designer':
-        return <CreativeDesigner data={data} color={color} />;
+        return <CreativeDesigner data={data} color={color} visibleSections={visibleSections} />;
       case 'executive-classic':
-        return <ExecutiveClassic data={data} color={color} />;
+        return <ExecutiveClassic data={data} color={color} visibleSections={visibleSections} />;
       case 'business-professional':
-        return <BusinessProfessional data={data} color={color} />;
+        return <BusinessProfessional data={data} color={color} visibleSections={visibleSections} />;
       default:
-        return <ModernProfessional data={data} color={color} />;
+        return <ModernProfessional data={data} color={color} visibleSections={visibleSections} />;
     }
   };
 

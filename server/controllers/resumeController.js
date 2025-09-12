@@ -3,6 +3,7 @@ import User from "../models/userModel.js";
 import puppeteer from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 
 // Save new resume
 // Save new resume
@@ -236,6 +237,218 @@ export const generatePDF = async (req, res) => {
     console.error("PDF generation error:", error);
     res.status(500).json({ 
       message: "Error generating PDF",
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
+// Generate Word document from HTML resume data
+export const generateWord = async (req, res) => {
+  try {
+    const { htmlContent, templateId, resumeData } = req.body;
+
+    if (!htmlContent || !templateId) {
+      return res.status(400).json({ 
+        message: "Missing required fields: htmlContent and templateId" 
+      });
+    }
+
+    // Launch Puppeteer to render HTML with all styles
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    const page = await browser.newPage();
+    
+    // Set viewport for consistent rendering
+    await page.setViewport({ width: 1200, height: 1600 });
+    
+    // Set the HTML content
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    
+    // Wait for any dynamic content to load
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Extract styled content from the rendered page
+    const styledContent = await page.evaluate(() => {
+      const container = document.querySelector('.template-container') || document.body;
+      
+      // Function to get computed styles for an element
+      const getElementStyles = (element) => {
+        const computedStyle = window.getComputedStyle(element);
+        return {
+          fontSize: computedStyle.fontSize,
+          fontFamily: computedStyle.fontFamily,
+          fontWeight: computedStyle.fontWeight,
+          color: computedStyle.color,
+          backgroundColor: computedStyle.backgroundColor,
+          textAlign: computedStyle.textAlign,
+          margin: computedStyle.margin,
+          padding: computedStyle.padding,
+          lineHeight: computedStyle.lineHeight,
+          textDecoration: computedStyle.textDecoration,
+          fontStyle: computedStyle.fontStyle
+        };
+      };
+
+      // Function to extract text content with styling information
+      const extractStyledText = (element) => {
+        const result = [];
+        
+        const processNode = (node) => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent.trim();
+            if (text) {
+              const parentElement = node.parentElement;
+              const styles = getElementStyles(parentElement);
+              result.push({
+                type: 'text',
+                content: text,
+                styles: styles,
+                tagName: parentElement.tagName.toLowerCase()
+              });
+            }
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const tagName = node.tagName.toLowerCase();
+            
+            // Handle different element types
+            if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
+              const styles = getElementStyles(node);
+              result.push({
+                type: 'heading',
+                level: parseInt(tagName.substring(1)),
+                content: node.textContent.trim(),
+                styles: styles
+              });
+            } else if (tagName === 'p') {
+              const styles = getElementStyles(node);
+              result.push({
+                type: 'paragraph',
+                content: node.textContent.trim(),
+                styles: styles
+              });
+            } else if (tagName === 'br') {
+              result.push({
+                type: 'linebreak'
+              });
+            } else {
+              // Process child nodes
+              Array.from(node.childNodes).forEach(processNode);
+            }
+          }
+        };
+
+        Array.from(element.childNodes).forEach(processNode);
+        return result;
+      };
+
+      return extractStyledText(container);
+    });
+
+    await browser.close();
+
+    // Convert extracted content to Word document
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: []
+      }]
+    });
+
+    // Process the extracted content
+    styledContent.forEach(item => {
+      if (item.type === 'heading') {
+        const headingLevel = item.level === 1 ? HeadingLevel.TITLE : 
+                            item.level === 2 ? HeadingLevel.HEADING_1 :
+                            item.level === 3 ? HeadingLevel.HEADING_2 :
+                            item.level === 4 ? HeadingLevel.HEADING_3 :
+                            HeadingLevel.HEADING_4;
+
+        doc.addSection({
+          properties: {},
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: item.content,
+                  bold: item.styles.fontWeight === 'bold' || parseInt(item.styles.fontWeight) >= 600,
+                  italics: item.styles.fontStyle === 'italic',
+                  size: Math.round(parseFloat(item.styles.fontSize) * 2), // Convert px to half-points
+                  color: item.styles.color !== 'rgb(0, 0, 0)' ? item.styles.color.replace('rgb', '').replace('(', '').replace(')', '') : undefined,
+                }),
+              ],
+              heading: headingLevel,
+              spacing: {
+                after: 200,
+              },
+            })
+          ]
+        });
+      } else if (item.type === 'paragraph') {
+        doc.addSection({
+          properties: {},
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: item.content,
+                  bold: item.styles.fontWeight === 'bold' || parseInt(item.styles.fontWeight) >= 600,
+                  italics: item.styles.fontStyle === 'italic',
+                  size: Math.round(parseFloat(item.styles.fontSize) * 2),
+                  color: item.styles.color !== 'rgb(0, 0, 0)' ? item.styles.color.replace('rgb', '').replace('(', '').replace(')', '') : undefined,
+                }),
+              ],
+              spacing: {
+                after: 100,
+              },
+            })
+          ]
+        });
+      } else if (item.type === 'text') {
+        // Add text runs for inline content
+        const currentSection = doc.sections[doc.sections.length - 1];
+        if (currentSection && currentSection.children.length > 0) {
+          const lastParagraph = currentSection.children[currentSection.children.length - 1];
+          if (lastParagraph.children) {
+            lastParagraph.children.push(
+              new TextRun({
+                text: item.content,
+                bold: item.styles.fontWeight === 'bold' || parseInt(item.styles.fontWeight) >= 600,
+                italics: item.styles.fontStyle === 'italic',
+                size: Math.round(parseFloat(item.styles.fontSize) * 2),
+                color: item.styles.color !== 'rgb(0, 0, 0)' ? item.styles.color.replace('rgb', '').replace('(', '').replace(')', '') : undefined,
+              })
+            );
+          }
+        }
+      } else if (item.type === 'linebreak') {
+        // Add line break
+        const currentSection = doc.sections[doc.sections.length - 1];
+        if (currentSection && currentSection.children.length > 0) {
+          const lastParagraph = currentSection.children[currentSection.children.length - 1];
+          if (lastParagraph.children) {
+            lastParagraph.children.push(new TextRun({ text: '\n' }));
+          }
+        }
+      }
+    });
+
+    // Generate Word document buffer
+    const buffer = await Packer.toBuffer(doc);
+
+    // Set response headers for Word download
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="resume_${templateId}.docx"`);
+    res.setHeader('Content-Length', buffer.length);
+
+    // Send the Word buffer
+    res.send(buffer);
+
+  } catch (error) {
+    console.error("Word generation error:", error);
+    res.status(500).json({ 
+      message: "Error generating Word document",
       details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }

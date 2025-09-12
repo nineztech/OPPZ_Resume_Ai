@@ -83,9 +83,10 @@ interface TemplateData {
   }>;
 }
 
-interface CleanMinimalProps {
+interface ModernProfessionalProps {
   data?: TemplateData;
   color?: string;
+  visibleSections?: Set<string>;
 }
 
 const cleanMinimalTemplateData: TemplateData = {
@@ -207,9 +208,20 @@ const cleanMinimalTemplateData: TemplateData = {
   }
 };
 
-const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
+const ResumePDF: React.FC<ModernProfessionalProps> = ({ data, color, visibleSections }) => {
   // Use the passed data prop if available, otherwise fall back to default data
   const templateData = data || cleanMinimalTemplateData;
+  
+  // Default visible sections if not provided
+  const sections = visibleSections || new Set([
+    'basic-details',
+    'summary', 
+    'skills',
+    'experience',
+    'education',
+    'projects',
+    'certifications'
+  ]);
 
   return (
     <div className="max-w-4xl mx-auto p-2 -mt-4 bg-white" style={{ 

@@ -11,6 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   ArrowLeft, 
   Save, 
@@ -26,7 +32,8 @@ import {
   ChevronRight,
   Code,
   Users,
-  Plus
+  Plus,
+  File
 } from 'lucide-react';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 import { templates as templateData, getTemplateById } from '@/data/templates';
@@ -34,6 +41,7 @@ import type { Template } from '@/data/templates';
 import ResumePreviewModal from '@/components/modals/ResumePreviewModal';
 import AddCustomSectionModal from '@/components/modals/AddCustomSectionModal';
 import { generatePDF, downloadPDF } from '@/services/pdfService';
+import { generateWord, downloadWord } from '@/services/wordService';
 
 // Helper function to safely process description text
 // const safeProcessDescription = (description: any): string[] => {
@@ -1807,6 +1815,43 @@ const ResumeBuilderPage = () => {
     }
   };
 
+  const handleDownloadWord = async () => {
+    if (!resumeRef.current) return;
+
+    try {
+      setIsDownloading(true);
+      
+      // Get the HTML content from the resume
+      const htmlContent = resumeRef.current.outerHTML;
+      
+      // Generate Word document using the service
+      const blob = await generateWord({
+        htmlContent,
+        templateId: selectedTemplate?.id || 'modern-professional',
+        resumeData: resumeData
+      });
+
+      // Download the Word document
+      const filename = `${resumeData.basicDetails.fullName.replace(/\s+/g, '_')}_Resume.docx`;
+      downloadWord(blob, filename);
+
+      toast({
+        title: 'Success',
+        description: 'Word document generated and downloaded successfully!',
+      });
+
+    } catch (error) {
+      console.error('Error generating Word document:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate Word document. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const sections = [
     { id: 'basic-details', label: 'Basic details', icon: User },
     { id: 'summary', label: 'Summary & Objective', icon: FileText },
@@ -2042,7 +2087,7 @@ const ResumeBuilderPage = () => {
                 size="sm"
                 onClick={() => setIsPreviewModalOpen(true)}
               >
-                <Eye className="w-4 h-4 mr-2" />
+                <Eye className="w-4 h-4" />
               
               </Button>
               <Button 
@@ -2059,13 +2104,27 @@ const ResumeBuilderPage = () => {
                 onClick={handleSaveResume}
                 disabled={isSaving}
               >
-                <Save className="w-4 h-4 mr-2" />
+                <Save className="w-4 h-4 " />
                 {/* {isSaving ? 'Saving...' : 'Save'} */}
               </Button>
-              <Button size="sm" onClick={handleDownloadPDF} disabled={isDownloading}>
-                <Download className="w-4 h-4 mr-2" />
-                {isDownloading ? 'Generating...' : 'Download'}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" disabled={isDownloading}>
+                    <Download className="w-4 h-4 mr-2" />
+                    {isDownloading ? 'Generating...' : 'Download'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleDownloadPDF}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Download as PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDownloadWord}>
+                    <File className="w-4 h-4 mr-2" />
+                    Download as Word
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -2076,6 +2135,7 @@ const ResumeBuilderPage = () => {
             <div className="p-6" ref={resumeRef}>
               <TemplateRenderer
                 templateId={selectedTemplate?.id || templateId}
+                visibleSections={visibleSections}
                 data={{
                   personalInfo: visibleSections.has('basic-details') ? {
                     name: resumeData.basicDetails.fullName,
@@ -2291,6 +2351,7 @@ const ResumeBuilderPage = () => {
         isOpen={isPreviewModalOpen}
         onClose={() => setIsPreviewModalOpen(false)}
         templateId={selectedTemplate?.id || templateId}
+        visibleSections={visibleSections}
         data={{
           personalInfo: visibleSections.has('basic-details') ? {
             name: resumeData.basicDetails.fullName,

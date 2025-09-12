@@ -5,7 +5,8 @@ import {
   getUserResumes,
   getResumeById,
   deleteResume,
-  generatePDF
+  generatePDF,
+  generateWord
 } from "../controllers/resumeController.js";
 import authMiddleware from "../middleware/auth.js";
 
@@ -19,5 +20,6 @@ router.get("/", getUserResumes);
 router.get("/:id", getResumeById);
 router.delete("/:id", deleteResume);
 router.post("/generate-pdf", generatePDF);
+router.post("/generate-word", generateWord);
 
 export default router;

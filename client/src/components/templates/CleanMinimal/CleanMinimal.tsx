@@ -86,6 +86,7 @@ interface TemplateData {
 interface CleanMinimalProps {
   data?: TemplateData;
   color?: string;
+  visibleSections?: Set<string>;
 }
 
 const cleanMinimalTemplateData: TemplateData = {
@@ -207,9 +208,20 @@ const cleanMinimalTemplateData: TemplateData = {
   }
 };
 
-const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
+const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }) => {
   // Use the passed data prop if available, otherwise fall back to default data
   const templateData = data || cleanMinimalTemplateData;
+  
+  // Default visible sections if not provided
+  const sections = visibleSections || new Set([
+    'basic-details',
+    'summary', 
+    'skills',
+    'experience',
+    'education',
+    'projects',
+    'certifications'
+  ]);
 
   return (
     <div className="max-w-4xl mx-auto px-2 -mt-5 bg-white" style={{ 
@@ -253,7 +265,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       </div>
 
       {/* Summary */}
-      {templateData.summary !== null && templateData.summary !== undefined && (
+      {sections.has('summary') && (
         <div className="mb-0 -mt-1" style={{ position: 'relative' }}>
           <h2 className="text-center font-bold -mb-1 uppercase" style={{ 
             fontSize: '13px',
@@ -271,14 +283,16 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
               color: '#000000',
               fontWeight: '500'
             }}>
-              {templateData.summary || 'Write a compelling summary of your professional background and key strengths...'}
+              {templateData.summary && templateData.summary.trim() !== '' 
+                ? templateData.summary 
+                : 'Write a compelling summary of your professional background and key strengths...'}
             </div>
           </div>
         </div>
       )}
 
       {/* Technical Skills */}
-      {templateData.skills?.technical !== null && templateData.skills?.technical !== undefined && (
+      {sections.has('skills') && (
         <div className="mb-0 -mt-1">
           <h2 className="text-center font-bold -mb-1 uppercase" style={{ 
             fontSize: '13px',
@@ -289,57 +303,69 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
             TECHNICAL SKILLS
           </h2>
           <div className="space-y-0">
-            {typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
-              // Handle categorized skills structure - display as "Category: skills"
-              Object.entries(templateData.skills.technical).map(([category, skills]) => {
-                // Skip empty categories
-                if (!skills || (Array.isArray(skills) && skills.length === 0)) {
-                  return null;
-                }
-                
-                // Ensure skills is an array
-                const skillsArray = Array.isArray(skills) ? skills : [skills];
-                
-                return (
-                  <div key={category} className="text-sm" style={{ 
-                    fontSize: '11px',
-                    lineHeight: '1.3',
-                    color: '#000000'
-                  }}>
-                    <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
-                  </div>
-                );
-              }).filter(Boolean) // Remove null entries
-            ) : Array.isArray(templateData.skills.technical) && templateData.skills.technical.length > 0 ? (
-              // Handle flat skills array - parse key-value pairs
-              templateData.skills.technical.map((skill, index) => {
-                if (!skill || typeof skill !== 'string') return null;
-                
-                // Check if skill contains a colon (key-value format)
-                if (skill.includes(':')) {
-                  const [key, value] = skill.split(':', 2);
+            {templateData.skills?.technical && templateData.skills.technical !== null && templateData.skills.technical !== undefined ? (
+              typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
+                // Handle categorized skills structure - display as "Category: skills"
+                Object.entries(templateData.skills.technical).map(([category, skills]) => {
+                  // Skip empty categories
+                  if (!skills || (Array.isArray(skills) && skills.length === 0)) {
+                    return null;
+                  }
+                  
+                  // Ensure skills is an array
+                  const skillsArray = Array.isArray(skills) ? skills : [skills];
+                  
                   return (
-                    <div key={index} className="text-sm" style={{ 
+                    <div key={category} className="text-sm" style={{ 
                       fontSize: '11px',
                       lineHeight: '1.3',
                       color: '#000000'
                     }}>
-                      <span className="font-bold" style={{ fontWeight: 'bold' }}>{key.trim()}:</span> {value.trim()}
+                      <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
                     </div>
                   );
-                } else {
-                  // Fallback for skills without colon
-                  return (
-                    <div key={index} className="text-sm" style={{ 
-                      fontSize: '11px',
-                      lineHeight: '1.3',
-                      color: '#000000'
-                    }}>
-                      {skill}
-                    </div>
-                  );
-                }
-              })
+                }).filter(Boolean) // Remove null entries
+              ) : Array.isArray(templateData.skills.technical) && templateData.skills.technical.length > 0 ? (
+                // Handle flat skills array - parse key-value pairs
+                templateData.skills.technical.map((skill, index) => {
+                  if (!skill || typeof skill !== 'string') return null;
+                  
+                  // Check if skill contains a colon (key-value format)
+                  if (skill.includes(':')) {
+                    const [key, value] = skill.split(':', 2);
+                    return (
+                      <div key={index} className="text-sm" style={{ 
+                        fontSize: '11px',
+                        lineHeight: '1.3',
+                        color: '#000000'
+                      }}>
+                        <span className="font-bold" style={{ fontWeight: 'bold' }}>{key.trim()}:</span> {value.trim()}
+                      </div>
+                    );
+                  } else {
+                    // Fallback for skills without colon
+                    return (
+                      <div key={index} className="text-sm" style={{ 
+                        fontSize: '11px',
+                        lineHeight: '1.3',
+                        color: '#000000'
+                      }}>
+                        {skill}
+                      </div>
+                    );
+                  }
+                })
+              ) : (
+                // Show placeholder when no skills are present
+                <div className="text-sm" style={{ 
+                  fontSize: '11px',
+                  lineHeight: '1.3',
+                  color: '#666666',
+                  fontStyle: 'italic'
+                }}>
+                  Add your technical skills here...
+                </div>
+              )
             ) : (
               // Show placeholder when no skills are present
               <div className="text-sm" style={{ 
@@ -356,7 +382,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       )}
 
       {/* Professional Experience */}
-      {Array.isArray(templateData.experience) && (
+      {sections.has('experience') && (
         <div className="-mb-2 -mt-1">
           <h2 className="text-center font-bold -mb-3 mt-1 uppercase" style={{ 
             fontSize: '13px',
@@ -367,7 +393,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
             PROFESSIONAL EXPERIENCE
           </h2>
           <div className="-space-y-2">
-            {templateData.experience.length > 0 ? (
+            {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
               templateData.experience.map((exp, index) => {
                 return (
                   <div key={index} >
@@ -436,7 +462,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
      
 
       {/* Projects */}
-      {Array.isArray(templateData.projects) && (
+      {sections.has('projects') && (
         <div className="-mb-3 -mt-1">
           <h2 className="text-center font-bold -mb-1  uppercase" style={{ 
             fontSize: '13px',
@@ -447,7 +473,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
             PROJECTS
           </h2>
           <div className="-space-y-2 -mt-4">
-            {templateData.projects.length > 0 ? (
+            {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
               templateData.projects.map((project, index) => (
                 <div key={index} style={{ marginBottom: '-10px' }}>
                                      <div className="-mb-1.5">
@@ -516,7 +542,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
         </div>
       )}
              {/* Education */}
-      {Array.isArray(templateData.education) && (
+      {sections.has('education') && (
         <div className="mb-0 -mt-1">
           <h2 className="text-center font-bold -mb-1 mt-2 uppercase" style={{ 
             fontSize: '13px',
@@ -527,7 +553,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
             EDUCATION
           </h2>
           <div className="space-y-0">
-            {templateData.education.length > 0 ? (
+            {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
               templateData.education.map((edu, index) => (
                 <div key={index} className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
                   <div>
@@ -584,7 +610,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
       )}
 
       {/* Certifications */}
-      {Array.isArray(templateData.certifications) && (
+      {sections.has('certifications') && (
         <div className="-mb-30 -mt-1">
           <h2 className="text-center font-bold -mb-1 uppercase" style={{ 
             fontSize: '13px',
@@ -595,7 +621,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color }) => {
             CERTIFICATIONS
           </h2>
           <div className="space-y-0">
-            {templateData.certifications.length > 0 ? (
+            {Array.isArray(templateData.certifications) && templateData.certifications.length > 0 ? (
               templateData.certifications.map((cert, index) => (
                 <div key={index} className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
                   <div>
