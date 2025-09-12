@@ -328,7 +328,9 @@ class AISuggestionServiceOptimized:
         - If NO projects exist in the resume, create exactly 2 dummy projects that match the job description requirements.
         - Each dummy project must have: name, existing (empty), rewrite (detailed project description), and recommendations.
         - Dummy projects should be relevant to the job role and demonstrate skills mentioned in the job description.
-        - If projects DO exist, enhance their descriptions in the "rewrite" field to better match the job description.
+        - If projects DO exist, ONLY enhance the descriptions of existing projects in the "rewrite" field to better match the job description.
+        - DO NOT create new projects when projects already exist - only enhance existing ones.
+        - For existing projects, keep the same project names and only improve the descriptions.
         - Project descriptions should include: technologies used, achievements, impact, and relevance to the target role.
         - Use strong action verbs and quantified results where possible.
         - Ensure project names and descriptions align with the {target_experience} level and job requirements.

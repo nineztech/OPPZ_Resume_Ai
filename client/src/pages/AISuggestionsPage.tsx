@@ -115,7 +115,8 @@ const AISuggestionsPage: React.FC = () => {
         skills: (state.suggestions as any).sectionSuggestions?.skills?.rewrite || [],
         workExperience: (state.suggestions as any).sectionSuggestions?.workExperience?.rewrite || null,
         education: (state.suggestions as any).sectionSuggestions?.education?.rewrite || null,
-        projects: (state.suggestions as any).sectionSuggestions?.projects?.rewrite || null,
+        // Pass the full projects array with name, existing, rewrite, recommendations
+        projects: (state.suggestions as any).sectionSuggestions?.projects || null,
         certifications: (state.suggestions as any).sectionSuggestions?.certifications?.rewrite || null
       }
         };
