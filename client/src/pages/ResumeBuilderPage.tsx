@@ -967,36 +967,34 @@ const ResumeBuilderPage = () => {
           if (rewrites.projects && rewrites.projects !== null) {
             console.log('Applying projects rewrites:', rewrites.projects);
             
-            // Handle projects as a single rewrite string
+            // Handle projects as a single rewrite string (for new projects)
             if (typeof rewrites.projects === 'string' && rewrites.projects.trim()) {
               const rewriteText = rewrites.projects;
               console.log('Project suggestion from AI:', rewriteText);
-              // Let backend handle project creation with proper structure
-              // Don't create hardcoded projects - let backend handle this
+              // This is for new projects - let backend handle project creation
             }
-            // Handle projects as array
+            // Handle projects as array of objects (for existing project enhancements)
             else if (Array.isArray(rewrites.projects) && rewrites.projects.length > 0) {
-              // Check if it's an array of simple strings or objects
-              if (typeof rewrites.projects[0] === 'string') {
-                rewrites.projects.forEach((projectName: string, _: number) => {
-                  if (projectName && projectName.trim()) {
-                    // Let backend handle project creation with proper structure
-                    console.log('Project suggestion from AI:', projectName.trim());
-                    // Don't create hardcoded projects - let backend handle this
-                  }
-                });
-              }
-              // Handle projects as array of objects (legacy support)
-              else {
-              rewrites.projects.forEach((projectRewrite: any, _: number) => {
-                if (projectRewrite.rewrite) {
-                  const rewriteText = projectRewrite.rewrite;
-                  console.log('Project suggestion from AI:', rewriteText);
-                  // Let backend handle project creation with proper structure
-                  // Don't create hardcoded projects - let backend handle this
+              console.log('Processing project enhancements for existing projects');
+              
+              // Apply enhancements to existing projects
+              processedData.projects = processedData.projects.map((existingProject: any) => {
+                // Find matching AI suggestion for this project
+                const aiProject = rewrites.projects.find((aiProj: any) => 
+                  aiProj.name && existingProject.name && 
+                  aiProj.name.toLowerCase().trim() === existingProject.name.toLowerCase().trim()
+                );
+                
+                if (aiProject && aiProject.rewrite) {
+                  console.log(`Enhancing project "${existingProject.name}" with AI suggestions`);
+                  return {
+                    ...existingProject,
+                    description: aiProject.rewrite // Replace description with enhanced version
+                  };
                 }
+                
+                return existingProject; // Keep original if no enhancement found
               });
-              }
             }
           }
           
@@ -1016,75 +1014,7 @@ const ResumeBuilderPage = () => {
           console.log('Current projects count:', processedData.projects.length);
           console.log('AI suggestions structure:', aiSuggestions);
           
-          // Check if we need to add projects from AI suggestions
-          let projectsAdded = false;
-          
-          // Method 1: Check sectionSuggestions.projects
-          if (aiSuggestions.sectionSuggestions?.projects) {
-            console.log('Found projects in sectionSuggestions:', aiSuggestions.sectionSuggestions.projects);
-            const projectSuggestions = aiSuggestions.sectionSuggestions.projects;
-            
-            // Handle as array of project objects
-            if (Array.isArray(projectSuggestions) && projectSuggestions.length > 0) {
-              projectSuggestions.forEach((project: any, index: number) => {
-                if (project && (project.rewrite || project.name || project.existing)) {
-                  const projectName = project.name || 'AI Suggested Project';
-                  const projectDescription = project.rewrite || project.existing || 'AI suggested project';
-                  
-                  const newProject = {
-                    id: `ai-project-section-${index}-${Date.now()}`,
-                    name: projectName,
-                    techStack: 'MERN Stack',
-                    startDate: '',
-                    endDate: '',
-                    description: projectDescription,
-                    link: ''
-                  };
-                  
-                  processedData.projects.push(newProject);
-                  changesSet.add(`project-${processedData.projects.length - 1}-ai-section`);
-                  projectsAdded = true;
-                  console.log('Added project from sectionSuggestions:', newProject);
-                }
-              });
-            }
-            // Handle as single rewrite string
-            else if (typeof projectSuggestions === 'string' && projectSuggestions.trim()) {
-              const rewriteText = projectSuggestions;
-              const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
-              
-              let projectTitle = 'AI Suggested Project';
-              const titleLine = lines.find((line: string) => line.startsWith('**') && line.endsWith('**'));
-              if (titleLine) {
-                projectTitle = titleLine.replace(/\*\*/g, '').trim();
-              }
-              
-              const bulletPoints = lines.filter((line: string) => line.startsWith('*') && !line.startsWith('**')).map((line: string) => line.substring(1).trim());
-              
-              const newProject = {
-                id: `ai-project-section-${Date.now()}`,
-                name: projectTitle,
-                techStack: 'MERN Stack',
-                startDate: '',
-                endDate: '',
-                description: bulletPoints.length > 0 ? bulletPoints.join('\n') : rewriteText,
-                link: ''
-              };
-              
-              processedData.projects.push(newProject);
-              changesSet.add(`project-${processedData.projects.length - 1}-ai-section`);
-              projectsAdded = true;
-              console.log('Added project from sectionSuggestions string:', newProject);
-            }
-          }
-          
-          // Method 2: Check if no projects exist - let backend handle project creation
-          if (processedData.projects.length === 0 && !projectsAdded) {
-            console.log('No projects found anywhere, letting backend handle project creation...');
-            // Don't create dummy projects - let the backend AI service handle this
-            projectsAdded = true;
-          }
-          
+          // Projects are now handled above - no need to add duplicate projects
           console.log('Final projects count after AI processing:', processedData.projects.length);
           
           // Apply Certifications rewrites
