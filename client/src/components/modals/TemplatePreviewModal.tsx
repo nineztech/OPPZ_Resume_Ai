@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Star, Download, Eye, Heart, Share2, X, Palette } from 'lucide-react';
+import { Star, Eye, X, Palette } from 'lucide-react';
 import { type Template } from '@/data/templates';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 
@@ -13,7 +13,7 @@ interface TemplatePreviewModalProps {
   onUseTemplate?: (templateId: string, selectedColor?: string) => void;
 }
 
-const TemplatePreviewModal = ({ template, isOpen, onClose, onDownload, onUseTemplate }: TemplatePreviewModalProps) => {
+const TemplatePreviewModal = ({ template, isOpen, onClose, onUseTemplate }: TemplatePreviewModalProps) => {
   const [selectedColor, setSelectedColor] = useState<string>('');
 
   // Set initial selected color when template changes
@@ -55,18 +55,7 @@ const TemplatePreviewModal = ({ template, isOpen, onClose, onDownload, onUseTemp
     setSelectedColor(color);
   };
 
-  const handleDownload = async () => {
-    try {
-      // For frontend templates, we'll simulate download
-      console.log('Downloading template:', template!.id, 'with color:', selectedColor);
-      
-      // Call the parent handler for any additional actions
-      onDownload(template!.id, selectedColor);
-    } catch (error) {
-      console.error('Error downloading template:', error);
-      alert('Failed to download template. Please try again.');
-    }
-  };
+  
 
   const handleUseTemplate = () => {
     if (onUseTemplate) {
