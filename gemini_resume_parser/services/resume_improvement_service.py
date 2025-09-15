@@ -725,44 +725,4 @@ class ResumeImprovementService:
         return summary
 
 
-                
-
-                # Simple comparison (can be enhanced with more sophisticated diffing)
-
-                if str(original_value) != str(improved_value):
-
-                    summary["fields_improved"].append(key)
-
-                    summary["total_changes"] += 1
-
-        
-
-        # Identify improvement areas based on common resume sections
-
-        improvement_areas = []
-
-        if "experience" in summary["fields_improved"]:
-
-            improvement_areas.append("Professional Experience")
-
-        if "skills" in summary["fields_improved"]:
-
-            improvement_areas.append("Skills Section")
-
-        if "summary" in summary["fields_improved"]:
-
-            improvement_areas.append("Professional Summary")
-
-        if "education" in summary["fields_improved"]:
-
-            improvement_areas.append("Education")
-
-        
-
-        summary["improvement_areas"] = improvement_areas
-
-        
-
-        return summary
-
 
