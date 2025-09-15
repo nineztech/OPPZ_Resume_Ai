@@ -4,12 +4,12 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-class GeminiConfig:
-    """Configuration class for Gemini API settings"""
+class OpenAIConfig:
+    """Configuration class for OpenAI API settings"""
     
-    # Gemini API Configuration
-    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-    GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
+    # OpenAI API Configuration
+    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+    OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
     
     # PDF Processing Configuration
     MAX_PDF_SIZE_MB = int(os.getenv('MAX_PDF_SIZE_MB', '10'))
@@ -79,7 +79,7 @@ class GeminiConfig:
     @classmethod
     def validate_config(cls):
         """Validate that required configuration is present"""
-        if not cls.GEMINI_API_KEY:
-            raise ValueError("GEMINI_API_KEY environment variable is required")
+        if not cls.OPENAI_API_KEY:
+            raise ValueError("OPENAI_API_KEY environment variable is required")
         return True
 

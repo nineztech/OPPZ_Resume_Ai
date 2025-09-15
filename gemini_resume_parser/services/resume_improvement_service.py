@@ -4,7 +4,7 @@ import datetime
 import re
 from typing import Dict, Any, Optional, List
 from google.generativeai import GenerativeModel
-from .gemini_parser_service import GeminiResumeParser
+from .openai_parser_service import OpenAIResumeParser
 
 logger = logging.getLogger(__name__)
 
@@ -17,18 +17,19 @@ class ResumeImprovementService:
     the suggestions from the ATS analysis.
     """
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-2.5-flash", temperature: float = 0.3, top_p: float = 0.8):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini", temperature: float = 0.3, top_p: float = 0.8):
         """
         Initialize the Resume Improvement Service
         
         Args:
-            api_key: Gemini API key (if not provided, will use environment variable)
-            model_name: Gemini model name (if not provided, will use default)
+            api_key: OpenAI API key (if not provided, will use environment variable)
+            model_name: OpenAI model name (if not provided, will use default)
             temperature: Controls randomness in responses (0.0 = deterministic, 1.0 = creative)
             top_p: Controls diversity via nucleus sampling (0.0 = focused, 1.0 = diverse)
         """
-        self.parser = GeminiResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
-        self.model = self.parser.model
+        self.parser = OpenAIResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
+        self.model = self.parser.client
+        self.model_name = model_name
         self.temperature = temperature
         self.top_p = top_p
     
@@ -139,9 +140,18 @@ class ResumeImprovementService:
         prompt = self._create_improvement_prompt(parsed_resume_data, suggestions, ats_analysis, missing_sections)
         
         try:
-            logger.info("Generating improved resume with Gemini API")
-            response = self.model.generate_content(prompt)
-            cleaned_response = self._clean_gemini_response(response.text)
+            logger.info("Generating improved resume with OpenAI API")
+            response = self.model.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an expert resume improvement specialist. Generate enhanced resume content based on ATS analysis and suggestions."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=self.temperature,
+                top_p=self.top_p,
+                max_tokens=4000
+            )
+            cleaned_response = self._clean_openai_response(response.choices[0].message.content)
             
             # Parse the improved resume
             improved_resume = json.loads(cleaned_response)
@@ -189,6 +199,7 @@ class ResumeImprovementService:
         - Preserve all original information while enhancing it
         - Ensure the improved resume is ATS-friendly and professional
         - Keep the same field names and structure as the input
+        - For projects: ALWAYS include techStack as a comma-separated string of technologies
 
         ORIGINAL RESUME DATA:
         {json.dumps(parsed_resume_data, indent=2)}
@@ -242,7 +253,7 @@ class ResumeImprovementService:
         7. MISSING SECTIONS - ADD DUMMY DATA:
            - If PROJECTS section is missing, add 2-3 realistic projects with:
              * Project name and detailed description (8-10 lines)
-             * Technologies used (based on their skills/experience)
+             * techStack: Comma-separated string of technologies used (e.g., "React, Node.js, MongoDB, AWS")
              * Key achievements or outcomes with specific metrics
              * Start date and end date (format: "Aug 2020 - Sep 2020")
              * Detailed project description including:
@@ -269,25 +280,138 @@ class ResumeImprovementService:
            - Include specific technical details and business impact in descriptions
 
         REQUIRED OUTPUT FORMAT:
-        Return the improved resume data in the exact same JSON structure as the input, but with enhanced content that addresses the ATS suggestions.
+         Return the improved resume data in the EXACT format expected by the frontend ResumeBuilderPage.tsx interface:
 
-        The output should be a valid JSON object with the same structure as the input parsed_resume_data, containing:
-        - All original fields and sections
-        - Enhanced content that addresses the ATS suggestions
-        - Improved bullet points with quantifiable achievements
-        - Better keyword integration
-        - More concise and impactful language
-        - ATS-optimized formatting and structure
-        - NEW SECTIONS: Add "projects" and "certificates" arrays if they were missing
-        - Projects array should contain objects with: 
-          * name: Project title
-          * description: Detailed 8-10 line description covering objectives, challenges, solutions, features, impact
-          * technologies: Array of technologies used
-          * achievements: Key outcomes with specific metrics
-          * startDate: Start date in "Aug 2020" format
-          * endDate: End date in "Sep 2020" format
-          * duration: Total duration (e.g., "2 months", "6 months")
-        - Certificates array should contain objects with: name, organization, date, description
+         {{
+           "basicDetails": {{
+             "fullName": "string",
+             "professionalTitle": "string", 
+             "phone": "string",
+             "email": "string",
+             "location": "string",
+             "website": "string",
+             "github": "string",
+             "linkedin": "string",
+             "profilePicture": "string (optional)"
+           }},
+           "summary": "string",
+           "objective": "string",
+           "experience": [
+             {{
+               "id": "string",
+               "company": "string",
+               "position": "string", 
+               "startDate": "string",
+               "endDate": "string",
+               "description": "string",
+               "location": "string"
+             }}
+           ],
+           "education": [
+             {{
+               "id": "string",
+               "institution": "string",
+               "degree": "string",
+               "year": "string",
+               "description": "string",
+               "grade": "string",
+               "location": "string"
+             }}
+           ],
+           "skills": "object or array - maintain original format",
+           "languages": [
+             {{
+               "name": "string",
+               "proficiency": "string"
+             }}
+           ],
+           "activities": [
+             {{
+               "id": "string",
+               "title": "string",
+               "description": "string"
+             }}
+           ],
+           "projects": [
+             {{
+               "id": "string",
+               "name": "string",
+               "techStack": "string",
+               "startDate": "string",
+               "endDate": "string", 
+               "description": "string",
+               "link": "string"
+             }}
+           ],
+           "certifications": [
+             {{
+               "id": "string",
+               "certificateName": "string",
+               "link": "string",
+               "startDate": "string",
+               "endDate": "string",
+               "instituteName": "string"
+             }}
+           ],
+           "references": [
+             {{
+               "id": "string",
+               "name": "string",
+               "title": "string",
+               "company": "string",
+               "phone": "string",
+               "email": "string",
+               "relationship": "string"
+             }}
+           ],
+           "customSections": [
+             {{
+               "id": "string",
+               "title": "string",
+               "type": "text|list|timeline|grid|mixed",
+               "position": "number",
+               "content": {{
+                 "text": "string (optional)",
+                 "items": [
+                   {{
+                     "id": "string",
+                     "title": "string (optional)",
+                     "subtitle": "string (optional)",
+                     "description": "string (optional)",
+                     "startDate": "string (optional)",
+                     "endDate": "string (optional)",
+                     "location": "string (optional)",
+                     "link": "string (optional)",
+                     "bullets": ["string"],
+                     "tags": ["string"]
+                   }}
+                 ],
+                 "columns": [
+                   {{
+                     "title": "string",
+                     "items": ["string"]
+                   }}
+                 ]
+               }},
+               "styling": {{
+                 "showBullets": "boolean (optional)",
+                 "showDates": "boolean (optional)",
+                 "showLocation": "boolean (optional)",
+                 "showLinks": "boolean (optional)",
+                 "showTags": "boolean (optional)",
+                 "layout": "vertical|horizontal|grid (optional)"
+               }}
+             }}
+           ]
+         }}
+
+         CRITICAL REQUIREMENTS:
+         - Use EXACT field names as shown above (e.g., "basicDetails", "fullName", "professionalTitle", etc.)
+         - Generate unique IDs for all array items using uuid-like strings
+         - Maintain the exact structure and nesting as shown
+         - For missing sections, add empty arrays with proper structure
+         - Ensure all required fields are present even if empty
+         - Use the frontend's expected data types (strings, arrays, objects)
 
         Focus on making specific, measurable improvements while maintaining the professional tone and authenticity of the original resume.
         Ensure all dummy data is realistic and relevant to the person's field and experience level.
@@ -316,9 +440,9 @@ class ResumeImprovementService:
         
         return '\n'.join(formatted_suggestions)
     
-    def _clean_gemini_response(self, response_text: str) -> str:
-        """Clean Gemini API response to extract valid JSON"""
-        logger.info(f"Cleaning Gemini response of {len(response_text)} characters")
+    def _clean_openai_response(self, response_text: str) -> str:
+        """Clean OpenAI API response to extract valid JSON"""
+        logger.info(f"Cleaning OpenAI response of {len(response_text)} characters")
         
         # Remove markdown code blocks
         if response_text.startswith("```json"):
@@ -366,44 +490,198 @@ class ResumeImprovementService:
     
     def _validate_improved_resume(self, improved_resume: Dict[str, Any], original_resume: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate and enhance the improved resume
+        Validate and enhance the improved resume to match frontend format exactly
         
         Args:
             improved_resume: The generated improved resume
             original_resume: The original resume for comparison
             
         Returns:
-            Validated and enhanced resume
+            Validated and enhanced resume in frontend format
         """
-        # Ensure all original fields are present
-        for key, value in original_resume.items():
-            if key not in improved_resume:
-                improved_resume[key] = value
-                logger.warning(f"Missing field in improved resume: {key}, using original")
+        import uuid
         
-        # Ensure projects section exists (add empty array if missing)
-        if "projects" not in improved_resume:
-            improved_resume["projects"] = []
-            logger.info("Added missing projects section")
-        
-        # Ensure certificates section exists (add empty array if missing)
-        if "certificates" not in improved_resume:
-            improved_resume["certificates"] = []
-            logger.info("Added missing certificates section")
-        
-        # Add metadata about the improvement
-        improved_resume["_improvement_metadata"] = {
-            "improved_at": datetime.datetime.utcnow().isoformat() + "Z",
-            "improvement_service": "ResumeImprovementService",
-            "original_fields_preserved": len(original_resume),
-            "improvement_applied": True,
-            "sections_added": {
-                "projects": "projects" not in original_resume,
-                "certificates": "certificates" not in original_resume
-            }
+        # Ensure all required frontend fields are present with correct structure
+        frontend_format = {
+            "basicDetails": {
+                "fullName": "",
+                "professionalTitle": "",
+                "phone": "",
+                "email": "",
+                "location": "",
+                "website": "",
+                "github": "",
+                "linkedin": "",
+                "profilePicture": ""
+            },
+            "summary": "",
+            "objective": "",
+            "experience": [],
+            "education": [],
+            "skills": {},
+            "languages": [],
+            "activities": [],
+            "projects": [],
+            "certifications": [],
+            "references": [],
+            "customSections": []
         }
         
-        return improved_resume
+        # Map basicDetails from original resume data (preserve original data)
+        if "basic_details" in original_resume and isinstance(original_resume["basic_details"], dict):
+            basic_details = original_resume["basic_details"]
+            frontend_format["basicDetails"] = {
+                "fullName": basic_details.get("full_name", basic_details.get("name", "")),
+                "professionalTitle": basic_details.get("professional_title", ""),
+                "phone": basic_details.get("phone", ""),
+                "email": basic_details.get("email", ""),
+                "location": basic_details.get("location", ""),
+                "website": basic_details.get("website", ""),
+                "github": basic_details.get("github", ""),
+                "linkedin": basic_details.get("linkedin", ""),
+                "profilePicture": basic_details.get("profilePicture", "")
+            }
+        elif "basicDetails" in original_resume and isinstance(original_resume["basicDetails"], dict):
+            # If original already has basicDetails format, use it directly
+            frontend_format["basicDetails"] = original_resume["basicDetails"]
+        
+        # Map other fields - preserve original data if available
+        frontend_format["summary"] = original_resume.get("summary", improved_resume.get("summary", ""))
+        frontend_format["objective"] = original_resume.get("objective", improved_resume.get("objective", ""))
+        frontend_format["skills"] = original_resume.get("skills", improved_resume.get("skills", {}))
+        
+        # Map experience with IDs - preserve original data if available
+        if "experience" in original_resume and isinstance(original_resume["experience"], list):
+            for i, exp in enumerate(original_resume["experience"]):
+                if isinstance(exp, dict):
+                    frontend_format["experience"].append({
+                        "id": str(uuid.uuid4()),
+                        "company": exp.get("company", ""),
+                        "position": exp.get("role", exp.get("position", "")),
+                        "startDate": exp.get("start_date", exp.get("startDate", "")),
+                        "endDate": exp.get("end_date", exp.get("endDate", "")),
+                        "description": exp.get("description", ""),
+                        "location": exp.get("location", "")
+                    })
+        elif "experience" in improved_resume and isinstance(improved_resume["experience"], list):
+            for i, exp in enumerate(improved_resume["experience"]):
+                if isinstance(exp, dict):
+                    frontend_format["experience"].append({
+                        "id": str(uuid.uuid4()),
+                        "company": exp.get("company", ""),
+                        "position": exp.get("role", exp.get("position", "")),
+                        "startDate": exp.get("start_date", exp.get("startDate", "")),
+                        "endDate": exp.get("end_date", exp.get("endDate", "")),
+                        "description": exp.get("description", ""),
+                        "location": exp.get("location", "")
+                    })
+        
+        # Map education with IDs - preserve original data if available
+        if "education" in original_resume and isinstance(original_resume["education"], list):
+            for i, edu in enumerate(original_resume["education"]):
+                if isinstance(edu, dict):
+                    frontend_format["education"].append({
+                        "id": str(uuid.uuid4()),
+                        "institution": edu.get("institution", edu.get("university", "")),
+                        "degree": edu.get("degree", ""),
+                        "year": edu.get("end_date", edu.get("year", edu.get("graduation_year", ""))),
+                        "description": edu.get("description", ""),
+                        "grade": edu.get("grade", ""),
+                        "location": edu.get("location", "")
+                    })
+        elif "education" in improved_resume and isinstance(improved_resume["education"], list):
+            for i, edu in enumerate(improved_resume["education"]):
+                if isinstance(edu, dict):
+                    frontend_format["education"].append({
+                        "id": str(uuid.uuid4()),
+                        "institution": edu.get("institution", edu.get("university", "")),
+                        "degree": edu.get("degree", ""),
+                        "year": edu.get("year", edu.get("graduation_year", "")),
+                        "description": edu.get("description", ""),
+                        "grade": edu.get("grade", ""),
+                        "location": edu.get("location", "")
+                    })
+        
+        # Map languages
+        if "languages" in improved_resume and isinstance(improved_resume["languages"], list):
+            for lang in improved_resume["languages"]:
+                if isinstance(lang, dict):
+                    frontend_format["languages"].append({
+                        "name": lang.get("name", ""),
+                        "proficiency": lang.get("proficiency", lang.get("profeciency", ""))
+                    })
+        
+        # Map activities (if any)
+        if "activities" in improved_resume and isinstance(improved_resume["activities"], list):
+            for i, activity in enumerate(improved_resume["activities"]):
+                if isinstance(activity, dict):
+                    frontend_format["activities"].append({
+                        "id": str(uuid.uuid4()),
+                        "title": activity.get("title", ""),
+                        "description": activity.get("description", "")
+                    })
+        
+        # Map projects with IDs
+        if "projects" in improved_resume and isinstance(improved_resume["projects"], list):
+            for i, project in enumerate(improved_resume["projects"]):
+                if isinstance(project, dict):
+                    # Convert tech stack to string if it's an array
+                    tech_stack = project.get("tech_stack", project.get("technologies", ""))
+                    if isinstance(tech_stack, list):
+                        tech_stack = ", ".join(tech_stack)
+                    
+                    frontend_format["projects"].append({
+                        "id": str(uuid.uuid4()),
+                        "name": project.get("name", ""),
+                        "techStack": tech_stack,
+                        "startDate": project.get("start_date", project.get("startDate", "")),
+                        "endDate": project.get("end_date", project.get("endDate", "")),
+                        "description": project.get("description", ""),
+                        "link": project.get("link", "")
+                    })
+        
+        # Map certifications with IDs
+        if "certifications" in improved_resume and isinstance(improved_resume["certifications"], list):
+            for i, cert in enumerate(improved_resume["certifications"]):
+                if isinstance(cert, dict):
+                    frontend_format["certifications"].append({
+                        "id": str(uuid.uuid4()),
+                        "certificateName": cert.get("certificateName", cert.get("certificate_name", cert.get("name", ""))),
+                        "link": cert.get("link", ""),
+                        "startDate": cert.get("startDate", cert.get("start_date", "")),
+                        "endDate": cert.get("endDate", cert.get("end_date", "")),
+                        "instituteName": cert.get("instituteName", cert.get("institute_name", cert.get("issuer", "")))
+                    })
+        
+        # Map references with IDs
+        if "references" in improved_resume and isinstance(improved_resume["references"], list):
+            for i, ref in enumerate(improved_resume["references"]):
+                if isinstance(ref, dict):
+                    frontend_format["references"].append({
+                        "id": str(uuid.uuid4()),
+                        "name": ref.get("name", ""),
+                        "title": ref.get("title", ""),
+                        "company": ref.get("company", ""),
+                        "phone": ref.get("phone", ""),
+                        "email": ref.get("email", ""),
+                        "relationship": ref.get("relationship", "")
+                    })
+        
+        # Map custom sections (if any)
+        if "customSections" in improved_resume and isinstance(improved_resume["customSections"], list):
+            for i, section in enumerate(improved_resume["customSections"]):
+                if isinstance(section, dict):
+                    frontend_format["customSections"].append({
+                        "id": str(uuid.uuid4()),
+                        "title": section.get("title", ""),
+                        "type": section.get("type", "text"),
+                        "position": section.get("position", i),
+                        "content": section.get("content", {}),
+                        "styling": section.get("styling", {})
+                    })
+        
+        logger.info("Successfully converted resume to frontend format")
+        return frontend_format
     
     def get_improvement_summary(self, original_resume: Dict[str, Any], improved_resume: Dict[str, Any]) -> Dict[str, Any]:
         """

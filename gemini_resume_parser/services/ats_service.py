@@ -3,8 +3,8 @@ import logging
 import datetime
 import re
 from typing import Dict, Any, Optional, List
-from google.generativeai import GenerativeModel
-from .gemini_parser_service import GeminiResumeParser
+from openai import OpenAI
+from .openai_parser_service import OpenAIResumeParser
 
 logger = logging.getLogger(__name__)
 
@@ -20,18 +20,19 @@ class StandardATSService:
     - Error-free output generation
     """
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-2.5-flash", temperature: float = 0.1, top_p: float = 0.8):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini", temperature: float = 0.1, top_p: float = 0.8):
         """
         Initialize the Standard ATS Service
         
         Args:
-            api_key: Gemini API key (if not provided, will use environment variable)
-            model_name: Gemini model name (if not provided, will use default)
+            api_key: OpenAI API key (if not provided, will use environment variable)
+            model_name: OpenAI model name (if not provided, will use default)
             temperature: Controls randomness in responses (0.0 = deterministic, 1.0 = creative)
             top_p: Controls diversity via nucleus sampling (0.0 = focused, 1.0 = diverse)
         """
-        self.parser = GeminiResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
-        self.model = self.parser.model
+        self.parser = OpenAIResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
+        self.client = self.parser.client
+        self.model_name = model_name
         self.temperature = temperature
         self.top_p = top_p
     
@@ -48,9 +49,7 @@ class StandardATSService:
         if top_p is not None:
             self.top_p = top_p
             
-        # Update the model's generation config
-        self.model.generation_config.temperature = self.temperature
-        self.model.generation_config.top_p = self.top_p
+        # Update the generation parameters (OpenAI handles this in API calls)
         logger.info(f"Updated generation parameters: temperature={self.temperature}, top_p={self.top_p}")
     
     def get_generation_settings(self) -> Dict[str, float]:
@@ -58,7 +57,7 @@ class StandardATSService:
         return {
             "temperature": self.temperature,
             "top_p": self.top_p,
-            "model_name": self.parser.model_name
+            "model_name": self.model_name
         }
 
     def set_consistent_parameters(self):
@@ -307,8 +306,17 @@ class StandardATSService:
 
         try:
             logger.info(f"Generating ATS analysis with temperature={self.temperature}, top_p={self.top_p}")
-            response = self.model.generate_content(prompt)
-            cleaned_response = self._clean_gemini_response(response.text)
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an expert ATS (Applicant Tracking System) analyst with 10+ years of experience in resume optimization and HR technology."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=self.temperature,
+                top_p=self.top_p,
+                max_tokens=4000
+            )
+            cleaned_response = self._clean_openai_response(response.choices[0].message.content)
             
             # Parse the JSON response
             ats_response = json.loads(cleaned_response)
@@ -326,19 +334,19 @@ class StandardATSService:
             return ats_response
             
         except json.JSONDecodeError as json_error:
-            logger.error(f"Failed to parse Gemini JSON response for ATS analysis: {str(json_error)}")
+            logger.error(f"Failed to parse OpenAI JSON response for ATS analysis: {str(json_error)}")
             logger.error(f"Raw response: {cleaned_response}")
             raise Exception(f"Invalid JSON response from AI: {str(json_error)}")
         except Exception as e:
             logger.error(f"Failed to analyze resume for ATS: {str(e)}")
             raise
 
-    def _clean_gemini_response(self, response_text: str) -> str:
-        """Clean Gemini API response to extract valid JSON"""
+    def _clean_openai_response(self, response_text: str) -> str:
+        """Clean OpenAI API response to extract valid JSON"""
         import re
         import json
         
-        logger.info(f"🧹 Cleaning Gemini ATS response of {len(response_text)} characters")
+        logger.info(f"🧹 Cleaning OpenAI ATS response of {len(response_text)} characters")
         
         # Remove markdown code blocks
         if response_text.startswith("```json"):
@@ -609,17 +617,17 @@ class JDSpecificATSService:
     - Consistent scoring methodology
     """
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-2.5-flash", temperature: float = 0.1, top_p: float = 0.8):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini", temperature: float = 0.1, top_p: float = 0.8):
         """
         Initialize the JD-Specific ATS Service
         
         Args:
-            api_key: Gemini API key (if not provided, will use environment variable)
-            model_name: Gemini model name (if not provided, will use default)
+            api_key: OpenAI API key (if not provided, will use environment variable)
+            model_name: OpenAI model name (if not provided, will use default)
             temperature: Controls randomness in responses (0.0 = deterministic, 1.0 = creative)
             top_p: Controls diversity via nucleus sampling (0.0 = focused, 1.0 = diverse)
         """
-        self.parser = GeminiResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
+        self.parser = OpenAIResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
         self.model = self.parser.model
         self.temperature = temperature
         self.top_p = top_p
@@ -637,9 +645,7 @@ class JDSpecificATSService:
         if top_p is not None:
             self.top_p = top_p
             
-        # Update the model's generation config
-        self.model.generation_config.temperature = self.temperature
-        self.model.generation_config.top_p = self.top_p
+        # Update the generation parameters (OpenAI handles this in API calls)
         logger.info(f"Updated generation parameters: temperature={self.temperature}, top_p={self.top_p}")
     
     def get_generation_settings(self) -> Dict[str, float]:
@@ -647,7 +653,7 @@ class JDSpecificATSService:
         return {
             "temperature": self.temperature,
             "top_p": self.top_p,
-            "model_name": self.parser.model_name
+            "model_name": self.model_name
         }
 
     def analyze_resume_for_jd(self, resume_text: str, job_description: str) -> Dict[str, Any]:
@@ -841,8 +847,17 @@ class JDSpecificATSService:
 
         try:
             logger.info(f"Generating JD-Specific ATS analysis with temperature={self.temperature}, top_p={self.top_p}")
-            response = self.model.generate_content(prompt)
-            cleaned_response = self._clean_gemini_response(response.text)
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an expert ATS (Applicant Tracking System) analyst and job matching specialist with 10+ years of experience in recruitment technology and resume optimization."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=self.temperature,
+                top_p=self.top_p,
+                max_tokens=4000
+            )
+            cleaned_response = self._clean_openai_response(response.choices[0].message.content)
             
             # Parse the JSON response
             jd_ats_response = json.loads(cleaned_response)
@@ -857,19 +872,19 @@ class JDSpecificATSService:
             return jd_ats_response
             
         except json.JSONDecodeError as json_error:
-            logger.error(f"Failed to parse Gemini JSON response for JD-Specific ATS analysis: {str(json_error)}")
+            logger.error(f"Failed to parse OpenAI JSON response for JD-Specific ATS analysis: {str(json_error)}")
             logger.error(f"Raw response: {cleaned_response}")
             raise Exception(f"Invalid JSON response from AI: {str(json_error)}")
         except Exception as e:
             logger.error(f"Failed to analyze resume for JD-Specific ATS: {str(e)}")
             raise
 
-    def _clean_gemini_response(self, response_text: str) -> str:
-        """Clean Gemini API response to extract valid JSON"""
+    def _clean_openai_response(self, response_text: str) -> str:
+        """Clean OpenAI API response to extract valid JSON"""
         import re
         import json
         
-        logger.info(f"🧹 Cleaning Gemini JD-ATS response of {len(response_text)} characters")
+        logger.info(f"🧹 Cleaning OpenAI JD-ATS response of {len(response_text)} characters")
         
         # Remove markdown code blocks
         if response_text.startswith("```json"):

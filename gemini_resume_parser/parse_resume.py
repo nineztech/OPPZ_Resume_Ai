@@ -7,7 +7,7 @@ Standalone script for parsing resume files
 import json
 import sys
 import logging
-from services.gemini_parser_service import GeminiResumeParser
+from services.openai_parser_service import OpenAIResumeParser
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,7 +22,7 @@ def main():
         file_path = sys.argv[1]
         
         # Initialize parser
-        parser = GeminiResumeParser()
+        parser = OpenAIResumeParser()
         
         # Parse resume
         parsed_data = parser.parse_resume_from_file(file_path)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Main entry point for Gemini Resume Parser
+Main entry point for OpenAI Resume Parser
 Provides command-line interface and example usage
 """
 
@@ -11,9 +11,9 @@ import sys
 from pathlib import Path
 from typing import Dict, Any
 
-from services.gemini_parser_service import GeminiResumeParser
+from services.openai_parser_service import OpenAIResumeParser
 from services.resume_improvement_service import ResumeImprovementService
-from config.config import GeminiConfig
+from config.config import OpenAIConfig
 
 # Configure logging
 logging.basicConfig(
@@ -24,19 +24,19 @@ logger = logging.getLogger(__name__)
 
 def parse_resume_file(file_path: str, output_file: str = None, api_key: str = None) -> Dict[str, Any]:
     """
-    Parse a resume file using Gemini API
+    Parse a resume file using OpenAI API
     
     Args:
         file_path: Path to the resume file
         output_file: Optional output file path for JSON results
-        api_key: Optional Gemini API key
+        api_key: Optional OpenAI API key
         
     Returns:
         Parsed resume data
     """
     try:
         # Initialize parser
-        parser = GeminiResumeParser(api_key=api_key)
+        parser = OpenAIResumeParser(api_key=api_key)
         
         # Parse resume
         logger.info(f"Parsing resume: {file_path}")
@@ -156,12 +156,12 @@ Examples:
         sys.exit(1)
 
 def example_usage():
-    """Example usage of the Gemini Resume Parser"""
-    print("=== Gemini Resume Parser - Example Usage ===\n")
+    """Example usage of the OpenAI Resume Parser"""
+    print("=== OpenAI Resume Parser - Example Usage ===\n")
     
     try:
         # Initialize parser
-        parser = GeminiResumeParser()
+        parser = OpenAIResumeParser()
         
         # Get model info
         model_info = parser.get_model_info()

@@ -3,8 +3,8 @@ import logging
 import datetime
 import re
 from typing import Dict, Any, Optional
-from google.generativeai import GenerativeModel
-from .gemini_parser_service import GeminiResumeParser
+from openai import OpenAI
+from .openai_parser_service import OpenAIResumeParser
 
 logger = logging.getLogger(__name__)
 
@@ -19,18 +19,19 @@ class AISuggestionService:
     - Extended token limits for complete responses
     """
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-2.5-flash", temperature: float = 0.3, top_p: float = 0.8):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini", temperature: float = 0.3, top_p: float = 0.8):
         """
         Initialize the AI Suggestion Service
         
         Args:
-            api_key: Gemini API key (if not provided, will use environment variable)
-            model_name: Gemini model name (if not provided, will use default)
+            api_key: OpenAI API key (if not provided, will use environment variable)
+            model_name: OpenAI model name (if not provided, will use default)
             temperature: Controls randomness in responses (0.0 = deterministic, 1.0 = creative)
             top_p: Controls diversity via nucleus sampling (0.0 = focused, 1.0 = diverse)
         """
-        self.parser = GeminiResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
-        self.model = self.parser.model
+        self.parser = OpenAIResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
+        self.client = self.parser.client
+        self.model_name = model_name
         self.temperature = temperature
         self.top_p = top_p
         
@@ -57,7 +58,7 @@ class AISuggestionService:
         return {
             "temperature": self.temperature,
             "top_p": self.top_p,
-            "model_name": self.parser.model_name
+            "model_name": self.model_name
         }
 
     def set_consistent_parameters(self):
@@ -143,18 +144,20 @@ class AISuggestionService:
 
         try:
             logger.info(f"Generating job description with temperature={self.temperature}, top_p={self.top_p}")
-            generation_config = {
-                "temperature": self.temperature,
-                "top_p": self.top_p,
-                "top_k": 40,
-                "max_output_tokens": 8192,
-                "candidate_count": 1
-            }
-            response = self.model.generate_content(prompt, generation_config=generation_config)
-            cleaned_response = self._clean_gemini_response(response.text)
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an expert global job market analyst and HR recruiter. Generate realistic, ATS-friendly job descriptions."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=self.temperature,
+                top_p=self.top_p,
+                max_tokens=4000
+            )
+            cleaned_response = self._clean_openai_response(response.choices[0].message.content)
             return json.loads(cleaned_response)
         except json.JSONDecodeError as json_error:
-            logger.error(f"Failed to parse Gemini JSON response for job description: {str(json_error)}")
+            logger.error(f"Failed to parse OpenAI JSON response for job description: {str(json_error)}")
             logger.error(f"Raw response: {cleaned_response}")
             raise Exception(f"Invalid JSON response from AI: {str(json_error)}")
         except Exception as e:
@@ -319,31 +322,33 @@ class AISuggestionService:
         try:
             logger.info(f"Comparing resume with JD using temperature={self.temperature}, top_p={self.top_p}")
             logger.info(f"🔍 Starting AI response generation...")
-            generation_config = {
-                "temperature": self.temperature,
-                "top_p": self.top_p,
-                "top_k": 40,
-                "max_output_tokens": 8192,
-                "candidate_count": 1
-            }
-            response = self.model.generate_content(prompt, generation_config=generation_config)
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an expert resume optimization specialist and career coach. Provide detailed, actionable suggestions for resume improvement."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=self.temperature,
+                top_p=self.top_p,
+                max_tokens=4000
+            )
             
             # Check if the response was blocked or filtered
-            if hasattr(response, 'candidates') and response.candidates:
-                candidate = response.candidates[0]
-                if hasattr(candidate, 'finish_reason') and candidate.finish_reason == 2:
-                    logger.error("🚨 Gemini response was blocked/filtered (finish_reason=2)")
+            if hasattr(response, 'choices') and response.choices:
+                choice = response.choices[0]
+                if hasattr(choice, 'finish_reason') and choice.finish_reason == 'content_filter':
+                    logger.error("🚨 OpenAI response was blocked/filtered")
                     logger.error("🚨 Creating fallback response due to content filtering")
                     # Create a comprehensive fallback response
                     ai_response = self._create_comprehensive_fallback_response(resume_data, job_description, target_experience)
                     logger.warning("⚠️ Using comprehensive fallback response due to content filtering")
                     return ai_response
             
-            # Check if response.text is accessible and not empty
+            # Check if response content is accessible and not empty
             try:
-                response_text = response.text
+                response_text = response.choices[0].message.content
                 if not response_text or not response_text.strip():
-                    logger.error("🚨 Gemini response is empty or None")
+                    logger.error("🚨 OpenAI response is empty or None")
                     logger.error("🚨 Creating fallback response due to empty response")
                     # Create a comprehensive fallback response
                     ai_response = self._create_comprehensive_fallback_response(resume_data, job_description, target_experience)
@@ -392,7 +397,7 @@ class AISuggestionService:
                     score_context = response_text[context_start:context_end]
                     logger.info(f"   Context around 'overallScore': {score_context}")
             
-            cleaned_response = self._clean_gemini_response(response_text)
+            cleaned_response = self._clean_openai_response(response_text)
             logger.info(f"🔍 Cleaned response length: {len(cleaned_response)} characters")
             logger.debug(f"🔍 Cleaned response: {cleaned_response}")
             
@@ -1344,12 +1349,12 @@ class AISuggestionService:
             logger.warning(f"❌ Error determining intelligent default experience: {str(e)}")
             return "Mid level"
 
-    def _clean_gemini_response(self, response_text: str) -> str:
-        """Clean Gemini API response to extract valid JSON"""
+    def _clean_openai_response(self, response_text: str) -> str:
+        """Clean OpenAI API response to extract valid JSON"""
         import re
         import json
         
-        logger.info(f"🧹 Cleaning Gemini response of {len(response_text)} characters")
+        logger.info(f"🧹 Cleaning OpenAI response of {len(response_text)} characters")
         
         # Remove markdown code blocks
         if response_text.startswith("```json"):

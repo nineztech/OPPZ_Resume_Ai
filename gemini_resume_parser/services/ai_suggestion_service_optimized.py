@@ -7,7 +7,7 @@ import logging
 import datetime
 import re
 from typing import Dict, Any, Optional
-from google.generativeai import GenerativeModel
+from openai import OpenAI
 from models.ai_suggestion_models import (
     AIComparisonResponse, 
     JobDescriptionResponse, 
@@ -20,7 +20,7 @@ from models.ai_suggestion_models import (
     EducationSuggestion,
     CertificationsSuggestion
 )
-from .gemini_parser_service import GeminiResumeParser
+from .openai_parser_service import OpenAIResumeParser
 
 logger = logging.getLogger(__name__)
 
@@ -36,18 +36,19 @@ class AISuggestionServiceOptimized:
     - Clean, maintainable code
     """
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-2.5-flash", temperature: float = 0.3, top_p: float = 0.8):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini", temperature: float = 0.3, top_p: float = 0.8):
         """
         Initialize the optimized AI Suggestion Service
         
         Args:
-            api_key: Gemini API key (if not provided, will use environment variable)
-            model_name: Gemini model name (if not provided, will use default)
+            api_key: OpenAI API key (if not provided, will use environment variable)
+            model_name: OpenAI model name (if not provided, will use default)
             temperature: Controls randomness in responses (0.0 = deterministic, 1.0 = creative)
             top_p: Controls diversity via nucleus sampling (0.0 = focused, 1.0 = diverse)
         """
-        self.parser = GeminiResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
-        self.model = self.parser.model
+        self.parser = OpenAIResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
+        self.model = self.parser.client
+        self.model_name = model_name
         self.temperature = temperature
         self.top_p = top_p
         
@@ -114,25 +115,35 @@ class AISuggestionServiceOptimized:
                 }
                 
                 logger.info(f"Attempt {attempt + 1}: Generating with temperature={config['temperature']}, top_p={config['top_p']}")
-                response = self.model.generate_content(prompt, generation_config=generation_config)
+                response = self.model.chat.completions.create(
+                    model=self.model_name,
+                    messages=[
+                        {"role": "system", "content": "You are an expert global job market analyst and HR recruiter. Generate realistic, ATS-friendly job descriptions."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=config['temperature'],
+                    top_p=config['top_p'],
+                    max_tokens=max_tokens
+                )
                 
                 # Check for blocked/filtered responses
-                if hasattr(response, 'candidates') and response.candidates:
-                    candidate = response.candidates[0]
-                    if hasattr(candidate, 'finish_reason'):
-                        if candidate.finish_reason == 2:
+                if hasattr(response, 'choices') and response.choices:
+                    choice = response.choices[0]
+                    if hasattr(choice, 'finish_reason'):
+                        if choice.finish_reason == 'content_filter':
                             logger.warning(f"Attempt {attempt + 1}: Response blocked by safety filters, retrying...")
                             continue
-                        elif candidate.finish_reason in [3, 4, 5]:
-                            logger.warning(f"Attempt {attempt + 1}: Response stopped (reason: {candidate.finish_reason}), retrying...")
+                        elif choice.finish_reason == 'length':
+                            logger.warning(f"Attempt {attempt + 1}: Response stopped due to length limit, retrying...")
                             continue
+                        # 'stop' and 'function_call' are successful completion reasons, don't retry
                 
                 # Check for valid response
-                if not response or not hasattr(response, 'text') or not response.text:
+                if not response or not hasattr(response, 'choices') or not response.choices or not response.choices[0].message.content:
                     logger.warning(f"Attempt {attempt + 1}: Empty response, retrying...")
                     continue
                 
-                response_text = response.text.strip()
+                response_text = response.choices[0].message.content.strip()
                 if not response_text:
                     logger.warning(f"Attempt {attempt + 1}: Empty response text, retrying...")
                     continue

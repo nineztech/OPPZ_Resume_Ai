@@ -479,8 +479,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
           }}>
             PROJECTS
           </h2>
-          <div className="border-b border-gray-800 mb-2"></div>
-          <div className="-space-y-2 -mt-4">
+          <div className="border-b border-gray-800 mb-0"></div>
+          <div className="space-y-2 mt-0">
             {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
               templateData.projects.map((project, index) => (
                 <div key={index} style={{ marginBottom: '-10px' }}>
@@ -551,7 +551,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
       )}
              {/* Education */}
       {sections.has('education') && (
-        <div className="mb-0 mt-0">
+        <div className="mb-0 mt-4">
           <h2 className="text-left font-bold mb-0 mt-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',

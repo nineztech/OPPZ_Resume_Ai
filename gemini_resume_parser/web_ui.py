@@ -18,8 +18,8 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Import the Gemini parser and ATS services
-from services.gemini_parser_service import GeminiResumeParser
+# Import the OpenAI parser and ATS services
+from services.openai_parser_service import OpenAIResumeParser
 from services.ats_service import StandardATSService, JDSpecificATSService
 from services.ai_suggestion_service_optimized import AISuggestionServiceOptimized
 from services.resume_improvement_service import ResumeImprovementService
@@ -1872,7 +1872,7 @@ def parse_resume():
         
         try:
             # Initialize parser
-            parser = GeminiResumeParser()
+            parser = OpenAIResumeParser()
             
             # Parse the resume
             logger.info(f"Parsing resume: {filename}")
@@ -2095,7 +2095,7 @@ def ai_suggestions():
             
             # Step 1: Parse the resume
             logger.info(f"Parsing resume for AI suggestions: {filename}")
-            parser = GeminiResumeParser()
+            parser = OpenAIResumeParser()
             resume_data = parser.parse_resume_from_file(filepath)
             
             # Step 2: Generate job description - let the service analyze experience level internally
@@ -2206,12 +2206,12 @@ def health():
     """Health check endpoint"""
     try:
         # Test if parser can be initialized
-        parser = GeminiResumeParser()
+        parser = OpenAIResumeParser()
         model_info = parser.get_model_info()
         
         return jsonify({
             'status': 'healthy',
-            'gemini_model': model_info['model_name'],
+            'openai_model': model_info['model_name'],
             'api_key_configured': model_info['api_key_configured']
         })
     except Exception as e:
