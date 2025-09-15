@@ -313,8 +313,7 @@ class GeminiParserService {
         id: Date.now().toString() + Math.random(),
         certificateName: cert.certificateName || cert.certificate_name || cert.Certificate_Name || cert['Certificate Name'] || cert.name || cert.Name || '',
         link: cert.link || cert.Link || cert.url || cert.URL || cert.website || cert.Website || '',
-        startDate: cert.startDate || cert.start_date || cert.Start_Date || cert['Start Date'] || '',
-        endDate: cert.endDate || cert.end_date || cert.End_Date || cert['End Date'] || '',
+        issueDate: cert.issueDate || cert.startDate || cert.start_date || cert.Start_Date || cert['Start Date'] || cert['Issue Date'] || '',
         instituteName: cert.instituteName || cert.institute_name || cert.Institute_Name || cert['Institute Name'] || cert.institution || cert.Institution || cert.provider || cert.Provider || ''
       })),
       references: (Array.isArray(geminiData.references) ? geminiData.references : []).map((ref: any) => ({
@@ -382,8 +381,7 @@ class GeminiParserService {
         id: Date.now().toString() + Math.random(),
         certificateName: cert.certificateName || cert.certificate_name || cert.Certificate_Name || cert['Certificate Name'] || cert.name || cert.Name || '',
         link: cert.link || cert.Link || cert.url || cert.URL || cert.website || cert.Website || '',
-        startDate: cert.startDate || cert.start_date || cert.Start_Date || cert['Start Date'] || '',
-        endDate: cert.endDate || cert.end_date || cert.End_Date || cert['End Date'] || '',
+        issueDate: cert.issueDate || cert.startDate || cert.start_date || cert.Start_Date || cert['Start Date'] || cert['Issue Date'] || '',
         instituteName: cert.instituteName || cert.institute_name || cert.Institute_Name || cert['Institute Name'] || cert.institution || cert.Institution || cert.provider || cert.Provider || ''
       })),
       references: (Array.isArray(geminiData.references) ? geminiData.references : []).map((ref: any) => ({

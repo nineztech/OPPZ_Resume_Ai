@@ -196,8 +196,7 @@ interface ResumeData {
     id: string;
     certificateName: string;
     link: string;
-    startDate: string;
-    endDate: string;
+    issueDate: string;
     instituteName: string;
   }>;
   references: Array<{
@@ -534,8 +533,7 @@ const ResumeBuilderPage = () => {
           id: cert.id || `cert-${Date.now()}-${Math.random()}`,
           certificateName: cert.certificateName || cert.CertificateName || '',
           link: cert.link || cert.Link || '',
-          startDate: cert.startDate || cert['Start Date'] || '',
-          endDate: cert.endDate || cert['End Date'] || '',
+          issueDate: cert.issueDate || cert.startDate || cert['Start Date'] || cert['Issue Date'] || '',
           instituteName: cert.instituteName || cert.InstituteName || cert.institueName || ''
         })),
         references: location.state.improvedResumeData.references || [],
@@ -641,7 +639,13 @@ const ResumeBuilderPage = () => {
           description: project.Description || project.description || project.summary || '',
           link: project.Link || project.link || project.url || project.github || ''
         })),
-        certifications: extractedData.certifications || [],
+        certifications: (extractedData.certifications || []).map((cert: any) => ({
+          id: cert.id || `cert-${Date.now()}-${Math.random()}`,
+          certificateName: cert.certificateName || cert.CertificateName || cert.name || '',
+          link: cert.link || cert.Link || '',
+          issueDate: cert.issueDate || cert.startDate || cert['Start Date'] || cert['Issue Date'] || '',
+          instituteName: cert.instituteName || cert.InstituteName || cert.institueName || cert.issuer || ''
+        })),
         references: extractedData.references || [],
         customSections: extractedData.customSections || []
       };
@@ -1098,8 +1102,7 @@ const ResumeBuilderPage = () => {
                     id: `ai-cert-${index}-${Date.now()}`,
                     certificateName: certLine,
                     link: '',
-                    startDate: '',
-                    endDate: '',
+                    issueDate: '',
                     instituteName: ''
                   };
                   
@@ -1118,8 +1121,7 @@ const ResumeBuilderPage = () => {
                     id: `ai-cert-${index}-${Date.now()}`,
                     certificateName: certRewrite,
                     link: '',
-                    startDate: '',
-                    endDate: '',
+                    issueDate: '',
                     instituteName: ''
                   };
                   
@@ -1464,8 +1466,7 @@ const ResumeBuilderPage = () => {
           id: Date.now().toString() + Math.random(),
           certificateName: cert.certificateName || '',
           instituteName: cert.instituteName || '',
-          startDate: cert.startDate || '',
-          endDate: cert.endDate || '',
+          issueDate: cert.issueDate || cert.startDate || '',
           link: cert.link || ''
         })) || [],
         references: [],
@@ -1618,8 +1619,7 @@ const ResumeBuilderPage = () => {
       id: Date.now().toString(),
       certificateName: '',
       link: '',
-      startDate: '',
-      endDate: '',
+      issueDate: '',
       instituteName: ''
     };
     setResumeData(prev => ({
@@ -2271,8 +2271,7 @@ const ResumeBuilderPage = () => {
                   certifications: visibleSections.has('certifications') ? resumeData.certifications.map(cert => ({
                     certificateName: cert.certificateName,
                     instituteName: cert.instituteName,
-                    startDate: cert.startDate,
-                    endDate: cert.endDate,
+            issueDate: cert.issueDate,
                     link: cert.link
                   })) : [],
                   additionalInfo: {
@@ -2488,8 +2487,7 @@ const ResumeBuilderPage = () => {
           certifications: visibleSections.has('certifications') ? resumeData.certifications.map(cert => ({
             certificateName: cert.certificateName,
             instituteName: cert.instituteName,
-            startDate: cert.startDate,
-            endDate: cert.endDate,
+            issueDate: cert.issueDate,
             link: cert.link
           })) : [],
           additionalInfo: {
@@ -3109,23 +3107,13 @@ const CertificationsSection = ({ certifications, onAdd, onUpdate, onRemove }: {
               />
             </div>
 
-                         <div className="grid grid-cols-2 gap-4">
                <div>
-                 <Label>Start Date</Label>
+              <Label>Issue Date</Label>
                  <Input
-                   value={cert.startDate}
-                   onChange={(e) => onUpdate(cert.id, 'startDate', e.target.value)}
+                value={cert.issueDate}
+                onChange={(e) => onUpdate(cert.id, 'issueDate', e.target.value)}
                    placeholder="e.g., Jan 2023"
                  />
-               </div>
-               <div>
-                 <Label>End Date</Label>
-                 <Input
-                   value={cert.endDate}
-                   onChange={(e) => onUpdate(cert.id, 'endDate', e.target.value)}
-                   placeholder="e.g., Present"
-                 />
-               </div>
              </div>
 
             <div>

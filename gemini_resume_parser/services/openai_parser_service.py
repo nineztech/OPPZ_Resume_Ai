@@ -315,8 +315,7 @@ class OpenAIResumeParser:
                         "id": cert.get("id", f"cert-{i}"),
                         "certificateName": cert.get("certificateName", cert.get("certificate_name", cert.get("name", ""))),
                         "link": cert.get("link", ""),
-                        "startDate": cert.get("startDate", cert.get("start_date", "")),
-                        "endDate": cert.get("endDate", cert.get("end_date", "")),
+                        "issueDate": cert.get("issueDate", cert.get("startDate", cert.get("start_date", ""))),
                         "instituteName": cert.get("instituteName", cert.get("institute_name", cert.get("institueName", cert.get("issuer", ""))))
                     }
         

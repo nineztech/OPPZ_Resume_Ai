@@ -40,8 +40,7 @@ interface TemplateData {
   certifications?: Array<{
     certificateName: string;
     instituteName: string;
-    startDate?: string;
-    endDate?: string;
+    issueDate?: string;
     link?: string;
   }>;
   additionalInfo: {
@@ -186,20 +185,17 @@ const cleanMinimalTemplateData: TemplateData = {
     {
       certificateName: 'Introduction to Data Analytics',
       instituteName: 'IBM',
-      startDate: '2023',
-      endDate: '2023'
+      issueDate: '2023'
     },
     {
       certificateName: 'Analyzing and Visualizing Data with Microsoft Power BI',
       instituteName: 'Microsoft',
-      startDate: '2023',
-      endDate: '2023'
+      issueDate: '2023'
     },
     {
       certificateName: 'Lean Six Sigma Green Belt',
       instituteName: 'ASQ (American Society for Quality)',
-      startDate: '2022',
-      endDate: '2022'
+      issueDate: '2022'
     }
   ],
   additionalInfo: {
@@ -640,16 +636,13 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                       <span style={{ fontWeight: 'bold' }}>{cert.certificateName || 'Certificate Name'}</span> - <span style={{ color: '#000000' }}>{cert.instituteName || 'Issuing Organization'}</span>
                     </div>
                   </div>
-                  {(cert.startDate || cert.endDate) ? (
+                  {cert.issueDate ? (
                     <div className="font-bold" style={{ 
                       fontSize: '11px',
                       fontWeight: 'bold',
                       letterSpacing: '0.2px'
                     }}>
-                      {cert.startDate && cert.endDate 
-                        ? `${cert.startDate} - ${cert.endDate}`
-                        : cert.startDate || cert.endDate
-                      }
+                      {cert.issueDate}
                     </div>
                   ) : (
                     <div className="font-bold" style={{ 

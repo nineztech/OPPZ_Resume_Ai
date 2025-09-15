@@ -295,7 +295,7 @@ class AISuggestionServiceOptimized:
         - For certifications: Use "certificateName" (not "name" or "certificate_name") and "instituteName" (not "issuer" or "institute_name")
         - For work experience: Use "startDate" and "endDate" (not "start_date" or "end_date")
         - For projects: Use "startDate" and "endDate" (not "start_date" or "end_date")
-        - For certifications: Use "startDate" and "endDate" (not "start_date" or "end_date")
+        - For certifications: Use "issueDate" (not "startDate", "endDate", "start_date", or "end_date")
         - These field names must match exactly what the frontend expects for proper data display
 
         OVERALL SCORE CALCULATION RULES:
@@ -367,10 +367,11 @@ class AISuggestionServiceOptimized:
         - Use strong action verbs and professional language in all rewrites.
 
         CRITICAL CERTIFICATIONS RULES:
-        - ALWAYS include startDate, endDate, certificateName, and instituteName in certification responses - if missing from existing resume, add realistic dummy dates and organization names.
+        - ALWAYS include issueDate, certificateName, and instituteName in certification responses - if missing from existing resume, add realistic issue dates and organization names.
         - For certifications, enhance descriptions while preserving certification names and issuing organizations.
         - certificateName should be the full name of the certification (e.g., "AWS Certified Solutions Architect").
         - instituteName should be the issuing organization (e.g., "Amazon Web Services").
+        - issueDate should be the date when the certification was issued (e.g., "Jan 2023").
         - Include relevant details about certification value and relevance to the target role.
         - Use professional language and highlight ongoing learning commitment.
 
@@ -433,10 +434,9 @@ class AISuggestionServiceOptimized:
                         "certificateName": "",
                         "existing": "",
                         "rewrite": "",
-                        "startDate": "",
-                        "endDate": "",
+                        "issueDate": "",
                         "instituteName": "",
-                        "recommendations": ["Add relevant professional certifications for the target role", "Include industry-specific certifications and licenses", "Add completion dates and credential IDs", "Highlight ongoing learning and skill development"]
+                        "recommendations": ["Add relevant professional certifications for the target role", "Include industry-specific certifications and licenses", "Add issue dates and credential IDs", "Highlight ongoing learning and skill development"]
                     }}
                 ]
             }},
