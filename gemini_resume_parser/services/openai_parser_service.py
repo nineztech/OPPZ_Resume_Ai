@@ -181,28 +181,34 @@ class OpenAIResumeParser:
         """Enforce schema compliance for parsed resume data"""
         logger.info("Enforcing schema compliance")
         
-        # Define required sections with default values
+        # Define required sections with default values - using frontend naming conventions
         required_sections = {
-            "basic_details": {
-                "name": "",
-                "professional_title": "",
+            "basicDetails": {
+                "fullName": "",
+                "professionalTitle": "",
                 "phone": "",
                 "email": "",
                 "location": "",
                 "website": "",
                 "github": "",
-                "linkedin": ""
+                "linkedin": "",
+                "profilePicture": ""
             },
             "summary": "",
-            "skills": [],
+            "objective": "",
+            "skills": {},
             "education": [],
             "experience": [],
             "projects": [],
             "certifications": [],
             "languages": [],
+            "activities": [],
             "references": [],
-            "other": []
+            "customSections": []
         }
+        
+        # Map old field names to new frontend format
+        parsed_data = self._map_to_frontend_format(parsed_data)
         
         # Ensure all required sections exist
         for section, default_value in required_sections.items():
@@ -210,14 +216,167 @@ class OpenAIResumeParser:
                 parsed_data[section] = default_value
                 logger.warning(f"Added missing section: {section}")
         
-        # Ensure basic_details has all required fields
-        if "basic_details" in parsed_data:
-            for field, default_value in required_sections["basic_details"].items():
-                if field not in parsed_data["basic_details"]:
-                    parsed_data["basic_details"][field] = default_value
-                    logger.warning(f"Added missing basic_details field: {field}")
+        # Ensure basicDetails has all required fields
+        if "basicDetails" in parsed_data:
+            for field, default_value in required_sections["basicDetails"].items():
+                if field not in parsed_data["basicDetails"]:
+                    parsed_data["basicDetails"][field] = default_value
+                    logger.warning(f"Added missing basicDetails field: {field}")
         
         logger.info("Schema compliance enforcement completed")
+        return parsed_data
+
+    def _map_to_frontend_format(self, parsed_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Map parsed data to frontend naming conventions"""
+        logger.info("Mapping data to frontend format")
+        
+        # Handle basicDetails mapping
+        if "basic_details" in parsed_data:
+            basic_details = parsed_data["basic_details"]
+            parsed_data["basicDetails"] = {
+                "fullName": basic_details.get("full_name", basic_details.get("name", "")),
+                "professionalTitle": basic_details.get("professional_title", ""),
+                "phone": basic_details.get("phone", ""),
+                "email": basic_details.get("email", ""),
+                "location": basic_details.get("location", ""),
+                "website": basic_details.get("website", ""),
+                "github": basic_details.get("github", ""),
+                "linkedin": basic_details.get("linkedin", ""),
+                "profilePicture": basic_details.get("profilePicture", "")
+            }
+            # Remove old basic_details
+            del parsed_data["basic_details"]
+        
+        # Handle education mapping
+        if "education" in parsed_data and isinstance(parsed_data["education"], dict):
+            # Convert single education object to array
+            edu = parsed_data["education"]
+            parsed_data["education"] = [{
+                "id": f"edu-{hash(str(edu))}",
+                "institution": edu.get("institution", ""),
+                "degree": edu.get("degree", ""),
+                "year": edu.get("end_date", edu.get("year", "")),
+                "description": edu.get("description", ""),
+                "grade": edu.get("grade", ""),
+                "location": edu.get("location", "")
+            }]
+        elif "education" in parsed_data and isinstance(parsed_data["education"], list):
+            # Ensure each education item has the correct structure
+            for i, edu in enumerate(parsed_data["education"]):
+                if isinstance(edu, dict):
+                    parsed_data["education"][i] = {
+                        "id": edu.get("id", f"edu-{i}"),
+                        "institution": edu.get("institution", ""),
+                        "degree": edu.get("degree", ""),
+                        "year": edu.get("end_date", edu.get("year", "")),
+                        "description": edu.get("description", ""),
+                        "grade": edu.get("grade", ""),
+                        "location": edu.get("location", "")
+                    }
+        
+        # Handle experience mapping
+        if "experience" in parsed_data and isinstance(parsed_data["experience"], list):
+            for i, exp in enumerate(parsed_data["experience"]):
+                if isinstance(exp, dict):
+                    parsed_data["experience"][i] = {
+                        "id": exp.get("id", f"exp-{i}"),
+                        "company": exp.get("company", ""),
+                        "position": exp.get("role", exp.get("position", "")),
+                        "startDate": exp.get("start_date", exp.get("startDate", "")),
+                        "endDate": exp.get("end_date", exp.get("endDate", "")),
+                        "description": exp.get("description", ""),
+                        "location": exp.get("location", "")
+                    }
+        
+        # Handle projects mapping
+        if "projects" in parsed_data and isinstance(parsed_data["projects"], list):
+            for i, project in enumerate(parsed_data["projects"]):
+                if isinstance(project, dict):
+                    # Convert tech stack to string if it's an array
+                    tech_stack = project.get("tech_stack", project.get("technologies", ""))
+                    if isinstance(tech_stack, list):
+                        tech_stack = ", ".join(tech_stack)
+                    
+                    parsed_data["projects"][i] = {
+                        "id": project.get("id", f"project-{i}"),
+                        "name": project.get("name", ""),
+                        "techStack": tech_stack,
+                        "startDate": project.get("start_date", project.get("startDate", "")),
+                        "endDate": project.get("end_date", project.get("endDate", "")),
+                        "description": project.get("description", ""),
+                        "link": project.get("link", "")
+                    }
+        
+        # Handle certifications mapping
+        if "certifications" in parsed_data and isinstance(parsed_data["certifications"], list):
+            for i, cert in enumerate(parsed_data["certifications"]):
+                if isinstance(cert, dict):
+                    parsed_data["certifications"][i] = {
+                        "id": cert.get("id", f"cert-{i}"),
+                        "certificateName": cert.get("certificateName", cert.get("certificate_name", cert.get("name", ""))),
+                        "link": cert.get("link", ""),
+                        "startDate": cert.get("startDate", cert.get("start_date", "")),
+                        "endDate": cert.get("endDate", cert.get("end_date", "")),
+                        "instituteName": cert.get("instituteName", cert.get("institute_name", cert.get("institueName", cert.get("issuer", ""))))
+                    }
+        
+        # Handle languages mapping
+        if "languages" in parsed_data and isinstance(parsed_data["languages"], list):
+            for i, lang in enumerate(parsed_data["languages"]):
+                if isinstance(lang, dict):
+                    parsed_data["languages"][i] = {
+                        "name": lang.get("name", ""),
+                        "proficiency": lang.get("proficiency", lang.get("profeciency", ""))
+                    }
+        
+        # Handle activities mapping
+        if "activities" in parsed_data and isinstance(parsed_data["activities"], list):
+            for i, activity in enumerate(parsed_data["activities"]):
+                if isinstance(activity, dict):
+                    parsed_data["activities"][i] = {
+                        "id": activity.get("id", f"activity-{i}"),
+                        "title": activity.get("title", ""),
+                        "description": activity.get("description", "")
+                    }
+        
+        # Handle references mapping
+        if "references" in parsed_data and isinstance(parsed_data["references"], list):
+            for i, ref in enumerate(parsed_data["references"]):
+                if isinstance(ref, dict):
+                    parsed_data["references"][i] = {
+                        "id": ref.get("id", f"ref-{i}"),
+                        "name": ref.get("name", ""),
+                        "title": ref.get("title", ""),
+                        "company": ref.get("company", ""),
+                        "phone": ref.get("phone", ""),
+                        "email": ref.get("email", ""),
+                        "relationship": ref.get("relationship", "")
+                    }
+        
+        # Ensure skills is an object (categorized format)
+        if "skills" in parsed_data:
+            if isinstance(parsed_data["skills"], list):
+                # Convert flat array to categorized object
+                skills_obj = {}
+                for skill in parsed_data["skills"]:
+                    if isinstance(skill, str) and skill.strip():
+                        # Categorize skill (simplified categorization)
+                        category = "Other Tools"
+                        if any(tech in skill.lower() for tech in ["python", "java", "javascript", "sql"]):
+                            category = "Languages"
+                        elif any(tech in skill.lower() for tech in ["tableau", "power bi", "excel"]):
+                            category = "Analytics"
+                        elif any(tech in skill.lower() for tech in ["aws", "azure", "gcp"]):
+                            category = "Cloud"
+                        
+                        if category not in skills_obj:
+                            skills_obj[category] = []
+                        skills_obj[category].append(skill)
+                parsed_data["skills"] = skills_obj
+            elif not isinstance(parsed_data["skills"], dict):
+                parsed_data["skills"] = {}
+        
+        logger.info("Frontend format mapping completed")
         return parsed_data
 
     def update_generation_parameters(self, temperature: float = None, top_p: float = None):

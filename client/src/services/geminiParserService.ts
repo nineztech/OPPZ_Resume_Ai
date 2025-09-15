@@ -272,7 +272,7 @@ class GeminiParserService {
       },
       summary: geminiData.summary || '',
       objective: '', // Not provided by Gemini parser
-      experience: (geminiData.experience || []).map(exp => ({
+      experience: (Array.isArray(geminiData.experience) ? geminiData.experience : []).map(exp => ({
         id: Date.now().toString() + Math.random(),
         company: exp.company || exp.Company || exp.company_name || exp['Company Name'] || '',
         position: exp.role || exp.Role || exp.position || exp.Position || exp.title || exp.Title || exp['Job Title'] || '',
@@ -281,7 +281,7 @@ class GeminiParserService {
         description: exp.description || exp.Description || exp.responsibilities || exp.Responsibilities || exp.achievements || exp.Achievements || '',
         location: exp.location || exp.Location || exp['Location'] || ''
       })),
-      education: (geminiData.education || []).map(edu => ({
+      education: (Array.isArray(geminiData.education) ? geminiData.education : []).map(edu => ({
         id: Date.now().toString() + Math.random(),
         institution: edu.institution || edu.Institution || edu.school || edu.School || edu.university || edu.University || edu['Institution Name'] || '',
         degree: edu.degree || edu.Degree || edu.qualification || edu.Qualification || edu['Degree Name'] || '',
@@ -291,16 +291,16 @@ class GeminiParserService {
         location: edu.location || edu.Location || edu['Location'] || ''
       })),
       skills: geminiData.skills || [],
-      languages: (geminiData.languages || []).map(lang => ({
+      languages: (Array.isArray(geminiData.languages) ? geminiData.languages : []).map(lang => ({
         name: lang.name || lang.Name || lang.language || lang.Language || '',
         proficiency: lang.proficiency || lang.Proficiency || lang.level || lang.Level || ''
       })),
-      activities: (geminiData.activities || []).map((activity: any) => ({
+      activities: (Array.isArray(geminiData.activities) ? geminiData.activities : []).map((activity: any) => ({
         id: Date.now().toString() + Math.random(),
         title: activity.title || activity.Title || activity.name || activity.Name || '',
         description: activity.description || activity.Description || activity.details || activity.Details || ''
       })),
-      projects: (geminiData.projects || []).map((project: any) => ({
+      projects: (Array.isArray(geminiData.projects) ? geminiData.projects : []).map((project: any) => ({
         id: Date.now().toString() + Math.random(),
         name: project.name || project.Name || project.title || project.Title || project['Project Name'] || '',
         techStack: project.techStack || project.tech_stack || project.Tech_Stack || project['Tech Stack'] || project.technologies || project.Technologies || '',
@@ -309,7 +309,7 @@ class GeminiParserService {
         description: project.description || project.Description || project.details || project.Details || project.summary || project.Summary || '',
         link: project.link || project.Link || project.url || project.URL || project.website || project.Website || ''
       })),
-      certifications: (geminiData.certifications || []).map((cert: any) => ({
+      certifications: (Array.isArray(geminiData.certifications) ? geminiData.certifications : []).map((cert: any) => ({
         id: Date.now().toString() + Math.random(),
         certificateName: cert.certificateName || cert.certificate_name || cert.Certificate_Name || cert['Certificate Name'] || cert.name || cert.Name || '',
         link: cert.link || cert.Link || cert.url || cert.URL || cert.website || cert.Website || '',
@@ -317,7 +317,7 @@ class GeminiParserService {
         endDate: cert.endDate || cert.end_date || cert.End_Date || cert['End Date'] || '',
         instituteName: cert.instituteName || cert.institute_name || cert.Institute_Name || cert['Institute Name'] || cert.institution || cert.Institution || cert.provider || cert.Provider || ''
       })),
-      references: (geminiData.references || []).map((ref: any) => ({
+      references: (Array.isArray(geminiData.references) ? geminiData.references : []).map((ref: any) => ({
         id: Date.now().toString() + Math.random(),
         name: ref.name || ref.Name || ref.fullName || ref.full_name || ref.Full_Name || ref['Full Name'] || '',
         title: ref.title || ref.Title || ref.jobTitle || ref.job_title || ref.Job_Title || ref['Job Title'] || ref.position || ref.Position || '',
@@ -369,7 +369,7 @@ class GeminiParserService {
         title: activity.title || activity.Title || activity.name || activity.Name || '',
         description: activity.description || activity.Description || activity.details || activity.Details || ''
       })),
-      projects: (geminiData.projects || []).map((project: any) => ({
+      projects: (Array.isArray(geminiData.projects) ? geminiData.projects : []).map((project: any) => ({
         id: Date.now().toString() + Math.random(),
         name: project.name || project.Name || project.title || project.Title || project['Project Name'] || '',
         techStack: project.techStack || project.tech_stack || project.Tech_Stack || project['Tech Stack'] || project.technologies || project.Technologies || '',
@@ -378,7 +378,7 @@ class GeminiParserService {
         description: project.description || project.Description || project.details || project.Details || project.summary || project.Summary || '',
         link: project.link || project.Link || project.url || project.URL || project.website || project.Website || ''
       })),
-      certifications: (geminiData.certifications || []).map((cert: any) => ({
+      certifications: (Array.isArray(geminiData.certifications) ? geminiData.certifications : []).map((cert: any) => ({
         id: Date.now().toString() + Math.random(),
         certificateName: cert.certificateName || cert.certificate_name || cert.Certificate_Name || cert['Certificate Name'] || cert.name || cert.Name || '',
         link: cert.link || cert.Link || cert.url || cert.URL || cert.website || cert.Website || '',
@@ -386,7 +386,7 @@ class GeminiParserService {
         endDate: cert.endDate || cert.end_date || cert.End_Date || cert['End Date'] || '',
         instituteName: cert.instituteName || cert.institute_name || cert.Institute_Name || cert['Institute Name'] || cert.institution || cert.Institution || cert.provider || cert.Provider || ''
       })),
-      references: (geminiData.references || []).map((ref: any) => ({
+      references: (Array.isArray(geminiData.references) ? geminiData.references : []).map((ref: any) => ({
         id: Date.now().toString() + Math.random(),
         name: ref.name || ref.Name || ref.fullName || ref.full_name || ref.Full_Name || ref['Full Name'] || '',
         title: ref.title || ref.Title || ref.jobTitle || ref.job_title || ref.Job_Title || ref['Job Title'] || ref.position || ref.Position || '',

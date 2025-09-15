@@ -290,6 +290,14 @@ class AISuggestionServiceOptimized:
         - NO REPETITIONS: Avoid repeating the Same Words or Sentences in different sections. Instead use synonyms or different words to avoid repetition.
         - SPELLING & GRAMMAR: Ensure all rewritten content has perfect spelling, grammar, and professional language.
 
+        CRITICAL FIELD NAMING CONVENTIONS - MUST FOLLOW EXACTLY:
+        - For projects: Use "techStack" (not "technologies" or "tech_stack") - must be a comma-separated string
+        - For certifications: Use "certificateName" (not "name" or "certificate_name") and "instituteName" (not "issuer" or "institute_name")
+        - For work experience: Use "startDate" and "endDate" (not "start_date" or "end_date")
+        - For projects: Use "startDate" and "endDate" (not "start_date" or "end_date")
+        - For certifications: Use "startDate" and "endDate" (not "start_date" or "end_date")
+        - These field names must match exactly what the frontend expects for proper data display
+
         OVERALL SCORE CALCULATION RULES:
         - Calculate overallScore based on how well the resume matches the job description requirements
         - Score 90-100: Excellent match - resume perfectly aligns with JD requirements, strong keywords, relevant experience
@@ -341,12 +349,13 @@ class AISuggestionServiceOptimized:
 
         CRITICAL PROJECTS RULES:
         - If NO projects exist in the resume, create exactly 2 dummy projects that match the job description requirements.
-        - Each dummy project must have: name, existing (empty), rewrite (detailed project description), startDate, endDate, and recommendations.
+        - Each dummy project must have: name, existing (empty), rewrite (detailed project description), startDate, endDate, techStack, and recommendations.
         - Dummy projects should be relevant to the job role and demonstrate skills mentioned in the job description.
         - If projects DO exist, ONLY enhance the descriptions of existing projects in the "rewrite" field to better match the job description.
         - DO NOT create new projects when projects already exist - only enhance existing ones.
         - For existing projects, keep the same project names and only improve the descriptions.
-        - ALWAYS include startDate and endDate in project responses - if missing from existing resume, add realistic dummy dates.
+        - ALWAYS include startDate, endDate, and techStack in project responses - if missing from existing resume, add realistic dummy dates and technologies.
+        - techStack should be a comma-separated string of technologies (e.g., "React, Node.js, MongoDB, AWS").
         - Project descriptions should include: technologies used, achievements, impact, and relevance to the target role.
         - Use strong action verbs and quantified results where possible.
         - Ensure project names and descriptions align with the {target_experience} level and job requirements.
@@ -358,8 +367,10 @@ class AISuggestionServiceOptimized:
         - Use strong action verbs and professional language in all rewrites.
 
         CRITICAL CERTIFICATIONS RULES:
-        - ALWAYS include startDate and endDate in certification responses - if missing from existing resume, add realistic dummy dates.
+        - ALWAYS include startDate, endDate, certificateName, and instituteName in certification responses - if missing from existing resume, add realistic dummy dates and organization names.
         - For certifications, enhance descriptions while preserving certification names and issuing organizations.
+        - certificateName should be the full name of the certification (e.g., "AWS Certified Solutions Architect").
+        - instituteName should be the issuing organization (e.g., "Amazon Web Services").
         - Include relevant details about certification value and relevance to the target role.
         - Use professional language and highlight ongoing learning commitment.
 
@@ -408,6 +419,7 @@ class AISuggestionServiceOptimized:
                         "rewrite": "",
                         "startDate": "",
                         "endDate": "",
+                        "techStack": "",
                         "recommendations": ["Enhance project description with specific technologies used", "Add quantified results and achievements", "Include project duration and team size", "Highlight relevant skills gained"]
                     }}
                 ],
@@ -418,13 +430,14 @@ class AISuggestionServiceOptimized:
                 }},
                 "certifications": [
                     {{
-                        "name": "",
+                        "certificateName": "",
                         "existing": "",
-                    "rewrite": "",
+                        "rewrite": "",
                         "startDate": "",
                         "endDate": "",
-                    "recommendations": ["Add relevant professional certifications for the target role", "Include industry-specific certifications and licenses", "Add completion dates and credential IDs", "Highlight ongoing learning and skill development"]
-                }}
+                        "instituteName": "",
+                        "recommendations": ["Add relevant professional certifications for the target role", "Include industry-specific certifications and licenses", "Add completion dates and credential IDs", "Highlight ongoing learning and skill development"]
+                    }}
                 ]
             }},
             "topRecommendations": [

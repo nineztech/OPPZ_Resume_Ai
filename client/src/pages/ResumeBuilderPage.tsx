@@ -479,7 +479,7 @@ const ResumeBuilderPage = () => {
         },
         summary: location.state.improvedResumeData.summary || '',
         objective: location.state.improvedResumeData.objective || '',
-        experience: (location.state.improvedResumeData.experience || []).map((exp: any) => {
+        experience: (Array.isArray(location.state.improvedResumeData.experience) ? location.state.improvedResumeData.experience : []).map((exp: any) => {
           console.log('Processing ATS experience item:', exp);
           
           const processedExp = {
@@ -494,7 +494,7 @@ const ResumeBuilderPage = () => {
           console.log('Processed ATS experience:', processedExp);
           return processedExp;
         }),
-        education: (location.state.improvedResumeData.education || []).map((edu: any) => ({
+        education: (Array.isArray(location.state.improvedResumeData.education) ? location.state.improvedResumeData.education : []).map((edu: any) => ({
           id: edu.id || `edu-${Date.now()}-${Math.random()}`,
           institution: edu.Institution || edu.institution || '',
           degree: edu.Degree || edu.degree || '',
@@ -588,7 +588,7 @@ const ResumeBuilderPage = () => {
         },
         summary: extractedData.summary || '',
         objective: extractedData.objective || '',
-        experience: (extractedData.experience || []).map((exp: any) => {
+        experience: (Array.isArray(extractedData.experience) ? extractedData.experience : []).map((exp: any) => {
           console.log('Processing experience item:', exp);
           
           // Parse duration into start and end dates
@@ -620,7 +620,7 @@ const ResumeBuilderPage = () => {
           console.log('Processed experience:', processedExp);
           return processedExp;
         }),
-        education: (extractedData.education || []).map((edu: any) => ({
+        education: (Array.isArray(extractedData.education) ? extractedData.education : []).map((edu: any) => ({
           id: edu.id || `edu-${Date.now()}-${Math.random()}`,
           institution: edu.Institution || edu.institution || edu.school || edu.university || '',
           degree: edu.Degree || edu.degree || edu.program || edu.major || '',
@@ -632,7 +632,7 @@ const ResumeBuilderPage = () => {
         skills: extractedData.skills || [],
         languages: extractedData.languages || [],
         activities: extractedData.activities || [],
-        projects: (extractedData.projects || []).map((project: any) => ({
+        projects: (Array.isArray(extractedData.projects) ? extractedData.projects : []).map((project: any) => ({
           id: project.id || `project-${Date.now()}-${Math.random()}`,
           name: project.Name || project.name || project.title || project.projectName || '',
           techStack: project['Tech Stack'] || project.techStack || project.technologies || project.tech || '',
