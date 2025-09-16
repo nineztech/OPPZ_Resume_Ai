@@ -3,7 +3,7 @@ import User from "../models/userModel.js";
 import puppeteer from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
 
 // Save new resume
 // Save new resume
@@ -276,14 +276,14 @@ export const generatePDF = async (req, res) => {
   }
 };
 
-// Generate Word document from HTML resume data
+// Generate Word document from HTML resume data (UPDATED)
 export const generateWord = async (req, res) => {
   try {
-    const { htmlContent, templateId, resumeData } = req.body;
+    const { htmlContent, templateId } = req.body;
 
     if (!htmlContent || !templateId) {
-      return res.status(400).json({ 
-        message: "Missing required fields: htmlContent and templateId" 
+      return res.status(400).json({
+        message: "Missing required fields: htmlContent and templateId"
       });
     }
 
@@ -294,178 +294,228 @@ export const generateWord = async (req, res) => {
     });
 
     const page = await browser.newPage();
-    
-    // Set viewport for consistent rendering
     await page.setViewport({ width: 1200, height: 1600 });
-    
-    // Set the HTML content
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-    
-    // Wait for any dynamic content to load
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Extract styled content from the rendered page
     const styledContent = await page.evaluate(() => {
       const container = document.querySelector('.template-container') || document.body;
-      
-      // Function to get computed styles for an element
+
       const getElementStyles = (element) => {
-        const computedStyle = window.getComputedStyle(element);
+        const cs = window.getComputedStyle(element);
         return {
-          fontSize: computedStyle.fontSize,
-          fontFamily: computedStyle.fontFamily,
-          fontWeight: computedStyle.fontWeight,
-          color: computedStyle.color,
-          backgroundColor: computedStyle.backgroundColor,
-          textAlign: computedStyle.textAlign,
-          margin: computedStyle.margin,
-          padding: computedStyle.padding,
-          lineHeight: computedStyle.lineHeight,
-          textDecoration: computedStyle.textDecoration,
-          fontStyle: computedStyle.fontStyle
+          fontSize: cs.fontSize,
+          fontFamily: cs.fontFamily,
+          fontWeight: cs.fontWeight,
+          color: cs.color,
+          backgroundColor: cs.backgroundColor,
+          textAlign: cs.textAlign,
+          margin: cs.margin,
+          padding: cs.padding,
+          lineHeight: cs.lineHeight,
+          textDecoration: cs.textDecoration,
+          fontStyle: cs.fontStyle
         };
       };
 
-      // Function to extract text content with styling information
-      const extractStyledText = (element) => {
-        const result = [];
-        
-        const processNode = (node) => {
-          if (node.nodeType === Node.TEXT_NODE) {
-            const text = node.textContent.trim();
+      const result = [];
+
+      const processNode = (node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = (node.textContent || "").trim();
+          if (text) {
+            const parentElement = node.parentElement || container;
+            const styles = getElementStyles(parentElement);
+            result.push({
+              type: 'text',
+              content: text,
+              styles: styles,
+              tagName: parentElement.tagName ? parentElement.tagName.toLowerCase() : 'span'
+            });
+          }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          const el = node;
+          const tagName = el.tagName.toLowerCase();
+
+          if (['h1','h2','h3','h4','h5','h6'].includes(tagName)) {
+            const styles = getElementStyles(el);
+            const text = (el.textContent || "").trim();
             if (text) {
-              const parentElement = node.parentElement;
-              const styles = getElementStyles(parentElement);
-              result.push({
-                type: 'text',
-                content: text,
-                styles: styles,
-                tagName: parentElement.tagName.toLowerCase()
-              });
-            }
-          } else if (node.nodeType === Node.ELEMENT_NODE) {
-            const tagName = node.tagName.toLowerCase();
-            
-            // Handle different element types
-            if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
-              const styles = getElementStyles(node);
               result.push({
                 type: 'heading',
-                level: parseInt(tagName.substring(1)),
-                content: node.textContent.trim(),
+                level: parseInt(tagName.substring(1), 10),
+                content: text,
                 styles: styles
               });
-            } else if (tagName === 'p') {
-              const styles = getElementStyles(node);
+            }
+          } else if (tagName === 'p') {
+            const styles = getElementStyles(el);
+            const text = (el.textContent || "").trim();
+            if (text) {
               result.push({
                 type: 'paragraph',
-                content: node.textContent.trim(),
+                content: text,
                 styles: styles
               });
-            } else if (tagName === 'br') {
-              result.push({
-                type: 'linebreak'
-              });
-            } else {
-              // Process child nodes
-              Array.from(node.childNodes).forEach(processNode);
             }
+            // Also walk children to capture inline emphasis if present
+            Array.from(el.childNodes).forEach(processNode);
+          } else if (tagName === 'br') {
+            result.push({ type: 'linebreak' });
+          } else {
+            Array.from(el.childNodes).forEach(processNode);
           }
-        };
-
-        Array.from(element.childNodes).forEach(processNode);
-        return result;
+        }
       };
 
-      return extractStyledText(container);
+      Array.from(container.childNodes).forEach(processNode);
+      return result;
     });
 
     await browser.close();
 
-    // Convert extracted content to Word document
+    // --- Helpers to translate CSS -> docx ---
+    const isBold = (fw) => {
+      if (!fw) return false;
+      if (typeof fw === 'string') {
+        if (fw.toLowerCase() === 'bold') return true;
+        const n = parseInt(fw, 10);
+        return !isNaN(n) && n >= 600;
+      }
+      if (typeof fw === 'number') return fw >= 600;
+      return false;
+    };
+
+    const pxToHalfPoints = (pxStr) => {
+      const n = parseFloat(pxStr || '');
+      // docx uses half-points; 1px ~ 0.75pt => 1px * 0.75 * 2 = 1.5 half-points
+      // But many examples simply use px*2; keep prior approach for visual parity
+      return Number.isFinite(n) ? Math.round(n * 2) : 24; // default ~12pt
+    };
+
+    const rgbToHex = (rgbStr) => {
+      if (!rgbStr) return undefined;
+      const s = rgbStr.trim();
+      if (s.startsWith('#')) {
+        return s.replace('#', '').toUpperCase();
+      }
+      // rgb or rgba
+      const m = s.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+      if (!m) return undefined;
+      const r = Math.max(0, Math.min(255, parseInt(m[1], 10)));
+      const g = Math.max(0, Math.min(255, parseInt(m[2], 10)));
+      const b = Math.max(0, Math.min(255, parseInt(m[3], 10)));
+      const hex = ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+      return hex.toUpperCase();
+    };
+
+    const colorOrUndefined = (rgbStr) => {
+      const hex = rgbToHex(rgbStr);
+      // Avoid setting pure black to keep default
+      if (!hex || hex === '000000') return undefined;
+      return hex;
+    };
+
+    const toAlignment = (alignStr) => {
+      const s = (alignStr || '').toLowerCase();
+      switch (s) {
+        case 'center': return AlignmentType.CENTER;
+        case 'right': return AlignmentType.RIGHT;
+        case 'justify': return AlignmentType.JUSTIFIED;
+        case 'left':
+        default: return AlignmentType.LEFT;
+      }
+    };
+
+    // --- Build paragraphs first (no in-place mutations) ---
+    const paragraphs = [];
+    let currentRuns = [];
+    let currentAlign = AlignmentType.LEFT;
+
+    const flushParagraph = (spacingAfter = 100) => {
+      if (currentRuns.length > 0) {
+        paragraphs.push(new Paragraph({
+          children: currentRuns,
+          alignment: currentAlign,
+          spacing: { after: spacingAfter }
+        }));
+        currentRuns = [];
+        currentAlign = AlignmentType.LEFT;
+      }
+    };
+
+    const makeRun = (text, styles) => new TextRun({
+      text: text || '',
+      bold: isBold(styles?.fontWeight),
+      italics: (styles?.fontStyle || '').toLowerCase() === 'italic',
+      size: pxToHalfPoints(styles?.fontSize),
+      color: colorOrUndefined(styles?.color)
+    });
+
+    (styledContent || []).forEach((item) => {
+      if (!item || !item.type) return;
+
+      if (item.type === 'heading') {
+        // Finish any open paragraph first
+        flushParagraph(100);
+
+        const level = Math.min(Math.max(parseInt(item.level, 10) || 1, 1), 6);
+        const headingPara = new Paragraph({
+          children: [
+            new TextRun({
+              text: item.content || '',
+              bold: isBold(item.styles?.fontWeight) || true, // headings generally bold
+              italics: (item.styles?.fontStyle || '').toLowerCase() === 'italic',
+              size: pxToHalfPoints(item.styles?.fontSize),
+              color: colorOrUndefined(item.styles?.color)
+            })
+          ],
+          heading:
+            level === 1 ? HeadingLevel.HEADING_1 :
+            level === 2 ? HeadingLevel.HEADING_2 :
+            level === 3 ? HeadingLevel.HEADING_3 :
+            level === 4 ? HeadingLevel.HEADING_4 :
+            level === 5 ? HeadingLevel.HEADING_5 :
+                          HeadingLevel.HEADING_6,
+          alignment: toAlignment(item.styles?.textAlign),
+          spacing: { after: 200 }
+        });
+
+        paragraphs.push(headingPara);
+
+      } else if (item.type === 'paragraph') {
+        // Start a new paragraph
+        flushParagraph(100);
+        currentAlign = toAlignment(item.styles?.textAlign);
+        currentRuns.push(makeRun(item.content || '', item.styles));
+
+      } else if (item.type === 'text') {
+        // Inline text: append to current paragraph if exists, else start one
+        if (currentRuns.length === 0) {
+          currentAlign = toAlignment(item.styles?.textAlign);
+        }
+        currentRuns.push(makeRun(item.content || '', item.styles));
+
+      } else if (item.type === 'linebreak') {
+        // Insert a line break in the current paragraph; if no paragraph, create one
+        if (currentRuns.length === 0) {
+          currentRuns.push(new TextRun({ text: '', break: 1 }));
+        } else {
+          currentRuns.push(new TextRun({ text: '', break: 1 }));
+        }
+      }
+    });
+
+    // Flush any trailing paragraph
+    flushParagraph(100);
+
+    // Build the document with a single section
     const doc = new Document({
       sections: [{
         properties: {},
-        children: []
+        children: paragraphs
       }]
-    });
-
-    // Process the extracted content
-    styledContent.forEach(item => {
-      if (item.type === 'heading') {
-        const headingLevel = item.level === 1 ? HeadingLevel.TITLE : 
-                            item.level === 2 ? HeadingLevel.HEADING_1 :
-                            item.level === 3 ? HeadingLevel.HEADING_2 :
-                            item.level === 4 ? HeadingLevel.HEADING_3 :
-                            HeadingLevel.HEADING_4;
-
-        doc.addSection({
-          properties: {},
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: item.content,
-                  bold: item.styles.fontWeight === 'bold' || parseInt(item.styles.fontWeight) >= 600,
-                  italics: item.styles.fontStyle === 'italic',
-                  size: Math.round(parseFloat(item.styles.fontSize) * 2), // Convert px to half-points
-                  color: item.styles.color !== 'rgb(0, 0, 0)' ? item.styles.color.replace('rgb', '').replace('(', '').replace(')', '') : undefined,
-                }),
-              ],
-              heading: headingLevel,
-              spacing: {
-                after: 200,
-              },
-            })
-          ]
-        });
-      } else if (item.type === 'paragraph') {
-        doc.addSection({
-          properties: {},
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: item.content,
-                  bold: item.styles.fontWeight === 'bold' || parseInt(item.styles.fontWeight) >= 600,
-                  italics: item.styles.fontStyle === 'italic',
-                  size: Math.round(parseFloat(item.styles.fontSize) * 2),
-                  color: item.styles.color !== 'rgb(0, 0, 0)' ? item.styles.color.replace('rgb', '').replace('(', '').replace(')', '') : undefined,
-                }),
-              ],
-              spacing: {
-                after: 100,
-              },
-            })
-          ]
-        });
-      } else if (item.type === 'text') {
-        // Add text runs for inline content
-        const currentSection = doc.sections[doc.sections.length - 1];
-        if (currentSection && currentSection.children.length > 0) {
-          const lastParagraph = currentSection.children[currentSection.children.length - 1];
-          if (lastParagraph.children) {
-            lastParagraph.children.push(
-              new TextRun({
-                text: item.content,
-                bold: item.styles.fontWeight === 'bold' || parseInt(item.styles.fontWeight) >= 600,
-                italics: item.styles.fontStyle === 'italic',
-                size: Math.round(parseFloat(item.styles.fontSize) * 2),
-                color: item.styles.color !== 'rgb(0, 0, 0)' ? item.styles.color.replace('rgb', '').replace('(', '').replace(')', '') : undefined,
-              })
-            );
-          }
-        }
-      } else if (item.type === 'linebreak') {
-        // Add line break
-        const currentSection = doc.sections[doc.sections.length - 1];
-        if (currentSection && currentSection.children.length > 0) {
-          const lastParagraph = currentSection.children[currentSection.children.length - 1];
-          if (lastParagraph.children) {
-            lastParagraph.children.push(new TextRun({ text: '\n' }));
-          }
-        }
-      }
     });
 
     // Generate Word document buffer
@@ -481,7 +531,7 @@ export const generateWord = async (req, res) => {
 
   } catch (error) {
     console.error("Word generation error:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: "Error generating Word document",
       details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
