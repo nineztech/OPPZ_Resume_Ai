@@ -68,17 +68,22 @@ class StandardATSService:
         self.update_generation_parameters(temperature=0.1, top_p=0.8)
         logger.info("🎯 Set consistent parameters for deterministic ATS analysis")
 
-    def analyze_resume(self, resume_text: str) -> Dict[str, Any]:
+    def analyze_resume(self, resume_text: str, parsed_data: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Analyze resume for ATS optimization and provide comprehensive feedback
         
         Args:
             resume_text: Raw resume text to analyze
+            parsed_data: Optional parsed resume data for more accurate analysis
             
         Returns:
             Dictionary containing ATS analysis results with scores and recommendations
         """
         logger.info(f"Starting Standard ATS analysis with temperature={self.temperature}, top_p={self.top_p}")
+        
+        # Validate parsed data if provided
+        if parsed_data:
+            parsed_data = self._validate_parsed_data(parsed_data)
         
         prompt = f"""
         You are an expert ATS (Applicant Tracking System) analyst with 10+ years of experience in resume optimization and HR technology.
@@ -91,11 +96,20 @@ class StandardATSService:
         - ALWAYS include ALL required sections: overall_score, category_scores, detailed_feedback, extracted_text, strengths, weaknesses, recommendations
         - Ensure all scores are integers between 0-100 (never "NA", "N/A", "None", "Null", "Unknown", or text)
         - NEVER use placeholder values - provide specific, actionable content
-        - NO REPETITIONS: Use unique, varied language across all sections
+        - LANGUAGE VARIETY: Use varied language within same sections, allow appropriate repetition across different sections
         - PERFECT GRAMMAR: All content must have flawless spelling, grammar, and professional language
         - CONSISTENT SCORING: Apply the same rigorous standards across all categories
         
         PRECISE SCORING CRITERIA - APPLY CONSISTENTLY:
+        
+        DYNAMIC SCORING RULES:
+        - Use precise scores (not just multiples of 5) - e.g., 87, 93, 76, 84
+        - Count total issues/problems found across all categories
+        - If total issues = 0: Apply 1.15x bonus multiplier to all category scores
+        - If total issues = 1-2: Apply 1.10x bonus multiplier to all category scores  
+        - If total issues = 3-4: Apply 1.05x bonus multiplier to all category scores
+        - If total issues = 5+: No bonus multiplier (use base scores)
+        - Final scores must be integers between 0-100 (cap at 100 if bonus exceeds)
         
         KEYWORD_USAGE_PLACEMENT (0-100):
         - 90-100: Perfect keyword presence and natural placement throughout resume, critical ATS ranking terms included, excellent industry-specific terminology
@@ -162,12 +176,12 @@ class StandardATSService:
         - 0-49: Very poor clarity, major communication problems
         
         REPETITION_AVOIDANCE (0-100):
-        - 90-100: Perfect varied language, no unnecessary repetitions, professional diversity
-        - 80-89: Excellent language variety with minor repetitive elements
-        - 70-79: Good variety but some repetitive action verbs or phrases
-        - 60-69: Fair variety, noticeable repetition affecting quality
-        - 50-59: Poor variety, significant repetitive language
-        - 0-49: Very poor variety, excessive repetition throughout
+        - 90-100: Perfect varied language, no unnecessary repetitions within same section, professional diversity across all sections
+        - 80-89: Excellent language variety with minor repetitive elements within sections, good cross-section diversity
+        - 70-79: Good variety but some repetitive action verbs or phrases within same section, acceptable cross-section repetition
+        - 60-69: Fair variety, noticeable repetition within same section affecting quality, some cross-section repetition acceptable
+        - 50-59: Poor variety, significant repetitive language within same section, limited cross-section diversity
+        - 0-49: Very poor variety, excessive repetition within same section, minimal cross-section language diversity
         
         CONTACT_INFORMATION_COMPLETENESS (0-100):
         - 90-100: Complete contact info (name, phone, email, LinkedIn, location) with proper formatting
@@ -188,11 +202,26 @@ class StandardATSService:
         RESUME TEXT TO ANALYZE:
         {resume_text}
         
+        PARSED RESUME DATA (for accurate analysis):
+        {json.dumps(parsed_data, indent=2) if parsed_data else "No parsed data provided"}
+        
+        CRITICAL ANALYSIS REQUIREMENTS:
+        - FIRST analyze the PARSED DATA to understand what information is actually present
+        - THEN analyze the raw text for formatting, grammar, and presentation issues
+        - ONLY suggest missing elements that are genuinely absent from the parsed data
+        - DO NOT suggest missing elements that already exist in the parsed data
+        - Cross-reference parsed data with raw text to identify discrepancies
+        
         SECTION DETECTION REQUIREMENTS:
-        - Check for PROJECTS section: Look for "Projects", "Personal Projects", "Portfolio", "Key Projects", "Project Experience"
-        - Check for CERTIFICATES section: Look for "Certifications", "Certificates", "Professional Certifications", "Licenses", "Credentials"
-        - If projects section is missing, reduce SECTION_ORGANIZATION score by 15-20 points
-        - If certificates section is missing, reduce SECTION_ORGANIZATION score by 10-15 points
+        - Check PARSED DATA for projects: Look for "projects", "project", "portfolio" keys with actual content
+        - Check PARSED DATA for certificates: Look for "certificates", "certifications", "certificate" keys with actual content
+        - Check PARSED DATA for experience: Look for "experience", "work_experience" with company, position, dates
+        - Check PARSED DATA for education: Look for "education", "academic" with institution, degree, year
+        - Check PARSED DATA for contact: Look for "contact", "basic_details" with phone, email, location
+        - Check PARSED DATA for skills: Look for "skills", "competencies" with actual skill lists
+        - Check PARSED DATA for summary: Look for "summary", "objective", "profile" with actual content
+        - If sections exist in parsed data but are empty/incomplete, suggest improvements rather than additions
+        - If sections are completely missing from parsed data, then suggest additions
         - Include specific feedback about missing sections in weaknesses and recommendations
         
         REQUIRED OUTPUT SCHEMA (MUST INCLUDE ALL SECTIONS):
@@ -296,12 +325,12 @@ class StandardATSService:
                 "repetition_avoidance": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Repetition Avoidance",
-                    "description": "Analysis of varied language and minimal unnecessary repetitions",
-                    "positives": ["Quote specific varied language examples from resume", "Reference specific sections with good word variety"],
-                    "negatives": ["Quote specific repetitive phrases found", "Identify specific sections with excessive repetition"],
-                    "suggestions": ["Provide exact word replacements needed", "Specify which sections need language variety"],
-                    "specific_issues": ["List exact repetitive phrases found in resume", "Identify specific sections needing word variety with locations"],
-                    "improvement_examples": ["Show before/after repetition examples", "Provide specific word variety improvements needed"]
+                    "description": "Analysis of varied language and minimal unnecessary repetitions within same section, allowing legitimate repetition across different sections",
+                    "positives": ["Quote specific varied language examples from resume", "Reference specific sections with good word variety", "Note acceptable cross-section repetition where appropriate"],
+                    "negatives": ["Quote specific repetitive phrases found within same section", "Identify specific sections with excessive internal repetition"],
+                    "suggestions": ["Provide exact word replacements needed within same section", "Specify which sections need internal language variety", "Note that cross-section repetition is acceptable when contextually appropriate"],
+                    "specific_issues": ["List exact repetitive phrases found within same section in resume", "Identify specific sections needing internal word variety with locations"],
+                    "improvement_examples": ["Show before/after repetition examples within same section", "Provide specific word variety improvements needed within sections"]
                 }},
                 "contact_information_completeness": {{
                     "score": <exact_score_based_on_criteria_above>,
@@ -369,6 +398,38 @@ class StandardATSService:
         - Identify specific missing elements (e.g., "Your contact section is missing a professional email address")
         - Reference specific formatting issues (e.g., "The bullet points in your Skills section are inconsistent")
         - Provide concrete examples of what to add, remove, or modify in the actual resume content
+        - For REPETITION ANALYSIS: Focus on repetition within the same section, not across different sections (e.g., using "implemented" in two different projects is acceptable)
+        
+        SPECIFIC SECTION ANALYSIS REQUIREMENTS:
+        - EXPERIENCE SECTION: Check for missing company names, job titles, dates, descriptions, locations
+        - EDUCATION SECTION: Check for missing institution names, degrees, graduation years, GPAs, locations
+        - CONTACT SECTION: Check for missing phone, email, LinkedIn, location, professional title
+        - SKILLS SECTION: Check for missing technical skills, soft skills, skill categorization
+        - PROJECTS SECTION: Check for missing project names, descriptions, tech stacks, dates, links
+        - CERTIFICATIONS SECTION: Check for missing certificate names, issuing organizations, dates
+        - SUMMARY SECTION: Check for missing professional summary or objective
+        - LANGUAGES SECTION: Check for missing language proficiency levels
+        - REFERENCES SECTION: Check for missing reference contact information
+        
+        SUGGESTION FORMAT REQUIREMENTS:
+        - Use specific format: "MISSING: [Section] - [Specific Element] - [Action Required]"
+        - Use specific format: "IMPROVE: [Section] - [Current Text] - [Suggested Improvement]"
+        - Use specific format: "ADD: [Section] - [Missing Element] - [Specific Addition Needed]"
+        - Use specific format: "FIX: [Section] - [Issue Description] - [Exact Fix Required]"
+        - Always specify the exact section and field that needs attention
+        - Always provide the exact text or element that needs to be added/changed
+        - Always explain what specific action is required
+        
+        PARSED DATA ANALYSIS RULES:
+        - If parsed data shows projects with dates, DO NOT suggest missing project dates
+        - If parsed data shows experience with company names, DO NOT suggest missing company names
+        - If parsed data shows education with degrees, DO NOT suggest missing degrees
+        - If parsed data shows contact info, DO NOT suggest missing contact information
+        - If parsed data shows skills, DO NOT suggest missing skills section
+        - Only suggest missing elements if they are genuinely absent from the parsed data
+        - Focus on quality improvements for existing elements rather than suggesting missing elements
+        - Check for completeness: if a field exists but is empty or incomplete, suggest improvements
+        - Check for accuracy: if a field exists but has poor content, suggest better content
         """
 
         try:
@@ -393,6 +454,9 @@ class StandardATSService:
             
             # Validate CSV parameters
             ats_response = self._validate_csv_parameters(ats_response)
+            
+            # Apply dynamic scoring based on issues count
+            ats_response = self._apply_dynamic_scoring(ats_response)
             
             # Final validation
             ats_response = self._final_ats_validation(ats_response)
@@ -674,6 +738,146 @@ class StandardATSService:
         
         logger.info("✅ CSV parameters validation completed")
         return ats_response
+    
+    def _validate_parsed_data(self, parsed_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate and clean parsed data to ensure accurate analysis
+        
+        Args:
+            parsed_data: Raw parsed resume data
+            
+        Returns:
+            Validated and cleaned parsed data
+        """
+        if not isinstance(parsed_data, dict):
+            logger.warning("Invalid parsed data format, returning empty dict")
+            return {}
+        
+        validated_data = {}
+        
+        # Check for common resume section keys and validate their content
+        section_mappings = {
+            "projects": ["projects", "project", "portfolio", "personal_projects"],
+            "experience": ["experience", "work_experience", "employment", "work_history"],
+            "education": ["education", "academic", "qualifications", "degrees"],
+            "contact": ["contact", "basic_details", "personal_info", "contact_info"],
+            "skills": ["skills", "competencies", "technical_skills", "soft_skills"],
+            "summary": ["summary", "objective", "profile", "professional_summary"],
+            "certifications": ["certificates", "certifications", "certificate", "licenses"],
+            "languages": ["languages", "language", "linguistic_skills"],
+            "references": ["references", "reference", "referees"]
+        }
+        
+        for section_name, possible_keys in section_mappings.items():
+            for key in possible_keys:
+                if key in parsed_data and parsed_data[key]:
+                    # Check if the data is not empty
+                    if isinstance(parsed_data[key], list) and len(parsed_data[key]) > 0:
+                        validated_data[section_name] = parsed_data[key]
+                        break
+                    elif isinstance(parsed_data[key], dict) and parsed_data[key]:
+                        validated_data[section_name] = parsed_data[key]
+                        break
+                    elif isinstance(parsed_data[key], str) and parsed_data[key].strip():
+                        validated_data[section_name] = parsed_data[key]
+                        break
+        
+        # Add any other non-empty fields
+        for key, value in parsed_data.items():
+            if key not in validated_data and value:
+                if isinstance(value, (list, dict)) and value:
+                    validated_data[key] = value
+                elif isinstance(value, str) and value.strip():
+                    validated_data[key] = value
+        
+        logger.info(f"Validated parsed data with {len(validated_data)} sections")
+        return validated_data
+
+    def _apply_dynamic_scoring(self, ats_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Apply dynamic scoring based on issues count to boost scores when issues are minimal
+        
+        Args:
+            ats_response: ATS analysis response dictionary
+            
+        Returns:
+            Updated ATS response with dynamic scoring applied
+        """
+        logger.info("🎯 Applying dynamic scoring based on issues count")
+        
+        # Count total issues across all categories
+        total_issues = 0
+        
+        # Count issues in detailed feedback sections
+        detailed_feedback = ats_response.get("detailed_feedback", {})
+        for category, feedback in detailed_feedback.items():
+            if isinstance(feedback, dict):
+                # Count issues in negatives, specific_issues, and suggestions
+                negatives = feedback.get("negatives", [])
+                specific_issues = feedback.get("specific_issues", [])
+                suggestions = feedback.get("suggestions", [])
+                
+                # Count non-empty issues
+                category_issues = len([item for item in negatives if item and item.strip()])
+                category_issues += len([item for item in specific_issues if item and item.strip()])
+                category_issues += len([item for item in suggestions if item and item.strip()])
+                
+                total_issues += category_issues
+        
+        # Count issues in weaknesses and recommendations
+        weaknesses = ats_response.get("weaknesses", [])
+        recommendations = ats_response.get("recommendations", [])
+        
+        total_issues += len([item for item in weaknesses if item and item.strip()])
+        total_issues += len([item for item in recommendations if item and item.strip()])
+        
+        # Determine bonus multiplier based on issues count
+        if total_issues == 0:
+            bonus_multiplier = 1.15
+            logger.info(f"🎯 No issues found - applying 1.15x bonus multiplier")
+        elif total_issues <= 2:
+            bonus_multiplier = 1.10
+            logger.info(f"🎯 {total_issues} issues found - applying 1.10x bonus multiplier")
+        elif total_issues <= 4:
+            bonus_multiplier = 1.05
+            logger.info(f"🎯 {total_issues} issues found - applying 1.05x bonus multiplier")
+        else:
+            bonus_multiplier = 1.0
+            logger.info(f"🎯 {total_issues} issues found - no bonus multiplier")
+        
+        # Apply bonus to category scores
+        category_scores = ats_response.get("category_scores", {})
+        updated_scores = {}
+        
+        for category, score in category_scores.items():
+            if isinstance(score, (int, float)) and score > 0:
+                # Apply bonus and ensure score is between 0-100
+                new_score = int(round(score * bonus_multiplier))
+                new_score = min(100, max(0, new_score))
+                updated_scores[category] = new_score
+                
+                if bonus_multiplier > 1.0:
+                    logger.info(f"🎯 {category}: {score} -> {new_score} (x{bonus_multiplier})")
+            else:
+                updated_scores[category] = score
+        
+        ats_response["category_scores"] = updated_scores
+        
+        # Recalculate overall score as weighted average
+        if updated_scores:
+            overall_score = int(round(sum(updated_scores.values()) / len(updated_scores)))
+            ats_response["overall_score"] = overall_score
+            logger.info(f"🎯 Overall score recalculated: {overall_score}")
+        
+        # Add dynamic scoring info to response
+        ats_response["dynamic_scoring"] = {
+            "total_issues_found": total_issues,
+            "bonus_multiplier_applied": bonus_multiplier,
+            "scoring_method": "dynamic_issue_based"
+        }
+        
+        logger.info(f"✅ Dynamic scoring applied successfully - {total_issues} issues, {bonus_multiplier}x multiplier")
+        return ats_response
 
 
 class JDSpecificATSService:
@@ -727,18 +931,23 @@ class JDSpecificATSService:
             "model_name": self.model_name
         }
 
-    def analyze_resume_for_jd(self, resume_text: str, job_description: str) -> Dict[str, Any]:
+    def analyze_resume_for_jd(self, resume_text: str, job_description: str, parsed_data: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Analyze resume for specific job description and provide comprehensive feedback
         
         Args:
             resume_text: Raw resume text to analyze
             job_description: Job description text to match against
+            parsed_data: Optional parsed resume data for more accurate analysis
             
         Returns:
             Dictionary containing JD-specific ATS analysis results with scores and recommendations
         """
         logger.info(f"Starting JD-Specific ATS analysis with temperature={self.temperature}, top_p={self.top_p}")
+        
+        # Validate parsed data if provided
+        if parsed_data:
+            parsed_data = self._validate_parsed_data(parsed_data)
         
         prompt = f"""
         You are an expert ATS (Applicant Tracking System) analyst and job matching specialist with 10+ years of experience in recruitment technology and resume optimization.
@@ -751,11 +960,20 @@ class JDSpecificATSService:
         - ALWAYS include ALL required sections: overall_score, match_percentage, missing_keywords, category_scores, detailed_feedback, extracted_text, strengths, weaknesses, recommendations
         - Ensure all scores are integers between 0-100 (never "NA", "N/A", "None", "Null", "Unknown", or text)
         - NEVER use placeholder values - provide specific, actionable content
-        - NO REPETITIONS: Use unique, varied language across all sections
+        - LANGUAGE VARIETY: Use varied language within same sections, allow appropriate repetition across different sections
         - PERFECT GRAMMAR: All content must have flawless spelling, grammar, and professional language
         - CONSISTENT SCORING: Apply the same rigorous standards across all categories
         
         PRECISE SCORING CRITERIA - APPLY CONSISTENTLY:
+        
+        DYNAMIC SCORING RULES:
+        - Use precise scores (not just multiples of 5) - e.g., 87, 93, 76, 84
+        - Count total issues/problems found across all categories
+        - If total issues = 0: Apply 1.15x bonus multiplier to all category scores
+        - If total issues = 1-2: Apply 1.10x bonus multiplier to all category scores  
+        - If total issues = 3-4: Apply 1.05x bonus multiplier to all category scores
+        - If total issues = 5+: No bonus multiplier (use base scores)
+        - Final scores must be integers between 0-100 (cap at 100 if bonus exceeds)
         
         KEYWORD_MATCH_SKILLS (0-100):
         - 90-100: Perfect keyword alignment, all required skills present, industry terms matched
@@ -805,6 +1023,14 @@ class JDSpecificATSService:
         - 50-59: Poor soft skills alignment, significant gaps
         - 0-49: Very poor soft skills match, minimal alignment
         
+        REPETITION_AVOIDANCE (0-100):
+        - 90-100: Perfect varied language, no unnecessary repetitions within same section, professional diversity across all sections
+        - 80-89: Excellent language variety with minor repetitive elements within sections, good cross-section diversity
+        - 70-79: Good variety but some repetitive action verbs or phrases within same section, acceptable cross-section repetition
+        - 60-69: Fair variety, noticeable repetition within same section affecting quality, some cross-section repetition acceptable
+        - 50-59: Poor variety, significant repetitive language within same section, limited cross-section diversity
+        - 0-49: Very poor variety, excessive repetition within same section, minimal cross-section language diversity
+        
         CONTACT_INFORMATION_COMPLETENESS (0-100):
         - 90-100: Complete contact info (name, phone, email, LinkedIn, location) with proper formatting
         - 80-89: Missing 1-2 non-critical contact elements, good overall contact presentation
@@ -824,14 +1050,30 @@ class JDSpecificATSService:
         RESUME TEXT TO ANALYZE:
         {resume_text}
         
+        PARSED RESUME DATA (for accurate analysis):
+        {json.dumps(parsed_data, indent=2) if parsed_data else "No parsed data provided"}
+        
         JOB DESCRIPTION TO MATCH AGAINST:
         {job_description}
         
+        CRITICAL ANALYSIS REQUIREMENTS:
+        - FIRST analyze the PARSED DATA to understand what information is actually present
+        - THEN analyze the raw text for formatting, grammar, and presentation issues
+        - ONLY suggest missing elements that are genuinely absent from the parsed data
+        - DO NOT suggest missing elements that already exist in the parsed data
+        - Cross-reference parsed data with job requirements to identify gaps
+        - Focus on job-relevant missing elements and improvements
+        
         SECTION DETECTION REQUIREMENTS:
-        - Check for PROJECTS section: Look for "Projects", "Personal Projects", "Portfolio", "Key Projects", "Project Experience"
-        - Check for CERTIFICATES section: Look for "Certifications", "Certificates", "Professional Certifications", "Licenses", "Credentials"
-        - If projects section is missing, reduce FORMATTING_STRUCTURE score by 15-20 points
-        - If certificates section is missing, reduce FORMATTING_STRUCTURE score by 10-15 points
+        - Check PARSED DATA for projects: Look for "projects", "project", "portfolio" keys with actual content
+        - Check PARSED DATA for certificates: Look for "certificates", "certifications", "certificate" keys with actual content
+        - Check PARSED DATA for experience: Look for "experience", "work_experience" with company, position, dates
+        - Check PARSED DATA for education: Look for "education", "academic" with institution, degree, year
+        - Check PARSED DATA for contact: Look for "contact", "basic_details" with phone, email, location
+        - Check PARSED DATA for skills: Look for "skills", "competencies" with actual skill lists
+        - Check PARSED DATA for summary: Look for "summary", "objective", "profile" with actual content
+        - If sections exist in parsed data but are empty/incomplete, suggest job-relevant improvements rather than additions
+        - If sections are completely missing from parsed data, then suggest job-relevant additions
         - Include specific feedback about missing sections in weaknesses and recommendations
         
         REQUIRED OUTPUT SCHEMA (MUST INCLUDE ALL SECTIONS):
@@ -847,6 +1089,7 @@ class JDSpecificATSService:
                 "achievements_impact": <exact_score_based_on_criteria_above>,
                 "formatting_structure": <exact_score_based_on_criteria_above>,
                 "soft_skills_match": <exact_score_based_on_criteria_above>,
+                "repetition_avoidance": <exact_score_based_on_criteria_above>,
                 "contact_information_completeness": <exact_score_based_on_criteria_above>,
                 "resume_length_optimization": <exact_score_based_on_criteria_above>
             }},
@@ -910,6 +1153,16 @@ class JDSpecificATSService:
                     "suggestions": ["Provide exact soft skills additions needed for this role", "Specify which sections need job-relevant soft skills"],
                     "specific_issues": ["List exact soft skills gaps found", "Identify specific sections needing soft skills with locations"],
                     "improvement_examples": ["Show before/after soft skills examples", "Provide specific job-relevant soft skills improvements needed"]
+                }},
+                "repetition_avoidance": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Repetition Avoidance",
+                    "description": "Specific analysis of varied language and minimal unnecessary repetitions within same section, allowing legitimate repetition across different sections",
+                    "positives": ["Quote specific varied language examples from resume", "Reference specific sections with good word variety", "Note acceptable cross-section repetition where appropriate"],
+                    "negatives": ["Quote specific repetitive phrases found within same section", "Identify specific sections with excessive internal repetition"],
+                    "suggestions": ["Provide exact word replacements needed within same section", "Specify which sections need internal language variety", "Note that cross-section repetition is acceptable when contextually appropriate"],
+                    "specific_issues": ["List exact repetitive phrases found within same section in resume", "Identify specific sections needing internal word variety with locations"],
+                    "improvement_examples": ["Show before/after repetition examples within same section", "Provide specific word variety improvements needed within sections"]
                 }},
                 "contact_information_completeness": {{
                     "score": <exact_score_based_on_criteria_above>,
@@ -975,6 +1228,39 @@ class JDSpecificATSService:
         - Identify specific missing job-relevant elements (e.g., "Your skills section is missing 'Python' which is required for this role")
         - Reference specific job-matching issues (e.g., "Your experience description lacks the 'team leadership' mentioned in the job requirements")
         - Provide concrete examples of what to add, remove, or modify in the actual resume content to better match the job
+        - For REPETITION ANALYSIS: Focus on repetition within the same section, not across different sections (e.g., using "implemented" in two different projects is acceptable)
+        
+        SPECIFIC SECTION ANALYSIS REQUIREMENTS:
+        - EXPERIENCE SECTION: Check for missing company names, job titles, dates, descriptions, locations, job-relevant keywords
+        - EDUCATION SECTION: Check for missing institution names, degrees, graduation years, GPAs, locations, job-relevant qualifications
+        - CONTACT SECTION: Check for missing phone, email, LinkedIn, location, professional title
+        - SKILLS SECTION: Check for missing technical skills, soft skills, job-required competencies, skill categorization
+        - PROJECTS SECTION: Check for missing project names, descriptions, tech stacks, dates, links, job-relevant technologies
+        - CERTIFICATIONS SECTION: Check for missing certificate names, issuing organizations, dates, job-relevant certifications
+        - SUMMARY SECTION: Check for missing professional summary or objective that aligns with job requirements
+        - LANGUAGES SECTION: Check for missing language proficiency levels, job-relevant languages
+        - REFERENCES SECTION: Check for missing reference contact information
+        
+        SUGGESTION FORMAT REQUIREMENTS:
+        - Use specific format: "MISSING: [Section] - [Specific Element] - [Job-Relevant Action Required]"
+        - Use specific format: "IMPROVE: [Section] - [Current Text] - [Job-Aligned Improvement]"
+        - Use specific format: "ADD: [Section] - [Missing Element] - [Job-Specific Addition Needed]"
+        - Use specific format: "FIX: [Section] - [Issue Description] - [Job-Matching Fix Required]"
+        - Always specify the exact section and field that needs attention
+        - Always provide the exact text or element that needs to be added/changed for job alignment
+        - Always explain what specific action is required to better match the job requirements
+        
+        PARSED DATA ANALYSIS RULES:
+        - If parsed data shows projects with dates, DO NOT suggest missing project dates
+        - If parsed data shows experience with company names, DO NOT suggest missing company names
+        - If parsed data shows education with degrees, DO NOT suggest missing degrees
+        - If parsed data shows contact info, DO NOT suggest missing contact information
+        - If parsed data shows skills, DO NOT suggest missing skills section
+        - Only suggest missing elements if they are genuinely absent from the parsed data
+        - Focus on job-relevant quality improvements for existing elements rather than suggesting missing elements
+        - Check for job relevance: if a field exists but lacks job-relevant content, suggest job-aligned improvements
+        - Check for completeness: if a field exists but is empty or incomplete, suggest job-relevant improvements
+        - Check for accuracy: if a field exists but has poor content, suggest better job-matching content
         """
 
         try:
@@ -996,6 +1282,9 @@ class JDSpecificATSService:
             
             # Enforce schema compliance
             jd_ats_response = self._enforce_jd_ats_schema_compliance(jd_ats_response)
+            
+            # Apply dynamic scoring based on issues count
+            jd_ats_response = self._apply_dynamic_scoring(jd_ats_response)
             
             # Final validation
             jd_ats_response = self._final_ats_validation(jd_ats_response)
@@ -1082,6 +1371,7 @@ class JDSpecificATSService:
                 "achievements_impact": 0,
                 "formatting_structure": 0,
                 "soft_skills_match": 0,
+                "repetition_avoidance": 0,
                 "contact_information_completeness": 0,
                 "resume_length_optimization": 0
             },
@@ -1092,6 +1382,7 @@ class JDSpecificATSService:
                 "achievements_impact": {"score": 0, "title": "Achievements & Impact", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
                 "formatting_structure": {"score": 0, "title": "Formatting & Structure", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
                 "soft_skills_match": {"score": 0, "title": "Soft Skills Match", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "repetition_avoidance": {"score": 0, "title": "Repetition Avoidance", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
                 "contact_information_completeness": {"score": 0, "title": "Contact Information Completeness", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
                 "resume_length_optimization": {"score": 0, "title": "Resume Length Optimization", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []}
             },
