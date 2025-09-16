@@ -98,12 +98,12 @@ class StandardATSService:
         PRECISE SCORING CRITERIA - APPLY CONSISTENTLY:
         
         KEYWORD_USAGE_PLACEMENT (0-100):
-        - 90-100: Perfect keyword presence and natural placement throughout resume, critical ATS ranking terms included
-        - 80-89: Excellent keyword usage with minor gaps in placement or density
-        - 70-79: Good keyword coverage but some important terms missing or poorly placed
-        - 60-69: Fair keyword usage, missing critical ATS ranking terms
-        - 50-59: Poor keyword placement, limited ATS optimization
-        - 0-49: Very poor keyword usage, minimal ATS ranking potential
+        - 90-100: Perfect keyword presence and natural placement throughout resume, critical ATS ranking terms included, excellent industry-specific terminology
+        - 80-89: Excellent keyword usage with minor gaps in placement or density, good industry keyword coverage
+        - 70-79: Good keyword coverage but some important terms missing or poorly placed, fair industry-specific language
+        - 60-69: Fair keyword usage, missing critical ATS ranking terms, limited industry-specific terminology
+        - 50-59: Poor keyword placement, limited ATS optimization, poor industry keyword coverage
+        - 0-49: Very poor keyword usage, minimal ATS ranking potential, minimal industry-relevant terminology
         
         SKILLS_MATCH_ALIGNMENT (0-100):
         - 90-100: Perfect alignment of technical and soft skills with industry requirements
@@ -169,6 +169,22 @@ class StandardATSService:
         - 50-59: Poor variety, significant repetitive language
         - 0-49: Very poor variety, excessive repetition throughout
         
+        CONTACT_INFORMATION_COMPLETENESS (0-100):
+        - 90-100: Complete contact info (name, phone, email, LinkedIn, location) with proper formatting
+        - 80-89: Missing 1-2 non-critical contact elements, good overall contact presentation
+        - 70-79: Missing important contact details (email/phone), some formatting issues
+        - 60-69: Multiple missing contact elements, poor contact information organization
+        - 50-59: Major contact information gaps, significant formatting problems
+        - 0-49: Critical contact information missing, completely inadequate contact section
+        
+        RESUME_LENGTH_OPTIMIZATION (0-100):
+        - 90-100: Perfect length for experience level, optimal content density
+        - 80-89: Appropriate length with minor adjustments needed, good content balance
+        - 70-79: Fair length optimization, some content could be condensed or expanded
+        - 60-69: Length issues (too short/long), content density problems
+        - 50-59: Poor length optimization, significant content balance issues
+        - 0-49: Inappropriate resume length, major content organization problems
+        
         RESUME TEXT TO ANALYZE:
         {resume_text}
         
@@ -192,80 +208,120 @@ class StandardATSService:
                 "grammar_spelling_quality": <exact_score_based_on_criteria_above>,
                 "header_consistency": <exact_score_based_on_criteria_above>,
                 "clarity_brevity": <exact_score_based_on_criteria_above>,
-                "repetition_avoidance": <exact_score_based_on_criteria_above>
+                "repetition_avoidance": <exact_score_based_on_criteria_above>,
+                "contact_information_completeness": <exact_score_based_on_criteria_above>,
+                "resume_length_optimization": <exact_score_based_on_criteria_above>
             }},
             "detailed_feedback": {{
                 "keyword_usage_placement": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Keyword Usage & Placement",
                     "description": "Analysis of keyword presence, placement, and ATS ranking optimization",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific phrases from resume that demonstrate good keyword usage", "Reference specific sections with strong industry terminology"],
+                    "negatives": ["Quote specific text that lacks important keywords", "Identify specific sections missing critical ATS terms"],
+                    "suggestions": ["Provide exact text replacement for specific phrases", "Specify which sections need keyword additions with examples"],
+                    "specific_issues": ["List exact problematic text found in resume", "Identify specific missing keywords with locations"],
+                    "improvement_examples": ["Show before/after text examples", "Provide specific additions needed in each section"]
                 }},
                 "skills_match_alignment": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Skills Match & Alignment",
                     "description": "Analysis of technical and soft skills alignment with industry requirements",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific skills listed in resume that align well", "Reference specific sections with strong skill presentation"],
+                    "negatives": ["Quote specific skills that are poorly presented", "Identify specific missing skills with exact locations"],
+                    "suggestions": ["Provide exact skill additions needed", "Specify which sections need skill reorganization"],
+                    "specific_issues": ["List exact skill formatting problems found", "Identify specific missing competencies with locations"],
+                    "improvement_examples": ["Show before/after skill presentation examples", "Provide specific skill additions needed in each section"]
                 }},
                 "formatting_layout_ats": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Formatting & Layout ATS",
                     "description": "Analysis of clean, simple formatting and ATS compatibility",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific formatting elements that work well", "Reference specific sections with good ATS compatibility"],
+                    "negatives": ["Quote specific formatting problems found", "Identify specific sections with ATS parsing issues"],
+                    "suggestions": ["Provide exact formatting fixes needed", "Specify which sections need layout improvements"],
+                    "specific_issues": ["List exact formatting problems found in resume", "Identify specific ATS compatibility issues with locations"],
+                    "improvement_examples": ["Show before/after formatting examples", "Provide specific layout changes needed in each section"]
                 }},
                 "section_organization": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Section Organization",
                     "description": "Analysis of essential resume sections and proper organization",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific well-organized sections", "Reference specific section headers that work well"],
+                    "negatives": ["Quote specific section organization problems", "Identify specific missing or poorly labeled sections"],
+                    "suggestions": ["Provide exact section reorganization needed", "Specify which sections need better labeling"],
+                    "specific_issues": ["List exact section organization problems found", "Identify specific missing sections with exact locations"],
+                    "improvement_examples": ["Show before/after section organization examples", "Provide specific section additions needed"]
                 }},
                 "achievements_impact_metrics": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Achievements & Impact Metrics",
                     "description": "Analysis of quantified achievements and measurable results",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific quantified achievements from resume", "Reference specific sections with strong metrics"],
+                    "negatives": ["Quote specific achievements that lack metrics", "Identify specific sections missing quantified results"],
+                    "suggestions": ["Provide exact metric additions needed", "Specify which achievements need quantification"],
+                    "specific_issues": ["List exact achievements lacking metrics found", "Identify specific sections needing quantification with locations"],
+                    "improvement_examples": ["Show before/after achievement examples with metrics", "Provide specific quantified improvements needed"]
                 }},
                 "grammar_spelling_quality": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Grammar & Spelling Quality",
                     "description": "Analysis of error-free professional language and quality",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific well-written sentences from resume", "Reference specific sections with excellent grammar"],
+                    "negatives": ["Quote specific grammatical errors found", "Identify specific spelling mistakes with exact locations"],
+                    "suggestions": ["Provide exact corrections for specific errors", "Specify which sentences need rewriting"],
+                    "specific_issues": ["List exact grammatical errors found in resume", "Identify specific spelling mistakes with locations"],
+                    "improvement_examples": ["Show before/after grammar correction examples", "Provide specific sentence improvements needed"]
                 }},
                 "header_consistency": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Header Consistency",
                     "description": "Analysis of standard section labels and header formatting",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific well-formatted headers from resume", "Reference specific sections with consistent labeling"],
+                    "negatives": ["Quote specific inconsistent headers found", "Identify specific non-standard section labels"],
+                    "suggestions": ["Provide exact header corrections needed", "Specify which headers need standardization"],
+                    "specific_issues": ["List exact header inconsistencies found", "Identify specific non-standard labels with locations"],
+                    "improvement_examples": ["Show before/after header examples", "Provide specific header standardization needed"]
                 }},
                 "clarity_brevity": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Clarity & Brevity",
                     "description": "Analysis of clear, concise sentences and professional brevity",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific clear, concise sentences from resume", "Reference specific sections with excellent brevity"],
+                    "negatives": ["Quote specific unclear or verbose sentences found", "Identify specific sections that are too wordy"],
+                    "suggestions": ["Provide exact sentence simplifications needed", "Specify which sections need condensing"],
+                    "specific_issues": ["List exact unclear sentences found in resume", "Identify specific verbose sections with locations"],
+                    "improvement_examples": ["Show before/after clarity examples", "Provide specific sentence improvements needed"]
                 }},
                 "repetition_avoidance": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Repetition Avoidance",
                     "description": "Analysis of varied language and minimal unnecessary repetitions",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific varied language examples from resume", "Reference specific sections with good word variety"],
+                    "negatives": ["Quote specific repetitive phrases found", "Identify specific sections with excessive repetition"],
+                    "suggestions": ["Provide exact word replacements needed", "Specify which sections need language variety"],
+                    "specific_issues": ["List exact repetitive phrases found in resume", "Identify specific sections needing word variety with locations"],
+                    "improvement_examples": ["Show before/after repetition examples", "Provide specific word variety improvements needed"]
+                }},
+                "contact_information_completeness": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Contact Information Completeness",
+                    "description": "Analysis of contact details presence, formatting, and professional presentation",
+                    "positives": ["Quote specific well-formatted contact information from resume", "Reference specific contact elements that are complete"],
+                    "negatives": ["Quote specific missing contact information", "Identify specific contact formatting problems"],
+                    "suggestions": ["Provide exact contact additions needed", "Specify which contact elements need formatting fixes"],
+                    "specific_issues": ["List exact missing contact information found", "Identify specific contact formatting problems with locations"],
+                    "improvement_examples": ["Show before/after contact information examples", "Provide specific contact improvements needed"]
+                }},
+                "resume_length_optimization": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Resume Length Optimization",
+                    "description": "Analysis of resume length appropriateness for experience level and content density",
+                    "positives": ["Quote specific sections with appropriate length", "Reference specific content that is well-balanced"],
+                    "negatives": ["Quote specific sections that are too long/short", "Identify specific content that needs length adjustment"],
+                    "suggestions": ["Provide exact content additions/removals needed", "Specify which sections need length optimization"],
+                    "specific_issues": ["List exact length problems found in resume", "Identify specific sections needing length adjustment with locations"],
+                    "improvement_examples": ["Show before/after length optimization examples", "Provide specific content density improvements needed"]
                 }}
             }},
             "extracted_text": "Complete text content extracted from the resume",
@@ -302,6 +358,17 @@ class StandardATSService:
         - Ensure consistent evaluation of keyword usage, skills match, formatting, and all other parameters!
         - Use the exact scoring ranges provided for each category - no deviations!
         - Provide consistent, professional feedback that matches the scoring criteria exactly!
+        
+        DETAILED FEEDBACK REQUIREMENTS - MANDATORY:
+        - For POSITIVES: Quote specific phrases, sentences, or sections from the actual resume that demonstrate strengths
+        - For NEGATIVES: Quote specific problematic text, missing elements, or formatting issues found in the resume
+        - For SUGGESTIONS: Provide exact text replacements, specific additions, or precise modifications needed
+        - Always reference actual content from the resume being analyzed, not generic advice
+        - Point to specific sections (e.g., "In your Experience section under 'Software Engineer'...")
+        - Quote exact text that needs improvement (e.g., "The phrase 'did stuff' should be replaced with...")
+        - Identify specific missing elements (e.g., "Your contact section is missing a professional email address")
+        - Reference specific formatting issues (e.g., "The bullet points in your Skills section are inconsistent")
+        - Provide concrete examples of what to add, remove, or modify in the actual resume content
         """
 
         try:
@@ -412,18 +479,22 @@ class StandardATSService:
                 "grammar_spelling_quality": 0,
                 "header_consistency": 0,
                 "clarity_brevity": 0,
-                "repetition_avoidance": 0
+                "repetition_avoidance": 0,
+                "contact_information_completeness": 0,
+                "resume_length_optimization": 0
             },
             "detailed_feedback": {
-                "keyword_usage_placement": {"score": 0, "title": "Keyword Usage & Placement", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "skills_match_alignment": {"score": 0, "title": "Skills Match & Alignment", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "formatting_layout_ats": {"score": 0, "title": "Formatting & Layout ATS", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "section_organization": {"score": 0, "title": "Section Organization", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "achievements_impact_metrics": {"score": 0, "title": "Achievements & Impact Metrics", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "grammar_spelling_quality": {"score": 0, "title": "Grammar & Spelling Quality", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "header_consistency": {"score": 0, "title": "Header Consistency", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "clarity_brevity": {"score": 0, "title": "Clarity & Brevity", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "repetition_avoidance": {"score": 0, "title": "Repetition Avoidance", "description": "", "positives": [], "negatives": [], "suggestions": []}
+                "keyword_usage_placement": {"score": 0, "title": "Keyword Usage & Placement", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "skills_match_alignment": {"score": 0, "title": "Skills Match & Alignment", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "formatting_layout_ats": {"score": 0, "title": "Formatting & Layout ATS", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "section_organization": {"score": 0, "title": "Section Organization", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "achievements_impact_metrics": {"score": 0, "title": "Achievements & Impact Metrics", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "grammar_spelling_quality": {"score": 0, "title": "Grammar & Spelling Quality", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "header_consistency": {"score": 0, "title": "Header Consistency", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "clarity_brevity": {"score": 0, "title": "Clarity & Brevity", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "repetition_avoidance": {"score": 0, "title": "Repetition Avoidance", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "contact_information_completeness": {"score": 0, "title": "Contact Information Completeness", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "resume_length_optimization": {"score": 0, "title": "Resume Length Optimization", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []}
             },
             "extracted_text": "",
             "strengths": [],
@@ -734,6 +805,22 @@ class JDSpecificATSService:
         - 50-59: Poor soft skills alignment, significant gaps
         - 0-49: Very poor soft skills match, minimal alignment
         
+        CONTACT_INFORMATION_COMPLETENESS (0-100):
+        - 90-100: Complete contact info (name, phone, email, LinkedIn, location) with proper formatting
+        - 80-89: Missing 1-2 non-critical contact elements, good overall contact presentation
+        - 70-79: Missing important contact details (email/phone), some formatting issues
+        - 60-69: Multiple missing contact elements, poor contact information organization
+        - 50-59: Major contact information gaps, significant formatting problems
+        - 0-49: Critical contact information missing, completely inadequate contact section
+        
+        RESUME_LENGTH_OPTIMIZATION (0-100):
+        - 90-100: Perfect length for experience level, optimal content density
+        - 80-89: Appropriate length with minor adjustments needed, good content balance
+        - 70-79: Fair length optimization, some content could be condensed or expanded
+        - 60-69: Length issues (too short/long), content density problems
+        - 50-59: Poor length optimization, significant content balance issues
+        - 0-49: Inappropriate resume length, major content organization problems
+        
         RESUME TEXT TO ANALYZE:
         {resume_text}
         
@@ -759,56 +846,90 @@ class JDSpecificATSService:
                 "education_certifications": <exact_score_based_on_criteria_above>,
                 "achievements_impact": <exact_score_based_on_criteria_above>,
                 "formatting_structure": <exact_score_based_on_criteria_above>,
-                "soft_skills_match": <exact_score_based_on_criteria_above>
+                "soft_skills_match": <exact_score_based_on_criteria_above>,
+                "contact_information_completeness": <exact_score_based_on_criteria_above>,
+                "resume_length_optimization": <exact_score_based_on_criteria_above>
             }},
             "detailed_feedback": {{
                 "keyword_match_skills": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Keyword Match & Skills",
                     "description": "Specific analysis of keyword alignment with job requirements",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific job-relevant keywords found in resume", "Reference specific sections with strong job keyword alignment"],
+                    "negatives": ["Quote specific missing job keywords", "Identify specific sections lacking required job terms"],
+                    "suggestions": ["Provide exact job keyword additions needed", "Specify which sections need job-specific terminology"],
+                    "specific_issues": ["List exact missing job keywords found", "Identify specific sections needing job terms with locations"],
+                    "improvement_examples": ["Show before/after job keyword examples", "Provide specific job-relevant additions needed"]
                 }},
                 "experience_relevance": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Experience Relevance",
                     "description": "Specific analysis of experience alignment with job requirements",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific job-relevant experience from resume", "Reference specific roles that align with job requirements"],
+                    "negatives": ["Quote specific experience that lacks job relevance", "Identify specific roles missing job-required experience"],
+                    "suggestions": ["Provide exact experience additions needed", "Specify which roles need job-relevant enhancements"],
+                    "specific_issues": ["List exact experience gaps found", "Identify specific roles needing job alignment with locations"],
+                    "improvement_examples": ["Show before/after experience examples", "Provide specific job-relevant experience improvements needed"]
                 }},
                 "education_certifications": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Education & Certifications",
                     "description": "Specific analysis of educational background match with job requirements",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific job-relevant education from resume", "Reference specific certifications that match job requirements"],
+                    "negatives": ["Quote specific missing job-required education", "Identify specific certifications needed for the role"],
+                    "suggestions": ["Provide exact education additions needed", "Specify which certifications to pursue for this role"],
+                    "specific_issues": ["List exact education gaps found", "Identify specific missing qualifications with locations"],
+                    "improvement_examples": ["Show before/after education examples", "Provide specific job-relevant education improvements needed"]
                 }},
                 "achievements_impact": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Achievements & Impact",
                     "description": "Specific analysis of quantified achievements and job-relevant impact",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific job-relevant achievements from resume", "Reference specific quantified results that align with job requirements"],
+                    "negatives": ["Quote specific achievements lacking job relevance", "Identify specific results that need job-focused metrics"],
+                    "suggestions": ["Provide exact job-relevant achievement additions needed", "Specify which achievements need job-focused quantification"],
+                    "specific_issues": ["List exact achievement gaps found", "Identify specific results needing job relevance with locations"],
+                    "improvement_examples": ["Show before/after achievement examples", "Provide specific job-relevant achievement improvements needed"]
                 }},
                 "formatting_structure": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Formatting & Structure",
                     "description": "Specific analysis of resume format and ATS compatibility for job application",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific well-formatted sections from resume", "Reference specific formatting that enhances job application"],
+                    "negatives": ["Quote specific formatting problems found", "Identify specific sections with ATS compatibility issues"],
+                    "suggestions": ["Provide exact formatting fixes needed for job application", "Specify which sections need job-focused formatting"],
+                    "specific_issues": ["List exact formatting problems found in resume", "Identify specific ATS issues with locations"],
+                    "improvement_examples": ["Show before/after formatting examples", "Provide specific job application formatting improvements needed"]
                 }},
                 "soft_skills_match": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Soft Skills Match",
                     "description": "Specific analysis of soft skills alignment with job requirements",
-                    "positives": ["Specific positive aspect 1", "Specific positive aspect 2"],
-                    "negatives": ["Specific issue 1", "Specific issue 2"],
-                    "suggestions": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+                    "positives": ["Quote specific job-relevant soft skills from resume", "Reference specific sections with strong soft skills presentation"],
+                    "negatives": ["Quote specific missing job-required soft skills", "Identify specific sections lacking soft skills alignment"],
+                    "suggestions": ["Provide exact soft skills additions needed for this role", "Specify which sections need job-relevant soft skills"],
+                    "specific_issues": ["List exact soft skills gaps found", "Identify specific sections needing soft skills with locations"],
+                    "improvement_examples": ["Show before/after soft skills examples", "Provide specific job-relevant soft skills improvements needed"]
+                }},
+                "contact_information_completeness": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Contact Information Completeness",
+                    "description": "Specific analysis of contact details presence, formatting, and professional presentation",
+                    "positives": ["Quote specific well-formatted contact information from resume", "Reference specific contact elements that are complete"],
+                    "negatives": ["Quote specific missing contact information", "Identify specific contact formatting problems"],
+                    "suggestions": ["Provide exact contact additions needed", "Specify which contact elements need formatting fixes"],
+                    "specific_issues": ["List exact missing contact information found", "Identify specific contact formatting problems with locations"],
+                    "improvement_examples": ["Show before/after contact information examples", "Provide specific contact improvements needed"]
+                }},
+                "resume_length_optimization": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Resume Length Optimization",
+                    "description": "Specific analysis of resume length appropriateness for experience level and content density",
+                    "positives": ["Quote specific sections with appropriate length", "Reference specific content that is well-balanced"],
+                    "negatives": ["Quote specific sections that are too long/short", "Identify specific content that needs length adjustment"],
+                    "suggestions": ["Provide exact content additions/removals needed", "Specify which sections need length optimization"],
+                    "specific_issues": ["List exact length problems found in resume", "Identify specific sections needing length adjustment with locations"],
+                    "improvement_examples": ["Show before/after length optimization examples", "Provide specific content density improvements needed"]
                 }}
             }},
             "extracted_text": "Complete text content extracted from the resume",
@@ -843,6 +964,17 @@ class JDSpecificATSService:
         - Calculate scores based on objective job matching criteria, not subjective opinions!
         - Maintain consistency in scoring methodology across all categories!
         - Analyze how well the resume matches the specific job requirements with precision!
+        
+        DETAILED FEEDBACK REQUIREMENTS - MANDATORY:
+        - For POSITIVES: Quote specific phrases, sentences, or sections from the actual resume that demonstrate job-relevant strengths
+        - For NEGATIVES: Quote specific problematic text, missing elements, or job-matching issues found in the resume
+        - For SUGGESTIONS: Provide exact text replacements, specific additions, or precise modifications needed for job alignment
+        - Always reference actual content from the resume being analyzed, not generic advice
+        - Point to specific sections (e.g., "In your Experience section under 'Software Engineer'...")
+        - Quote exact text that needs improvement (e.g., "The phrase 'did stuff' should be replaced with...")
+        - Identify specific missing job-relevant elements (e.g., "Your skills section is missing 'Python' which is required for this role")
+        - Reference specific job-matching issues (e.g., "Your experience description lacks the 'team leadership' mentioned in the job requirements")
+        - Provide concrete examples of what to add, remove, or modify in the actual resume content to better match the job
         """
 
         try:
@@ -949,15 +1081,19 @@ class JDSpecificATSService:
                 "education_certifications": 0,
                 "achievements_impact": 0,
                 "formatting_structure": 0,
-                "soft_skills_match": 0
+                "soft_skills_match": 0,
+                "contact_information_completeness": 0,
+                "resume_length_optimization": 0
             },
             "detailed_feedback": {
-                "keyword_match_skills": {"score": 0, "title": "Keyword Match & Skills", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "experience_relevance": {"score": 0, "title": "Experience Relevance", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "education_certifications": {"score": 0, "title": "Education & Certifications", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "achievements_impact": {"score": 0, "title": "Achievements & Impact", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "formatting_structure": {"score": 0, "title": "Formatting & Structure", "description": "", "positives": [], "negatives": [], "suggestions": []},
-                "soft_skills_match": {"score": 0, "title": "Soft Skills Match", "description": "", "positives": [], "negatives": [], "suggestions": []}
+                "keyword_match_skills": {"score": 0, "title": "Keyword Match & Skills", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "experience_relevance": {"score": 0, "title": "Experience Relevance", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "education_certifications": {"score": 0, "title": "Education & Certifications", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "achievements_impact": {"score": 0, "title": "Achievements & Impact", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "formatting_structure": {"score": 0, "title": "Formatting & Structure", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "soft_skills_match": {"score": 0, "title": "Soft Skills Match", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "contact_information_completeness": {"score": 0, "title": "Contact Information Completeness", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "resume_length_optimization": {"score": 0, "title": "Resume Length Optimization", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []}
             },
             "extracted_text": "",
             "strengths": [],
