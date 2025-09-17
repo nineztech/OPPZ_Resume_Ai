@@ -32,6 +32,7 @@ interface TemplateData {
     institution: string;
     dates: string;
     details: string[];
+    location?: string;
   }>;
   projects?: Array<{
     Name: string;

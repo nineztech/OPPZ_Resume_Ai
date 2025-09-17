@@ -29,6 +29,7 @@ interface TemplateData {
     institution: string;
     dates: string;
     details: string[];
+    location?: string;
   }>;
   projects?: Array<{
     Name: string;
@@ -578,6 +579,9 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                       letterSpacing: '0.3px'
                     }}>
                       {edu.institution || 'Institution Name'}
+                      {edu.location && edu.location.trim() && (
+                        <span style={{ fontWeight: 'bold' }}> | {edu.location}</span>
+                      )}
                     </div>
                     <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#000000' }}>
                       {edu.degree || 'Degree/Program'}
@@ -603,7 +607,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                     color: '#666666',
                     fontStyle: 'italic'
                   }}>
-                    Institution Name
+                    Institution Name | Location
                   </div>
                   <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#666666', fontStyle: 'italic' }}>
                     Degree/Program

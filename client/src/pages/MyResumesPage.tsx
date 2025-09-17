@@ -391,7 +391,8 @@ const MyResumesPage = () => {
         degree: edu.degree || '',
         institution: edu.institution || '',
         dates: edu.year || '',
-        details: Array.isArray(edu.details) ? edu.details : []
+        details: Array.isArray(edu.details) ? edu.details : [],
+        location: edu.location || ''
       })),
       projects: resumeData.projects || [],
       additionalInfo: {

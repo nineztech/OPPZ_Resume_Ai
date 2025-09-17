@@ -29,6 +29,7 @@ interface TemplateData {
     institution: string;
     dates: string;
     details: string[];
+    location?: string;
   }>;
   projects?: Array<{
     Name: string;
@@ -261,13 +262,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
         )}
       </div>
 
-      {/* Strong line separator */}
-      <hr style={{ 
-        border: 'none',
-        borderTop: '2px solid #1f2937',
-        margin: '8px 0',
-        width: '100%'
-      }} />
+      {/* Strong Separation Line */}
+      <div className="w-full border-t-2 border-gray-800 my-4"></div>
 
       {/* Summary */}
       {sections.has('summary') && (
@@ -586,6 +582,9 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                       letterSpacing: '0.3px'
                     }}>
                       {edu.institution || 'Institution Name'}
+                      {edu.location && edu.location.trim() && (
+                        <span style={{ fontWeight: 'bold' }}> | {edu.location}</span>
+                      )}
                     </div>
                     <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#000000' }}>
                       {edu.degree || 'Degree/Program'}
@@ -611,7 +610,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                     color: '#666666',
                     fontStyle: 'italic'
                   }}>
-                    Institution Name
+                    Institution Name | Location
                   </div>
                   <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#666666', fontStyle: 'italic' }}>
                     Degree/Program
@@ -717,3 +716,4 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
 };
 
 export default ResumePDF;
+

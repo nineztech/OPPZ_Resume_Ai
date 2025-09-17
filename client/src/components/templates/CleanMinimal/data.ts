@@ -26,6 +26,7 @@ export interface TemplateData {
     institution: string;
     dates: string;
     details: string[];
+    location?: string;
   }>;
   projects?: Array<{
     Name: string;
@@ -38,8 +39,7 @@ export interface TemplateData {
   certifications?: Array<{
     certificateName: string;
     instituteName: string;
-    startDate?: string;
-    endDate?: string;
+    issueDate?: string;
     link?: string;
   }>;
   additionalInfo: {
@@ -147,16 +147,18 @@ export const cleanMinimalTemplateData: TemplateData = {
   ],
   education: [
     {
-      degree: 'Master of Science, Industrial Engineering (GPA: 3.73) Tempe, Arizona',
+      degree: 'Master of Science, Industrial Engineering (GPA: 3.73)',
       institution: 'Arizona State University',
       dates: 'Aug 2023 - May 2025',
-      details: []
+      details: [],
+      location: 'Tempe, Arizona'
     },
     {
-      degree: 'Bachelor of Technology, Mechanical Engineering (GPA: 3.65) Chennai, India',
+      degree: 'Bachelor of Technology, Mechanical Engineering (GPA: 3.65)',
       institution: 'SRM University',
       dates: 'Jun 2013 - Jul 2017',
-      details: []
+      details: [],
+      location: 'Chennai, India'
     }
   ],
   projects: [

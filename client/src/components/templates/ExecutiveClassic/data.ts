@@ -19,12 +19,14 @@ export interface TemplateData {
     company: string;
     dates: string;
     achievements: string[];
+    location?: string;
   }>;
   education: Array<{
     degree: string;
     institution: string;
     dates: string;
     details: string[];
+    location?: string;
   }>;
   projects?: Array<{
     Name: string;
@@ -37,8 +39,7 @@ export interface TemplateData {
   certifications?: Array<{
     certificateName: string;
     instituteName: string;
-    startDate?: string;
-    endDate?: string;
+    issueDate?: string;
     link?: string;
   }>;
   additionalInfo: {
@@ -104,9 +105,10 @@ export const cleanMinimalTemplateData: TemplateData = {
   },
   experience: [
     {
-      title: 'Supply Chain Analyst — Systel Inc. (Remote — Austin, TX, USA)',
-      company: '',
+      title: 'Supply Chain Analyst — Systel Inc.',
+      company: 'Systel Inc.',
       dates: 'Apr 2023 – Present',
+      location: 'Austin, TX, USA',
       achievements: [
         'Implemented JIT and ROP inventory models for rugged-server line; reducing excess stock by 15% while maintaining a 98% service level.',
         'Designed and launched Power BI dashboards with Row-Level Security, enabling 50+ users to access real-time inventory and demand KPIs.',
@@ -116,9 +118,10 @@ export const cleanMinimalTemplateData: TemplateData = {
       ]
     },
     {
-      title: 'Supply Chain Analyst — Sterlite Technologies Ltd. (Chennai, India)',
-      company: '',
+      title: 'Supply Chain Analyst — Sterlite Technologies Ltd.',
+      company: 'Sterlite Technologies Ltd.',
       dates: 'Apr 2020 – Apr 2023',
+      location: 'Chennai, India',
       achievements: [
         'Managed end-to-end order fulfillment for fiber optic cables (400+ demand); deployed SAP MM MRP parameters and safety-stock modeling, cutting stockouts 22 %.',
         'Designed integrated Power BI-Tableau supply-chain control tower integrating SAP, WMS, and freight APIs; provided real-time OTD, capacity, and cost dashboards used by COO.',
@@ -129,9 +132,10 @@ export const cleanMinimalTemplateData: TemplateData = {
       ]
     },
     {
-      title: 'Supply Chain Analyst — Caterpillar (Chennai, India)',
-      company: '',
+      title: 'Supply Chain Analyst — Caterpillar',
+      company: 'Caterpillar',
       dates: 'Jun 2018 – Mar 2020',
+      location: 'Chennai, India',
       achievements: [
         'Co-developed inventory segmentation (ABC/XYZ) and Goal-Seek/Solver-based reorder policies, reducing working capital by 10 (1.5 % of finished-goods inventory).',
         'Enhanced SAP SD order-to-cash workflow; cut order cycle time 20 % and improved order fillrate 10 pp.',
@@ -143,16 +147,18 @@ export const cleanMinimalTemplateData: TemplateData = {
   ],
   education: [
     {
-      degree: 'Master of Science, Industrial Engineering (GPA: 3.73) Tempe, Arizona',
+      degree: 'Master of Science, Industrial Engineering (GPA: 3.73)',
       institution: 'Arizona State University',
       dates: 'Aug 2023 - May 2025',
-      details: []
+      details: [],
+      location: 'Tempe, Arizona'
     },
     {
-      degree: 'Bachelor of Technology, Mechanical Engineering (GPA: 3.65) Chennai, India',
+      degree: 'Bachelor of Technology, Mechanical Engineering (GPA: 3.65)',
       institution: 'SRM University',
       dates: 'Jun 2013 - Jul 2017',
-      details: []
+      details: [],
+      location: 'Chennai, India'
     }
   ],
   projects: [
@@ -177,20 +183,20 @@ export const cleanMinimalTemplateData: TemplateData = {
     {
       certificateName: 'Introduction to Data Analytics',
       instituteName: 'IBM',
-      startDate: '2023',
-      endDate: '2023'
+      issueDate: '2023',
+      link: 'https://www.coursera.org/learn/introduction-to-data-analytics'
     },
     {
       certificateName: 'Analyzing and Visualizing Data with Microsoft Power BI',
       instituteName: 'Microsoft',
-      startDate: '2023',
-      endDate: '2023'
+      issueDate: '2023',
+      link: 'https://www.edx.org/course/analyzing-and-visualizing-data-with-power-bi'
     },
     {
       certificateName: 'Lean Six Sigma Green Belt',
       instituteName: 'ASQ (American Society for Quality)',
-      startDate: '2022',
-      endDate: '2022'
+      issueDate: '2022',
+      link: 'https://asq.org/cert/six-sigma-green-belt'
     }
   ],
   additionalInfo: {
