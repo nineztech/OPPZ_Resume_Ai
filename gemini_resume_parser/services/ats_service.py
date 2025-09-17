@@ -20,7 +20,7 @@ class StandardATSService:
     - Error-free output generation
     """
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini", temperature: float = 0.1, top_p: float = 0.8):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o", temperature: float = 0.1, top_p: float = 0.8):
         """
         Initialize the Standard ATS Service
         
@@ -88,17 +88,18 @@ class StandardATSService:
         prompt = f"""
         You are an expert ATS (Applicant Tracking System) analyst with 10+ years of experience in resume optimization and HR technology.
         
-        TASK: Perform a comprehensive ATS analysis of the provided resume with precise, consistent scoring and actionable feedback.
+        TASK: Perform a comprehensive ATS analysis of the provided resume with precise, consistent scoring and HIGHLY SPECIFIC, ACTIONABLE feedback that will increase the resume score by 10-15 points when applied.
         
         CRITICAL REQUIREMENTS - MANDATORY COMPLIANCE:
         - Return ONLY valid JSON (no markdown, no code fences, no explanations, no additional text)
         - NEVER omit any section - if no issues exist, return empty arrays/strings but keep the section structure
         - ALWAYS include ALL required sections: overall_score, category_scores, detailed_feedback, extracted_text, strengths, weaknesses, recommendations
         - Ensure all scores are integers between 0-100 (never "NA", "N/A", "None", "Null", "Unknown", or text)
-        - NEVER use placeholder values - provide specific, actionable content
+        - NEVER use placeholder values - provide HIGHLY SPECIFIC, ACTIONABLE content with EXACT text examples
         - LANGUAGE VARIETY: Use varied language within same sections, allow appropriate repetition across different sections
         - PERFECT GRAMMAR: All content must have flawless spelling, grammar, and professional language
         - CONSISTENT SCORING: Apply the same rigorous standards across all categories
+        - SPECIFIC FEEDBACK: Every suggestion must include EXACT text examples, specific section locations, and precise improvement instructions
         
         PRECISE SCORING CRITERIA - APPLY CONSISTENTLY:
         
@@ -245,22 +246,22 @@ class StandardATSService:
                 "keyword_usage_placement": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Keyword Usage & Placement",
-                    "description": "Analysis of keyword presence, placement, and ATS ranking optimization",
-                    "positives": ["Quote specific phrases from resume that demonstrate good keyword usage", "Reference specific sections with strong industry terminology"],
-                    "negatives": ["Quote specific text that lacks important keywords", "Identify specific sections missing critical ATS terms"],
-                    "suggestions": ["Provide exact text replacement for specific phrases", "Specify which sections need keyword additions with examples"],
-                    "specific_issues": ["List exact problematic text found in resume", "Identify specific missing keywords with locations"],
-                    "improvement_examples": ["Show before/after text examples", "Provide specific additions needed in each section"]
+                    "description": "Comprehensive analysis of keyword presence, placement, and ATS ranking optimization",
+                    "positives": ["Quote EXACT phrases from resume that demonstrate good keyword usage with line numbers", "Reference SPECIFIC sections with strong industry terminology and exact locations", "Identify ALL instances of effective keyword integration"],
+                    "negatives": ["Quote EXACT text that lacks important keywords with specific line/section references", "Identify SPECIFIC sections missing critical ATS terms with exact locations and missing keyword lists", "List ALL missing industry keywords, technical terms, soft skills, action verbs", "Identify ALL sections with insufficient keyword density"],
+                    "suggestions": ["Provide EXACT text replacement for specific phrases with before/after examples", "Specify EXACT sections that need keyword additions with specific keyword lists and placement instructions", "Add missing technical keywords: [list 15-20 specific technical terms]", "Add missing soft skills: [list 8-10 specific soft skills]", "Add missing action verbs: [list 10-15 power action verbs]", "Add missing industry terms: [list 12-15 industry-specific keywords]"],
+                    "specific_issues": ["List EXACT problematic text found in resume with line numbers and section names", "Identify SPECIFIC missing keywords with exact locations and industry relevance", "Document ALL instances of weak language that needs keyword enhancement", "Identify ALL sections with poor keyword optimization"],
+                    "improvement_examples": ["Show DETAILED before/after text examples with exact replacements", "Provide SPECIFIC additions needed in each section with exact positioning", "Demonstrate keyword integration in summary, experience, skills, and projects sections"]
                 }},
                 "skills_match_alignment": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Skills Match & Alignment",
-                    "description": "Analysis of technical and soft skills alignment with industry requirements",
-                    "positives": ["Quote specific skills listed in resume that align well", "Reference specific sections with strong skill presentation"],
-                    "negatives": ["Quote specific skills that are poorly presented", "Identify specific missing skills with exact locations"],
-                    "suggestions": ["Provide exact skill additions needed", "Specify which sections need skill reorganization"],
-                    "specific_issues": ["List exact skill formatting problems found", "Identify specific missing competencies with locations"],
-                    "improvement_examples": ["Show before/after skill presentation examples", "Provide specific skill additions needed in each section"]
+                    "description": "Comprehensive analysis of technical and soft skills alignment with industry requirements",
+                    "positives": ["Quote specific skills listed in resume that align well", "Reference specific sections with strong skill presentation", "Identify ALL well-presented technical and soft skills"],
+                    "negatives": ["Quote specific skills that are poorly presented", "Identify specific missing skills with exact locations", "List ALL missing technical skills, programming languages, frameworks, tools", "Identify ALL missing soft skills, leadership qualities, communication abilities", "Document ALL skills that need better categorization or presentation"],
+                    "suggestions": ["Provide exact skill additions needed", "Specify which sections need skill reorganization", "ADD_SKILLS: Technical Skills - Add: [list 12-15 specific technical skills with proficiency levels]", "ADD_SKILLS: Soft Skills - Add: [list 8-10 specific soft skills]", "ADD_SKILLS: Tools & Technologies - Add: [list 10-12 specific tools and technologies]", "ADD_SKILLS: Certifications - Add: [list 5-8 relevant certifications]"],
+                    "specific_issues": ["List exact skill formatting problems found", "Identify specific missing competencies with locations", "Document ALL instances of incomplete skill presentation", "Identify ALL sections with insufficient skill coverage"],
+                    "improvement_examples": ["Show before/after skill presentation examples", "Provide specific skill additions needed in each section", "Demonstrate proper skill categorization and proficiency levels"]
                 }},
                 "formatting_layout_ats": {{
                     "score": <exact_score_based_on_criteria_above>,
@@ -275,22 +276,22 @@ class StandardATSService:
                 "section_organization": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Section Organization",
-                    "description": "Analysis of essential resume sections and proper organization",
-                    "positives": ["Quote specific well-organized sections", "Reference specific section headers that work well"],
-                    "negatives": ["Quote specific section organization problems", "Identify specific missing or poorly labeled sections"],
-                    "suggestions": ["Provide exact section reorganization needed", "Specify which sections need better labeling"],
-                    "specific_issues": ["List exact section organization problems found", "Identify specific missing sections with exact locations"],
-                    "improvement_examples": ["Show before/after section organization examples", "Provide specific section additions needed"]
+                    "description": "Comprehensive analysis of essential resume sections and proper organization",
+                    "positives": ["Quote specific well-organized sections", "Reference specific section headers that work well", "Identify ALL properly structured sections"],
+                    "negatives": ["Quote specific section organization problems", "Identify specific missing or poorly labeled sections", "List ALL missing essential sections: Projects, Certifications, Languages, References", "Document ALL incomplete sections with missing information", "Identify ALL sections with poor organization or labeling", "List ALL certifications missing issuing organizations", "Document ALL certifications without proper organizational attribution"],
+                    "suggestions": ["Provide exact section reorganization needed", "Specify which sections need better labeling", "ADD: Projects Section - Create comprehensive projects section with tech stacks, challenges, outcomes", "ADD: Certifications Section - Add relevant certifications with issuing organizations and dates", "ADD: Languages Section - Include language proficiencies if applicable", "IMPROVE: Section Headers - Standardize all section headers for ATS compatibility", "ADD_ORGANIZATION: Certifications Section - For EVERY certificate missing organization, infer and add appropriate issuing organization"],
+                    "specific_issues": ["List exact section organization problems found", "Identify specific missing sections with exact locations", "Document ALL instances of poor section structure", "Identify ALL sections with insufficient content", "List ALL certifications that need issuing organizations added"],
+                    "improvement_examples": ["Show before/after section organization examples", "Provide specific section additions needed", "Demonstrate proper section structure and content organization", "Show examples of certificates with proper organizational attribution"]
                 }},
                 "achievements_impact_metrics": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Achievements & Impact Metrics",
-                    "description": "Analysis of quantified achievements and measurable results",
-                    "positives": ["Quote specific quantified achievements from resume", "Reference specific sections with strong metrics"],
-                    "negatives": ["Quote specific achievements that lack metrics", "Identify specific sections missing quantified results"],
-                    "suggestions": ["Provide exact metric additions needed", "Specify which achievements need quantification"],
-                    "specific_issues": ["List exact achievements lacking metrics found", "Identify specific sections needing quantification with locations"],
-                    "improvement_examples": ["Show before/after achievement examples with metrics", "Provide specific quantified improvements needed"]
+                    "description": "Comprehensive analysis of quantified achievements and measurable results",
+                    "positives": ["Quote specific quantified achievements from resume", "Reference specific sections with strong metrics", "Identify ALL instances of effective quantification"],
+                    "negatives": ["Quote specific achievements that lack metrics", "Identify specific sections missing quantified results", "List ALL achievements without numbers, percentages, dollar amounts, timeframes", "Document ALL instances of vague descriptions that need quantification", "Identify ALL sections with insufficient measurable impact"],
+                    "suggestions": ["Provide exact metric additions needed", "Specify which achievements need quantification", "ENHANCE_ACHIEVEMENT: Experience Section - Add quantified metrics: team sizes, project scopes, efficiency improvements, cost savings, timeframes", "ENHANCE_ACHIEVEMENT: Projects Section - Add specific outcomes: user impact, performance gains, technical achievements", "ENHANCE_ACHIEVEMENT: Summary Section - Add quantified experience: years of experience, team leadership, project delivery"],
+                    "specific_issues": ["List exact achievements lacking metrics found", "Identify specific sections needing quantification with locations", "Document ALL instances of weak achievement descriptions", "Identify ALL sections with poor impact measurement"],
+                    "improvement_examples": ["Show before/after achievement examples with metrics", "Provide specific quantified improvements needed", "Demonstrate proper quantification in experience, projects, and summary sections"]
                 }},
                 "grammar_spelling_quality": {{
                     "score": <exact_score_based_on_criteria_above>,
@@ -325,32 +326,32 @@ class StandardATSService:
                 "repetition_avoidance": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Repetition Avoidance",
-                    "description": "Analysis of varied language and minimal unnecessary repetitions within same section, allowing legitimate repetition across different sections",
+                    "description": "Comprehensive analysis of ALL repeated language and unnecessary repetitions within same section, allowing legitimate repetition across different sections",
                     "positives": ["Quote specific varied language examples from resume", "Reference specific sections with good word variety", "Note acceptable cross-section repetition where appropriate"],
-                    "negatives": ["Quote specific repetitive phrases found within same section", "Identify specific sections with excessive internal repetition"],
-                    "suggestions": ["Provide exact word replacements needed within same section", "Specify which sections need internal language variety", "Note that cross-section repetition is acceptable when contextually appropriate"],
-                    "specific_issues": ["List exact repetitive phrases found within same section in resume", "Identify specific sections needing internal word variety with locations"],
-                    "improvement_examples": ["Show before/after repetition examples within same section", "Provide specific word variety improvements needed within sections"]
+                    "negatives": ["Quote EVERY specific repetitive phrase found within same section", "Identify ALL sections with excessive internal repetition", "List ALL overused action verbs with exact counts", "Document ALL redundant phrases with specific locations", "Count EVERY instance of repeated words within same section"],
+                    "suggestions": ["Provide exact word replacements needed for EVERY repeated word within same section", "Specify ALL sections that need internal language variety", "FIX_REPETITION: [Section] - Word '[repeated word]' used [X] times - Replace instances: [Instance 1: word → alternative1], [Instance 2: word → alternative2], [Instance 3: word → alternative3]", "Note that cross-section repetition is acceptable when contextually appropriate"],
+                    "specific_issues": ["List EVERY exact repetitive phrase found within same section in resume with counts", "Identify ALL specific sections needing internal word variety with exact locations", "Document ALL instances of overused action verbs", "Count ALL repeated words and phrases within each section"],
+                    "improvement_examples": ["Show before/after repetition examples for EVERY repeated word within same section", "Provide specific word variety improvements needed for ALL repetitions within sections", "Demonstrate alternative word choices for EVERY overused term"]
                 }},
                 "contact_information_completeness": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Contact Information Completeness",
-                    "description": "Analysis of contact details presence, formatting, and professional presentation",
-                    "positives": ["Quote specific well-formatted contact information from resume", "Reference specific contact elements that are complete"],
-                    "negatives": ["Quote specific missing contact information", "Identify specific contact formatting problems"],
-                    "suggestions": ["Provide exact contact additions needed", "Specify which contact elements need formatting fixes"],
-                    "specific_issues": ["List exact missing contact information found", "Identify specific contact formatting problems with locations"],
-                    "improvement_examples": ["Show before/after contact information examples", "Provide specific contact improvements needed"]
+                    "description": "Comprehensive analysis of contact details presence, formatting, and professional presentation",
+                    "positives": ["Quote specific well-formatted contact information from resume", "Reference specific contact elements that are complete", "Identify ALL properly formatted contact details"],
+                    "negatives": ["Quote specific missing contact information", "Identify specific contact formatting problems", "List ALL missing contact elements: phone number, email address, LinkedIn profile, location, professional title", "Document ALL contact formatting issues: inconsistent formatting, missing elements, poor presentation"],
+                    "suggestions": ["Provide exact contact additions needed", "Specify which contact elements need formatting fixes", "FIX_CONTACT: Add missing phone number with proper formatting", "FIX_CONTACT: Add professional email address", "FIX_CONTACT: Add LinkedIn profile URL", "FIX_CONTACT: Add current location", "FIX_CONTACT: Add professional title"],
+                    "specific_issues": ["List exact missing contact information found", "Identify specific contact formatting problems with locations", "Document ALL instances of incomplete contact information", "Identify ALL contact formatting inconsistencies"],
+                    "improvement_examples": ["Show before/after contact information examples", "Provide specific contact improvements needed", "Demonstrate proper contact formatting and completeness"]
                 }},
                 "resume_length_optimization": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Resume Length Optimization",
-                    "description": "Analysis of resume length appropriateness for experience level and content density",
-                    "positives": ["Quote specific sections with appropriate length", "Reference specific content that is well-balanced"],
-                    "negatives": ["Quote specific sections that are too long/short", "Identify specific content that needs length adjustment"],
-                    "suggestions": ["Provide exact content additions/removals needed", "Specify which sections need length optimization"],
-                    "specific_issues": ["List exact length problems found in resume", "Identify specific sections needing length adjustment with locations"],
-                    "improvement_examples": ["Show before/after length optimization examples", "Provide specific content density improvements needed"]
+                    "description": "Comprehensive analysis of resume length appropriateness and section-specific description optimization",
+                    "positives": ["Quote specific sections with appropriate length", "Reference specific content that is well-balanced", "Identify ALL well-sized descriptions"],
+                    "negatives": ["Quote specific sections that are too long/short", "Identify specific content that needs length adjustment", "List ALL project descriptions that are too short (less than 2 sentences)", "List ALL experience descriptions that are too short (less than 2 sentences)", "List ALL summary descriptions that are too short (less than 50 words)", "List ALL project descriptions that are too long (more than 5 sentences)", "List ALL experience descriptions that are too long (more than 5 sentences)", "List ALL summary descriptions that are too long (more than 150 words)"],
+                    "suggestions": ["Provide exact content additions/removals needed", "Specify which sections need length optimization", "OPTIMIZE_DESCRIPTION: Project Section - Current: '[exact short description]' - Expand to: '[detailed 3-4 sentence description with tech stack, challenges, outcomes, and metrics]'", "OPTIMIZE_DESCRIPTION: Experience Section - Current: '[exact short description]' - Expand to: '[detailed 3-4 sentence description with responsibilities, achievements, and quantified results]'", "OPTIMIZE_DESCRIPTION: Summary Section - Current: '[exact short summary]' - Expand to: '[comprehensive 3-4 line summary with experience, skills, achievements, and career objectives]'", "OPTIMIZE_DESCRIPTION: Project Section - Current: '[exact long description]' - Compress to: '[concise 2-3 sentence description focusing on key outcomes and tech stack]'", "OPTIMIZE_DESCRIPTION: Experience Section - Current: '[exact long description]' - Compress to: '[focused 2-3 sentence description highlighting main achievements and responsibilities]'", "OPTIMIZE_DESCRIPTION: Summary Section - Current: '[exact long summary]' - Compress to: '[concise 2-3 line summary with core competencies and value proposition]'"],
+                    "specific_issues": ["List exact length problems found in resume", "Identify specific sections needing length adjustment with locations", "Document ALL descriptions that need expansion with exact content", "Document ALL descriptions that need compression with exact content"],
+                    "improvement_examples": ["Show before/after length optimization examples", "Provide specific content density improvements needed", "Demonstrate optimal description lengths for projects, experience, and summary sections"]
                 }}
             }},
             "extracted_text": "Complete text content extracted from the resume",
@@ -365,11 +366,30 @@ class StandardATSService:
                 "Specific weakness 3 with details"
             ],
             "recommendations": [
-                "Priority recommendation 1 with specific action",
-                "Priority recommendation 2 with specific action", 
-                "Priority recommendation 3 with specific action",
-                "Priority recommendation 4 with specific action",
-                "Priority recommendation 5 with specific action"
+                "MANDATORY: Include ALL identified issues from EVERY section in recommendations",
+                "If 5 repetition issues found, list ALL 5 repetition fixes in recommendations",
+                "If 3 sections missing dates, list ALL 3 sections with missing dates in recommendations", 
+                "If multiple description length issues, list ALL description optimization needs in recommendations",
+                "If project descriptions are too short, include 'OPTIMIZE_DESCRIPTION: Expand project descriptions' in recommendations",
+                "If experience descriptions are too short, include 'OPTIMIZE_DESCRIPTION: Expand experience descriptions' in recommendations", 
+                "If summary description is too short, include 'OPTIMIZE_DESCRIPTION: Expand summary description' in recommendations",
+                "If project descriptions are too long, include 'OPTIMIZE_DESCRIPTION: Compress project descriptions' in recommendations",
+                "If experience descriptions are too long, include 'OPTIMIZE_DESCRIPTION: Compress experience descriptions' in recommendations",
+                "If summary description is too long, include 'OPTIMIZE_DESCRIPTION: Compress summary description' in recommendations",
+                "If skills are unstructured, include skills restructuring in recommendations",
+                "If certificates missing organizations, include ALL organization inferences in recommendations",
+                "For EVERY certificate without issuing organization, include 'ADD_ORGANIZATION: [Certificate Name] - Add issuing organization' in recommendations",
+                "EVERY single issue must appear in recommendations - DO NOT limit to 5 items",
+                "Priority recommendation 1: [Most critical issue with specific action]",
+                "Priority recommendation 2: [Second critical issue with specific action]",
+                "Continue listing ALL remaining issues until EVERY problem is addressed",
+                "Include ALL missing dates from ALL sections as separate recommendation items",
+                "Include ALL repetition issues as separate recommendation items",
+                "Include ALL description length issues as separate recommendation items",
+                "Include ALL formatting issues as separate recommendation items",
+                "Include ALL grammar issues as separate recommendation items",
+                "Include ALL missing certificate organizations as separate recommendation items",
+                "TOTAL RECOMMENDATIONS SHOULD EQUAL TOTAL ISSUES FOUND"
             ]
         }}
         
@@ -388,17 +408,37 @@ class StandardATSService:
         - Use the exact scoring ranges provided for each category - no deviations!
         - Provide consistent, professional feedback that matches the scoring criteria exactly!
         
-        DETAILED FEEDBACK REQUIREMENTS - MANDATORY:
-        - For POSITIVES: Quote specific phrases, sentences, or sections from the actual resume that demonstrate strengths
-        - For NEGATIVES: Quote specific problematic text, missing elements, or formatting issues found in the resume
-        - For SUGGESTIONS: Provide exact text replacements, specific additions, or precise modifications needed
-        - Always reference actual content from the resume being analyzed, not generic advice
-        - Point to specific sections (e.g., "In your Experience section under 'Software Engineer'...")
-        - Quote exact text that needs improvement (e.g., "The phrase 'did stuff' should be replaced with...")
-        - Identify specific missing elements (e.g., "Your contact section is missing a professional email address")
-        - Reference specific formatting issues (e.g., "The bullet points in your Skills section are inconsistent")
-        - Provide concrete examples of what to add, remove, or modify in the actual resume content
-        - For REPETITION ANALYSIS: Focus on repetition within the same section, not across different sections (e.g., using "implemented" in two different projects is acceptable)
+        ULTRA-COMPREHENSIVE FEEDBACK REQUIREMENTS - MANDATORY FOR 90+ SCORE IMPROVEMENT:
+        - For POSITIVES: Quote EXACT phrases with precise locations from the actual resume that demonstrate strengths
+        - For NEGATIVES: Quote EXACT problematic text with specific replacements, missing elements with precise additions, formatting issues with exact fixes
+        - For SUGGESTIONS: Provide COMPLETE before/after text replacements that will boost scores by 5-10 points each
+        - Always reference EXACT content with QUANTIFIED improvements and INDUSTRY KEYWORDS
+        - Provide SPECIFIC text replacements: "Replace '[exact current text]' with '[complete improved text with metrics and keywords]'"
+        - Add SPECIFIC skills: "Add these exact skills to Skills section: [list 8-10 specific technical skills]"
+        - Enhance SPECIFIC achievements: "Replace '[current achievement]' with '[quantified achievement with numbers, percentages, and impact metrics]'"
+        - Fix SPECIFIC formatting: "Change '[exact formatting issue]' to '[exact formatting solution]'"
+        - Add SPECIFIC keywords: "Integrate these exact industry terms: [list 10-15 specific keywords with placement instructions]"
+        - Enhance SPECIFIC sections: "In [exact section], add '[complete content with quantified metrics]'"
+        
+        COMPREHENSIVE PROBLEM DETECTION REQUIREMENTS - IDENTIFY EVERY POSSIBLE ISSUE:
+        - CONTACT SECTION: Check for missing name, phone, email, LinkedIn, location, professional title, website, GitHub
+        - SUMMARY SECTION: Check for missing professional summary, quantified experience, industry keywords, achievement highlights, skills mention, description length (too short/long)
+        - EXPERIENCE SECTION: Check for missing company names, job titles, dates, locations, quantified achievements, action verbs, industry keywords, technical details, team sizes, project scopes, business impact, description length (too short/long)
+        - EDUCATION SECTION: Check for missing institution names, degrees, graduation years, GPAs, locations, relevant coursework, academic achievements, honors
+        - SKILLS SECTION: Check for missing technical skills, soft skills, tools, frameworks, programming languages, certifications, proficiency levels, industry-specific competencies, unstructured skills text that needs proper formatting
+        - PROJECTS SECTION: Check for missing project names, descriptions, tech stacks, dates, links, challenges solved, outcomes achieved, team collaboration details, description length (too short/long)
+        - CERTIFICATIONS SECTION: Check for missing certificate names, issuing organizations, dates, expiration dates, credential IDs, skill validation, infer organizations from certificate names
+        - LANGUAGES SECTION: Check for missing language proficiency levels, certifications, relevant language skills for the role
+        - REFERENCES SECTION: Check for missing reference contact information, professional relationships, permission to contact
+        - FORMATTING ISSUES: Check for inconsistent fonts, spacing, bullet points, section headers, date formats, contact formatting, ATS compatibility
+        - KEYWORD OPTIMIZATION: Check for missing industry keywords, technical terms, soft skills, action verbs, quantified metrics, location keywords
+        - ACHIEVEMENT QUANTIFICATION: Check for missing numbers, percentages, dollar amounts, timeframes, team sizes, project scopes, efficiency improvements, cost savings
+        - GRAMMAR & SPELLING: Check for typos, grammatical errors, inconsistent tense, punctuation issues, professional language quality
+        - REPETITION ISSUES: Check for ALL repeated words within same section, ALL overused action verbs, ALL redundant phrases, lack of variety - LIST EVERY SINGLE REPETITION ISSUE
+        - SECTION COMPLETENESS: Check for missing essential sections, incomplete information, empty fields, placeholder text
+        - ATS COMPATIBILITY: Check for tables, graphics, complex formatting, non-standard fonts, header issues, parsing problems
+        - MISSING DATES ANALYSIS: Check for missing dates in ALL sections (experience, education, projects, certifications, languages, references) and list EVERY section with missing dates
+        - DESCRIPTION OPTIMIZATION: Check for descriptions that are too short (less than 2 sentences) or too long (more than 5 sentences) in ALL sections
         
         SPECIFIC SECTION ANALYSIS REQUIREMENTS:
         - EXPERIENCE SECTION: Check for missing company names, job titles, dates, descriptions, locations
@@ -411,14 +451,23 @@ class StandardATSService:
         - LANGUAGES SECTION: Check for missing language proficiency levels
         - REFERENCES SECTION: Check for missing reference contact information
         
-        SUGGESTION FORMAT REQUIREMENTS:
-        - Use specific format: "MISSING: [Section] - [Specific Element] - [Action Required]"
-        - Use specific format: "IMPROVE: [Section] - [Current Text] - [Suggested Improvement]"
-        - Use specific format: "ADD: [Section] - [Missing Element] - [Specific Addition Needed]"
-        - Use specific format: "FIX: [Section] - [Issue Description] - [Exact Fix Required]"
-        - Always specify the exact section and field that needs attention
-        - Always provide the exact text or element that needs to be added/changed
-        - Always explain what specific action is required
+        ULTRA-COMPREHENSIVE SUGGESTION FORMAT FOR 90+ SCORES:
+        - SKILLS FORMAT: "ADD_SKILLS: [Section] - Missing: [exact skill list] - Add: 'Technical Skills: Python (Advanced), React.js (Expert), AWS (Intermediate), Machine Learning (Advanced), SQL (Expert), Docker (Intermediate), Git (Advanced), Agile/Scrum (Expert), Kubernetes (Intermediate), Microservices (Advanced)'"
+        - SKILLS STRUCTURE FORMAT: "STRUCTURE_SKILLS: [Section] - Current: '[unstructured skills text]' - Restructure to: 'Technical: [Java, Python, JavaScript], Soft Skills: [Communication, Leadership, Problem Solving], Tools: [Git, Docker, Jenkins], Frameworks: [React, Angular, Spring]'"
+        - ACHIEVEMENT FORMAT: "ENHANCE_ACHIEVEMENT: [Section] - Current: '[exact current text]' - Replace with: '[quantified achievement with 2-3 specific metrics, percentages, and business impact]'"
+        - KEYWORD FORMAT: "ADD_KEYWORDS: [Section] - Missing terms: [exact keyword list] - Integration: 'Naturally integrate these terms: [specific placement instructions for each keyword]'"
+        - EXPERIENCE FORMAT: "IMPROVE_EXPERIENCE: [Section] - Current: '[exact bullet point]' - Replace with: '[power verb] + [specific action] + [quantified result] + [business impact] + [relevant keywords]'"
+        - PROJECT FORMAT: "ENHANCE_PROJECT: [Section] - Current: '[exact description]' - Replace with: '[detailed project with tech stack, challenges solved, quantified outcomes, and industry keywords]'"
+        - CONTACT FORMAT: "FIX_CONTACT: [Section] - Issue: '[exact issue]' - Solution: '[complete contact format with all required elements]'"
+        - SUMMARY FORMAT: "REWRITE_SUMMARY: [Section] - Current: '[exact text]' - Replace with: '[3-4 line professional summary with years of experience, key skills, achievements, and industry keywords]'"
+        - MISSING SECTION FORMAT: "ADD_SECTION: [Section Name] - Missing: [section description] - Add: '[complete section content with all required elements]'"
+        - FORMATTING FORMAT: "FIX_FORMATTING: [Section] - Issue: '[exact formatting problem]' - Solution: '[exact formatting fix]'"
+        - GRAMMAR FORMAT: "FIX_GRAMMAR: [Section] - Current: '[exact text with error]' - Replace with: '[corrected text]'"
+        - MISSING DATES FORMAT: "ADD_DATES: [All Sections with Missing Dates] - Missing dates in: [Experience Section: Company A, Company B], [Projects Section: Project X, Project Y], [Certifications Section: Cert A, Cert B] - Add: '[Experience: Jan 2020 - Dec 2022], [Projects: Mar 2021 - May 2021, Jun 2022 - Aug 2022], [Certifications: Issued: Jan 2023, Valid until: Jan 2026]'"
+        - PROJECT DATES FORMAT: "ADD_PROJECT_DATES: Projects Section - Missing start/end dates for: [Project Name 1, Project Name 2] - Add dummy dates: '[Project 1: Jan 2023 - Mar 2023], [Project 2: Apr 2023 - Jun 2023]' with realistic 2-4 month durations"
+        - ORGANIZATION INFERENCE FORMAT: "ADD_ORGANIZATION: [Section] - Certificate: '[certificate name]' - Inferred organization: '[Google for Google Cloud Certification, Microsoft for Azure Certification, Oracle for Oracle Database Certification, etc.]'"
+        - DESCRIPTION LENGTH FORMAT: "OPTIMIZE_DESCRIPTION: [Section] - Current: '[exact description]' - Issue: '[too short: less than 2 sentences / too long: more than 5 sentences]' - Replace with: '[optimized 2-4 sentence description with keywords and metrics]'"
+        - REPETITION FORMAT: "FIX_REPETITION: [Section] - Repeated words: '[managed, developed, implemented, created]' - Replace instances: '[First: managed → led], [Second: developed → engineered], [Third: implemented → executed], [Fourth: created → designed]'"
         
         PARSED DATA ANALYSIS RULES:
         - If parsed data shows projects with dates, DO NOT suggest missing project dates
@@ -457,6 +506,9 @@ class StandardATSService:
             
             # Apply dynamic scoring based on issues count
             ats_response = self._apply_dynamic_scoring(ats_response)
+            
+            # Add improvement potential analysis
+            ats_response = self._add_improvement_potential(ats_response)
             
             # Final validation
             ats_response = self._final_ats_validation(ats_response)
@@ -879,6 +931,83 @@ class StandardATSService:
         logger.info(f"✅ Dynamic scoring applied successfully - {total_issues} issues, {bonus_multiplier}x multiplier")
         return ats_response
 
+    def _add_improvement_potential(self, ats_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Add improvement potential analysis to help users understand score improvement possibilities
+        
+        Args:
+            ats_response: ATS analysis response dictionary
+            
+        Returns:
+            Updated ATS response with improvement potential analysis
+        """
+        logger.info("📈 Adding improvement potential analysis")
+        
+        current_score = ats_response.get("overall_score", 0)
+        category_scores = ats_response.get("category_scores", {})
+        weaknesses = ats_response.get("weaknesses", [])
+        recommendations = ats_response.get("recommendations", [])
+        
+        # Calculate improvement potential based on current weaknesses
+        potential_improvement = 0
+        low_scoring_categories = []
+        
+        for category, score in category_scores.items():
+            if score < 70:
+                potential_improvement += (85 - score) * 0.8  # Realistic improvement target
+                low_scoring_categories.append({
+                    "category": category,
+                    "current_score": score,
+                    "target_score": min(95, score + 15),
+                    "improvement_potential": min(25, 85 - score)
+                })
+        
+        # Estimate target score after improvements
+        target_score = min(95, current_score + max(10, potential_improvement // len(category_scores) if category_scores else 10))
+        
+        # Create improvement roadmap
+        improvement_roadmap = []
+        if len(weaknesses) > 0:
+            improvement_roadmap.append({
+                "priority": "HIGH",
+                "action": "Address Critical Issues",
+                "description": f"Fix {len(weaknesses)} identified weaknesses",
+                "score_impact": "+5-8 points"
+            })
+        
+        if len([cat for cat in low_scoring_categories if cat["current_score"] < 60]) > 0:
+            improvement_roadmap.append({
+                "priority": "HIGH", 
+                "action": "Boost Low-Scoring Categories",
+                "description": "Focus on categories scoring below 60",
+                "score_impact": "+8-12 points"
+            })
+        
+        if len(recommendations) > 0:
+            improvement_roadmap.append({
+                "priority": "MEDIUM",
+                "action": "Apply AI Recommendations", 
+                "description": f"Implement {len(recommendations)} optimization suggestions",
+                "score_impact": "+3-6 points"
+            })
+        
+        # Add improvement potential data to response
+        ats_response["improvement_analysis"] = {
+            "current_score": current_score,
+            "target_score": target_score,
+            "improvement_potential": target_score - current_score,
+            "low_scoring_categories": low_scoring_categories,
+            "improvement_roadmap": improvement_roadmap,
+            "score_breakdown": {
+                "achievable_with_fixes": min(current_score + 8, 90),
+                "achievable_with_optimization": min(current_score + 15, 95),
+                "confidence_level": "HIGH" if len(weaknesses) > 2 else "MEDIUM"
+            }
+        }
+        
+        logger.info(f"📈 Improvement potential analysis: {current_score} → {target_score} (+{target_score - current_score} points)")
+        return ats_response
+
 
 class JDSpecificATSService:
     """
@@ -952,7 +1081,7 @@ class JDSpecificATSService:
         prompt = f"""
         You are an expert ATS (Applicant Tracking System) analyst and job matching specialist with 10+ years of experience in recruitment technology and resume optimization.
         
-        TASK: Perform a comprehensive job-specific ATS analysis comparing the resume against the provided job description with precise, consistent scoring and actionable feedback.
+        TASK: Perform a comprehensive job-specific ATS analysis comparing the resume against the provided job description with precise, consistent scoring and HIGHLY SPECIFIC, ACTIONABLE feedback that will increase both the overall score and job match percentage by 10-15 points when applied.
         
         CRITICAL REQUIREMENTS - MANDATORY COMPLIANCE:
         - Return ONLY valid JSON (no markdown, no code fences, no explanations, no additional text)

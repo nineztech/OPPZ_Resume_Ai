@@ -17,7 +17,7 @@ class ResumeImprovementService:
     the suggestions from the ATS analysis.
     """
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini", temperature: float = 0.3, top_p: float = 0.8):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o", temperature: float = 0.3, top_p: float = 0.8):
         """
         Initialize the Resume Improvement Service
         
@@ -49,7 +49,7 @@ class ResumeImprovementService:
         # Extract suggestions from ATS analysis
         suggestions = self._extract_suggestions(ats_analysis)
         
-        # Generate improved resume
+        # Generate improved resume based ONLY on ATS suggestions
         improved_resume = self._generate_improved_resume(parsed_resume_data, suggestions, ats_analysis)
         
         logger.info("Successfully generated improved resume")
@@ -188,18 +188,21 @@ class ResumeImprovementService:
         original_text = ats_analysis.get("extracted_text", "")
         
         prompt = f"""
-        You are an expert resume writer and ATS optimization specialist with 15+ years of experience in creating high-impact resumes that pass ATS systems and impress recruiters.
+        You are an expert resume writer and ATS optimization specialist with 15+ years of experience in creating high-impact resumes that achieve 90+ ATS scores and impress recruiters.
 
-        TASK: Improve the provided resume by applying specific ATS suggestions while maintaining the original structure and content integrity.
+        TASK: Dramatically improve the provided resume by applying SPECIFIC ATS suggestions to increase the overall score by 10-15 points while maintaining original structure and content integrity.
 
-        CRITICAL REQUIREMENTS:
+        CRITICAL REQUIREMENTS FOR SCORE IMPROVEMENT:
         - Return ONLY valid JSON (no markdown, no code fences, no explanations)
         - Maintain the exact same structure as the original parsed resume data
-        - Apply suggestions naturally without making the resume sound artificial
-        - Preserve all original information while enhancing it
-        - Ensure the improved resume is ATS-friendly and professional
+        - Apply EVERY suggestion with precision and industry-specific enhancements
+        - Transform generic descriptions into quantified, keyword-rich, achievement-focused content
+        - Ensure the improved resume achieves 90+ ATS compatibility
         - Keep the same field names and structure as the input
         - For projects: ALWAYS include techStack as a comma-separated string of technologies
+        - MANDATORY: Apply ALL suggestions from the ATS analysis with specific improvements
+        - ENHANCE every bullet point with quantified metrics and industry keywords
+        - OPTIMIZE every section for maximum ATS score improvement
 
         ORIGINAL RESUME DATA:
         {json.dumps(parsed_resume_data, indent=2)}
@@ -219,36 +222,39 @@ class ResumeImprovementService:
         - Projects Section Missing: {missing_sections.get('projects', False)}
         - Certificates Section Missing: {missing_sections.get('certificates', False)}
 
-        IMPROVEMENT GUIDELINES:
-        1. ACHIEVEMENTS & IMPACT METRICS:
-           - Add specific numbers, percentages, and quantifiable results
-           - Use action verbs and measurable outcomes
-           - Include timeframes and scale of impact
+        SCORE-BOOSTING IMPROVEMENT GUIDELINES (Target: 90+ ATS Score):
+        1. ACHIEVEMENTS & IMPACT METRICS (High Impact):
+           - Transform EVERY bullet point to include specific numbers, percentages, and quantifiable results
+           - Add measurable outcomes with industry-standard metrics (ROI, efficiency gains, cost savings)
+           - Include timeframes, team sizes, budget amounts, and scale of impact
+           - Use power words: "increased", "optimized", "achieved", "delivered", "exceeded"
 
-        2. CLARITY & BREVITY:
-           - Make bullet points more concise and impactful
-           - Remove redundant words and phrases
-           - Use active voice and strong action verbs
+        2. KEYWORD OPTIMIZATION (Critical for ATS):
+           - Integrate 15-20 relevant industry keywords naturally throughout all sections
+           - Use technical terms, software names, methodologies, and industry-specific language
+           - Include variations and synonyms of important terms
+           - Add trending industry keywords and certifications
+           - Optimize for both technical and soft skills mentioned in job descriptions
 
-        3. FORMATTING & LAYOUT:
-           - Ensure ATS-friendly formatting
-           - Use standard section headers
-           - Maintain consistent spacing and structure
+        3. SECTION ENHANCEMENT (ATS Structure):
+           - Ensure every section has robust, keyword-rich content
+           - Add industry-specific terminology to job titles and descriptions
+           - Include technical skills with proficiency levels
+           - Enhance education with relevant coursework and achievements
+           - Add certifications, training, and professional development
 
-        4. KEYWORD OPTIMIZATION:
-           - Integrate relevant industry keywords naturally
-           - Use variations of important terms
-           - Include both technical and soft skills
+        4. CLARITY & PROFESSIONAL LANGUAGE:
+           - Rewrite weak descriptions with powerful, action-oriented language
+           - Use industry-standard terminology and professional phrasing
+           - Eliminate vague terms like "helped", "assisted", "worked on"
+           - Replace with specific action verbs and concrete accomplishments
 
-        5. REPETITION AVOIDANCE:
-           - Vary action verbs and descriptive phrases
-           - Use different ways to express similar concepts
-           - Avoid repeating the same words or phrases
-
-        6. GRAMMAR & SPELLING:
-           - Ensure perfect grammar and spelling
-           - Use professional language throughout
-           - Maintain consistent tense and formatting
+        5. ATS COMPATIBILITY OPTIMIZATION:
+           - Use standard section headers recognized by ATS systems
+           - Ensure consistent formatting and structure
+           - Add location information where missing
+           - Include complete contact information
+           - Use standard date formats
 
         7. MISSING SECTIONS - ADD DUMMY DATA:
            - If PROJECTS section is missing, add 2-3 realistic projects with:
@@ -412,30 +418,82 @@ class ResumeImprovementService:
          - Ensure all required fields are present even if empty
          - Use the frontend's expected data types (strings, arrays, objects)
 
-        Focus on making specific, measurable improvements while maintaining the professional tone and authenticity of the original resume.
-        Ensure all dummy data is realistic and relevant to the person's field and experience level.
+        CRITICAL: APPLY ONLY ATS SUGGESTIONS - NO SELF-ENHANCEMENT:
+        - Apply ONLY the specific suggestions provided in the ATS analysis
+        - Do NOT add any improvements that are not explicitly mentioned in the suggestions
+        - Do NOT enhance sections unless there is a specific suggestion to do so
+        - PRESERVE all original content unless explicitly told to change it in the suggestions
+        - Follow ATS suggestions exactly as written without adding extra improvements
+        - MANDATORY: When "OPTIMIZE_DESCRIPTION" suggestions are provided for projects, experience, or summary - apply them precisely
+        - EXPAND short descriptions by adding specific details, technical information, and quantified outcomes
+        - COMPRESS long descriptions by focusing on key achievements and removing redundant information
+
+        COMPREHENSIVE SUGGESTION APPLICATION RULES:
+        - For "ADD_SKILLS" suggestions: Add ONLY the specific skills mentioned in the suggestion
+        - For "STRUCTURE_SKILLS" suggestions: Reorganize unstructured skills into proper categories (Technical, Soft Skills, Tools, Frameworks)
+        - For "ENHANCE_ACHIEVEMENT" suggestions: Replace ONLY with the exact text provided in the suggestion
+        - For "ADD_KEYWORDS" suggestions: Add ONLY the keywords explicitly mentioned in the suggestion
+        - For "IMPROVE_EXPERIENCE" suggestions: Make ONLY the changes specified in the suggestion
+        - For "ENHANCE_PROJECT" suggestions: Apply ONLY the specific enhancements mentioned
+        - For "REWRITE_SUMMARY" suggestions: Use ONLY the provided replacement text
+        - For "FIX_CONTACT" suggestions: Fix ONLY the issues specifically mentioned
+        - For "ADD_DATES" suggestions: Add missing dates to ALL sections mentioned in the suggestion
+        - For "ADD_PROJECT_DATES" suggestions: Add dummy start and end dates to projects with realistic 2-4 month durations
+        - For "ADD_ORGANIZATION" suggestions: Infer and add organizations for certificates based on certificate names
+        - For "OPTIMIZE_DESCRIPTION" suggestions: Enhance descriptions that are too short or too long as specified - expand short descriptions, compress long descriptions
+        - For "FIX_REPETITION" suggestions: Replace ALL repeated words with alternatives as specified
+        - For "FIX_FORMATTING" suggestions: Fix ONLY the formatting issues specifically mentioned
+        - For "FIX_GRAMMAR" suggestions: Fix ONLY the grammar errors specifically mentioned
+        - CRITICAL: If no suggestion exists for a section, leave it completely unchanged
+
+        Focus on making TRANSFORMATIVE improvements that directly address ATS scoring criteria while maintaining professional authenticity.
+        Ensure all improvements align with the specific feedback provided in the ATS analysis.
         """
 
         return prompt
     
     def _format_suggestions_for_prompt(self, suggestions: Dict[str, List[str]]) -> str:
         """
-        Format suggestions for inclusion in the prompt
+        Format suggestions for inclusion in the prompt with enhanced specificity
         
         Args:
             suggestions: Dictionary of suggestions by category
             
         Returns:
-            Formatted suggestions text
+            Formatted suggestions text with action-oriented instructions
         """
         formatted_suggestions = []
         
-        for category, suggestion_list in suggestions.items():
-            if suggestion_list:
+        # Priority order for suggestions (most impactful first)
+        priority_categories = [
+            'keyword_usage_placement',
+            'achievements_impact_metrics', 
+            'skills_match_alignment',
+            'section_organization',
+            'clarity_brevity',
+            'formatting_layout_ats',
+            'grammar_spelling_quality',
+            'header_consistency',
+            'repetition_avoidance',
+            'general_recommendations'
+        ]
+        
+        for category in priority_categories:
+            if category in suggestions and suggestions[category]:
                 category_name = category.replace('_', ' ').title()
-                formatted_suggestions.append(f"\n{category_name}:")
+                formatted_suggestions.append(f"\n🎯 ATS SUGGESTION - {category_name}:")
+                for i, suggestion in enumerate(suggestions[category], 1):
+                    # Pass suggestions exactly as they are from ATS analysis
+                    formatted_suggestions.append(f"  APPLY EXACTLY: {suggestion}")
+                formatted_suggestions.append("")  # Add spacing
+        
+        # Add any remaining categories not in priority list
+        for category, suggestion_list in suggestions.items():
+            if category not in priority_categories and suggestion_list:
+                category_name = category.replace('_', ' ').title()
+                formatted_suggestions.append(f"\n📈 ATS SUGGESTION - {category_name}:")
                 for i, suggestion in enumerate(suggestion_list, 1):
-                    formatted_suggestions.append(f"  {i}. {suggestion}")
+                    formatted_suggestions.append(f"  APPLY EXACTLY: {suggestion}")
         
         return '\n'.join(formatted_suggestions)
     
@@ -544,14 +602,31 @@ class ResumeImprovementService:
             # If original already has basicDetails format, use it directly
             frontend_format["basicDetails"] = original_resume["basicDetails"]
         
-        # Map other fields - preserve original data if available
-        frontend_format["summary"] = original_resume.get("summary", improved_resume.get("summary", ""))
-        frontend_format["objective"] = original_resume.get("objective", improved_resume.get("objective", ""))
-        frontend_format["skills"] = original_resume.get("skills", improved_resume.get("skills", {}))
+        # Map other fields - prioritize improved data for score enhancement
+        frontend_format["summary"] = improved_resume.get("summary") or original_resume.get("summary", "")
+        frontend_format["objective"] = improved_resume.get("objective") or original_resume.get("objective", "")
         
-        # Map experience with IDs - preserve original data if available
-        if "experience" in original_resume and isinstance(original_resume["experience"], list):
-            for i, exp in enumerate(original_resume["experience"]):
+        # Skills section - merge existing skills with new skills from ATS suggestions
+        improved_skills = improved_resume.get("skills")
+        original_skills = original_resume.get("skills")
+        
+        if improved_skills and original_skills:
+            # Merge existing skills with new skills from ATS suggestions
+            merged_skills = self._merge_skills_sections(original_skills, improved_skills)
+            frontend_format["skills"] = merged_skills
+        elif improved_skills:
+            # Only improved skills available
+            frontend_format["skills"] = improved_skills
+        elif original_skills:
+            # Only original skills available
+            frontend_format["skills"] = original_skills
+        else:
+            # No skills section exists, leave empty
+            frontend_format["skills"] = {}
+        
+        # Map experience with IDs - prioritize improved data if available
+        if "experience" in improved_resume and isinstance(improved_resume["experience"], list):
+            for i, exp in enumerate(improved_resume["experience"]):
                 if isinstance(exp, dict):
                     frontend_format["experience"].append({
                         "id": str(uuid.uuid4()),
@@ -562,8 +637,8 @@ class ResumeImprovementService:
                         "description": exp.get("description", ""),
                         "location": exp.get("location", "")
                     })
-        elif "experience" in improved_resume and isinstance(improved_resume["experience"], list):
-            for i, exp in enumerate(improved_resume["experience"]):
+        elif "experience" in original_resume and isinstance(original_resume["experience"], list):
+            for i, exp in enumerate(original_resume["experience"]):
                 if isinstance(exp, dict):
                     frontend_format["experience"].append({
                         "id": str(uuid.uuid4()),
@@ -620,7 +695,7 @@ class ResumeImprovementService:
                         "description": activity.get("description", "")
                     })
         
-        # Map projects with IDs
+        # Map projects with IDs - prioritize improved data
         if "projects" in improved_resume and isinstance(improved_resume["projects"], list):
             for i, project in enumerate(improved_resume["projects"]):
                 if isinstance(project, dict):
@@ -629,12 +704,20 @@ class ResumeImprovementService:
                     if isinstance(tech_stack, list):
                         tech_stack = ", ".join(tech_stack)
                     
+                    # Ensure project dates are present - add dummy dates if missing
+                    start_date = project.get("start_date", project.get("startDate", ""))
+                    end_date = project.get("end_date", project.get("endDate", ""))
+                    
+                    # Keep existing dates or leave empty for AI to generate
+                    start_date = start_date or ""
+                    end_date = end_date or ""
+                    
                     frontend_format["projects"].append({
                         "id": str(uuid.uuid4()),
                         "name": project.get("name", ""),
                         "techStack": tech_stack,
-                        "startDate": project.get("start_date", project.get("startDate", "")),
-                        "endDate": project.get("end_date", project.get("endDate", "")),
+                        "startDate": start_date,
+                        "endDate": end_date,
                         "description": project.get("description", ""),
                         "link": project.get("link", "")
                     })
@@ -723,6 +806,148 @@ class ResumeImprovementService:
         summary["improvement_areas"] = improvement_areas
         
         return summary
+    
+    def _merge_skills_sections(self, original_skills: Any, improved_skills: Any) -> Dict[str, Any]:
+        """
+        Merge existing skills with new skills from ATS suggestions
+        ALWAYS preserves ALL existing skills and adds new ones from ATS suggestions
+        Removes duplicates across the entire skills section
+        
+        Args:
+            original_skills: Original skills from resume
+            improved_skills: Skills with ATS suggestions applied
+            
+        Returns:
+            Merged skills section with both existing and new skills, no duplicates
+        """
+        # First, collect ALL existing skills from original resume
+        all_existing_skills = self._extract_all_skills(original_skills)
+        
+        # Then, collect new skills from improved resume
+        all_new_skills = self._extract_all_skills(improved_skills)
+        
+        # Remove duplicates across entire skills section
+        existing_lower = [s.lower() for s in all_existing_skills]
+        unique_new_skills = [skill for skill in all_new_skills if skill.lower() not in existing_lower]
+        
+        # Combine: ALL existing + unique new skills
+        all_combined_skills = all_existing_skills + unique_new_skills
+        
+        # Distribute skills back to appropriate categories
+        return self._distribute_skills_to_categories(all_combined_skills, original_skills)
+    
+    def _extract_all_skills(self, skills: Any) -> List[str]:
+        """
+        Extract all skills from any skills format (dict, list, etc.)
+        
+        Args:
+            skills: Skills in any format
+            
+        Returns:
+            List of all skills found
+        """
+        all_skills = []
+        
+        if isinstance(skills, dict):
+            for category, skill_list in skills.items():
+                if isinstance(skill_list, list):
+                    all_skills.extend(skill_list)
+        elif isinstance(skills, list):
+            all_skills.extend(skills)
+        
+        # Remove empty strings and None values
+        return [skill for skill in all_skills if skill and str(skill).strip()]
+    
+    def _distribute_skills_to_categories(self, all_skills: List[str], original_skills: Any) -> Dict[str, Any]:
+        """
+        Distribute skills back to appropriate categories based on original structure
+        Intelligently categorizes skills into technical, soft, tools, and frameworks
+        
+        Args:
+            all_skills: Combined list of all skills
+            original_skills: Original skills structure to maintain format
+            
+        Returns:
+            Skills distributed to appropriate categories
+        """
+        # Smart categorization of skills
+        technical_keywords = ['python', 'java', 'javascript', 'c++', 'c#', 'sql', 'html', 'css', 'php', 'ruby', 'go', 'rust', 'swift', 'kotlin', 'typescript', 'machine learning', 'ai', 'data science', 'algorithms', 'programming', 'coding', 'development', 'software']
+        soft_keywords = ['communication', 'leadership', 'teamwork', 'problem solving', 'critical thinking', 'adaptability', 'creativity', 'time management', 'project management', 'collaboration', 'mentoring', 'presentation', 'negotiation', 'analytical']
+        tools_keywords = ['git', 'docker', 'kubernetes', 'jenkins', 'jira', 'confluence', 'slack', 'trello', 'asana', 'figma', 'photoshop', 'excel', 'powerpoint', 'tableau', 'postman', 'vs code', 'intellij', 'eclipse']
+        framework_keywords = ['react', 'angular', 'vue', 'node.js', 'express', 'django', 'flask', 'spring', 'hibernate', 'bootstrap', 'jquery', 'webpack', 'babel', 'jest', 'cypress', 'tensorflow', 'pytorch', 'scikit-learn']
+        
+        # Initialize categories
+        categorized_skills = {
+            "technical": [],
+            "soft": [],
+            "tools": [],
+            "frameworks": []
+        }
+        
+        # If original skills had a specific structure, try to maintain it
+        if isinstance(original_skills, dict):
+            # Use original categories if they exist
+            for category in original_skills.keys():
+                if category not in categorized_skills:
+                    categorized_skills[category] = []
+        
+        # Categorize each skill intelligently
+        for skill in all_skills:
+            skill_lower = skill.lower()
+            categorized = False
+            
+            # Check for framework keywords first (more specific)
+            for keyword in framework_keywords:
+                if keyword in skill_lower:
+                    categorized_skills["frameworks"].append(skill)
+                    categorized = True
+                    break
+            
+            if not categorized:
+                # Check for tools keywords
+                for keyword in tools_keywords:
+                    if keyword in skill_lower:
+                        categorized_skills["tools"].append(skill)
+                        categorized = True
+                        break
+            
+            if not categorized:
+                # Check for soft skills keywords
+                for keyword in soft_keywords:
+                    if keyword in skill_lower:
+                        categorized_skills["soft"].append(skill)
+                        categorized = True
+                        break
+            
+            if not categorized:
+                # Check for technical keywords
+                for keyword in technical_keywords:
+                    if keyword in skill_lower:
+                        categorized_skills["technical"].append(skill)
+                        categorized = True
+                        break
+            
+            # If no category found, default to technical
+            if not categorized:
+                categorized_skills["technical"].append(skill)
+        
+        # Remove empty categories unless they existed in original
+        if isinstance(original_skills, dict):
+            # Keep original structure
+            result = {}
+            for category in original_skills.keys():
+                if category in categorized_skills:
+                    result[category] = categorized_skills[category]
+                else:
+                    result[category] = []
+            # Add any new categories that have skills
+            for category, skills_list in categorized_skills.items():
+                if category not in result and skills_list:
+                    result[category] = skills_list
+            return result
+        else:
+            # Return all categories, remove empty ones
+            return {k: v for k, v in categorized_skills.items() if v}
 
 
 
