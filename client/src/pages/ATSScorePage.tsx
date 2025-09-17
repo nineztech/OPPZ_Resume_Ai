@@ -1400,64 +1400,94 @@ const ATSScorePage: React.FC = () => {
             )}
           </Button>
         </motion.div>
-{/* ATS Requirements Info */}
+        {/* Enhanced ATS Requirements & Score Improvement Info */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
           className="mb-8"
         >
-          <Card className="bg-blue-50 border-blue-200">
-            <CardHeader>
-              <CardTitle className="flex items-center text-blue-800">
-                <AlertCircle className="w-5 h-5 mr-2" />
-                ATS Requirements Checklist
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="bg-blue-50 border-blue-200">
+              <CardHeader>
+                <CardTitle className="flex items-center text-blue-800">
+                  <AlertCircle className="w-5 h-5 mr-2" />
+                  ATS Requirements Checklist
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm">
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Complete Name</span>
+                    <span className="font-medium">Complete Name & Contact</span>
                   </div>
-                  <p className="text-blue-700 ml-6">Must include first AND last name</p>
+                  <p className="text-blue-700 ml-6">First & last name, email, phone number</p>
                   
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Contact Information</span>
+                    <span className="font-medium">Industry Keywords</span>
                   </div>
-                  <p className="text-blue-700 ml-6">Email OR phone number required</p>
+                  <p className="text-blue-700 ml-6">15-20 relevant technical & soft skills</p>
+                  
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="font-medium">Quantified Achievements</span>
+                  </div>
+                  <p className="text-blue-700 ml-6">Numbers, percentages, measurable results</p>
                   
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-4 h-4 text-green-600" />
                     <span className="font-medium">Standard Sections</span>
                   </div>
-                  <p className="text-blue-700 ml-6">Experience, Education, Skills clearly defined</p>
+                  <p className="text-blue-700 ml-6">Experience, Education, Skills, Projects</p>
                 </div>
-                
-                <div className="space-y-2">
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-green-50 to-blue-50 border-green-200">
+              <CardHeader>
+                <CardTitle className="flex items-center text-green-800">
+                  <TrendingUp className="w-5 h-5 mr-2" />
+                  AI-Powered Score Improvement
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm">
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Keywords</span>
+                    <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">🎯</span>
+                    </div>
+                    <span className="font-medium">Target: 90+ ATS Score</span>
                   </div>
-                  <p className="text-blue-700 ml-6">Relevant industry terms and skills</p>
+                  <p className="text-green-700 ml-6">Our AI optimizes your resume for maximum ATS compatibility</p>
                   
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Formatting</span>
+                    <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">⚡</span>
+                    </div>
+                    <span className="font-medium">Smart Keyword Optimization</span>
                   </div>
-                  <p className="text-blue-700 ml-6">Clean, readable structure</p>
+                  <p className="text-blue-700 ml-6">Adds industry-specific terms and technologies</p>
                   
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Achievements</span>
+                    <div className="w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">📈</span>
+                    </div>
+                    <span className="font-medium">Achievement Enhancement</span>
                   </div>
-                  <p className="text-blue-700 ml-6">Quantified results and metrics</p>
+                  <p className="text-purple-700 ml-6">Transforms descriptions into quantified results</p>
+                  
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">🔧</span>
+                    </div>
+                    <span className="font-medium">Format Optimization</span>
+                  </div>
+                  <p className="text-orange-700 ml-6">Ensures perfect ATS parsing and readability</p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </motion.div>
 
         {/* Results */}

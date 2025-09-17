@@ -248,17 +248,22 @@ const ATSResultsPage: React.FC = () => {
             <Button 
               variant="default" 
               size="sm" 
-              className="text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="text-sm bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed font-semibold"
               onClick={applyATSSuggestions}
               disabled={isApplyingSuggestions || (!state.parsedResumeData && !state.fileContent)}
-              title={(!state.parsedResumeData && !state.fileContent) ? 'No resume data available - cannot apply suggestions' : 'Apply ATS suggestions to improve resume'}
+              title={(!state.parsedResumeData && !state.fileContent) ? 'No resume data available - cannot apply suggestions' : 'Apply AI-powered suggestions to boost ATS score to 90+'}
             >
               {isApplyingSuggestions ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Optimizing Resume...
+                </>
               ) : (
-                <Wand2 className="w-4 h-4 mr-2" />
+                <>
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  🚀 Boost to 90+ Score
+                </>
               )}
-              {isApplyingSuggestions ? 'Applying...' : 'Apply Suggestions'}
             </Button>
             <Button variant="outline" size="sm" className="text-sm">
               <Download className="w-4 h-4 mr-2" />
@@ -456,17 +461,61 @@ const ATSResultsPage: React.FC = () => {
                               <div className="w-4 h-4 mr-2 bg-blue-500 rounded-full flex items-center justify-center">
                                 <span className="text-white text-xs">💡</span>
                               </div>
-                              Recommendations
+                              Actionable Recommendations
                             </h4>
-                            <div className="space-y-2">
-                              {section.suggestions.map((suggestion, index) => (
-                                <div key={index} className="flex items-start space-x-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                  <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
-                                    <span className="text-white text-xs font-bold">•</span>
+                            <div className="space-y-3">
+                              {section.suggestions.map((suggestion, index) => {
+                                // Parse suggestion format for better display - handle new specific formats
+                                const isSpecificFormat = suggestion.startsWith('ADD_SKILLS:') || suggestion.startsWith('ENHANCE_ACHIEVEMENT:') || 
+                                                         suggestion.startsWith('ADD_KEYWORDS:') || suggestion.startsWith('IMPROVE_EXPERIENCE:') ||
+                                                         suggestion.startsWith('ENHANCE_PROJECT:') || suggestion.startsWith('REWRITE_SUMMARY:') ||
+                                                         suggestion.startsWith('FIX_CONTACT:') || suggestion.startsWith('MISSING:') || 
+                                                         suggestion.startsWith('IMPROVE:') || suggestion.startsWith('ADD:') || suggestion.startsWith('FIX:');
+                                
+                                let suggestionType = 'GENERAL';
+                                if (suggestion.startsWith('ADD_SKILLS:')) suggestionType = 'SKILLS';
+                                else if (suggestion.startsWith('ENHANCE_ACHIEVEMENT:')) suggestionType = 'ACHIEVEMENT';
+                                else if (suggestion.startsWith('ADD_KEYWORDS:')) suggestionType = 'KEYWORDS';
+                                else if (suggestion.startsWith('IMPROVE_EXPERIENCE:')) suggestionType = 'EXPERIENCE';
+                                else if (suggestion.startsWith('ENHANCE_PROJECT:')) suggestionType = 'PROJECT';
+                                else if (suggestion.startsWith('REWRITE_SUMMARY:')) suggestionType = 'SUMMARY';
+                                else if (suggestion.startsWith('FIX_CONTACT:')) suggestionType = 'CONTACT';
+                                else if (isSpecificFormat) suggestionType = suggestion.split(':')[0];
+                                
+                                const suggestionContent = isSpecificFormat ? suggestion.substring(suggestion.indexOf(':') + 1).trim() : suggestion;
+                                
+                                return (
+                                  <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg overflow-hidden">
+                                    <div className="flex items-center space-x-2 p-2 bg-blue-100 border-b border-blue-200">
+                                      <div className={`px-2 py-1 rounded text-xs font-bold text-white ${
+                                        suggestionType === 'SKILLS' ? 'bg-green-600' :
+                                        suggestionType === 'ACHIEVEMENT' ? 'bg-yellow-600' :
+                                        suggestionType === 'KEYWORDS' ? 'bg-purple-600' :
+                                        suggestionType === 'EXPERIENCE' ? 'bg-orange-600' :
+                                        suggestionType === 'PROJECT' ? 'bg-indigo-600' :
+                                        suggestionType === 'SUMMARY' ? 'bg-pink-600' :
+                                        suggestionType === 'CONTACT' ? 'bg-red-600' :
+                                        suggestionType === 'MISSING' ? 'bg-red-500' :
+                                        suggestionType === 'IMPROVE' ? 'bg-orange-500' :
+                                        suggestionType === 'ADD' ? 'bg-green-500' :
+                                        suggestionType === 'FIX' ? 'bg-purple-500' : 'bg-blue-500'
+                                      }`}>
+                                        {suggestionType}
+                                      </div>
+                                      <span className="text-sm font-medium text-blue-800">Action Required #{index + 1}</span>
+                                    </div>
+                                    <div className="p-3">
+                                      <p className="text-sm text-blue-800 leading-relaxed">{suggestionContent}</p>
+                                      {(section as any).improvement_examples && (section as any).improvement_examples[index] && (
+                                        <div className="mt-2 p-2 bg-white rounded border-l-4 border-blue-400">
+                                          <p className="text-xs text-blue-600 font-medium">💡 Example:</p>
+                                          <p className="text-xs text-blue-700 mt-1">{(section as any).improvement_examples[index]}</p>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                  <span className="text-sm text-blue-800">{suggestion}</span>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
 
