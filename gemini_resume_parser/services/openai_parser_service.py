@@ -70,7 +70,7 @@ class OpenAIResumeParser:
     
     def parse_resume_text(self, resume_text: str, custom_prompt: Optional[str] = None) -> Dict[str, Any]:
         """
-        Parse resume text using OpenAI API
+        Parse resume text using OpenAI API with format detection
         
         Args:
             resume_text: Raw resume text
@@ -80,15 +80,19 @@ class OpenAIResumeParser:
             Parsed resume data as dictionary
         """
         try:
-            # Prepare prompt
-            prompt = self._prepare_prompt(resume_text, custom_prompt)
+            # Detect resume format and prepare appropriate prompt
+            resume_type = self._detect_resume_format(resume_text)
+            logger.info(f"Detected resume type: {resume_type}")
+            
+            # Prepare prompt based on detected format
+            prompt = self._prepare_prompt(resume_text, custom_prompt, resume_type)
             
             # Generate content using OpenAI
             logger.info("Sending request to OpenAI API")
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are a professional resume parsing system. Extract structured data from resume text and return valid JSON only."},
+                    {"role": "system", "content": "You are an advanced resume parsing system that handles all types of resumes including academic, professional, student, and non-standard formats. Extract structured data from resume text and return valid JSON only."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=self.temperature,
@@ -99,8 +103,8 @@ class OpenAIResumeParser:
             # Parse response
             parsed_data = self._parse_response(response.choices[0].message.content)
             
-            # Enforce schema compliance
-            parsed_data = self._enforce_schema_compliance(parsed_data)
+            # Enforce schema compliance with format-specific handling
+            parsed_data = self._enforce_schema_compliance(parsed_data, resume_type)
             
             logger.info("✅ Resume parsing completed successfully")
             return parsed_data
@@ -109,12 +113,71 @@ class OpenAIResumeParser:
             logger.error(f"Failed to parse resume text: {str(e)}")
             raise
 
-    def _prepare_prompt(self, resume_text: str, custom_prompt: Optional[str] = None) -> str:
-        """Prepare the prompt for resume parsing"""
+    def _detect_resume_format(self, resume_text: str) -> str:
+        """Detect the type of resume format"""
+        text_lower = resume_text.lower()
+        
+        # Academic/Student resume indicators
+        academic_indicators = [
+            'course:', 'research project:', 'thesis:', 'academic project',
+            'master of science', 'bachelor of science', 'phd', 'graduate',
+            'relevant coursework', 'coursework:', 'academic background',
+            'education and credentials', 'student', 'university project'
+        ]
+        
+        # Professional resume indicators
+        professional_indicators = [
+            'work experience', 'employment history', 'professional experience',
+            'career history', 'job experience', 'employment:', 'work history',
+            'years of experience', 'professional background', 'career'
+        ]
+        
+        # Count indicators
+        academic_score = sum(1 for indicator in academic_indicators if indicator in text_lower)
+        professional_score = sum(1 for indicator in professional_indicators if indicator in text_lower)
+        
+        # Determine format
+        if academic_score > professional_score:
+            return "academic"
+        elif professional_score > academic_score:
+            return "professional"
+        else:
+            return "mixed"
+    
+    def _prepare_prompt(self, resume_text: str, custom_prompt: Optional[str] = None, resume_type: str = "mixed") -> str:
+        """Prepare the prompt for resume parsing based on detected format"""
         if custom_prompt:
             return custom_prompt.format(resume_text=resume_text)
         
-        return OpenAIConfig.DEFAULT_PROMPT_TEMPLATE.format(resume_text=resume_text)
+        # Add format-specific instructions to the base template
+        format_instructions = ""
+        if resume_type == "academic":
+            format_instructions = """
+            **ACADEMIC RESUME DETECTED**
+            - Focus on extracting academic projects, coursework, and research
+            - Map "COURSE:" sections to projects, not experience
+            - Include relevant coursework in education descriptions
+            - Handle incomplete academic dates gracefully
+            """
+        elif resume_type == "professional":
+            format_instructions = """
+            **PROFESSIONAL RESUME DETECTED**
+            - Focus on work experience and professional achievements
+            - Distinguish between technical skills and communication languages
+            - Extract complete employment history
+            """
+        else:
+            format_instructions = """
+            **MIXED FORMAT RESUME DETECTED**
+            - Handle both academic and professional sections
+            - Distinguish between course projects and work experience
+            - Extract all available information from both formats
+            """
+        
+        base_template = OpenAIConfig.DEFAULT_PROMPT_TEMPLATE
+        enhanced_template = base_template + format_instructions
+        
+        return enhanced_template.format(resume_text=resume_text)
 
     def _parse_response(self, response_text: str) -> Dict[str, Any]:
         """Parse OpenAI response and extract JSON"""
@@ -177,8 +240,8 @@ class OpenAIResumeParser:
         logger.warning("Could not extract valid JSON from AI response")
         return '{"error": "Invalid JSON response", "message": "Could not parse AI response"}'
 
-    def _enforce_schema_compliance(self, parsed_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Enforce schema compliance for parsed resume data"""
+    def _enforce_schema_compliance(self, parsed_data: Dict[str, Any], resume_type: str = "mixed") -> Dict[str, Any]:
+        """Enforce schema compliance for parsed resume data with format-specific handling"""
         logger.info("Enforcing schema compliance")
         
         # Define required sections with default values - using frontend naming conventions
@@ -210,6 +273,9 @@ class OpenAIResumeParser:
         # Map old field names to new frontend format
         parsed_data = self._map_to_frontend_format(parsed_data)
         
+        # Apply format-specific processing
+        parsed_data = self._apply_format_specific_processing(parsed_data, resume_type)
+        
         # Ensure all required sections exist
         for section, default_value in required_sections.items():
             if section not in parsed_data:
@@ -225,6 +291,101 @@ class OpenAIResumeParser:
         
         logger.info("Schema compliance enforcement completed")
         return parsed_data
+    
+    def _apply_format_specific_processing(self, parsed_data: Dict[str, Any], resume_type: str) -> Dict[str, Any]:
+        """Apply format-specific processing to parsed data"""
+        logger.info(f"Applying {resume_type} format-specific processing")
+        
+        if resume_type == "academic":
+            # For academic resumes, ensure projects are properly categorized
+            if "experience" in parsed_data and isinstance(parsed_data["experience"], list):
+                # Move academic projects from experience to projects
+                academic_projects = []
+                professional_experience = []
+                
+                for exp in parsed_data["experience"]:
+                    if isinstance(exp, dict):
+                        # Check if this is actually an academic project
+                        company = exp.get("company", "").lower()
+                        position = exp.get("position", "").lower()
+                        
+                        if any(keyword in company or keyword in position for keyword in 
+                               ["course", "university", "research", "thesis", "academic", "project"]):
+                            # Convert to project format
+                            academic_projects.append({
+                                "id": exp.get("id", f"project-{len(academic_projects)}"),
+                                "name": exp.get("position", exp.get("company", "")),
+                                "techStack": exp.get("description", ""),
+                                "startDate": exp.get("startDate", ""),
+                                "endDate": exp.get("endDate", ""),
+                                "description": exp.get("description", ""),
+                                "link": ""
+                            })
+                        else:
+                            professional_experience.append(exp)
+                
+                # Update the sections
+                parsed_data["experience"] = professional_experience
+                if "projects" not in parsed_data:
+                    parsed_data["projects"] = []
+                parsed_data["projects"].extend(academic_projects)
+                
+                logger.info(f"Moved {len(academic_projects)} academic projects from experience to projects")
+        
+        # Handle name extraction issues
+        if "basicDetails" in parsed_data and "fullName" in parsed_data["basicDetails"]:
+            full_name = parsed_data["basicDetails"]["fullName"]
+            if full_name and len(full_name.split()) < 2:
+                # Try to extract name from other parts of the resume
+                logger.warning(f"Incomplete name detected: {full_name}")
+                # Try to fix common name issues
+                improved_name = self._improve_name_extraction(full_name, parsed_data)
+                if improved_name != full_name:
+                    parsed_data["basicDetails"]["fullName"] = improved_name
+                    logger.info(f"Improved name extraction: {full_name} -> {improved_name}")
+        
+        return parsed_data
+    
+    def _improve_name_extraction(self, current_name: str, parsed_data: Dict[str, Any]) -> str:
+        """Improve name extraction by analyzing the resume content"""
+        import re
+        
+        # Common patterns for split names
+        if len(current_name.split()) == 1 and current_name.isupper():
+            # This might be a split name like "STRM" from "S T R M"
+            # Look for patterns in the original text or other fields
+            
+            # Check if there are other name fragments
+            if "basicDetails" in parsed_data:
+                email = parsed_data["basicDetails"].get("email", "")
+                if email:
+                    # Extract name from email
+                    email_name = email.split("@")[0]
+                    if "." in email_name:
+                        parts = email_name.split(".")
+                        if len(parts) >= 2:
+                            return f"{parts[0].title()} {parts[1].title()}"
+        
+        # Handle common name patterns
+        name_patterns = [
+            r'^([A-Z])\s+([A-Z])\s+([A-Z])\s+([A-Z])\s+(.+)$',  # S T R M NAME
+            r'^([A-Z]+)\s+(.+)$',  # STRM NAME
+            r'^(.+)\s+([A-Z]+)$',  # NAME STRM
+        ]
+        
+        for pattern in name_patterns:
+            match = re.match(pattern, current_name.strip())
+            if match:
+                groups = match.groups()
+                if len(groups) >= 2:
+                    # Try to reconstruct a proper name
+                    if len(groups[0]) <= 4 and groups[0].isupper():
+                        # This looks like initials or abbreviation
+                        return f"{groups[0]} {groups[1]}"
+                    else:
+                        return f"{groups[0]} {groups[1]}"
+        
+        return current_name
 
     def _map_to_frontend_format(self, parsed_data: Dict[str, Any]) -> Dict[str, Any]:
         """Map parsed data to frontend naming conventions"""
