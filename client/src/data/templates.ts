@@ -103,7 +103,7 @@ export const templates: Template[] = [
     downloads: 1247,
     isPopular: true,
     features: ['Clean Layout', 'Professional Design', 'Easy Customization', 'ATS Friendly'],
-    colors: ['#1e293b', '#374154', '#1e3a8a', '#1e40af'],
+    colors: ['#1e293b', '#374154', '#2c5282', '#1e40af'],
     formats: ['PDF', 'DOCX', 'HTML'],
     templateData: {
       personalInfo: {
@@ -184,7 +184,7 @@ export const templates: Template[] = [
     rating: 4.6,
     downloads: 892,
     features: ['Minimal Design', 'Easy to Read', 'Professional', 'Clean Layout'],
-    colors: ['#1e293b', '#374154', '#1e3a8a', '#1e40af'],
+    colors: ['#1e293b', '#374154', '#2c5282', '#1e40af'],
     formats: ['PDF', 'DOCX', 'HTML'],
     templateData: {
       personalInfo: {
@@ -258,7 +258,7 @@ export const templates: Template[] = [
     downloads: 756,
     isNew: true,
     features: ['Creative Layout', 'Bold Design', 'Visual Impact', 'Designer Friendly'],
-    colors: ['#1e293b', '#374154', '#1e3a8a', '#1e40af'],
+    colors: ['#1e293b', '#374154', '#2c5282', '#1e40af'],
     formats: ['PDF', 'DOCX', 'HTML'],
     templateData: {
       personalInfo: {
@@ -332,7 +332,7 @@ export const templates: Template[] = [
     downloads: 1103,
     isPopular: true,
     features: ['Executive Style', 'Professional Layout', 'Traditional Design', 'Senior Level'],
-    colors: ['#1e293b', '#374154', '#1e3a8a', '#1e40af'],
+    colors: ['#1e293b', '#374154', '#2c5282', '#1e40af'],
     formats: ['PDF', 'DOCX', 'HTML'],
     templateData: {
       personalInfo: {
@@ -414,7 +414,7 @@ export const templates: Template[] = [
     downloads: 856,
     isNew: true,
     features: ['Professional Layout', 'Modern Design', 'Business Focus', 'Clean Typography'],
-    colors: ['#1e293b', '#374154', '#1e3a8a', '#1e40af'],
+    colors: ['#1e293b', '#374154', '#2c5282', '#1e40af'],
     formats: ['PDF', 'DOCX', 'HTML'],
     templateData: {
       personalInfo: {
@@ -484,6 +484,85 @@ export const templates: Template[] = [
         languages: ['English', 'Spanish', 'French'],
         certifications: ['Certified Business Analysis Professional (CBAP)', 'Agile Certified Practitioner (ACP)', 'Six Sigma Green Belt'],
         awards: ['Analyst of the Year (2023)', 'Excellence in Process Improvement (2022)', 'Innovation Award (2021)']
+      }
+    }
+  },
+  {
+    id: 'elite-modern',
+    name: 'Elite Modern',
+    category: 'Professional',
+    description: 'Elite modern design with sophisticated blue accents and professional styling',
+    image: '/src/assets/templates/elite-modern-preview.png',
+    rating: 4.9,
+    downloads: 1200,
+    isPopular: true,
+    isNew: true,
+    features: ['Elite Design', 'Blue Accents', 'Professional Layout', 'Modern Typography'],
+    colors: ['#1e293b', '#374154', '#2c5282', '#1e40af'],
+    formats: ['PDF', 'DOCX', 'HTML'],
+    templateData: {
+      personalInfo: {
+        name: 'ESTELLE DARCY',
+        title: 'SUPPLY CHAIN ANALYST',
+        address: '123 Anywhere St., Any City',
+        email: 'hello@reallygreatsite.com',
+        website: 'www.reallygreatsite.com'
+      },
+      summary: 'Results-driven Supply Chain Analyst with 5 years of experience optimizing end-to-end supply chain operations for heavy equipment, telecom, and defense electronics manufacturers. Proven record of reducing inventory 15-25%, cutting logistics costs 12-18%, and accelerating on-time delivery through data-driven planning.',
+      skills: {
+        technical: [
+          'Analytics & Reporting: Power BI, Tableau, Advanced Excel',
+          'Database & Languages: SQL Server, MS Access, Python, R, MATLAB',
+          'ERP / SCM Systems: SAP (MM, WM, PP, QM, CO), Oracle NetSuite',
+          'Process Ideologies: SDLC, Agile/Scrum, Waterfall, Lean Six Sigma',
+          'Planning & Optimization: Demand Forecasting, S&OP, JIT, ROP',
+          'Project & Collaboration: Jira, Confluence, MS Project, SharePoint'
+        ]
+      },
+      experience: [
+        {
+          title: 'Supply Chain Analyst',
+          company: 'Systel Inc.',
+          dates: 'Apr 2023 - Present',
+          achievements: [
+            'Implemented JIT and ROP inventory models, reducing excess stock by 15% while maintaining 98% service level.',
+            'Designed Power BI dashboards enabling 50+ users to access real-time inventory and demand KPIs.',
+            'Automated manual reporting workflows, cutting weekly report preparation time from 6 hours to 30 minutes.'
+          ]
+        },
+        {
+          title: 'Supply Chain Analyst',
+          company: 'Sterlite Technologies Ltd.',
+          dates: 'Apr 2020 - Apr 2023',
+          achievements: [
+            'Managed end-to-end order fulfillment for fiber optic cables, cutting stockouts by 22%.',
+            'Designed integrated Power BI-Tableau supply-chain control tower used by COO.',
+            'Improved top-tier supplier OTD from 85% to 97% within 9 months.'
+          ]
+        }
+      ],
+      education: [
+        {
+          degree: 'Master of Science, Industrial Engineering (GPA: 3.73)',
+          institution: 'Arizona State University',
+          dates: 'Aug 2023 - May 2025',
+          details: [
+            'Concentration in Supply Chain Management and Data Analytics.'
+          ]
+        },
+        {
+          degree: 'Bachelor of Technology, Mechanical Engineering (GPA: 3.65)',
+          institution: 'SRM University',
+          dates: 'Jun 2013 - Jul 2017',
+          details: [
+            'Major in Mechanical Engineering with focus on Industrial Systems.'
+          ]
+        }
+      ],
+      additionalInfo: {
+        languages: ['English', 'Hindi', 'Tamil'],
+        certifications: ['Introduction to Data Analytics (IBM)', 'Microsoft Power BI Certification', 'Lean Six Sigma Green Belt'],
+        awards: ['Supply Chain Excellence Award (2023)', 'Process Improvement Champion (2022)', 'Innovation Award (2021)']
       }
     }
   }
