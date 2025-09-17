@@ -709,3 +709,4 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
 };
 
 export default ResumePDF;
+
