@@ -22,6 +22,7 @@ interface TemplateData {
     dates: string;
     achievements: string[];
     description?: string; // Added for fallback
+    location?: string; // Added for location display
   }>;
   education: Array<{
     degree: string;
@@ -412,6 +413,9 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                            letterSpacing: '0.2px'
                         }}>
                           <b>{exp.company || 'Company Name'}</b>
+                          {exp.location && exp.location.trim() && (
+                            <span style={{ color: '#666666' }}> • {exp.location}</span>
+                          )}
                         </p>
                       </div>
                       <div className="font-bold text-right mt-2" style={{ 
@@ -520,7 +524,16 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                       {project.Description ? (
                         <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
                           <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
-                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{project.Description}</span>
+                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>
+                            {project.Description}
+                            {project.Link && project.Link.trim() && (
+                              <span style={{ color: '#0077b5', textDecoration: 'underline', marginLeft: '4px' }}>
+                                <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>
+                                  View Project
+                                </a>
+                              </span>
+                            )}
+                          </span>
                         </div>
                       ) : (
                         <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
@@ -634,6 +647,13 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                       color: '#000000'
                     }}>
                       <span style={{ fontWeight: 'bold' }}>{cert.certificateName || 'Certificate Name'}</span> - <span style={{ color: '#000000' }}>{cert.instituteName || 'Issuing Organization'}</span>
+                      {cert.link && cert.link.trim() && (
+                        <span style={{ marginLeft: '8px' }}>
+                          <a href={cert.link} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline', fontSize: '10px' }}>
+                            View Certificate
+                          </a>
+                        </span>
+                      )}
                     </div>
                   </div>
                   {cert.issueDate ? (
