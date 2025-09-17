@@ -4,6 +4,7 @@ import CleanMinimal from './CleanMinimal/CleanMinimal';
 import CreativeDesigner from './CreativeDesigner/CreativeDesigner';
 import ExecutiveClassic from './ExecutiveClassic/ExecutiveClassic';
 import BusinessProfessional from './BussinessProfessional/BusinessProfessional';
+import EliteModern from './EliteModern/EliteModern';
 
 interface TemplateData {
   personalInfo: {
@@ -32,6 +33,7 @@ interface TemplateData {
     institution: string;
     dates: string;
     details: string[];
+    location?: string;
   }>;
   projects?: Array<{
     Name: string;
@@ -107,6 +109,8 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({ templateId, data, c
         return <ExecutiveClassic data={data} color={color} visibleSections={visibleSections} />;
       case 'business-professional':
         return <BusinessProfessional data={data} color={color} visibleSections={visibleSections} />;
+      case 'elite-modern':
+        return <EliteModern data={data} color={color} visibleSections={visibleSections} />;
       default:
         return <ModernProfessional data={data} color={color} visibleSections={visibleSections} />;
     }

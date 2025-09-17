@@ -81,7 +81,7 @@ export interface TemplateData {
   }>;
 }
 
-export const cleanMinimalTemplateData: TemplateData = {
+export const eliteModernTemplateData: TemplateData = {
   personalInfo: {
     name: 'Nikhil Dundu',
     title: 'Supply Chain Analyst',

@@ -29,6 +29,7 @@ interface TemplateData {
     institution: string;
     dates: string;
     details: string[];
+    location?: string;
   }>;
   projects?: Array<{
     Name: string;
@@ -426,25 +427,20 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                         {exp.dates || 'Start Date - End Date'}
                       </div>
                     </div>
-                    <div className="space-y-0 ml-0 mt-0">
+                    <div className="ml-0 mt-0">
                       {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
-                        exp.achievements.map((achievement, idx) => (
-                          <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                            <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
-                            <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{achievement}</span>
-                          </div>
-                        ))
+                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#000000', fontWeight: '500', textAlign: 'justify' }}>
+                          {exp.achievements.join(' ')}
+                        </div>
                       ) : exp.description ? (
                         // Fallback to description if no achievements array
-                        <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                          <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
-                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{exp.description}</span>
+                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#000000', fontWeight: '500', textAlign: 'justify' }}>
+                          {exp.description}
                         </div>
                       ) : (
                         // Show placeholder when no content
-                        <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                          <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
-                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#666666', fontWeight: '500', fontStyle: 'italic' }}>Describe your key responsibilities and achievements...</span>
+                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
+                          Describe your key responsibilities and achievements...
                         </div>
                       )}
                     </div>
@@ -453,9 +449,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
               })
             ) : (
               // Show placeholder when no experience entries
-              <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
-                <span className="leading-tight" style={{ lineHeight: '1.2', color: '#666666', fontWeight: '500', fontStyle: 'italic' }}>Add your work experience here...</span>
+              <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
+                Add your work experience here...
               </div>
             )}
           </div>
@@ -522,23 +517,19 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                      </div>
                     <div className="space-y-0 ml-0 mt-0">
                       {project.Description ? (
-                        <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                          <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
-                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>
-                            {project.Description}
-                            {project.Link && project.Link.trim() && (
-                              <span style={{ color: '#0077b5', textDecoration: 'underline', marginLeft: '4px' }}>
-                                <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>
-                                  View Project
-                                </a>
-                              </span>
-                            )}
-                          </span>
+                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#000000', fontWeight: '500', textAlign: 'justify' }}>
+                          {project.Description}
+                          {project.Link && project.Link.trim() && (
+                            <span style={{ color: '#0077b5', textDecoration: 'underline', marginLeft: '4px' }}>
+                              <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>
+                                View Project
+                              </a>
+                            </span>
+                          )}
                         </div>
                       ) : (
-                        <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                          <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
-                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#666666', fontWeight: '500', fontStyle: 'italic' }}>Describe your project details...</span>
+                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
+                          Describe your project details...
                         </div>
                       )}
                     </div>
@@ -546,9 +537,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
               ))
             ) : (
               // Show placeholder when no projects
-              <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                <span className="mr-2" style={{ fontWeight: 'bold' }}>•</span>
-                <span className="leading-tight" style={{ lineHeight: '1.2', color: '#666666', fontWeight: '500', fontStyle: 'italic' }}>Add your projects here...</span>
+              <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
+                Add your projects here...
               </div>
             )}
           </div>
@@ -578,6 +568,9 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                       letterSpacing: '0.3px'
                     }}>
                       {edu.institution || 'Institution Name'}
+                      {edu.location && edu.location.trim() && (
+                        <span style={{ fontWeight: 'bold' }}> | {edu.location}</span>
+                      )}
                     </div>
                     <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#000000' }}>
                       {edu.degree || 'Degree/Program'}
@@ -603,7 +596,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                     color: '#666666',
                     fontStyle: 'italic'
                   }}>
-                    Institution Name
+                    Institution Name | Location
                   </div>
                   <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#666666', fontStyle: 'italic' }}>
                     Degree/Program
@@ -709,3 +702,4 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
 };
 
 export default ResumePDF;
+

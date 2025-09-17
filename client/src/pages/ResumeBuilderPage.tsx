@@ -2258,7 +2258,8 @@ const ResumeBuilderPage = () => {
                     degree: edu.degree,
                     institution: edu.institution,
                     dates: edu.year,
-                    details: safeProcessDescription(edu.description)
+                    details: safeProcessDescription(edu.description),
+                    location: edu.location
                   })) : [],
                   projects: visibleSections.has('projects') ? resumeData.projects.map(project => ({
                     Name: project.name,

@@ -84,13 +84,13 @@ interface TemplateData {
   }>;
 }
 
-interface CleanMinimalProps {
+interface EliteModernProps {
   data?: TemplateData;
   color?: string;
   visibleSections?: Set<string>;
 }
 
-const cleanMinimalTemplateData: TemplateData = {
+const eliteModernTemplateData: TemplateData = {
   personalInfo: {
     name: 'Nikhil Dundu',
     title: 'Supply Chain Analyst',
@@ -206,9 +206,9 @@ const cleanMinimalTemplateData: TemplateData = {
   }
 };
 
-const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }) => {
+const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections }) => {
   // Use the passed data prop if available, otherwise fall back to default data
-  const templateData = data || cleanMinimalTemplateData;
+  const templateData = data || eliteModernTemplateData;
   
   // Default visible sections if not provided
   const sections = visibleSections || new Set([
@@ -235,11 +235,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
               fontSize: '22px',
               fontWeight: 'bold',
               letterSpacing: '1px',
-              color: color || '#1f2937'
+              color: color || '#2c5282'
             }}>
               {templateData.personalInfo.name || 'Your Full Name'}
             </h1>
-            <div className="text-lg font-semibold mb-0" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
+            <div className="text-lg font-semibold mb-0" style={{ fontSize: '14px', fontWeight: '600', color: color || '#4a5568' }}>
               {templateData.personalInfo.title || 'Your Professional Title'}
             </div>
             <div className="text-sm" style={{ fontSize: '11px' }}>
@@ -249,10 +249,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
               {(templateData.personalInfo.phone || templateData.personalInfo.email) && ' | '}
               {templateData.personalInfo.email || 'your.email@example.com'}
               {templateData.personalInfo.linkedin && (
-                <> | <a href={templateData.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>LinkedIn</a></>
+                <> | <a href={templateData.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>LinkedIn</a></>
               )}
               {templateData.personalInfo.github && (
-                <> | <a href={templateData.personalInfo.github} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>GitHub</a></>
+                <> | <a href={templateData.personalInfo.github} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>GitHub</a></>
               )}
               {templateData.personalInfo.website && !templateData.personalInfo.linkedin && !templateData.personalInfo.github && (
                 <> | {templateData.personalInfo.website}</>
@@ -270,11 +270,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
             fontWeight: 'bold',
             letterSpacing: '0.5px',
             lineHeight: '2.5',
-            color: color || '#1f2937'
+            color: color || '#2c5282'
           }}>
             SUMMARY
           </h2>
-          <div className="w-full border-t-2 border-gray-800 -mt-2 mb-2"></div>
+          <div className="w-full border-t-2 border-blue-600 -mt-2 mb-2"></div>
           <div className="ml-0 mt-0 mb-0 p-0" >
             <div className="text-sm" style={{ 
               fontSize: '12px',
@@ -299,11 +299,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
             fontWeight: 'bold',
             letterSpacing: '0.5px',
               lineHeight: '2.5',
-            color: color || '#1f2937'
+            color: color || '#2c5282'
           }}>
             TECHNICAL SKILLS
           </h2>
-          <div className="w-full border-t-2 border-gray-800 -mt-2 mb-2"></div>
+          <div className="w-full border-t-2 border-blue-600 -mt-2 mb-2"></div>
           <div className="space-y-0">
             {templateData.skills?.technical && templateData.skills.technical !== null && templateData.skills.technical !== undefined ? (
               typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
@@ -323,7 +323,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                       lineHeight: '1.3',
                       color: '#000000'
                     }}>
-                      <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
+                      <span className="font-bold" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
                     </div>
                   );
                 }).filter(Boolean) // Remove null entries
@@ -341,7 +341,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                         lineHeight: '1.3',
                         color: '#000000'
                       }}>
-                        <span className="font-bold" style={{ fontWeight: 'bold' }}>{key.trim()}:</span> {value.trim()}
+                        <span className="font-bold" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>{key.trim()}:</span> {value.trim()}
                       </div>
                     );
                   } else {
@@ -391,11 +391,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
             fontWeight: 'bold',
             lineHeight: '2.5',  
             letterSpacing: '0.5px',
-            color: color || '#1f2937'
+            color: color || '#2c5282'
           }}>
             PROFESSIONAL EXPERIENCE
           </h2>
-          <div className="w-full border-t-2 border-gray-800 -mt-2 mb-2"></div>
+          <div className="w-full border-t-2 border-blue-600 -mt-2 mb-2"></div>
           <div className="-space-y-2">
             {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
               templateData.experience.map((exp, index) => {
@@ -407,7 +407,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                         <h3 className="font-bold" style={{ 
                           fontSize: '11px',
                           fontWeight: 'bold',
-                          letterSpacing: '0.3px'
+                          letterSpacing: '0.3px',
+                          color: color || '#2c5282'
                         }}>
                           {exp.title || 'Job Title'}
                         </h3>
@@ -425,7 +426,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                       <div className="font-bold text-right mt-2" style={{ 
                         fontSize: '11px',
                         fontWeight: 'bold',
-                        letterSpacing: '0.2px'
+                        letterSpacing: '0.2px',
+                        color: color || '#2c5282'
                       }}>
                         {exp.dates || 'Start Date - End Date'}
                       </div>
@@ -470,11 +472,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
             fontWeight: 'bold',
             letterSpacing: '0.5px',
             lineHeight: '2.5',  
-            color: color || '#1f2937'
+            color: color || '#2c5282'
           }}>
             PROJECTS
           </h2>
-          <div className="w-full border-t-2 border-gray-800 -mt-2 mb-2 mb-2"></div>
+          <div className="w-full border-t-2 border-blue-600 -mt-2 mb-2 mb-2"></div>
           <div className="-space-y-2 -mt-4">
             {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
               templateData.projects.map((project, index) => (
@@ -485,7 +487,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                            <h3 className="font-bold" style={{ 
                              fontSize: '11px',
                              fontWeight: 'bold',
-                             letterSpacing: '0.3px'
+                             letterSpacing: '0.3px',
+                             color: color || '#2c5282'
                            }}>
                              {project.Name || 'Project Name'}
                            </h3>
@@ -500,7 +503,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                                                {(project.Start_Date || project.End_Date) ? (
                             <div className="font-bold" style={{ 
                               fontSize: '11px',
-                              fontWeight: 'bold'
+                              fontWeight: 'bold',
+                              color: color || '#2c5282'
                             }}>
                               {project.Start_Date && project.End_Date 
                                 ? `${project.Start_Date} - ${project.End_Date}`
@@ -519,13 +523,13 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                           )}
                        </div>
                      </div>
-                    <div className="space-y-0 ml-0 mt-0">
+                    <div className="ml-0 mt-0">
                       {project.Description ? (
                         <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#000000', fontWeight: '500', textAlign: 'justify' }}>
                           {project.Description}
                           {project.Link && project.Link.trim() && (
-                            <span style={{ color: '#0077b5', textDecoration: 'underline', marginLeft: '4px' }}>
-                              <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>
+                            <span style={{ color: '#2c5282', textDecoration: 'underline', marginLeft: '4px' }}>
+                              <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>
                                 View Project
                               </a>
                             </span>
@@ -557,11 +561,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
             fontWeight: 'bold',
             lineHeight: '2.5',  
             letterSpacing: '0.5px',
-            color: color || '#1f2937'
+            color: color || '#2c5282'
           }}>
             EDUCATION
           </h2>
-          <div className="w-full border-t-2 border-gray-800 -mt-2 mb-2"></div>
+          <div className="w-full border-t-2 border-blue-600 -mt-2 mb-2"></div>
           <div className="space-y-0">
             {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
               templateData.education.map((edu, index) => (
@@ -570,7 +574,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                     <div className="font-bold" style={{ 
                       fontSize: '11px',
                       fontWeight: 'bold',
-                      letterSpacing: '0.3px'
+                      letterSpacing: '0.3px',
+                      color: color || '#2c5282'
                     }}>
                       {edu.institution || 'Institution Name'}
                       {edu.location && edu.location.trim() && (
@@ -584,7 +589,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                   <div className="font-bold" style={{ 
                     fontSize: '11px',
                     fontWeight: 'bold',
-                    letterSpacing: '0.2px'
+                    letterSpacing: '0.2px',
+                    color: color || '#2c5282'
                   }}>
                     {edu.dates || 'Graduation Year'}
                     </div>
@@ -630,11 +636,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
             fontWeight: 'bold',
             letterSpacing: '0.5px',
             lineHeight: '2.5',  
-            color: color || '#1f2937'
+            color: color || '#2c5282'
           }}>
             CERTIFICATIONS
           </h2>
-          <div className="w-full border-t-2 border-gray-800 -mt-2 mb-2"></div>
+          <div className="w-full border-t-2 border-blue-600 -mt-2 mb-2"></div>
           <div className="space-y-0">
             {Array.isArray(templateData.certifications) && templateData.certifications.length > 0 ? (
               templateData.certifications.map((cert, index) => (
@@ -645,10 +651,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                       letterSpacing: '0.2px',
                       color: '#000000'
                     }}>
-                      <span style={{ fontWeight: 'bold' }}>{cert.certificateName || 'Certificate Name'}</span> - <span style={{ color: '#000000' }}>{cert.instituteName || 'Issuing Organization'}</span>
+                      <span style={{ fontWeight: 'bold', color: color || '#2c5282' }}>{cert.certificateName || 'Certificate Name'}</span> - <span style={{ color: '#000000' }}>{cert.instituteName || 'Issuing Organization'}</span>
                       {cert.link && cert.link.trim() && (
                         <span style={{ marginLeft: '8px' }}>
-                          <a href={cert.link} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline', fontSize: '10px' }}>
+                          <a href={cert.link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline', fontSize: '10px' }}>
                             View Certificate
                           </a>
                         </span>
@@ -659,7 +665,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                     <div className="font-bold" style={{ 
                       fontSize: '11px',
                       fontWeight: 'bold',
-                      letterSpacing: '0.2px'
+                      letterSpacing: '0.2px',
+                      color: color || '#2c5282'
                     }}>
                       {cert.issueDate}
                     </div>
@@ -708,4 +715,3 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
 };
 
 export default ResumePDF;
-
