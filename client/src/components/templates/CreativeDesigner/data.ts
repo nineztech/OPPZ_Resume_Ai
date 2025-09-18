@@ -83,7 +83,7 @@ export interface TemplateData {
 
 export const cleanMinimalTemplateData: TemplateData = {
   personalInfo: {
-    name: 'Nikhil Dundu',
+    name: 'Nikhil Dund',
     title: 'Supply Chain Analyst',
     address: 'AZ USA',
     email: 'ndundu1804@gmail.com',

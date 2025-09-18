@@ -2252,7 +2252,9 @@ const ResumeBuilderPage = () => {
                     dates: exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || exp.endDate || '',
                     achievements: safeProcessDescription(exp.description),
                     description: exp.description, // Keep original description as fallback
-                    location: exp.location // Add location for templates that need it
+                    location: exp.location, // Add location for templates that need it
+                    startDate: exp.startDate, // Add individual start date for templates
+                    endDate: exp.endDate // Add individual end date for templates
                   })) : [],
                   education: visibleSections.has('education') ? resumeData.education.map(edu => ({
                     degree: edu.degree,
@@ -2469,7 +2471,9 @@ const ResumeBuilderPage = () => {
             dates: exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || exp.endDate || '',
             achievements: safeProcessDescription(exp.description),
             description: exp.description, // Keep original description as fallback
-            location: exp.location // Add location for templates that need it
+            location: exp.location, // Add location for templates that need it
+            startDate: exp.startDate, // Add individual start date for templates
+            endDate: exp.endDate // Add individual end date for templates
           })) : [],
           education: visibleSections.has('education') ? resumeData.education.map(edu => ({
             degree: edu.degree,

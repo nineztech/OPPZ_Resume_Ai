@@ -20,7 +20,7 @@ class StandardATSService:
     - Error-free output generation
     """
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o", temperature: float = 0.1, top_p: float = 0.8):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini", temperature: float = 0.1, top_p: float = 0.8):
         """
         Initialize the Standard ATS Service
         
@@ -1032,6 +1032,8 @@ class JDSpecificATSService:
             top_p: Controls diversity via nucleus sampling (0.0 = focused, 1.0 = diverse)
         """
         self.parser = OpenAIResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
+        self.client = self.parser.client
+        self.model_name = model_name
         self.model = self.parser.model
         self.temperature = temperature
         self.top_p = top_p
@@ -1588,6 +1590,92 @@ class JDSpecificATSService:
         
         logger.info("✅ JD-ATS schema compliance enforcement completed")
         return jd_ats_response
+
+    def _apply_dynamic_scoring(self, ats_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Apply dynamic scoring based on issues count to boost scores when issues are minimal
+        
+        Args:
+            ats_response: ATS analysis response dictionary
+            
+        Returns:
+            Updated ATS response with dynamic scoring applied
+        """
+        logger.info("🎯 Applying dynamic scoring based on issues count")
+        
+        # Count total issues across all categories
+        total_issues = 0
+        
+        # Count issues in detailed feedback sections
+        detailed_feedback = ats_response.get("detailed_feedback", {})
+        for category, feedback in detailed_feedback.items():
+            if isinstance(feedback, dict):
+                # Count issues in negatives, specific_issues, and suggestions
+                negatives = feedback.get("negatives", [])
+                specific_issues = feedback.get("specific_issues", [])
+                suggestions = feedback.get("suggestions", [])
+                
+                # Count non-empty issues
+                category_issues = len([item for item in negatives if item and item.strip()])
+                category_issues += len([item for item in specific_issues if item and item.strip()])
+                category_issues += len([item for item in suggestions if item and item.strip()])
+                
+                total_issues += category_issues
+        
+        # Count issues in weaknesses and recommendations
+        weaknesses = ats_response.get("weaknesses", [])
+        recommendations = ats_response.get("recommendations", [])
+        
+        total_issues += len([item for item in weaknesses if item and item.strip()])
+        total_issues += len([item for item in recommendations if item and item.strip()])
+        
+        # Determine bonus multiplier based on issues count
+        if total_issues == 0:
+            bonus_multiplier = 1.15
+            logger.info(f"🎯 No issues found - applying 1.15x bonus multiplier")
+        elif total_issues <= 2:
+            bonus_multiplier = 1.10
+            logger.info(f"🎯 {total_issues} issues found - applying 1.10x bonus multiplier")
+        elif total_issues <= 4:
+            bonus_multiplier = 1.05
+            logger.info(f"🎯 {total_issues} issues found - applying 1.05x bonus multiplier")
+        else:
+            bonus_multiplier = 1.0
+            logger.info(f"🎯 {total_issues} issues found - no bonus multiplier")
+        
+        # Apply bonus to category scores
+        category_scores = ats_response.get("category_scores", {})
+        updated_scores = {}
+        
+        for category, score in category_scores.items():
+            if isinstance(score, (int, float)) and score > 0:
+                # Apply bonus and ensure score is between 0-100
+                new_score = int(round(score * bonus_multiplier))
+                new_score = min(100, max(0, new_score))
+                updated_scores[category] = new_score
+                
+                if bonus_multiplier > 1.0:
+                    logger.info(f"🎯 {category}: {score} -> {new_score} (x{bonus_multiplier})")
+            else:
+                updated_scores[category] = score
+        
+        ats_response["category_scores"] = updated_scores
+        
+        # Recalculate overall score as weighted average
+        if updated_scores:
+            overall_score = int(round(sum(updated_scores.values()) / len(updated_scores)))
+            ats_response["overall_score"] = overall_score
+            logger.info(f"🎯 Overall score recalculated: {overall_score}")
+        
+        # Add dynamic scoring info to response
+        ats_response["dynamic_scoring"] = {
+            "total_issues_found": total_issues,
+            "bonus_multiplier_applied": bonus_multiplier,
+            "scoring_method": "dynamic_issue_based"
+        }
+        
+        logger.info(f"✅ Dynamic scoring applied successfully - {total_issues} issues, {bonus_multiplier}x multiplier")
+        return ats_response
 
     def _final_ats_validation(self, jd_ats_response: Dict[str, Any]) -> Dict[str, Any]:
         """
