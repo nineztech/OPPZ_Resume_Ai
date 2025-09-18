@@ -256,7 +256,7 @@ class ResumeImprovementService:
            - Ensure consistent formatting and structure
            - Add location information where missing
            - Include complete contact information
-           - Use standard date formats
+           - Use standard date formats: MUST be in "MMM YYYY" format (e.g., "Jan 2025", "Dec 2024") - convert all other formats like "2025-01", "01/2025", "January 2025", "2025" to this format
 
         7. MISSING SECTIONS - ADD DUMMY DATA:
            - If PROJECTS section is missing, add 2-3 realistic projects with:
@@ -446,6 +446,7 @@ class ResumeImprovementService:
         - For "FIX_REPETITION" suggestions: Replace ALL repeated words with alternatives as specified
         - For "FIX_FORMATTING" suggestions: Fix ONLY the formatting issues specifically mentioned
         - For "FIX_GRAMMAR" suggestions: Fix ONLY the grammar errors specifically mentioned
+        - For "FIX_DATE_FORMAT" suggestions: Convert ALL dates to "MMM YYYY" format (e.g., "Jan 2025", "Dec 2024") - convert dates like "2025-01" to "Jan 2025", "01/2025" to "Jan 2025", "January 2025" to "Jan 2025", "2025" to "Jan 2025"
         - CRITICAL: If no suggestion exists for a section, leave it completely unchanged
 
         Focus on making TRANSFORMATIVE improvements that directly address ATS scoring criteria while maintaining professional authenticity.
@@ -763,8 +764,126 @@ class ResumeImprovementService:
                         "styling": section.get("styling", {})
                     })
         
+        # Apply date format fixes to ensure all dates are in "MMM YYYY" format
+        frontend_format = self._fix_date_formats(frontend_format)
+        
         logger.info("Successfully converted resume to frontend format")
         return frontend_format
+    
+    def _fix_date_formats(self, resume_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Fix all date formats to ensure they are in "MMM YYYY" format (e.g., "Jan 2025", "Dec 2024")
+        
+        Args:
+            resume_data: Resume data dictionary
+            
+        Returns:
+            Resume data with corrected date formats
+        """
+        import re
+        from datetime import datetime
+        
+        # Month mapping for conversion
+        month_mapping = {
+            '01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr',
+            '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug',
+            '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec',
+            '1': 'Jan', '2': 'Feb', '3': 'Mar', '4': 'Apr',
+            '5': 'May', '6': 'Jun', '7': 'Jul', '8': 'Aug',
+            '9': 'Sep'
+        }
+        
+        full_month_mapping = {
+            'january': 'Jan', 'february': 'Feb', 'march': 'Mar', 'april': 'Apr',
+            'may': 'May', 'june': 'Jun', 'july': 'Jul', 'august': 'Aug',
+            'september': 'Sep', 'october': 'Oct', 'november': 'Nov', 'december': 'Dec'
+        }
+        
+        def convert_date_format(date_str: str) -> str:
+            """Convert various date formats to MMM YYYY format"""
+            if not date_str or not isinstance(date_str, str):
+                return date_str
+                
+            date_str = date_str.strip()
+            
+            # Already in correct format (MMM YYYY)
+            if re.match(r'^[A-Za-z]{3}\s+\d{4}$', date_str):
+                return date_str.title()
+            
+            # Format: YYYY-MM or YYYY/MM or YYYY.MM
+            match = re.match(r'^(\d{4})[-/.](\d{1,2})$', date_str)
+            if match:
+                year, month = match.groups()
+                month_abbr = month_mapping.get(month.zfill(2), month)
+                return f"{month_abbr} {year}"
+            
+            # Format: MM/YYYY or MM-YYYY or MM.YYYY
+            match = re.match(r'^(\d{1,2})[-/.](\d{4})$', date_str)
+            if match:
+                month, year = match.groups()
+                month_abbr = month_mapping.get(month.zfill(2), month)
+                return f"{month_abbr} {year}"
+            
+            # Format: Full month name YYYY (e.g., "January 2025")
+            match = re.match(r'^([A-Za-z]+)\s+(\d{4})$', date_str)
+            if match:
+                month_name, year = match.groups()
+                month_abbr = full_month_mapping.get(month_name.lower(), month_name)
+                return f"{month_abbr} {year}"
+            
+            # Format: Just year (e.g., "2025")
+            if re.match(r'^\d{4}$', date_str):
+                return f"Jan {date_str}"
+            
+            # If no pattern matches, return as is
+            return date_str
+        
+        # Fix dates in experience section
+        if 'experience' in resume_data and isinstance(resume_data['experience'], list):
+            for exp in resume_data['experience']:
+                if isinstance(exp, dict):
+                    if 'startDate' in exp:
+                        exp['startDate'] = convert_date_format(exp['startDate'])
+                    if 'endDate' in exp:
+                        exp['endDate'] = convert_date_format(exp['endDate'])
+        
+        # Fix dates in education section
+        if 'education' in resume_data and isinstance(resume_data['education'], list):
+            for edu in resume_data['education']:
+                if isinstance(edu, dict):
+                    if 'year' in edu:
+                        edu['year'] = convert_date_format(edu['year'])
+        
+        # Fix dates in projects section
+        if 'projects' in resume_data and isinstance(resume_data['projects'], list):
+            for project in resume_data['projects']:
+                if isinstance(project, dict):
+                    if 'startDate' in project:
+                        project['startDate'] = convert_date_format(project['startDate'])
+                    if 'endDate' in project:
+                        project['endDate'] = convert_date_format(project['endDate'])
+        
+        # Fix dates in certifications section
+        if 'certifications' in resume_data and isinstance(resume_data['certifications'], list):
+            for cert in resume_data['certifications']:
+                if isinstance(cert, dict):
+                    if 'issueDate' in cert:
+                        cert['issueDate'] = convert_date_format(cert['issueDate'])
+        
+        # Fix dates in custom sections
+        if 'customSections' in resume_data and isinstance(resume_data['customSections'], list):
+            for section in resume_data['customSections']:
+                if isinstance(section, dict) and 'content' in section:
+                    content = section['content']
+                    if isinstance(content, dict) and 'items' in content:
+                        for item in content['items']:
+                            if isinstance(item, dict):
+                                if 'startDate' in item:
+                                    item['startDate'] = convert_date_format(item['startDate'])
+                                if 'endDate' in item:
+                                    item['endDate'] = convert_date_format(item['endDate'])
+        
+        return resume_data
     
     def get_improvement_summary(self, original_resume: Dict[str, Any], improved_resume: Dict[str, Any]) -> Dict[str, Any]:
         """
