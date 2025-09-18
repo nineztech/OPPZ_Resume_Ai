@@ -65,6 +65,9 @@ class OpenAIConfig:
     - "PROFESSIONAL EXPERIENCE:" = Experience
     
     **Skills Section Handling:**
+    - PRESERVE ORIGINAL SKILL CATEGORIES as they appear in the resume
+    - Extract skills in their original categorized format (e.g., "Languages", "Frameworks", "Tools", "Cloud", etc.)
+    - Do NOT recategorize or merge skill categories - keep them exactly as they appear
     - Technical skills (Python, Java, etc.) = Skills
     - Communication languages (English, Spanish, etc.) = Languages
     - Distinguish between technical and communication languages
@@ -89,7 +92,7 @@ class OpenAIConfig:
     Parse the following resume text into structured JSON with these sections:
     Basic Details: Full Name (MUST include first AND last name, handle split names), Professional Title, Phone, Email, Location, Website, GitHub, LinkedIn
     summary: Extract ALL content from Profile/Summary sections (this is crucial - do not leave empty if Profile content exists)
-    Skills: Technical skills only (programming languages, software, tools, frameworks)
+    Skills: Technical skills in their original categorized format (preserve categories like "Languages", "Frameworks", "Tools", "Cloud", etc. as they appear in the resume)
     Education: Institution, Degree, Start Date, End Date, Grade, Description (include relevant coursework), Location 
     Experience: Only actual employment (Company, Role, Start Date, End Date, Description, Location)
     Projects: Academic projects, course work, research, thesis (Name, Tech Stack, Start Date, End Date, Description, Link)

@@ -516,25 +516,22 @@ class OpenAIResumeParser:
         # Ensure skills is an object (categorized format)
         if "skills" in parsed_data:
             if isinstance(parsed_data["skills"], list):
-                # Convert flat array to categorized object
+                # Convert flat array to categorized object only if no categories exist
+                # This preserves the original categorization from the AI response
                 skills_obj = {}
                 for skill in parsed_data["skills"]:
                     if isinstance(skill, str) and skill.strip():
-                        # Categorize skill (simplified categorization)
+                        # If skills come as a flat list, put them in "Other Tools" as fallback
+                        # This should rarely happen with the updated prompt
                         category = "Other Tools"
-                        if any(tech in skill.lower() for tech in ["python", "java", "javascript", "sql"]):
-                            category = "Languages"
-                        elif any(tech in skill.lower() for tech in ["tableau", "power bi", "excel"]):
-                            category = "Analytics"
-                        elif any(tech in skill.lower() for tech in ["aws", "azure", "gcp"]):
-                            category = "Cloud"
-                        
                         if category not in skills_obj:
                             skills_obj[category] = []
                         skills_obj[category].append(skill)
                 parsed_data["skills"] = skills_obj
             elif not isinstance(parsed_data["skills"], dict):
+                # If skills is not a dict or list, initialize as empty dict
                 parsed_data["skills"] = {}
+            # If skills is already a dict (categorized), keep it as is - this preserves original categories
         
         logger.info("Frontend format mapping completed")
         return parsed_data
