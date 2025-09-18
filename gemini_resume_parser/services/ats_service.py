@@ -20,7 +20,7 @@ class StandardATSService:
     - Error-free output generation
     """
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o", temperature: float = 0.1, top_p: float = 0.8):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini", temperature: float = 0.1, top_p: float = 0.8):
         """
         Initialize the Standard ATS Service
         
@@ -210,12 +210,16 @@ class StandardATSService:
         - FIRST analyze the PARSED DATA to understand what information is actually present
         - THEN analyze the raw text for formatting, grammar, and presentation issues
         - ONLY suggest missing elements that are genuinely absent from the parsed data
+        - PROJECT DESCRIPTION LENGTH ENFORCEMENT: For ALL projects, count the number of statements (sentences ending with period, exclamation, or question mark) - if less than 6 statements, you MUST suggest expansion to exactly 6-7 statements - if more than 7 statements, you MUST suggest reduction to exactly 6-7 statements - this is MANDATORY and CRITICAL
         - DO NOT suggest missing elements that already exist in the parsed data
         - Cross-reference parsed data with raw text to identify discrepancies
         - SECTION-SPECIFIC ANALYSIS: Each section should ONLY contain suggestions relevant to that specific section
         - NO CROSS-SECTION SUGGESTIONS: Do not include suggestions from other sections in any section's feedback
         - IF SECTION IS COMPLETE: If a section has all required elements and is well-formatted, return empty arrays for negatives, suggestions, and specific_issues
         - SECTION ISOLATION: Each detailed_feedback section must be completely independent and self-contained
+        - MANDATORY PROJECT DESCRIPTION LENGTH: ALL project descriptions MUST be exactly 6-7 statements - NO EXCEPTIONS - if less than 6 statements, MUST expand to 6-7 statements - if more than 7 statements, MUST condense to 6-7 statements - this is a CRITICAL REQUIREMENT
+        - PROJECT DESCRIPTION ENFORCEMENT: For EVERY project with less than 6 statements, you MUST generate exactly 6-7 statements in your suggestions - COUNT the statements and ensure they are exactly 6-7 - this is MANDATORY
+        - PROJECT DESCRIPTION COUNTING: When analyzing projects, count each statement (each sentence ending with period, exclamation, or question mark) - if count is less than 6, you MUST suggest expansion to exactly 6-7 statements - if count is more than 7, you MUST suggest reduction to exactly 6-7 statements
         
         SECTION DETECTION REQUIREMENTS:
         - Check PARSED DATA for projects: Look for "projects", "project", "portfolio" keys with actual content
@@ -234,7 +238,7 @@ class StandardATSService:
         - SKILLS SECTION: Only suggest skills-related improvements (missing skills, categorization, formatting)
         - EXPERIENCE SECTION: Only suggest experience-related improvements (job descriptions, achievements, formatting)
         - EDUCATION SECTION: Only suggest education-related improvements (degrees, institutions, dates, formatting)
-        - PROJECTS SECTION: Only suggest project-related improvements (descriptions, tech stacks, outcomes, formatting)
+        - PROJECTS SECTION: Only suggest project-related improvements (descriptions, tech stacks, outcomes, formatting) - MANDATORY: ensure all project descriptions are exactly 6-7 statements
         - CERTIFICATIONS SECTION: Only suggest certification-related improvements (missing certs, organizations, dates)
         - SUMMARY SECTION: Only suggest summary-related improvements (content, length, keywords, formatting)
         - FORMATTING SECTION: Only suggest formatting-related improvements (layout, ATS compatibility, structure)
@@ -297,10 +301,10 @@ class StandardATSService:
                     "title": "Section Organization",
                     "description": "Comprehensive analysis of essential resume sections and proper organization",
                     "positives": ["Quote specific well-organized sections", "Reference specific section headers that work well", "Identify ALL properly structured sections"],
-                    "negatives": ["Quote specific section organization problems", "Identify specific missing or poorly labeled sections", "List ALL missing essential sections: Projects, Certifications, Languages, References", "Document ALL incomplete sections with missing information", "Identify ALL sections with poor organization or labeling", "List ALL certifications missing issuing organizations", "Document ALL certifications without proper organizational attribution"],
-                    "suggestions": ["Provide exact section reorganization needed", "Specify which sections need better labeling", "ADD: Projects Section - Create comprehensive projects section with tech stacks, challenges, outcomes", "ADD: Certifications Section - Add relevant certifications with issuing organizations and dates", "ADD: Languages Section - Include language proficiencies if applicable", "IMPROVE: Section Headers - Standardize all section headers for ATS compatibility", "ADD_ORGANIZATION: Certifications Section - For EVERY certificate missing organization, infer and add appropriate issuing organization"],
-                    "specific_issues": ["List exact section organization problems found", "Identify specific missing sections with exact locations", "Document ALL instances of poor section structure", "Identify ALL sections with insufficient content", "List ALL certifications that need issuing organizations added"],
-                    "improvement_examples": ["Show before/after section organization examples", "Provide specific section additions needed", "Demonstrate proper section structure and content organization", "Show examples of certificates with proper organizational attribution"]
+                    "negatives": ["Quote specific section organization problems", "Identify specific missing or poorly labeled sections", "List ALL missing essential sections: Projects, Certifications, Languages, References", "Document ALL incomplete sections with missing information", "Identify ALL sections with poor organization or labeling", "List ALL certifications missing issuing organizations", "Document ALL certifications without proper organizational attribution", "List ALL project descriptions that are too short (less than 6 statements) or too long (more than 7 statements)", "Document ALL project descriptions that need length optimization for professional presentation"],
+                    "suggestions": ["Provide exact section reorganization needed", "Specify which sections need better labeling", "ADD: Projects Section - Create comprehensive projects section with tech stacks, challenges, outcomes", "ADD: Certifications Section - Add relevant certifications with issuing organizations and dates", "ADD: Languages Section - Include language proficiencies if applicable", "IMPROVE: Section Headers - Standardize all section headers for ATS compatibility", "ADD_ORGANIZATION: Certifications Section - For EVERY certificate missing organization, infer and add appropriate issuing organization", "OPTIMIZE_PROJECT_DESCRIPTION: For project descriptions with less than 6 statements - MANDATORY: Expand to EXACTLY 6-7 statements with detailed tech stack, challenges, solutions, outcomes, and impact metrics - COUNT statements and ensure exactly 6-7", "OPTIMIZE_PROJECT_DESCRIPTION: For project descriptions with more than 7 statements - MANDATORY: Condense to EXACTLY 6-7 statements with precise, professional language focusing on key achievements and technical details - COUNT statements and ensure exactly 6-7"],
+                    "specific_issues": ["List exact section organization problems found", "Identify specific missing sections with exact locations", "Document ALL instances of poor section structure", "Identify ALL sections with insufficient content", "List ALL certifications that need issuing organizations added", "List ALL project descriptions with incorrect length (too short: less than 6 statements, too long: more than 7 statements) with exact project names and current statement counts"],
+                    "improvement_examples": ["Show before/after section organization examples", "Provide specific section additions needed", "Demonstrate proper section structure and content organization", "Show examples of certificates with proper organizational attribution", "Show before/after project description length examples: 'Current: [2 statements] → Optimized: [6-7 statements with tech stack, challenges, solutions, outcomes]'", "Show before/after project description length examples: 'Current: [10 statements] → Optimized: [6-7 concise, professional statements focusing on key achievements]'"]
                 }},
                 "achievements_impact_metrics": {{
                     "score": <exact_score_based_on_criteria_above>,
@@ -392,10 +396,10 @@ class StandardATSService:
                 "If 5 repetition issues found, list ALL 5 repetition fixes in recommendations",
                 "If 3 sections missing dates, list ALL 3 sections with missing dates in recommendations", 
                 "If multiple description length issues, list ALL description optimization needs in recommendations",
-                "If project descriptions are too short, include 'OPTIMIZE_DESCRIPTION: Expand project descriptions' in recommendations",
+                "If project descriptions are too short (less than 6 statements), include 'OPTIMIZE_PROJECT_LENGTH: Expand project descriptions to 6-7 professional statements with tech stack, challenges, solutions, outcomes, and impact metrics' in recommendations",
+                "If project descriptions are too long (more than 7 statements), include 'OPTIMIZE_PROJECT_LENGTH: Condense project descriptions to 6-7 concise, professional statements focusing on key achievements and technical details' in recommendations",
                 "If experience descriptions are too short, include 'OPTIMIZE_DESCRIPTION: Expand experience descriptions' in recommendations", 
                 "If summary description is too short, include 'OPTIMIZE_DESCRIPTION: Expand summary description' in recommendations",
-                "If project descriptions are too long, include 'OPTIMIZE_DESCRIPTION: Compress project descriptions' in recommendations",
                 "If experience descriptions are too long, include 'OPTIMIZE_DESCRIPTION: Compress experience descriptions' in recommendations",
                 "If summary description is too long, include 'OPTIMIZE_DESCRIPTION: Compress summary description' in recommendations",
                 "If skills are unstructured, include skills restructuring in recommendations",
@@ -448,7 +452,7 @@ class StandardATSService:
         - EXPERIENCE SECTION: Check for missing company names, job titles, dates, locations, quantified achievements, action verbs, industry keywords, technical details, team sizes, project scopes, business impact, description length (too short/long)
         - EDUCATION SECTION: Check for missing institution names, degrees, graduation years, GPAs, locations, relevant coursework, academic achievements, honors
         - SKILLS SECTION: Check for missing technical skills, soft skills, tools, frameworks, programming languages, certifications, proficiency levels, industry-specific competencies, unstructured skills text that needs proper formatting
-        - PROJECTS SECTION: Check for missing project names, descriptions, tech stacks, dates, links, challenges solved, outcomes achieved, team collaboration details, description length (too short/long)
+        - PROJECTS SECTION: Check for missing project names, descriptions, tech stacks, dates, links, challenges solved, outcomes achieved, team collaboration details, description length (too short/long), project description length validation (MANDATORY: exactly 6-7 statements required - count each statement and ensure exactly 6-7)
         - CERTIFICATIONS SECTION: Check for missing certificate names, issuing organizations, dates, expiration dates, credential IDs, skill validation, infer organizations from certificate names
         - LANGUAGES SECTION: Check for missing language proficiency levels, certifications, relevant language skills for the role
         - REFERENCES SECTION: Check for missing reference contact information, professional relationships, permission to contact
@@ -467,7 +471,7 @@ class StandardATSService:
         - EDUCATION SECTION: Check for missing institution names, degrees, graduation years, GPAs, locations
         - CONTACT SECTION: Check for missing phone, email, LinkedIn, location, professional title
         - SKILLS SECTION: Check for missing technical skills, soft skills, skill categorization
-        - PROJECTS SECTION: Check for missing project names, descriptions, tech stacks, dates, links
+        - PROJECTS SECTION: Check for missing project names, descriptions, tech stacks, dates, links, project description length validation (MANDATORY: exactly 6-7 statements required - count each statement and ensure exactly 6-7)
         - CERTIFICATIONS SECTION: Check for missing certificate names, issuing organizations, dates
         - SUMMARY SECTION: Check for missing professional summary or objective
         - LANGUAGES SECTION: Check for missing language proficiency levels
@@ -480,6 +484,7 @@ class StandardATSService:
         - KEYWORD FORMAT: "ADD_KEYWORDS: [Section] - Missing terms: [exact keyword list] - Integration: 'Naturally integrate these terms: [specific placement instructions for each keyword]'"
         - EXPERIENCE FORMAT: "IMPROVE_EXPERIENCE: [Section] - Current: '[exact bullet point]' - Replace with: '[power verb] + [specific action] + [quantified result] + [business impact] + [relevant keywords]'"
         - PROJECT FORMAT: "ENHANCE_PROJECT: [Section] - Current: '[exact description]' - Replace with: '[detailed project with tech stack, challenges solved, quantified outcomes, and industry keywords]'"
+        - PROJECT LENGTH FORMAT: "OPTIMIZE_PROJECT_LENGTH: [Project Name] - Current: '[X statements]' - Issue: '[too short: less than 6 statements / too long: more than 7 statements]' - Replace with: '[6-7 professional statements with tech stack, challenges, solutions, outcomes, and impact metrics]'"
         - CONTACT FORMAT: "FIX_CONTACT: [Section] - Issue: '[exact issue]' - Solution: '[complete contact format with all required elements]'"
         - SUMMARY FORMAT: "REWRITE_SUMMARY: [Section] - Current: '[exact text]' - Replace with: '[3-4 line professional summary with years of experience, key skills, achievements, and industry keywords]'"
         - MISSING SECTION FORMAT: "ADD_SECTION: [Section Name] - Missing: [section description] - Add: '[complete section content with all required elements]'"
@@ -1213,6 +1218,7 @@ class JDSpecificATSService:
         - FIRST analyze the PARSED DATA to understand what information is actually present
         - THEN analyze the raw text for formatting, grammar, and presentation issues
         - ONLY suggest missing elements that are genuinely absent from the parsed data
+        - PROJECT DESCRIPTION LENGTH ENFORCEMENT: For ALL projects, count the number of statements (sentences ending with period, exclamation, or question mark) - if less than 6 statements, you MUST suggest expansion to exactly 6-7 statements - if more than 7 statements, you MUST suggest reduction to exactly 6-7 statements - this is MANDATORY and CRITICAL
         - DO NOT suggest missing elements that already exist in the parsed data
         - Cross-reference parsed data with job requirements to identify gaps
         - Focus on job-relevant missing elements and improvements
@@ -1220,6 +1226,9 @@ class JDSpecificATSService:
         - NO CROSS-SECTION SUGGESTIONS: Do not include suggestions from other sections in any section's feedback
         - IF SECTION IS COMPLETE: If a section has all required elements and is well-formatted, return empty arrays for negatives, suggestions, and specific_issues
         - SECTION ISOLATION: Each detailed_feedback section must be completely independent and self-contained
+        - MANDATORY PROJECT DESCRIPTION LENGTH: ALL project descriptions MUST be exactly 6-7 statements - NO EXCEPTIONS - if less than 6 statements, MUST expand to 6-7 statements - if more than 7 statements, MUST condense to 6-7 statements - this is a CRITICAL REQUIREMENT
+        - PROJECT DESCRIPTION ENFORCEMENT: For EVERY project with less than 6 statements, you MUST generate exactly 6-7 statements in your suggestions - COUNT the statements and ensure they are exactly 6-7 - this is MANDATORY
+        - PROJECT DESCRIPTION COUNTING: When analyzing projects, count each statement (each sentence ending with period, exclamation, or question mark) - if count is less than 6, you MUST suggest expansion to exactly 6-7 statements - if count is more than 7, you MUST suggest reduction to exactly 6-7 statements
         
         SECTION DETECTION REQUIREMENTS:
         - Check PARSED DATA for projects: Look for "projects", "project", "portfolio" keys with actual content
@@ -1407,7 +1416,7 @@ class JDSpecificATSService:
         - EDUCATION SECTION: Check for missing institution names, degrees, graduation years, GPAs, locations, job-relevant qualifications
         - CONTACT SECTION: Check for missing phone, email, LinkedIn, location, professional title
         - SKILLS SECTION: Check for missing technical skills, soft skills, job-required competencies, skill categorization
-        - PROJECTS SECTION: Check for missing project names, descriptions, tech stacks, dates, links, job-relevant technologies
+        - PROJECTS SECTION: Check for missing project names, descriptions, tech stacks, dates, links, job-relevant technologies, project description length validation (MANDATORY: exactly 6-7 statements required - count each statement and ensure exactly 6-7)
         - CERTIFICATIONS SECTION: Check for missing certificate names, issuing organizations, dates, job-relevant certifications
         - SUMMARY SECTION: Check for missing professional summary or objective that aligns with job requirements
         - LANGUAGES SECTION: Check for missing language proficiency levels, job-relevant languages
