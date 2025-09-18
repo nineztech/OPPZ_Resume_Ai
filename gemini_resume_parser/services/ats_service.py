@@ -20,7 +20,7 @@ class StandardATSService:
     - Error-free output generation
     """
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o", temperature: float = 0.1, top_p: float = 0.8):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini", temperature: float = 0.1, top_p: float = 0.8):
         """
         Initialize the Standard ATS Service
         
