@@ -961,6 +961,64 @@ class StandardATSService:
         logger.info(f"✅ Dynamic scoring applied successfully - {total_issues} issues, {bonus_multiplier}x multiplier")
         return ats_response
 
+    def _extract_tech_stack_from_description(self, description: str) -> str:
+        """
+        Extract tech stack from project description using AI analysis
+        
+        Args:
+            description: Project description text
+            
+        Returns:
+            Comma-separated string of technologies found
+        """
+        if not description or not description.strip():
+            return ""
+        
+        try:
+            prompt = f"""
+            Analyze the following project description and extract all technologies, frameworks, programming languages, tools, and platforms mentioned.
+            
+            PROJECT DESCRIPTION:
+            {description}
+            
+            Return ONLY a comma-separated list of technologies found. Do not include explanations or additional text.
+            Examples of what to extract:
+            - Programming languages: Python, JavaScript, Java, C++, etc.
+            - Frameworks: React, Angular, Django, Spring, etc.
+            - Databases: MySQL, MongoDB, PostgreSQL, etc.
+            - Cloud platforms: AWS, Azure, GCP, etc.
+            - Tools: Docker, Kubernetes, Git, Jenkins, etc.
+            - Libraries: NumPy, Pandas, Express.js, etc.
+            
+            If no technologies are found, return an empty string.
+            """
+            
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                top_p=0.8,
+                max_tokens=200
+            )
+            
+            tech_stack = response.choices[0].message.content.strip()
+            
+            # Clean up the response
+            tech_stack = tech_stack.replace('"', '').replace("'", "").strip()
+            
+            # Remove any non-technology words and clean up
+            tech_terms = []
+            for term in tech_stack.split(','):
+                term = term.strip()
+                if term and len(term) > 1 and not term.lower() in ['and', 'or', 'with', 'using', 'built', 'developed', 'created']:
+                    tech_terms.append(term)
+            
+            return ', '.join(tech_terms) if tech_terms else ""
+            
+        except Exception as e:
+            logger.warning(f"Failed to extract tech stack from description: {e}")
+            return ""
+
     def _add_improvement_potential(self, ats_response: Dict[str, Any]) -> Dict[str, Any]:
         """
         Add improvement potential analysis to help users understand score improvement possibilities
@@ -1420,6 +1478,7 @@ class JDSpecificATSService:
         - CONTACT SECTION: Check for missing phone, email, LinkedIn, location, professional title
         - SKILLS SECTION: Check for missing technical skills, soft skills, job-required competencies, skill categorization
         - PROJECTS SECTION: Check for missing project names, descriptions, tech stacks, dates, links, job-relevant technologies, project description length validation (MANDATORY: exactly 6-7 statements required - count each statement and ensure exactly 6-7)
+        - TECH STACK EXTRACTION: For projects with missing or empty tech stacks, analyze the project description to extract relevant technologies, frameworks, programming languages, and tools mentioned
         - CERTIFICATIONS SECTION: Check for missing certificate names, issuing organizations, dates, job-relevant certifications
         - SUMMARY SECTION: Check for missing professional summary or objective that aligns with job requirements
         - LANGUAGES SECTION: Check for missing language proficiency levels, job-relevant languages

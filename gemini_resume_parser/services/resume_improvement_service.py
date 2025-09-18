@@ -703,9 +703,22 @@ class ResumeImprovementService:
             for i, project in enumerate(improved_resume["projects"]):
                 if isinstance(project, dict):
                     # Convert tech stack to string if it's an array
-                    tech_stack = project.get("tech_stack", project.get("technologies", ""))
+                    tech_stack = project.get("tech_stack", project.get("technologies", project.get("techStack", "")))
                     if isinstance(tech_stack, list):
                         tech_stack = ", ".join(tech_stack)
+                    
+                    # If tech stack is empty, try to extract from description
+                    if not tech_stack or tech_stack.strip() == "":
+                        description = project.get("description", "")
+                        if description:
+                            tech_stack = self._extract_tech_stack_from_description(description)
+                    
+                    # If still empty, generate tech stack based on project name and description
+                    if not tech_stack or tech_stack.strip() == "":
+                        project_name = project.get("name", "")
+                        description = project.get("description", "")
+                        if project_name or description:
+                            tech_stack = self._generate_tech_stack_for_project(project_name, description, frontend_format.get("skills"))
                     
                     # Ensure project dates are present - add dummy dates if missing
                     start_date = project.get("start_date", project.get("startDate", ""))
@@ -724,16 +737,82 @@ class ResumeImprovementService:
                         "description": project.get("description", ""),
                         "link": project.get("link", "")
                     })
+        elif "projects" in original_resume and isinstance(original_resume["projects"], list):
+            # Fallback to original projects if no improved projects
+            for i, project in enumerate(original_resume["projects"]):
+                if isinstance(project, dict):
+                    # Convert tech stack to string if it's an array
+                    tech_stack = project.get("tech_stack", project.get("technologies", project.get("techStack", "")))
+                    if isinstance(tech_stack, list):
+                        tech_stack = ", ".join(tech_stack)
+                    
+                    # If tech stack is empty, try to extract from description
+                    if not tech_stack or tech_stack.strip() == "":
+                        description = project.get("description", "")
+                        if description:
+                            tech_stack = self._extract_tech_stack_from_description(description)
+                    
+                    # If still empty, generate tech stack based on project name and description
+                    if not tech_stack or tech_stack.strip() == "":
+                        project_name = project.get("name", "")
+                        description = project.get("description", "")
+                        if project_name or description:
+                            tech_stack = self._generate_tech_stack_for_project(project_name, description, frontend_format.get("skills"))
+                    
+                    frontend_format["projects"].append({
+                        "id": str(uuid.uuid4()),
+                        "name": project.get("name", ""),
+                        "techStack": tech_stack,
+                        "startDate": project.get("start_date", project.get("startDate", "")),
+                        "endDate": project.get("end_date", project.get("endDate", "")),
+                        "description": project.get("description", ""),
+                        "link": project.get("link", "")
+                    })
         
         # Map certifications with IDs
         if "certifications" in improved_resume and isinstance(improved_resume["certifications"], list):
             for i, cert in enumerate(improved_resume["certifications"]):
                 if isinstance(cert, dict):
+                    issue_date = cert.get("issueDate", cert.get("startDate", cert.get("start_date", "")))
+                    
+                    # If issue date is missing, generate a dummy date (6-24 months ago)
+                    if not issue_date or issue_date.strip() == "":
+                        import random
+                        from datetime import datetime, timedelta
+                        
+                        # Generate a random date between 6-24 months ago
+                        months_ago = random.randint(6, 24)
+                        dummy_date = datetime.now() - timedelta(days=months_ago * 30)
+                        issue_date = dummy_date.strftime("%b %Y")
+                    
                     frontend_format["certifications"].append({
                         "id": str(uuid.uuid4()),
                         "certificateName": cert.get("certificateName", cert.get("certificate_name", cert.get("name", ""))),
                         "link": cert.get("link", ""),
-                        "issueDate": cert.get("issueDate", cert.get("startDate", cert.get("start_date", ""))),
+                        "issueDate": issue_date,
+                        "instituteName": cert.get("instituteName", cert.get("institute_name", cert.get("issuer", "")))
+                    })
+        elif "certifications" in original_resume and isinstance(original_resume["certifications"], list):
+            # Fallback to original certifications if no improved certifications
+            for i, cert in enumerate(original_resume["certifications"]):
+                if isinstance(cert, dict):
+                    issue_date = cert.get("issueDate", cert.get("startDate", cert.get("start_date", "")))
+                    
+                    # If issue date is missing, generate a dummy date (6-24 months ago)
+                    if not issue_date or issue_date.strip() == "":
+                        import random
+                        from datetime import datetime, timedelta
+                        
+                        # Generate a random date between 6-24 months ago
+                        months_ago = random.randint(6, 24)
+                        dummy_date = datetime.now() - timedelta(days=months_ago * 30)
+                        issue_date = dummy_date.strftime("%b %Y")
+                    
+                    frontend_format["certifications"].append({
+                        "id": str(uuid.uuid4()),
+                        "certificateName": cert.get("certificateName", cert.get("certificate_name", cert.get("name", ""))),
+                        "link": cert.get("link", ""),
+                        "issueDate": issue_date,
                         "instituteName": cert.get("instituteName", cert.get("institute_name", cert.get("issuer", "")))
                     })
         
@@ -884,6 +963,138 @@ class ResumeImprovementService:
                                     item['endDate'] = convert_date_format(item['endDate'])
         
         return resume_data
+
+    def _extract_tech_stack_from_description(self, description: str) -> str:
+        """
+        Extract tech stack from project description using AI analysis
+        
+        Args:
+            description: Project description text
+            
+        Returns:
+            Comma-separated string of technologies found
+        """
+        if not description or not description.strip():
+            return ""
+        
+        try:
+            prompt = f"""
+            Analyze the following project description and extract all technologies, frameworks, programming languages, tools, and platforms mentioned.
+            
+            PROJECT DESCRIPTION:
+            {description}
+            
+            Return ONLY a comma-separated list of technologies found. Do not include explanations or additional text.
+            Examples of what to extract:
+            - Programming languages: Python, JavaScript, Java, C++, etc.
+            - Frameworks: React, Angular, Django, Spring, etc.
+            - Databases: MySQL, MongoDB, PostgreSQL, etc.
+            - Cloud platforms: AWS, Azure, GCP, etc.
+            - Tools: Docker, Kubernetes, Git, Jenkins, etc.
+            - Libraries: NumPy, Pandas, Express.js, etc.
+            
+            If no technologies are found, return an empty string.
+            """
+            
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                top_p=0.8,
+                max_tokens=200
+            )
+            
+            tech_stack = response.choices[0].message.content.strip()
+            
+            # Clean up the response
+            tech_stack = tech_stack.replace('"', '').replace("'", "").strip()
+            
+            # Remove any non-technology words and clean up
+            tech_terms = []
+            for term in tech_stack.split(','):
+                term = term.strip()
+                if term and len(term) > 1 and not term.lower() in ['and', 'or', 'with', 'using', 'built', 'developed', 'created']:
+                    tech_terms.append(term)
+            
+            return ', '.join(tech_terms) if tech_terms else ""
+            
+        except Exception as e:
+            logger.warning(f"Failed to extract tech stack from description: {e}")
+            return ""
+
+    def _generate_tech_stack_for_project(self, project_name: str, description: str, skills: Any = None) -> str:
+        """
+        Generate appropriate tech stack for a project based on name, description, and existing skills
+        
+        Args:
+            project_name: Name of the project
+            description: Project description
+            skills: Existing skills from resume (optional)
+            
+        Returns:
+            Comma-separated string of suggested technologies
+        """
+        try:
+            # Extract skills from the skills object if provided
+            skill_list = []
+            if skills:
+                if isinstance(skills, dict):
+                    for category, skill_array in skills.items():
+                        if isinstance(skill_array, list):
+                            skill_list.extend(skill_array)
+                elif isinstance(skills, list):
+                    skill_list = skills
+            
+            skills_text = ", ".join(skill_list) if skill_list else "No specific skills mentioned"
+            
+            prompt = f"""
+            Based on the project name, description, and available skills, suggest an appropriate tech stack.
+            
+            PROJECT NAME: {project_name}
+            PROJECT DESCRIPTION: {description}
+            AVAILABLE SKILLS: {skills_text}
+            
+            Return ONLY a comma-separated list of 3-6 relevant technologies that would be appropriate for this project.
+            Choose technologies that:
+            1. Match the project description and requirements
+            2. Are commonly used together
+            3. Are relevant to the project type
+            4. Include both frontend and backend technologies if applicable
+            
+            Examples:
+            - Web app: "React, Node.js, MongoDB, Express.js, AWS"
+            - Data science: "Python, Pandas, NumPy, Jupyter, Scikit-learn"
+            - Mobile app: "React Native, JavaScript, Firebase, Redux"
+            - Backend API: "Python, Django, PostgreSQL, Docker, AWS"
+            
+            If no clear technologies can be determined, return an empty string.
+            """
+            
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                top_p=0.8,
+                max_tokens=150
+            )
+            
+            tech_stack = response.choices[0].message.content.strip()
+            
+            # Clean up the response
+            tech_stack = tech_stack.replace('"', '').replace("'", "").strip()
+            
+            # Remove any non-technology words and clean up
+            tech_terms = []
+            for term in tech_stack.split(','):
+                term = term.strip()
+                if term and len(term) > 1 and not term.lower() in ['and', 'or', 'with', 'using', 'built', 'developed', 'created']:
+                    tech_terms.append(term)
+            
+            return ', '.join(tech_terms) if tech_terms else ""
+            
+        except Exception as e:
+            logger.warning(f"Failed to generate tech stack for project: {e}")
+            return ""
     
     def get_improvement_summary(self, original_resume: Dict[str, Any], improved_resume: Dict[str, Any]) -> Dict[str, Any]:
         """

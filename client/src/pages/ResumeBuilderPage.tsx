@@ -43,6 +43,44 @@ import AddCustomSectionModal from '@/components/modals/AddCustomSectionModal';
 import { generatePDF, downloadPDF } from '@/services/pdfService';
 import { generateWord, downloadWord } from '@/services/wordService';
 
+// Helper function to extract tech stack from project description
+const extractTechStackFromDescription = (description: string): string => {
+  if (!description || typeof description !== "string") return "";
+  
+  // Common technology patterns to look for
+  const techPatterns = [
+    // Programming Languages
+    /\b(JavaScript|TypeScript|Python|Java|C\+\+|C#|PHP|Ruby|Go|Rust|Swift|Kotlin|Scala|R|MATLAB|Perl)\b/gi,
+    // Frontend Frameworks
+    /\b(React|Angular|Vue|Vue\.js|Svelte|Ember|Backbone|jQuery|Bootstrap|Tailwind|TailwindCSS)\b/gi,
+    // Backend Frameworks
+    /\b(Express|Node\.js|NodeJS|Django|Flask|Spring|Laravel|Rails|ASP\.NET|FastAPI|NestJS)\b/gi,
+    // Databases
+    /\b(MySQL|PostgreSQL|MongoDB|Redis|Cassandra|DynamoDB|SQLite|MariaDB|SQL Server|Elasticsearch|Oracle)\b/gi,
+    // Cloud Platforms
+    /\b(AWS|Azure|GCP|Google Cloud|Docker|Kubernetes|Heroku|Vercel|Netlify|Firebase)\b/gi,
+    // Tools & Libraries
+    /\b(Git|GitHub|GitLab|Bitbucket|Jenkins|Docker|Kubernetes|Webpack|Babel|NPM|Yarn|Maven|Gradle)\b/gi,
+    // Testing
+    /\b(Jest|Cypress|Selenium|JUnit|Mocha|Jasmine|Pytest|RSpec)\b/gi,
+    // Other Technologies
+    /\b(HTML|CSS|SASS|SCSS|LESS|REST|GraphQL|SOAP|JSON|XML|OAuth|JWT)\b/gi
+  ];
+  
+  const foundTechs = new Set<string>();
+  
+  techPatterns.forEach(pattern => {
+    const matches = description.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        foundTechs.add(match.trim());
+      });
+    }
+  });
+  
+  return Array.from(foundTechs).join(', ');
+};
+
 // Helper function to safely process description text
 // const safeProcessDescription = (description: any): string[] => {
 //   // Handle null, undefined, or non-string values
@@ -531,22 +569,44 @@ const ResumeBuilderPage = () => {
         },
         languages: location.state.improvedResumeData.languages || [],
         activities: location.state.improvedResumeData.activities || [],
-        projects: (location.state.improvedResumeData.projects || []).map((project: any) => ({
-          id: project.id || `project-${Date.now()}-${Math.random()}`,
-          name: project.Name || project.name || '',
-          techStack: project['Tech Stack'] || project.techStack || '',
-          startDate: project['Start Date'] || project.startDate || '',
-          endDate: project['End Date'] || project.endDate || '',
-          description: project.Description || project.description || '',
-          link: project.Link || project.link || ''
-        })),
-        certifications: (location.state.improvedResumeData.certifications || []).map((cert: any) => ({
-          id: cert.id || `cert-${Date.now()}-${Math.random()}`,
-          certificateName: cert.certificateName || cert.CertificateName || '',
-          link: cert.link || cert.Link || '',
-          issueDate: cert.issueDate || cert.startDate || cert['Start Date'] || cert['Issue Date'] || '',
-          instituteName: cert.instituteName || cert.InstituteName || cert.institueName || ''
-        })),
+        projects: (location.state.improvedResumeData.projects || []).map((project: any) => {
+          let techStack = project['Tech Stack'] || project.techStack || '';
+          
+          // If tech stack is empty, try to extract from description
+          if (!techStack || techStack.trim() === '') {
+            const description = project.Description || project.description || '';
+            techStack = extractTechStackFromDescription(description);
+          }
+          
+          return {
+            id: project.id || `project-${Date.now()}-${Math.random()}`,
+            name: project.Name || project.name || '',
+            techStack: techStack,
+            startDate: project['Start Date'] || project.startDate || '',
+            endDate: project['End Date'] || project.endDate || '',
+            description: project.Description || project.description || '',
+            link: project.Link || project.link || ''
+          };
+        }),
+        certifications: (location.state.improvedResumeData.certifications || []).map((cert: any) => {
+          let issueDate = cert.issueDate || cert.startDate || cert['Start Date'] || cert['Issue Date'] || '';
+          
+          // If issue date is missing, generate a dummy date (6-24 months ago)
+          if (!issueDate || issueDate.trim() === '') {
+            const monthsAgo = Math.floor(Math.random() * 19) + 6; // 6-24 months ago
+            const date = new Date();
+            date.setMonth(date.getMonth() - monthsAgo);
+            issueDate = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          }
+          
+          return {
+            id: cert.id || `cert-${Date.now()}-${Math.random()}`,
+            certificateName: cert.certificateName || cert.CertificateName || '',
+            link: cert.link || cert.Link || '',
+            issueDate: issueDate,
+            instituteName: cert.instituteName || cert.InstituteName || cert.institueName || ''
+          };
+        }),
         references: location.state.improvedResumeData.references || [],
         customSections: location.state.improvedResumeData.customSections || []
       };
@@ -641,22 +701,44 @@ const ResumeBuilderPage = () => {
         skills: extractedData.skills || [],
         languages: extractedData.languages || [],
         activities: extractedData.activities || [],
-        projects: (Array.isArray(extractedData.projects) ? extractedData.projects : []).map((project: any) => ({
-          id: project.id || `project-${Date.now()}-${Math.random()}`,
-          name: project.Name || project.name || project.title || project.projectName || '',
-          techStack: project['Tech Stack'] || project.techStack || project.technologies || project.tech || '',
-          startDate: project['Start Date'] || project.startDate || project.start || '',
-          endDate: project['End Date'] || project.endDate || project.end || '',
-          description: project.Description || project.description || project.summary || '',
-          link: project.Link || project.link || project.url || project.github || ''
-        })),
-        certifications: (extractedData.certifications || []).map((cert: any) => ({
-          id: cert.id || `cert-${Date.now()}-${Math.random()}`,
-          certificateName: cert.certificateName || cert.CertificateName || cert.name || '',
-          link: cert.link || cert.Link || '',
-          issueDate: cert.issueDate || cert.startDate || cert['Start Date'] || cert['Issue Date'] || '',
-          instituteName: cert.instituteName || cert.InstituteName || cert.institueName || cert.issuer || ''
-        })),
+        projects: (Array.isArray(extractedData.projects) ? extractedData.projects : []).map((project: any) => {
+          let techStack = project['Tech Stack'] || project.techStack || project.technologies || project.tech || '';
+          
+          // If tech stack is empty, try to extract from description
+          if (!techStack || techStack.trim() === '') {
+            const description = project.Description || project.description || project.summary || '';
+            techStack = extractTechStackFromDescription(description);
+          }
+          
+          return {
+            id: project.id || `project-${Date.now()}-${Math.random()}`,
+            name: project.Name || project.name || project.title || project.projectName || '',
+            techStack: techStack,
+            startDate: project['Start Date'] || project.startDate || project.start || '',
+            endDate: project['End Date'] || project.endDate || project.end || '',
+            description: project.Description || project.description || project.summary || '',
+            link: project.Link || project.link || project.url || project.github || ''
+          };
+        }),
+        certifications: (extractedData.certifications || []).map((cert: any) => {
+          let issueDate = cert.issueDate || cert.startDate || cert['Start Date'] || cert['Issue Date'] || '';
+          
+          // If issue date is missing, generate a dummy date (6-24 months ago)
+          if (!issueDate || issueDate.trim() === '') {
+            const monthsAgo = Math.floor(Math.random() * 19) + 6; // 6-24 months ago
+            const date = new Date();
+            date.setMonth(date.getMonth() - monthsAgo);
+            issueDate = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          }
+          
+          return {
+            id: cert.id || `cert-${Date.now()}-${Math.random()}`,
+            certificateName: cert.certificateName || cert.CertificateName || cert.name || '',
+            link: cert.link || cert.Link || '',
+            issueDate: issueDate,
+            instituteName: cert.instituteName || cert.InstituteName || cert.institueName || cert.issuer || ''
+          };
+        }),
         references: extractedData.references || [],
         customSections: extractedData.customSections || []
       };
@@ -1054,15 +1136,25 @@ const ResumeBuilderPage = () => {
               console.log('Processing AI suggested projects');
               
               // Convert AI project suggestions to resume format
-              const aiProjects = rewrites.projects.map((aiProject: any) => ({
-                id: `project-${Date.now()}-${Math.random()}`,
-                name: aiProject.name || 'Untitled Project',
-                techStack: '', // AI doesn't provide tech stack in this format
-                startDate: aiProject.startDate || '',
-                endDate: aiProject.endDate || '',
-                description: aiProject.rewrite || aiProject.existing || '',
-                link: ''
-              }));
+              const aiProjects = rewrites.projects.map((aiProject: any) => {
+                const description = aiProject.rewrite || aiProject.existing || '';
+                let techStack = '';
+                
+                // Try to extract tech stack from description
+                if (description) {
+                  techStack = extractTechStackFromDescription(description);
+                }
+                
+                return {
+                  id: `project-${Date.now()}-${Math.random()}`,
+                  name: aiProject.name || 'Untitled Project',
+                  techStack: techStack,
+                  startDate: aiProject.startDate || '',
+                  endDate: aiProject.endDate || '',
+                  description: description,
+                  link: ''
+                };
+              });
               
               // If no existing projects, use AI projects
               if (processedData.projects.length === 0) {
@@ -1464,22 +1556,44 @@ const ResumeBuilderPage = () => {
         skills: defaultData.skills?.technical || [],
         languages: defaultData.additionalInfo?.languages || [],
         activities: [],
-        projects: defaultData.projects?.map((project: any) => ({
-          id: Date.now().toString() + Math.random(),
-          name: project.Name || '',
-          techStack: project.Tech_Stack || '',
-          startDate: project.Start_Date || '',
-          endDate: project.End_Date || '',
-          description: project.Description || '',
-          link: project.Link || ''
-        })) || [],
-        certifications: defaultData.certifications?.map((cert: any) => ({
-          id: Date.now().toString() + Math.random(),
-          certificateName: cert.certificateName || '',
-          instituteName: cert.instituteName || '',
-          issueDate: cert.issueDate || cert.startDate || '',
-          link: cert.link || ''
-        })) || [],
+        projects: defaultData.projects?.map((project: any) => {
+          let techStack = project.Tech_Stack || '';
+          
+          // If tech stack is empty, try to extract from description
+          if (!techStack || techStack.trim() === '') {
+            const description = project.Description || '';
+            techStack = extractTechStackFromDescription(description);
+          }
+          
+          return {
+            id: Date.now().toString() + Math.random(),
+            name: project.Name || '',
+            techStack: techStack,
+            startDate: project.Start_Date || '',
+            endDate: project.End_Date || '',
+            description: project.Description || '',
+            link: project.Link || ''
+          };
+        }) || [],
+        certifications: defaultData.certifications?.map((cert: any) => {
+          let issueDate = cert.issueDate || cert.startDate || '';
+          
+          // If issue date is missing, generate a dummy date (6-24 months ago)
+          if (!issueDate || issueDate.trim() === '') {
+            const monthsAgo = Math.floor(Math.random() * 19) + 6; // 6-24 months ago
+            const date = new Date();
+            date.setMonth(date.getMonth() - monthsAgo);
+            issueDate = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          }
+          
+          return {
+            id: Date.now().toString() + Math.random(),
+            certificateName: cert.certificateName || '',
+            instituteName: cert.instituteName || '',
+            issueDate: issueDate,
+            link: cert.link || ''
+          };
+        }) || [],
         references: [],
         customSections: []
       });
