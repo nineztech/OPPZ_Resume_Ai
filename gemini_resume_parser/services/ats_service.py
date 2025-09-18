@@ -20,7 +20,7 @@ class StandardATSService:
     - Error-free output generation
     """
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini", temperature: float = 0.1, top_p: float = 0.8):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o", temperature: float = 0.1, top_p: float = 0.8):
         """
         Initialize the Standard ATS Service
         
@@ -212,6 +212,10 @@ class StandardATSService:
         - ONLY suggest missing elements that are genuinely absent from the parsed data
         - DO NOT suggest missing elements that already exist in the parsed data
         - Cross-reference parsed data with raw text to identify discrepancies
+        - SECTION-SPECIFIC ANALYSIS: Each section should ONLY contain suggestions relevant to that specific section
+        - NO CROSS-SECTION SUGGESTIONS: Do not include suggestions from other sections in any section's feedback
+        - IF SECTION IS COMPLETE: If a section has all required elements and is well-formatted, return empty arrays for negatives, suggestions, and specific_issues
+        - SECTION ISOLATION: Each detailed_feedback section must be completely independent and self-contained
         
         SECTION DETECTION REQUIREMENTS:
         - Check PARSED DATA for projects: Look for "projects", "project", "portfolio" keys with actual content
@@ -224,6 +228,19 @@ class StandardATSService:
         - If sections exist in parsed data but are empty/incomplete, suggest improvements rather than additions
         - If sections are completely missing from parsed data, then suggest additions
         - Include specific feedback about missing sections in weaknesses and recommendations
+        
+        SECTION-SPECIFIC FEEDBACK RULES:
+        - CONTACT SECTION: Only suggest contact-related improvements (phone, email, LinkedIn, location, formatting)
+        - SKILLS SECTION: Only suggest skills-related improvements (missing skills, categorization, formatting)
+        - EXPERIENCE SECTION: Only suggest experience-related improvements (job descriptions, achievements, formatting)
+        - EDUCATION SECTION: Only suggest education-related improvements (degrees, institutions, dates, formatting)
+        - PROJECTS SECTION: Only suggest project-related improvements (descriptions, tech stacks, outcomes, formatting)
+        - CERTIFICATIONS SECTION: Only suggest certification-related improvements (missing certs, organizations, dates)
+        - SUMMARY SECTION: Only suggest summary-related improvements (content, length, keywords, formatting)
+        - FORMATTING SECTION: Only suggest formatting-related improvements (layout, ATS compatibility, structure)
+        - GRAMMAR SECTION: Only suggest grammar and spelling improvements
+        - REPETITION SECTION: Only suggest repetition-related improvements within the same section
+        - If a section is complete and well-formatted, return empty arrays for that section's feedback
         
         REQUIRED OUTPUT SCHEMA (MUST INCLUDE ALL SECTIONS):
         {{
@@ -256,22 +273,24 @@ class StandardATSService:
                 "skills_match_alignment": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Skills Match & Alignment",
-                    "description": "Comprehensive analysis of technical and soft skills alignment with industry requirements",
+                    "description": "Comprehensive analysis of technical and soft skills alignment with industry requirements - ONLY skills-related feedback",
                     "positives": ["Quote specific skills listed in resume that align well", "Reference specific sections with strong skill presentation", "Identify ALL well-presented technical and soft skills"],
                     "negatives": ["Quote specific skills that are poorly presented", "Identify specific missing skills with exact locations", "List ALL missing technical skills, programming languages, frameworks, tools", "Identify ALL missing soft skills, leadership qualities, communication abilities", "Document ALL skills that need better categorization or presentation"],
                     "suggestions": ["Provide exact skill additions needed", "Specify which sections need skill reorganization", "ADD_SKILLS: Technical Skills - Add: [list 12-15 specific technical skills with proficiency levels]", "ADD_SKILLS: Soft Skills - Add: [list 8-10 specific soft skills]", "ADD_SKILLS: Tools & Technologies - Add: [list 10-12 specific tools and technologies]", "ADD_SKILLS: Certifications - Add: [list 5-8 relevant certifications]"],
                     "specific_issues": ["List exact skill formatting problems found", "Identify specific missing competencies with locations", "Document ALL instances of incomplete skill presentation", "Identify ALL sections with insufficient skill coverage"],
-                    "improvement_examples": ["Show before/after skill presentation examples", "Provide specific skill additions needed in each section", "Demonstrate proper skill categorization and proficiency levels"]
+                    "improvement_examples": ["Show before/after skill presentation examples", "Provide specific skill additions needed in each section", "Demonstrate proper skill categorization and proficiency levels"],
+                    "section_isolation_note": "ONLY include skills-related suggestions. Do not suggest contact, experience, education, or other section improvements in this skills section feedback."
                 }},
                 "formatting_layout_ats": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Formatting & Layout ATS",
-                    "description": "Analysis of clean, simple formatting and ATS compatibility",
+                    "description": "Analysis of clean, simple formatting and ATS compatibility - ONLY formatting-related feedback",
                     "positives": ["Quote specific formatting elements that work well", "Reference specific sections with good ATS compatibility"],
                     "negatives": ["Quote specific formatting problems found", "Identify specific sections with ATS parsing issues"],
                     "suggestions": ["Provide exact formatting fixes needed", "Specify which sections need layout improvements"],
                     "specific_issues": ["List exact formatting problems found in resume", "Identify specific ATS compatibility issues with locations"],
-                    "improvement_examples": ["Show before/after formatting examples", "Provide specific layout changes needed in each section"]
+                    "improvement_examples": ["Show before/after formatting examples", "Provide specific layout changes needed in each section"],
+                    "section_isolation_note": "ONLY include formatting-related suggestions. Do not suggest content, skills, experience, or other section improvements in this formatting section feedback."
                 }},
                 "section_organization": {{
                     "score": <exact_score_based_on_criteria_above>,
@@ -296,12 +315,13 @@ class StandardATSService:
                 "grammar_spelling_quality": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Grammar & Spelling Quality",
-                    "description": "Analysis of error-free professional language and quality",
+                    "description": "Analysis of error-free professional language and quality - ONLY grammar and spelling feedback",
                     "positives": ["Quote specific well-written sentences from resume", "Reference specific sections with excellent grammar"],
                     "negatives": ["Quote specific grammatical errors found", "Identify specific spelling mistakes with exact locations"],
                     "suggestions": ["Provide exact corrections for specific errors", "Specify which sentences need rewriting"],
                     "specific_issues": ["List exact grammatical errors found in resume", "Identify specific spelling mistakes with locations"],
-                    "improvement_examples": ["Show before/after grammar correction examples", "Provide specific sentence improvements needed"]
+                    "improvement_examples": ["Show before/after grammar correction examples", "Provide specific sentence improvements needed"],
+                    "section_isolation_note": "ONLY include grammar and spelling suggestions. Do not suggest content, formatting, skills, or other section improvements in this grammar section feedback."
                 }},
                 "header_consistency": {{
                     "score": <exact_score_based_on_criteria_above>,
@@ -326,22 +346,24 @@ class StandardATSService:
                 "repetition_avoidance": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Repetition Avoidance",
-                    "description": "Comprehensive analysis of ALL repeated language and unnecessary repetitions within same section, allowing legitimate repetition across different sections",
+                    "description": "Comprehensive analysis of ALL repeated language and unnecessary repetitions within same section, allowing legitimate repetition across different sections - ONLY repetition-related feedback",
                     "positives": ["Quote specific varied language examples from resume", "Reference specific sections with good word variety", "Note acceptable cross-section repetition where appropriate"],
                     "negatives": ["Quote EVERY specific repetitive phrase found within same section", "Identify ALL sections with excessive internal repetition", "List ALL overused action verbs with exact counts", "Document ALL redundant phrases with specific locations", "Count EVERY instance of repeated words within same section"],
                     "suggestions": ["Provide exact word replacements needed for EVERY repeated word within same section", "Specify ALL sections that need internal language variety", "FIX_REPETITION: [Section] - Word '[repeated word]' used [X] times - Replace instances: [Instance 1: word → alternative1], [Instance 2: word → alternative2], [Instance 3: word → alternative3]", "Note that cross-section repetition is acceptable when contextually appropriate"],
                     "specific_issues": ["List EVERY exact repetitive phrase found within same section in resume with counts", "Identify ALL specific sections needing internal word variety with exact locations", "Document ALL instances of overused action verbs", "Count ALL repeated words and phrases within each section"],
-                    "improvement_examples": ["Show before/after repetition examples for EVERY repeated word within same section", "Provide specific word variety improvements needed for ALL repetitions within sections", "Demonstrate alternative word choices for EVERY overused term"]
+                    "improvement_examples": ["Show before/after repetition examples for EVERY repeated word within same section", "Provide specific word variety improvements needed for ALL repetitions within sections", "Demonstrate alternative word choices for EVERY overused term"],
+                    "section_isolation_note": "ONLY include repetition-related suggestions. Do not suggest content, formatting, skills, or other section improvements in this repetition section feedback."
                 }},
                 "contact_information_completeness": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Contact Information Completeness",
-                    "description": "Comprehensive analysis of contact details presence, formatting, and professional presentation",
+                    "description": "Comprehensive analysis of contact details presence, formatting, and professional presentation - ONLY contact-related feedback",
                     "positives": ["Quote specific well-formatted contact information from resume", "Reference specific contact elements that are complete", "Identify ALL properly formatted contact details"],
                     "negatives": ["Quote specific missing contact information", "Identify specific contact formatting problems", "List ALL missing contact elements: phone number, email address, LinkedIn profile, location, professional title", "Document ALL contact formatting issues: inconsistent formatting, missing elements, poor presentation"],
                     "suggestions": ["Provide exact contact additions needed", "Specify which contact elements need formatting fixes", "FIX_CONTACT: Add missing phone number with proper formatting", "FIX_CONTACT: Add professional email address", "FIX_CONTACT: Add LinkedIn profile URL", "FIX_CONTACT: Add current location", "FIX_CONTACT: Add professional title"],
                     "specific_issues": ["List exact missing contact information found", "Identify specific contact formatting problems with locations", "Document ALL instances of incomplete contact information", "Identify ALL contact formatting inconsistencies"],
-                    "improvement_examples": ["Show before/after contact information examples", "Provide specific contact improvements needed", "Demonstrate proper contact formatting and completeness"]
+                    "improvement_examples": ["Show before/after contact information examples", "Provide specific contact improvements needed", "Demonstrate proper contact formatting and completeness"],
+                    "section_isolation_note": "ONLY include contact-related suggestions. Do not suggest skills, experience, education, or other section improvements in this contact section feedback."
                 }},
                 "resume_length_optimization": {{
                     "score": <exact_score_based_on_criteria_above>,
@@ -1194,6 +1216,10 @@ class JDSpecificATSService:
         - DO NOT suggest missing elements that already exist in the parsed data
         - Cross-reference parsed data with job requirements to identify gaps
         - Focus on job-relevant missing elements and improvements
+        - SECTION-SPECIFIC ANALYSIS: Each section should ONLY contain suggestions relevant to that specific section
+        - NO CROSS-SECTION SUGGESTIONS: Do not include suggestions from other sections in any section's feedback
+        - IF SECTION IS COMPLETE: If a section has all required elements and is well-formatted, return empty arrays for negatives, suggestions, and specific_issues
+        - SECTION ISOLATION: Each detailed_feedback section must be completely independent and self-contained
         
         SECTION DETECTION REQUIREMENTS:
         - Check PARSED DATA for projects: Look for "projects", "project", "portfolio" keys with actual content
@@ -1206,6 +1232,18 @@ class JDSpecificATSService:
         - If sections exist in parsed data but are empty/incomplete, suggest job-relevant improvements rather than additions
         - If sections are completely missing from parsed data, then suggest job-relevant additions
         - Include specific feedback about missing sections in weaknesses and recommendations
+        
+        SECTION-SPECIFIC FEEDBACK RULES:
+        - KEYWORD MATCH SECTION: Only suggest keyword-related improvements (missing job keywords, skill terms, industry terminology)
+        - EXPERIENCE RELEVANCE SECTION: Only suggest experience-related improvements (job relevance, role alignment, industry experience)
+        - EDUCATION SECTION: Only suggest education-related improvements (degrees, certifications, qualifications for the role)
+        - ACHIEVEMENTS SECTION: Only suggest achievement-related improvements (quantified results, job-relevant impact metrics)
+        - FORMATTING SECTION: Only suggest formatting-related improvements (layout, ATS compatibility, structure)
+        - SOFT SKILLS SECTION: Only suggest soft skills-related improvements (leadership, communication, teamwork for the role)
+        - REPETITION SECTION: Only suggest repetition-related improvements within the same section
+        - CONTACT SECTION: Only suggest contact-related improvements (phone, email, LinkedIn, location, formatting)
+        - LENGTH SECTION: Only suggest length-related improvements (content density, section optimization)
+        - If a section is complete and well-formatted, return empty arrays for that section's feedback
         
         REQUIRED OUTPUT SCHEMA (MUST INCLUDE ALL SECTIONS):
         {{
@@ -1228,22 +1266,24 @@ class JDSpecificATSService:
                 "keyword_match_skills": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Keyword Match & Skills",
-                    "description": "Specific analysis of keyword alignment with job requirements",
+                    "description": "Specific analysis of keyword alignment with job requirements - ONLY keyword and skills-related feedback",
                     "positives": ["Quote specific job-relevant keywords found in resume", "Reference specific sections with strong job keyword alignment"],
                     "negatives": ["Quote specific missing job keywords", "Identify specific sections lacking required job terms"],
                     "suggestions": ["Provide exact job keyword additions needed", "Specify which sections need job-specific terminology"],
                     "specific_issues": ["List exact missing job keywords found", "Identify specific sections needing job terms with locations"],
-                    "improvement_examples": ["Show before/after job keyword examples", "Provide specific job-relevant additions needed"]
+                    "improvement_examples": ["Show before/after job keyword examples", "Provide specific job-relevant additions needed"],
+                    "section_isolation_note": "ONLY include keyword and skills-related suggestions. Do not suggest contact, formatting, experience, or other section improvements in this keyword section feedback."
                 }},
                 "experience_relevance": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Experience Relevance",
-                    "description": "Specific analysis of experience alignment with job requirements",
+                    "description": "Specific analysis of experience alignment with job requirements - ONLY experience-related feedback",
                     "positives": ["Quote specific job-relevant experience from resume", "Reference specific roles that align with job requirements"],
                     "negatives": ["Quote specific experience that lacks job relevance", "Identify specific roles missing job-required experience"],
                     "suggestions": ["Provide exact experience additions needed", "Specify which roles need job-relevant enhancements"],
                     "specific_issues": ["List exact experience gaps found", "Identify specific roles needing job alignment with locations"],
-                    "improvement_examples": ["Show before/after experience examples", "Provide specific job-relevant experience improvements needed"]
+                    "improvement_examples": ["Show before/after experience examples", "Provide specific job-relevant experience improvements needed"],
+                    "section_isolation_note": "ONLY include experience-related suggestions. Do not suggest contact, formatting, skills, or other section improvements in this experience section feedback."
                 }},
                 "education_certifications": {{
                     "score": <exact_score_based_on_criteria_above>,
@@ -1298,12 +1338,13 @@ class JDSpecificATSService:
                 "contact_information_completeness": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Contact Information Completeness",
-                    "description": "Specific analysis of contact details presence, formatting, and professional presentation",
+                    "description": "Specific analysis of contact details presence, formatting, and professional presentation - ONLY contact-related feedback",
                     "positives": ["Quote specific well-formatted contact information from resume", "Reference specific contact elements that are complete"],
                     "negatives": ["Quote specific missing contact information", "Identify specific contact formatting problems"],
                     "suggestions": ["Provide exact contact additions needed", "Specify which contact elements need formatting fixes"],
                     "specific_issues": ["List exact missing contact information found", "Identify specific contact formatting problems with locations"],
-                    "improvement_examples": ["Show before/after contact information examples", "Provide specific contact improvements needed"]
+                    "improvement_examples": ["Show before/after contact information examples", "Provide specific contact improvements needed"],
+                    "section_isolation_note": "ONLY include contact-related suggestions. Do not suggest skills, experience, education, or other section improvements in this contact section feedback."
                 }},
                 "resume_length_optimization": {{
                     "score": <exact_score_based_on_criteria_above>,
