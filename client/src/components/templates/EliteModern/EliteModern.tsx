@@ -447,11 +447,26 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
                           </div>
                         ))
                       ) : exp.description ? (
-                        // Fallback to description if no achievements array
-                        <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                          <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
-                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{exp.description}</span>
-                        </div>
+                        // Handle newline-separated descriptions first (from backend parsing)
+                        (() => {
+                          const newlineParts = exp.description.split(/\n+/g).map(s => s.trim()).filter(Boolean);
+                          if (newlineParts.length > 1) {
+                            return newlineParts.map((sentence, idx) => (
+                              <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                                <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
+                                <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{sentence}</span>
+                              </div>
+                            ));
+                          }
+                          
+                          // Fallback to single description for legacy format
+                          return (
+                            <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                              <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
+                              <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{exp.description}</span>
+                            </div>
+                          );
+                        })()
                       ) : (
                         // Show placeholder when no content
                         <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
@@ -537,25 +552,48 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
                      </div>
                     <div className="space-y-0 ml-0 mt-0">
                       {project.Description ? (
-                        project.Description.split('. ').map((sentence, idx) => {
-                          if (!sentence.trim()) return null;
-                          const isLast = idx === project.Description.split('. ').length - 1;
-                          return (
-                            <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                              <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
-                              <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>
-                                {sentence.trim()}{isLast ? '' : '.'}
-                                {isLast && project.Link && project.Link.trim() && (
-                                  <span style={{ color: '#2c5282', textDecoration: 'underline', marginLeft: '2px' }}>
-                                    <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>
-                                      Link
-                                    </a>
-                                  </span>
-                                )}
-                              </span>
-                            </div>
-                          );
-                        })
+                        (() => {
+                          // Handle newline-separated descriptions first (from backend parsing)
+                          const newlineParts = project.Description.split(/\n+/g).map(s => s.trim()).filter(Boolean);
+                          if (newlineParts.length > 1) {
+                            return newlineParts.map((sentence, idx) => (
+                              <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                                <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
+                                <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>
+                                  {sentence}
+                                  {idx === newlineParts.length - 1 && project.Link && project.Link.trim() && (
+                                    <span style={{ color: '#2c5282', textDecoration: 'underline', marginLeft: '2px' }}>
+                                      <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>
+                                        Link
+                                      </a>
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            ));
+                          }
+                          
+                          // Fallback to sentence splitting for legacy descriptions
+                          return project.Description.split('. ').map((sentence, idx) => {
+                            if (!sentence.trim()) return null;
+                            const isLast = idx === project.Description.split('. ').length - 1;
+                            return (
+                              <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                                <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
+                                <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>
+                                  {sentence.trim()}{isLast ? '' : '.'}
+                                  {isLast && project.Link && project.Link.trim() && (
+                                    <span style={{ color: '#2c5282', textDecoration: 'underline', marginLeft: '2px' }}>
+                                      <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>
+                                        Link
+                                      </a>
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            );
+                          });
+                        })()
                       ) : (
                         <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
                           <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>

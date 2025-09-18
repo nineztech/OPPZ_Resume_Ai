@@ -289,6 +289,7 @@ class AISuggestionServiceOptimized:
         - NEVER use "NA", "N/A", "None", "Null", "Unknown", or similar placeholder values - use empty strings or appropriate defaults instead.
         - NO REPETITIONS: Avoid repeating the Same Words or Sentences in different sections. Instead use synonyms or different words to avoid repetition.
         - SPELLING & GRAMMAR: Ensure all rewritten content has perfect spelling, grammar, and professional language.
+        - **CRITICAL FORMATTING**: For ALL description fields (experience, projects, education, activities, etc.), format each sentence to end with \\n (newline character). This ensures proper bullet point formatting in the frontend.
 
         CRITICAL FIELD NAMING CONVENTIONS - MUST FOLLOW EXACTLY:
         - For projects: Use "techStack" (not "technologies" or "tech_stack") - must be a comma-separated string
@@ -359,12 +360,14 @@ class AISuggestionServiceOptimized:
         - Project descriptions should include: technologies used, achievements, impact, and relevance to the target role.
         - Use strong action verbs and quantified results where possible.
         - Ensure project names and descriptions align with the {target_experience} level and job requirements.
+        - **DESCRIPTION FORMATTING**: Each feature/achievement should be a separate sentence ending with \\n
 
         CRITICAL WORK EXPERIENCE RULES:
         - ALWAYS include startDate and endDate in work experience responses - if missing from existing resume, add realistic dummy dates.
         - For work experience, enhance descriptions while preserving role and company information.
         - Include quantified achievements, technologies used, and impact in rewritten descriptions.
         - Use strong action verbs and professional language in all rewrites.
+        - **DESCRIPTION FORMATTING**: Each responsibility/achievement should be a separate sentence ending with \\n
 
         CRITICAL CERTIFICATIONS RULES:
         - ALWAYS include issueDate, certificateName, and instituteName in certification responses - if missing from existing resume, add realistic issue dates and organization names.
@@ -381,6 +384,7 @@ class AISuggestionServiceOptimized:
         - NEVER return education rewrite as an array like ["string1", "string2"].
         - Combine multiple education entries into one comprehensive string if needed.
         - Include relevant coursework, achievements, and academic highlights in the single string.
+        - **DESCRIPTION FORMATTING**: Each detail should be a separate sentence ending with \\n
 
         RESUME DATA:
         {resume_text}

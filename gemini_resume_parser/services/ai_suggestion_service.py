@@ -204,6 +204,7 @@ class AISuggestionService:
         - NEVER use "NA", "N/A", "None", "Null", "Unknown", or similar placeholder values - use empty strings or appropriate defaults instead.
         - NO REPETITIONS: Avoid repeating the Same Words or Sentences in different sections. Instead use synonyms or different words to avoid repetition.
         - SPELLING & GRAMMAR: Ensure all rewritten content has perfect spelling, grammar, and professional language.
+        - **CRITICAL FORMATTING**: For ALL description fields (experience, projects, education, activities, etc.), format each sentence to end with \\n (newline character). This ensures proper bullet point formatting in the frontend.
     
         OVERALL SCORE CALCULATION RULES:
         - Calculate overallScore based on how well the resume matches the job description requirements
@@ -258,6 +259,7 @@ class AISuggestionService:
         - Project descriptions should include: technologies used, achievements, impact, and relevance to the target role.
         - Use strong action verbs and quantified results where possible.
         - Ensure project names and descriptions align with the {target_experience} level and job requirements.
+        - **DESCRIPTION FORMATTING**: Each feature/achievement should be a separate sentence ending with \\n
 
         RESUME DATA:
         {resume_text}

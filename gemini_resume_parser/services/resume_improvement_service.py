@@ -203,6 +203,7 @@ class ResumeImprovementService:
         - MANDATORY: Apply ALL suggestions from the ATS analysis with specific improvements
         - ENHANCE every bullet point with quantified metrics and industry keywords
         - OPTIMIZE every section for maximum ATS score improvement
+        - **CRITICAL FORMATTING**: For ALL description fields (experience, projects, education, activities, etc.), format each sentence to end with \\n (newline character). This ensures proper bullet point formatting in the frontend.
 
         ORIGINAL RESUME DATA:
         {json.dumps(parsed_resume_data, indent=2)}
@@ -228,6 +229,7 @@ class ResumeImprovementService:
            - Add measurable outcomes with industry-standard metrics (ROI, efficiency gains, cost savings)
            - Include timeframes, team sizes, budget amounts, and scale of impact
            - Use power words: "increased", "optimized", "achieved", "delivered", "exceeded"
+           - **DESCRIPTION FORMATTING**: Each responsibility/achievement should be a separate sentence ending with \\n
 
         2. KEYWORD OPTIMIZATION (Critical for ATS):
            - Integrate 15-20 relevant industry keywords naturally throughout all sections

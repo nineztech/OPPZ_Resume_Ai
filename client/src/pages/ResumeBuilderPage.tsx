@@ -86,12 +86,23 @@ const safeProcessDescription = (description: any): string[] => {
     // Normalize line endings and spaces
     text = text.replace(/\r\n?/g, "\n").replace(/\u00A0/g, " "); // CRLF -> LF, nbsp -> space
 
-    // 1) Normalize *any* bullet-like glyphs to a single marker "•"
+    // 1) Handle newline-separated descriptions (from backend parsing)
+    // Split on \n and filter out empty lines
+    const newlineParts = text
+      .split(/\n+/g)
+      .map(s => s.trim())
+      .filter(Boolean);
+    
+    if (newlineParts.length > 1) {
+      return newlineParts;
+    }
+
+    // 2) Normalize *any* bullet-like glyphs to a single marker "•"
     //    Includes common MS Word / Wingdings private-use bullets like \uF0B7, etc.
     const BULLET_CHARS = /[\u2022\u2023\u25CF\u25CB\u25A0\u25AA\u25AB\u00B7\u2219\u2043\u25E6\u2027\u25C9\u25C8\u25D8\uF0B7]/g;
     text = text.replace(BULLET_CHARS, "•");
 
-    // 2) If bullets exist anywhere, split *on* them robustly.
+    // 3) If bullets exist anywhere, split *on* them robustly.
     //    Handles cases where "•" is on its own line (Word copy-paste) or inline.
     if (text.includes("•")) {
       // Ensure every bullet starts on a new line: turn spaces-before-• into newline + "• "
@@ -104,7 +115,7 @@ const safeProcessDescription = (description: any): string[] => {
       if (partsFromBullets.length > 0) return partsFromBullets;
     }
 
-    // 3) Handle dash/asterisk style bullets at start of lines
+    // 4) Handle dash/asterisk style bullets at start of lines
     const lines = text
       .split("\n")
       .map(l => l.trim())
@@ -117,7 +128,7 @@ const safeProcessDescription = (description: any): string[] => {
         .filter(Boolean);
     }
 
-    // 4) Sentence splitting even when there's NO space after punctuation.
+    // 5) Sentence splitting even when there's NO space after punctuation.
     //    Insert a newline after ., ?, ! if the next char is a letter/(
     //    e.g., "compliance.Managed" -> "compliance.\nManaged"
     text = text.replace(/([.!?])(?=[A-Za-z(])/g, "$1\n");
@@ -131,7 +142,7 @@ const safeProcessDescription = (description: any): string[] => {
 
     if (sentences.length > 1) return sentences;
 
-    // 5) Absolute fallback: single bullet
+    // 6) Absolute fallback: single bullet
     return [text.trim()];
   } catch (err) {
     console.warn("Error processing description:", err, "Description:", description);

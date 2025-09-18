@@ -106,6 +106,14 @@ class OpenAIConfig:
     3. Handle incomplete dates gracefully
     4. Separate technical skills from communication languages
     5. Extract all available information even from non-standard formats
+    6. **CRITICAL FORMATTING**: For ALL description fields (experience, projects, education, activities, etc.), format each sentence to end with \n (newline character). This ensures proper bullet point formatting in the frontend.
+    
+    **DESCRIPTION FORMATTING RULES**:
+    - Experience descriptions: Each responsibility/achievement should be a separate sentence ending with \n
+    - Project descriptions: Each feature/achievement should be a separate sentence ending with \n  
+    - Education descriptions: Each detail should be a separate sentence ending with \n
+    - Activity descriptions: Each detail should be a separate sentence ending with \n
+    - Example: "Developed web applications using React and Node.js.\nImplemented responsive design for mobile devices.\nCollaborated with team of 5 developers.\n"
     
     Output in pure JSON format only. Return ONLY the JSON output — no explanations.
     """
