@@ -81,9 +81,9 @@ export interface TemplateData {
   }>;
 }
 
-export const cleanMinimalTemplateData: TemplateData = {
+export const eliteModernTemplateData: TemplateData = {
   personalInfo: {
-    name: 'Nikhil Dundu',
+    name: 'Nikhil Dund',
     title: 'Supply Chain Analyst',
     address: 'AZ USA',
     email: 'ndundu1804@gmail.com',
@@ -183,19 +183,19 @@ export const cleanMinimalTemplateData: TemplateData = {
     {
       certificateName: 'Introduction to Data Analytics',
       instituteName: 'IBM',
-      issueDate: '2023',
+      issueDate: 'Jan 2023',
       link: 'https://www.coursera.org/learn/introduction-to-data-analytics'
     },
     {
       certificateName: 'Analyzing and Visualizing Data with Microsoft Power BI',
       instituteName: 'Microsoft',
-      issueDate: '2023',
+      issueDate: 'Feb 2023',
       link: 'https://www.edx.org/course/analyzing-and-visualizing-data-with-power-bi'
     },
     {
       certificateName: 'Lean Six Sigma Green Belt',
       instituteName: 'ASQ (American Society for Quality)',
-      issueDate: '2022',
+      issueDate: 'Mar 2022',
       link: 'https://asq.org/cert/six-sigma-green-belt'
     }
   ],

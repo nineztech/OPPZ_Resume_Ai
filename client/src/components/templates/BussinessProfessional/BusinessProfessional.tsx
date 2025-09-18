@@ -20,9 +20,13 @@ interface TemplateData {
     title: string;
     company: string;
     dates: string;
+    Start_Date?: string;
+    End_Date?: string;
     achievements: string[];
     description?: string; // Added for fallback
     location?: string; // Added for location display
+    startDate?: string; // Added for individual start date
+    endDate?: string; // Added for individual end date
   }>;
   education: Array<{
     degree: string;
@@ -84,13 +88,13 @@ interface TemplateData {
   }>;
 }
 
-interface CleanMinimalProps {
+interface EliteModernProps {
   data?: TemplateData;
   color?: string;
   visibleSections?: Set<string>;
 }
 
-const cleanMinimalTemplateData: TemplateData = {
+const eliteModernTemplateData: TemplateData = {
   personalInfo: {
     name: 'Nikhil Dundu',
     title: 'Supply Chain Analyst',
@@ -117,6 +121,8 @@ const cleanMinimalTemplateData: TemplateData = {
       title: 'Supply Chain Analyst — Systel Inc. (Remote — Austin, TX, USA)',
       company: '',
       dates: 'Apr 2023 – Present',
+      Start_Date: 'Jan 2023',
+      End_Date: 'Mar 2023',
       achievements: [
         'Implemented JIT and ROP inventory models for rugged-server line; reducing excess stock by 15% while maintaining a 98% service level.',
         'Designed and launched Power BI dashboards with Row-Level Security, enabling 50+ users to access real-time inventory and demand KPIs.',
@@ -128,6 +134,8 @@ const cleanMinimalTemplateData: TemplateData = {
     {
       title: 'Supply Chain Analyst — Sterlite Technologies Ltd. (Chennai, India)',
       company: '',
+      Start_Date: 'Jan 2023',
+      End_Date: 'Mar 2023',
       dates: 'Apr 2020 – Apr 2023',
       achievements: [
         'Managed end-to-end order fulfillment for fiber optic cables (400+ demand); deployed SAP MM MRP parameters and safety-stock modeling, cutting stockouts 22 %.',
@@ -141,6 +149,8 @@ const cleanMinimalTemplateData: TemplateData = {
     {
       title: 'Supply Chain Analyst — Caterpillar (Chennai, India)',
       company: '',
+      Start_Date: 'Jan 2023',
+      End_Date: 'Mar 2023',
       dates: 'Jun 2018 – Mar 2020',
       achievements: [
         'Co-developed inventory segmentation (ABC/XYZ) and Goal-Seek/Solver-based reorder policies, reducing working capital by 10 (1.5 % of finished-goods inventory).',
@@ -187,17 +197,17 @@ const cleanMinimalTemplateData: TemplateData = {
     {
       certificateName: 'Introduction to Data Analytics',
       instituteName: 'IBM',
-      issueDate: '2023'
+      issueDate: 'Jan 2023'
     },
     {
       certificateName: 'Analyzing and Visualizing Data with Microsoft Power BI',
       instituteName: 'Microsoft',
-      issueDate: '2023'
+      issueDate: 'Feb 2023'
     },
     {
       certificateName: 'Lean Six Sigma Green Belt',
       instituteName: 'ASQ (American Society for Quality)',
-      issueDate: '2022'
+      issueDate: 'Mar 2022'
     }
   ],
   additionalInfo: {
@@ -206,9 +216,9 @@ const cleanMinimalTemplateData: TemplateData = {
   }
 };
 
-const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }) => {
+const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections }) => {
   // Use the passed data prop if available, otherwise fall back to default data
-  const templateData = data || cleanMinimalTemplateData;
+  const templateData = data || eliteModernTemplateData;
   
   // Default visible sections if not provided
   const sections = visibleSections || new Set([
@@ -222,7 +232,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
   ]);
 
   return (
-    <div className="max-w-4xl mx-auto px-2 mt-0 bg-white" style={{ 
+    <div className="max-w-4xl mx-auto px-2 -mt-4 bg-white" style={{ 
       fontFamily: 'Arial, Helvetica, Calibri, sans-serif',
       fontSize: '11px',
       lineHeight: '1.3'
@@ -231,15 +241,15 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
       <div className="text-center mb-0">
         {templateData.personalInfo && (
           <>
-            <h1 className="text-2xl py-0 my-0 mb-0 font-bold" style={{ 
+            <h1 className="text-2xl py-0 my-0 -mb-2 font-bold" style={{ 
               fontSize: '22px',
               fontWeight: 'bold',
               letterSpacing: '1px',
-              color: color || '#1f2937'
+              color: color || '#2c5282'
             }}>
               {templateData.personalInfo.name || 'Your Full Name'}
             </h1>
-            <div className="text-lg font-semibold mb-0" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
+            <div className="text-lg font-semibold -mb-1" style={{ fontSize: '14px', fontWeight: '600', color: color || '#4a5568' }}>
               {templateData.personalInfo.title || 'Your Professional Title'}
             </div>
             <div className="text-sm" style={{ fontSize: '11px' }}>
@@ -249,10 +259,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
               {(templateData.personalInfo.phone || templateData.personalInfo.email) && ' | '}
               {templateData.personalInfo.email || 'your.email@example.com'}
               {templateData.personalInfo.linkedin && (
-                <> | <a href={templateData.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>LinkedIn</a></>
+                <> | <a href={templateData.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>LinkedIn</a></>
               )}
               {templateData.personalInfo.github && (
-                <> | <a href={templateData.personalInfo.github} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>GitHub</a></>
+                <> | <a href={templateData.personalInfo.github} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>GitHub</a></>
               )}
               {templateData.personalInfo.website && !templateData.personalInfo.linkedin && !templateData.personalInfo.github && (
                 <> | {templateData.personalInfo.website}</>
@@ -262,21 +272,19 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
         )}
       </div>
 
-      {/* Strong Separation Line */}
-      <div className="w-full border-t-2 border-gray-800 my-4"></div>
-
       {/* Summary */}
       {sections.has('summary') && (
-        <div className="mb-0 mt-0" style={{ position: 'relative' }}>
-          <h2 className="text-center font-bold mb-0 uppercase" style={{ 
+        <div className="mb-0 -mt-2" style={{ position: 'relative' }}>
+          <h2 className="text-left font-bold mb-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
             letterSpacing: '0.5px',
             lineHeight: '2.5',
-            color: color || '#1f2937'
+            color: color || '#2c5282'
           }}>
             SUMMARY
           </h2>
+          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: color || '#2c5282' }}></div>
           <div className="ml-0 mt-0 mb-0 p-0" >
             <div className="text-sm" style={{ 
               fontSize: '12px',
@@ -296,15 +304,16 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
       {/* Technical Skills */}
       {sections.has('skills') && (
         <div className="mb-0 mt-0">
-          <h2 className="text-center font-bold mb-0 uppercase" style={{ 
+          <h2 className="text-left font-bold mb-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
             letterSpacing: '0.5px',
               lineHeight: '2.5',
-            color: color || '#1f2937'
+            color: color || '#2c5282'
           }}>
             TECHNICAL SKILLS
           </h2>
+          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: color || '#2c5282' }}></div>
           <div className="space-y-0">
             {templateData.skills?.technical && templateData.skills.technical !== null && templateData.skills.technical !== undefined ? (
               typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
@@ -324,7 +333,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                       lineHeight: '1.3',
                       color: '#000000'
                     }}>
-                      <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
+                      <span className="font-bold" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
                     </div>
                   );
                 }).filter(Boolean) // Remove null entries
@@ -342,7 +351,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                         lineHeight: '1.3',
                         color: '#000000'
                       }}>
-                        <span className="font-bold" style={{ fontWeight: 'bold' }}>{key.trim()}:</span> {value.trim()}
+                        <span className="font-bold" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>{key.trim()}:</span> {value.trim()}
                       </div>
                     );
                   } else {
@@ -386,64 +395,83 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
 
       {/* Professional Experience */}
       {sections.has('experience') && (
-        <div className="mb-0 ">
-          <h2 className="text-center font-bold mt-2 uppercase" style={{ 
+        <div className="mb-0 mt-0">
+          <h2 className="text-left font-bold mb-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
             lineHeight: '2.5',  
             letterSpacing: '0.5px',
-            color: color || '#1f2937'
+            color: color || '#2c5282'
           }}>
             PROFESSIONAL EXPERIENCE
           </h2>
+          <div className="w-full border-t-2 -mt-2 mb-0" style={{ borderColor: color || '#2c5282' }}></div>
           <div className="-space-y-2">
             {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
               templateData.experience.map((exp, index) => {
                 return (
                   <div key={index} >
                     
-                    <div className="flex justify-between items-start ">
-                      <div className="flex-1">
-                        <h3 className="font-bold" style={{ 
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          letterSpacing: '0.3px'
-                        }}>
-                          {exp.title || 'Job Title'}
-                        </h3>
-                        <p className="text-gray-600 -mt-2 mb-1" style={{ 
-                          fontSize: '10px',
-                          fontWeight: '500',
-                           letterSpacing: '0.2px'
-                        }}>
-                          <b>{exp.company || 'Company Name'}</b>
-                          {exp.location && exp.location.trim() && (
-                            <span style={{ color: '#666666' }}> • {exp.location}</span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="font-bold text-right mt-2" style={{ 
+                     <div className="flex justify-between -mt-1 items-start ">
+                       <div className="flex-1">
+                         <h3 className="font-bold" style={{ 
+                           fontSize: '11px',
+                           fontWeight: 'bold',
+                           letterSpacing: '0.3px',
+                           color: color || '#2c5282'
+                         }}>
+                           {exp.company || 'Company Name'}
+                           {exp.title && exp.title.trim() && (
+                             <span style={{ color: color || '#2c5282' }}> | {exp.title}</span>
+                           )}
+                           {exp.location && exp.location.trim() && (
+                             <span style={{ color: color || '#2c5282' }}> | {exp.location}</span>
+                           )}
+                         </h3>
+                       </div>
+                      <div className="font-bold text-right mt-3" style={{ 
                         fontSize: '11px',
                         fontWeight: 'bold',
-                        letterSpacing: '0.2px'
+                        letterSpacing: '0.2px',
+                        color: color || '#2c5282'
                       }}>
-                        {exp.dates || 'Start Date - End Date'}
+                        {exp.dates || (exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || exp.endDate || 'Start Date - End Date')}
                       </div>
                     </div>
-                    <div className="ml-0 mt-0">
+                    <div className="space-y-0 ml-0 -mt-2">
                       {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
-                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#000000', fontWeight: '500', textAlign: 'justify' }}>
-                          {exp.achievements.join(' ')}
-                        </div>
+                        exp.achievements.map((achievement, idx) => (
+                          <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                            <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
+                            <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{achievement}</span>
+                          </div>
+                        ))
                       ) : exp.description ? (
-                        // Fallback to description if no achievements array
-                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#000000', fontWeight: '500', textAlign: 'justify' }}>
-                          {exp.description}
-                        </div>
+                        // Handle newline-separated descriptions first (from backend parsing)
+                        (() => {
+                          const newlineParts = exp.description.split(/\n+/g).map(s => s.trim()).filter(Boolean);
+                          if (newlineParts.length > 1) {
+                            return newlineParts.map((sentence, idx) => (
+                              <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                                <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
+                                <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{sentence}</span>
+                              </div>
+                            ));
+                          }
+                          
+                          // Fallback to single description for legacy format
+                          return (
+                            <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                              <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
+                              <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>{exp.description}</span>
+                            </div>
+                          );
+                        })()
                       ) : (
                         // Show placeholder when no content
-                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
-                          Describe your key responsibilities and achievements...
+                        <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                          <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
+                          <span className="leading-tight" style={{ lineHeight: '1.2', color: '#666666', fontWeight: '500', fontStyle: 'italic' }}>Describe your key responsibilities and achievements...</span>
                         </div>
                       )}
                     </div>
@@ -452,8 +480,9 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
               })
             ) : (
               // Show placeholder when no experience entries
-              <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
-                Add your work experience here...
+              <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
+                <span className="leading-tight" style={{ lineHeight: '1.2', color: '#666666', fontWeight: '500', fontStyle: 'italic' }}>Add your work experience here...</span>
               </div>
             )}
           </div>
@@ -464,27 +493,29 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
 
       {/* Projects */}
       {sections.has('projects') && (
-        <div className="mb-0 mt-0">
-          <h2 className="text-center font-bold mb-0  uppercase" style={{ 
+        <div className="mb-3 mt-0">
+          <h2 className="text-left font-bold mb-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
             letterSpacing: '0.5px',
             lineHeight: '2.5',  
-            color: color || '#1f2937'
+            color: color || '#2c5282'
           }}>
             PROJECTS
           </h2>
+          <div className="w-full border-t-2 -mt-2 mb-3 " style={{ borderColor: color || '#2c5282' }}></div>
           <div className="-space-y-2 -mt-4">
             {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
               templateData.projects.map((project, index) => (
-                <div key={index} style={{ marginBottom: '-10px' }}>
+                <div key={index} style={{ marginBottom: '-13px' }}>
                                      <div className="-mb-1.5">
                        <div className="flex justify-between items-center">
                          <div className="flex items-center gap-2">
                            <h3 className="font-bold" style={{ 
                              fontSize: '11px',
                              fontWeight: 'bold',
-                             letterSpacing: '0.3px'
+                             letterSpacing: '0.3px',
+                             color: color || '#2c5282'
                            }}>
                              {project.Name || 'Project Name'}
                            </h3>
@@ -497,9 +528,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                            </span>
                          </div>
                                                {(project.Start_Date || project.End_Date) ? (
-                            <div className="font-bold" style={{ 
+                            <div className="font-bold " style={{ 
                               fontSize: '11px',
-                              fontWeight: 'bold'
+                              fontWeight: 'bold',
+                              color: color || '#2c5282'
                             }}>
                               {project.Start_Date && project.End_Date 
                                 ? `${project.Start_Date} - ${project.End_Date}`
@@ -518,20 +550,34 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                           )}
                        </div>
                      </div>
-                    <div className="space-y-0 ml-0 mt-0">
+                    <div className="ml-0 -mt-2">
                       {project.Description ? (
-                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#000000', fontWeight: '500', textAlign: 'justify' }}>
+                        <div style={{ 
+                          fontSize: '12px',
+                          lineHeight: '1.4',
+                          color: '#000000',
+                          fontWeight: '500',
+                          textAlign: 'justify',
+                          marginBottom: '8px'
+                        }}>
                           {project.Description}
                           {project.Link && project.Link.trim() && (
-                            <span style={{ color: '#0077b5', textDecoration: 'underline', marginLeft: '4px' }}>
-                              <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>
-                                View Project
+                            <span style={{ marginLeft: '4px' }}>
+                              <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>
+                                Link
                               </a>
                             </span>
                           )}
                         </div>
                       ) : (
-                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
+                        <div style={{ 
+                          fontSize: '12px',
+                          lineHeight: '1.4',
+                          color: '#666666',
+                          fontWeight: '500',
+                          fontStyle: 'italic',
+                          textAlign: 'justify'
+                        }}>
                           Describe your project details...
                         </div>
                       )}
@@ -540,8 +586,9 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
               ))
             ) : (
               // Show placeholder when no projects
-              <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
-                Add your projects here...
+              <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
+                <span className="leading-tight" style={{ lineHeight: '1.2', color: '#666666', fontWeight: '500', fontStyle: 'italic' }}>Add your projects here...</span>
               </div>
             )}
           </div>
@@ -550,16 +597,17 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
       
       {/* Education */}
       {sections.has('education') && (
-        <div className="mb-0 ">
-          <h2 className="text-center font-bold mt-4 uppercase" style={{ 
+        <div className="mb-0 -mt-3">
+          <h2 className="text-left font-bold mb-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
             lineHeight: '2.5',  
             letterSpacing: '0.5px',
-            color: color || '#1f2937'
+            color: color || '#2c5282'
           }}>
             EDUCATION
           </h2>
+          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: color || '#2c5282' }}></div>
           <div className="space-y-0">
             {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
               templateData.education.map((edu, index) => (
@@ -568,21 +616,23 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                     <div className="font-bold" style={{ 
                       fontSize: '11px',
                       fontWeight: 'bold',
-                      letterSpacing: '0.3px'
+                      letterSpacing: '0.3px',
+                      color: color || '#2c5282'
                     }}>
                       {edu.institution || 'Institution Name'}
-                      {edu.location && edu.location.trim() && (
-                        <span style={{ fontWeight: 'bold' }}> | {edu.location}</span>
+                      {edu.degree && edu.degree.trim() && (
+                        <span style={{ color: color || '#2c5282' }}> | {edu.degree}</span>
                       )}
-                    </div>
-                    <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#000000' }}>
-                      {edu.degree || 'Degree/Program'}
+                      {edu.location && edu.location.trim() && (
+                        <span style={{ color: color || '#2c5282' }}> | {edu.location}</span>
+                      )}
                     </div>
                   </div>
                   <div className="font-bold" style={{ 
                     fontSize: '11px',
                     fontWeight: 'bold',
-                    letterSpacing: '0.2px'
+                    letterSpacing: '0.2px',
+                    color: color || '#2c5282'
                   }}>
                     {edu.dates || 'Graduation Year'}
                     </div>
@@ -599,10 +649,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                     color: '#666666',
                     fontStyle: 'italic'
                   }}>
-                    Institution Name | Location
-                  </div>
-                  <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#666666', fontStyle: 'italic' }}>
-                    Degree/Program
+                    Institution Name | Degree/Program | Location
                   </div>
                 </div>
                 <div className="font-bold" style={{ 
@@ -622,16 +669,17 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
 
       {/* Certifications */}
       {sections.has('certifications') && (
-        <div className="mb-0 mt-0">
-          <h2 className="text-center font-bold mb-0 uppercase" style={{ 
+        <div className="mb-0 -mt-1">
+          <h2 className="text-left font-bold mb-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
             letterSpacing: '0.5px',
             lineHeight: '2.5',  
-            color: color || '#1f2937'
+            color: color || '#2c5282'
           }}>
             CERTIFICATIONS
           </h2>
+          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: color || '#2c5282' }}></div>
           <div className="space-y-0">
             {Array.isArray(templateData.certifications) && templateData.certifications.length > 0 ? (
               templateData.certifications.map((cert, index) => (
@@ -642,11 +690,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                       letterSpacing: '0.2px',
                       color: '#000000'
                     }}>
-                      <span style={{ fontWeight: 'bold' }}>{cert.certificateName || 'Certificate Name'}</span> - <span style={{ color: '#000000' }}>{cert.instituteName || 'Issuing Organization'}</span>
+                      <span style={{ fontWeight: 'bold', color: color || '#2c5282' }}>{cert.certificateName || 'Certificate Name'}</span> - <span style={{ color: '#000000' }}>{cert.instituteName || 'Issuing Organization'}</span>
                       {cert.link && cert.link.trim() && (
-                        <span style={{ marginLeft: '8px' }}>
-                          <a href={cert.link} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline', fontSize: '10px' }}>
-                            View Certificate
+                        <span style={{ marginLeft: '4px' }}>
+                          <a href={cert.link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline', fontSize: '10px' }}>
+                            Link
                           </a>
                         </span>
                       )}
@@ -656,7 +704,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                     <div className="font-bold" style={{ 
                       fontSize: '11px',
                       fontWeight: 'bold',
-                      letterSpacing: '0.2px'
+                      letterSpacing: '0.2px',
+                      color: color || '#2c5282'
                     }}>
                       {cert.issueDate}
                     </div>
@@ -705,4 +754,3 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
 };
 
 export default ResumePDF;
-
