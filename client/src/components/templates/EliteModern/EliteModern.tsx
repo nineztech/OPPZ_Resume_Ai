@@ -232,7 +232,7 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
   ]);
 
   return (
-    <div className="max-w-4xl mx-auto px-2 -mt-4 bg-white" style={{ 
+    <div className="max-w-4xl mx-auto px-2 md:-mt-4 sm:-mt-3 bg-white" style={{ 
       fontFamily: 'Arial, Helvetica, Calibri, sans-serif',
       fontSize: '11px',
       lineHeight: '1.3'
@@ -241,7 +241,7 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
       <div className="text-center mb-0">
         {templateData.personalInfo && (
           <>
-            <h1 className="text-2xl py-0 my-0 -mb-2 font-bold" style={{ 
+            <h1 className="text-2xl py-0 my-0 md:-mb-2 sm:-mb-1 font-bold" style={{ 
               fontSize: '22px',
               fontWeight: 'bold',
               letterSpacing: '1px',
@@ -274,7 +274,7 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
 
       {/* Summary */}
       {sections.has('summary') && (
-        <div className="mb-0 mt-0" style={{ position: 'relative' }}>
+        <div className="mb-0 md:-mt-2 sm:-mt-1" style={{ position: 'relative' }}>
           <h2 className="text-left font-bold mb-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
@@ -284,7 +284,7 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
           }}>
             SUMMARY
           </h2>
-          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: color || '#2c5282' }}></div>
+          <div className="w-full border-t-2 md:-mt-2 sm:-mt-1 md:mb-2 sm:mb-1.5" style={{ borderColor: color || '#2c5282' }}></div>
           <div className="ml-0 mt-0 mb-0 p-0" >
             <div className="text-sm" style={{ 
               fontSize: '12px',
@@ -313,7 +313,7 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
           }}>
             TECHNICAL SKILLS
           </h2>
-          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: color || '#2c5282' }}></div>
+          <div className="w-full border-t-2 md:-mt-2 sm:-mt-1.5 mb-2" style={{ borderColor: color || '#2c5282' }}></div>
           <div className="space-y-0">
             {templateData.skills?.technical && templateData.skills.technical !== null && templateData.skills.technical !== undefined ? (
               typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
@@ -405,14 +405,14 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
           }}>
             PROFESSIONAL EXPERIENCE
           </h2>
-          <div className="w-full border-t-2 -mt-2 mb-0" style={{ borderColor: color || '#2c5282' }}></div>
+          <div className="w-full border-t-2 md:-mt-2 sm:-mt-1.5 mb-0" style={{ borderColor: color || '#2c5282' }}></div>
           <div className="-space-y-2">
             {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
               templateData.experience.map((exp, index) => {
                 return (
                   <div key={index} >
                     
-                     <div className="flex justify-between items-start ">
+                     <div className="flex justify-between md:-mt-1 sm:-mt-0.5  items-start ">
                        <div className="flex-1">
                          <h3 className="font-bold" style={{ 
                            fontSize: '11px',
@@ -438,7 +438,7 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
                         {exp.dates || (exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || exp.endDate || 'Start Date - End Date')}
                       </div>
                     </div>
-                    <div className="space-y-0 ml-0 mt-0">
+                    <div className="space-y-0 ml-0 md:-mt-2 sm:-mt-1.5" >
                       {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
                         exp.achievements.map((achievement, idx) => (
                           <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
@@ -493,7 +493,7 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
 
       {/* Projects */}
       {sections.has('projects') && (
-        <div className="mb-2 mt-0">
+        <div className="mb-3 mt-0">
           <h2 className="text-left font-bold mb-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
@@ -503,11 +503,11 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
           }}>
             PROJECTS
           </h2>
-          <div className="w-full border-t-2 -mt-2 mb-2 mb-2" style={{ borderColor: color || '#2c5282' }}></div>
+          <div className="w-full border-t-2 md:-mt-2 sm:-mt-1.5 mb-3 " style={{ borderColor: color || '#2c5282' }}></div>
           <div className="-space-y-2 -mt-4">
             {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
               templateData.projects.map((project, index) => (
-                <div key={index} style={{ marginBottom: '-10px' }}>
+                <div key={index} style={{ marginBottom: '-13px' }}>
                                      <div className="-mb-1.5">
                        <div className="flex justify-between items-center">
                          <div className="flex items-center gap-2">
@@ -550,49 +550,30 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
                           )}
                        </div>
                      </div>
-                    <div className="space-y-0 ml-0 mt-0">
+                    <div className="ml-0 md:-mt-2 sm:-mt-1.5">
                       {project.Description ? (
                         (() => {
-                          // Handle newline-separated descriptions first (from backend parsing)
-                          const newlineParts = project.Description.split(/\n+/g).map(s => s.trim()).filter(Boolean);
-                          if (newlineParts.length > 1) {
-                            return newlineParts.map((sentence, idx) => (
-                              <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                                <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
-                                <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>
-                                  {sentence}
-                                  {idx === newlineParts.length - 1 && project.Link && project.Link.trim() && (
-                                    <span style={{ color: '#2c5282', textDecoration: 'underline', marginLeft: '2px' }}>
-                                      <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>
-                                        Link
-                                      </a>
-                                    </span>
-                                  )}
-                                </span>
-                              </div>
-                            ));
-                          }
-                          
-                          // Fallback to sentence splitting for legacy descriptions
-                          return project.Description.split('. ').map((sentence, idx) => {
-                            if (!sentence.trim()) return null;
-                            const isLast = idx === project.Description.split('. ').length - 1;
-                            return (
-                              <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                                <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
-                                <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>
-                                  {sentence.trim()}{isLast ? '' : '.'}
-                                  {isLast && project.Link && project.Link.trim() && (
-                                    <span style={{ color: '#2c5282', textDecoration: 'underline', marginLeft: '2px' }}>
-                                      <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>
-                                        Link
-                                      </a>
-                                    </span>
-                                  )}
-                                </span>
-                              </div>
-                            );
-                          });
+                          // Split description by newlines and create bullet points
+                          const descriptionParts = project.Description.split(/\n+/g).map(s => s.trim()).filter(Boolean);
+                          return (
+                            <div className="space-y-0">
+                              {descriptionParts.map((part, idx) => (
+                                <div key={idx} className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
+                                  <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
+                                  <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>
+                                    {part}
+                                    {idx === descriptionParts.length - 1 && project.Link && project.Link.trim() && (
+                                      <span style={{ marginLeft: '4px' }}>
+                                        <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>
+                                          Link
+                                        </a>
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          );
                         })()
                       ) : (
                         <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
@@ -605,9 +586,9 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
               ))
             ) : (
               // Show placeholder when no projects
-              <div className="flex items-start" style={{ fontSize: '12px', marginBottom: '2px' }}>
-                <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
-                <span className="leading-tight" style={{ lineHeight: '1.2', color: '#666666', fontWeight: '500', fontStyle: 'italic' }}>Add your projects here...</span>
+              <div className="flex items-start " style={{ fontSize: '12px', marginBottom: '2px' }}>
+                <span className="mr-2 md:pt-2.5 sm:pt-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
+                <span className="leading-tight md:pt-2.5 sm:pt-2" style={{ lineHeight: '1.2', color: '#666666', fontWeight: '500', fontStyle: 'italic' }}>Add your projects here...</span>
               </div>
             )}
           </div>
@@ -616,7 +597,7 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
       
       {/* Education */}
       {sections.has('education') && (
-        <div className="mb-0 mt-0">
+        <div className="mb-0 md:-mt-2 sm:-mt-1.5">
           <h2 className="text-left font-bold mb-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
@@ -626,7 +607,7 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
           }}>
             EDUCATION
           </h2>
-          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: color || '#2c5282' }}></div>
+          <div className="w-full border-t-2 md:-mt-2 sm:-mt-1.5 mb-2" style={{ borderColor: color || '#2c5282' }}></div>
           <div className="space-y-0">
             {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
               templateData.education.map((edu, index) => (
@@ -688,7 +669,7 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
 
       {/* Certifications */}
       {sections.has('certifications') && (
-        <div className="mb-0 mt-0">
+        <div className="mb-0 md:-mt-1 sm:-mt-0.5">
           <h2 className="text-left font-bold mb-0 uppercase" style={{ 
             fontSize: '13px',
             fontWeight: 'bold',
@@ -698,7 +679,7 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
           }}>
             CERTIFICATIONS
           </h2>
-          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: color || '#2c5282' }}></div>
+          <div className="w-full border-t-2 md:-mt-2 sm:-mt-1.5 mb-2" style={{ borderColor: color || '#2c5282' }}></div>
           <div className="space-y-0">
             {Array.isArray(templateData.certifications) && templateData.certifications.length > 0 ? (
               templateData.certifications.map((cert, index) => (

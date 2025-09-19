@@ -236,9 +236,9 @@ export const generatePDF = async (req, res) => {
       printBackground: true,
       margin: {
         top: '1mm',
-        right: '5mm',
-        bottom: '5mm',
-        left: '5mm'
+        right: '1mm',
+        bottom: '1mm',
+        left: '1mm'
       }
     });
 
