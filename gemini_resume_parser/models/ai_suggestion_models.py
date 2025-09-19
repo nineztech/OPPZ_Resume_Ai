@@ -147,6 +147,7 @@ class AIComparisonResponse(BaseModel):
     """Main model for AI comparison response"""
     overallScore: int = Field(..., ge=0, le=100, description="Overall score between 0-100")
     analysisTimestamp: str = Field(..., description="ISO timestamp of analysis")
+    roleMismatchWarning: Optional[str] = Field(default=None, description="Warning if resume is better suited for a different role")
     sectionSuggestions: SectionSuggestions = Field(default_factory=SectionSuggestions)
     topRecommendations: List[str] = Field(default_factory=list, description="Top recommendations")
 
@@ -178,13 +179,45 @@ class AIComparisonResponse(BaseModel):
 
 
 class JobDescriptionResponse(BaseModel):
-    """Model for job description generation response"""
-    jobDescription: str = Field(..., description="Generated job description")
+    """Model for detailed job description generation response"""
+    req_id: str = Field(default="", description="Job requisition ID")
+    title: str = Field(..., description="Job title")
+    level: str = Field(..., description="Experience level")
+    alt_titles: List[str] = Field(default_factory=list, description="Alternative job titles")
+    department: str = Field(default="", description="Department name")
+    team_name: str = Field(default="", description="Team name")
+    reports_to: str = Field(default="", description="Reporting manager")
+    employment_type: str = Field(default="Full-time", description="Employment type")
+    work_model: str = Field(default="Hybrid", description="Work model")
+    location: Dict[str, Any] = Field(default_factory=dict, description="Location details")
+    visa_work_auth: Dict[str, Any] = Field(default_factory=dict, description="Visa and work authorization")
+    mission: str = Field(default="", description="Team mission")
+    impact_summary: str = Field(default="", description="Impact summary")
+    responsibilities: List[str] = Field(default_factory=list, description="Job responsibilities")
+    must_have_qualifications: List[str] = Field(default_factory=list, description="Must-have qualifications")
+    nice_to_have_qualifications: List[str] = Field(default_factory=list, description="Nice-to-have qualifications")
+    tech_stack: Dict[str, Any] = Field(default_factory=dict, description="Technology stack")
+    kpis: List[str] = Field(default_factory=list, description="Key performance indicators")
+    screening_questions: List[str] = Field(default_factory=list, description="Screening questions")
+    education: str = Field(default="", description="Education requirements")
+    certifications: List[str] = Field(default_factory=list, description="Required certifications")
+    compensation: Dict[str, Any] = Field(default_factory=dict, description="Compensation details")
+    benefits: List[str] = Field(default_factory=list, description="Benefits")
+    interview_process: List[str] = Field(default_factory=list, description="Interview process")
+    industry: str = Field(default="", description="Industry")
+    function: str = Field(default="", description="Function")
+    keywords: List[str] = Field(default_factory=list, description="Keywords for ATS")
+    eeo_statement: str = Field(default="", description="EEO statement")
+    posting: Dict[str, Any] = Field(default_factory=dict, description="Posting details")
+    seo: Dict[str, Any] = Field(default_factory=dict, description="SEO metadata")
     sector: str = Field(..., description="Target sector")
     country: str = Field(..., description="Target country")
     designation: str = Field(..., description="Job designation")
     experienceLevel: str = Field(..., description="Target experience level")
     generatedAt: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + 'Z')
+    
+    # Legacy field for backward compatibility
+    jobDescription: Optional[str] = Field(default=None, description="Legacy job description field")
 
 
 class ResumeData(BaseModel):

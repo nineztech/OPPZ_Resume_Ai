@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { 
   ArrowLeft,
   Sparkles, 
@@ -11,7 +10,6 @@ import {
   CheckCircle, 
   Briefcase,
   Settings,
-  Eye,
   Star,
   ArrowRight,
   GraduationCap,
@@ -19,13 +17,13 @@ import {
   Code,
   Database,
   Cloud,
-  GitBranch
+  GitBranch,
+  Plus,
 } from 'lucide-react';
-import type { AISuggestions, AIJobDescription } from '@/services/geminiParserService';
+import type { AISuggestions } from '@/services/geminiParserService';
 
 interface LocationState {
   suggestions: AISuggestions;
-  jobDescription: AIJobDescription;
   sector: string;
   country: string;
   designation: string;
@@ -43,16 +41,15 @@ const AISuggestionsPage: React.FC = () => {
   const state = location.state as LocationState;
 
   const [activeTab, setActiveTab] = useState('overview');
-  const [showJobDescription, setShowJobDescription] = useState(false);
 
   useEffect(() => {
     // Redirect back if no state data
-    if (!state || !state.suggestions || !state.jobDescription) {
+    if (!state || !state.suggestions) {
       navigate('/resume/templates');
     }
   }, [state, navigate]);
 
-  if (!state || !state.suggestions || !state.jobDescription) {
+  if (!state || !state.suggestions) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -63,7 +60,7 @@ const AISuggestionsPage: React.FC = () => {
     );
   }
 
-  const { suggestions, jobDescription } = state;
+  const { suggestions } = state;
 
   // Add fallback for empty suggestions
   if (!suggestions || Object.keys(suggestions).length === 0) {
@@ -98,13 +95,16 @@ const AISuggestionsPage: React.FC = () => {
     return 'text-red-600 bg-red-100';
   };
 
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: Target },
-    { id: 'sections', label: 'Section Analysis', icon: Settings },
-    { id: 'experience', label: 'Experience', icon: Briefcase },
-    { id: 'skills', label: 'Skills Analysis', icon: Code },
-    { id: 'action-plan', label: 'Action Plan', icon: CheckCircle }
-  ];
+  const tabs = (() => {
+    const tabConfigs = {
+      overview: { id: 'overview', label: 'Overview', icon: Target },
+      sections: { id: 'sections', label: 'Section Analysis', icon: Settings },
+      experience: { id: 'experience', label: 'Experience', icon: Briefcase },
+      skills: { id: 'skills', label: 'Skills Analysis', icon: Code },
+      actionPlan: { id: 'action-plan', label: 'Action Plan', icon: CheckCircle }
+    };
+    return Object.values(tabConfigs);
+  })();
 
   const handleApplyChanges = () => {
     // Process all section rewrites from AI suggestions
@@ -131,7 +131,6 @@ const AISuggestionsPage: React.FC = () => {
           mode: 'ai-enhanced',
           extractedData: state.aiResults?.resumeData || state.extractedData,
           aiSuggestions: processedSuggestions,
-          jobDescription: state.jobDescription,
           aiParams: state.aiResults?.parameters || {
             sector: state.sector,
             country: state.country,
@@ -140,7 +139,6 @@ const AISuggestionsPage: React.FC = () => {
           appliedSuggestions: {
             timestamp: new Date().toISOString(),
             suggestions: processedSuggestions,
-            jobDescription: state.jobDescription,
             sectionsModified: Object.keys(processedSuggestions.appliedRewrites).filter(
               key => (processedSuggestions.appliedRewrites as any)[key] && 
               (Array.isArray((processedSuggestions.appliedRewrites as any)[key]) ? 
@@ -162,7 +160,6 @@ const AISuggestionsPage: React.FC = () => {
           appliedSuggestions: {
             timestamp: new Date().toISOString(),
             suggestions: processedSuggestions,
-            jobDescription: state.jobDescription,
             sectionsModified: Object.keys(processedSuggestions.appliedRewrites).filter(
               key => (processedSuggestions.appliedRewrites as any)[key] && 
               (Array.isArray((processedSuggestions.appliedRewrites as any)[key]) ? 
@@ -221,6 +218,21 @@ const AISuggestionsPage: React.FC = () => {
           </div>
         )}
         
+        {/* Role Mismatch Warning */}
+        {(suggestions as any).roleMismatchWarning && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="text-sm font-medium text-red-800 mb-1">Role Mismatch Detected</h3>
+                <p className="text-sm text-red-700">
+                  {(suggestions as any).roleMismatchWarning}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Score Overview */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
           <div className="flex items-center justify-between">
@@ -293,7 +305,14 @@ const AISuggestionsPage: React.FC = () => {
                           if (recommendations.length === 0) {
                             return (
                               <li className="text-sm text-gray-500 italic">
-                                No specific recommendations available at this time.
+                                {(() => {
+                                  const fallbackMessages = {
+                                    noRecommendations: 'No specific recommendations available at this time.',
+                                    noData: 'No data available',
+                                    loading: 'Loading recommendations...'
+                                  };
+                                  return fallbackMessages.noRecommendations;
+                                })()}
                               </li>
                             );
                           }
@@ -327,7 +346,14 @@ const AISuggestionsPage: React.FC = () => {
                           if (sections.length === 0) {
                             return (
                               <div className="text-sm text-gray-500 italic">
-                                No section analysis available at this time.
+                                {(() => {
+                                  const emptyStateMessages = {
+                                    noSectionAnalysis: 'No section analysis available at this time.',
+                                    noData: 'No data available',
+                                    loading: 'Loading analysis...'
+                                  };
+                                  return emptyStateMessages.noSectionAnalysis;
+                                })()}
                               </div>
                             );
                           }
@@ -383,12 +409,18 @@ const AISuggestionsPage: React.FC = () => {
                                   </div>
                                 </div>
                                 <div className="text-xs text-gray-600 mt-1">
-                                  {hasIssues 
-                                    ? 'Needs content' 
-                                    : hasRecommendations 
-                                      ? 'Can be improved'
-                                      : 'Well structured'
-                                  }
+                                  {(() => {
+                                    const statusMessages = {
+                                      needsContent: 'Needs content',
+                                      canBeImproved: 'Can be improved', 
+                                      wellStructured: 'Well structured'
+                                    };
+                                    return hasIssues 
+                                      ? statusMessages.needsContent
+                                      : hasRecommendations 
+                                        ? statusMessages.canBeImproved
+                                        : statusMessages.wellStructured;
+                                  })()}
                                 </div>
                               </div>
                             );
@@ -415,9 +447,18 @@ const AISuggestionsPage: React.FC = () => {
                         </div>
                         <div className="text-sm text-gray-600">Overall Score</div>
                         <div className="text-xs text-gray-500 mt-1">
-                          {(suggestions.overallScore || 0) >= 80 ? 'Excellent' : 
-                           (suggestions.overallScore || 0) >= 60 ? 'Good' : 
-                           (suggestions.overallScore || 0) >= 40 ? 'Needs Improvement' : 'Poor'}
+                          {(() => {
+                            const scoreLevels = {
+                              excellent: 'Excellent',
+                              good: 'Good',
+                              needsImprovement: 'Needs Improvement',
+                              poor: 'Poor'
+                            };
+                            const score = suggestions.overallScore || 0;
+                            return score >= 80 ? scoreLevels.excellent :
+                                   score >= 60 ? scoreLevels.good :
+                                   score >= 40 ? scoreLevels.needsImprovement : scoreLevels.poor;
+                          })()}
                         </div>
                       </div>
                       
@@ -458,12 +499,35 @@ const AISuggestionsPage: React.FC = () => {
                         const sectionSuggestions = (suggestions as any).sectionSuggestions || {};
                         const insights = [];
                         
+                        const insightMessages = {
+                          professionalSummary: {
+                            title: 'Professional Summary',
+                            description: 'AI has provided an enhanced version of your professional summary'
+                          },
+                          skillsEnhancement: {
+                            title: 'Skills Enhancement', 
+                            description: 'New skills have been suggested to better match the job requirements'
+                          },
+                          projectRecommendations: {
+                            title: 'Project Recommendations',
+                            description: (count: number) => `${count} project suggestions provided`
+                          },
+                          experienceEnhancement: {
+                            title: 'Experience Enhancement',
+                            description: 'Work experience descriptions have been optimized'
+                          },
+                          missingSections: {
+                            title: 'Missing Sections',
+                            description: (sections: string[]) => `Consider adding: ${sections.join(', ')}`
+                          }
+                        };
+                        
                         // Check for professional summary insights
                         if (sectionSuggestions.professionalSummary?.rewrite) {
                           insights.push({
                             type: 'positive',
-                            title: 'Professional Summary',
-                            description: 'AI has provided an enhanced version of your professional summary'
+                            title: insightMessages.professionalSummary.title,
+                            description: insightMessages.professionalSummary.description
                           });
                         }
                         
@@ -471,8 +535,8 @@ const AISuggestionsPage: React.FC = () => {
                         if (sectionSuggestions.skills?.rewrite) {
                           insights.push({
                             type: 'positive',
-                            title: 'Skills Enhancement',
-                            description: 'New skills have been suggested to better match the job requirements'
+                            title: insightMessages.skillsEnhancement.title,
+                            description: insightMessages.skillsEnhancement.description
                           });
                         }
                         
@@ -480,8 +544,8 @@ const AISuggestionsPage: React.FC = () => {
                         if (sectionSuggestions.projects && Array.isArray(sectionSuggestions.projects) && sectionSuggestions.projects.length > 0) {
                           insights.push({
                             type: 'positive',
-                            title: 'Project Recommendations',
-                            description: `${sectionSuggestions.projects.length} project suggestions provided`
+                            title: insightMessages.projectRecommendations.title,
+                            description: insightMessages.projectRecommendations.description(sectionSuggestions.projects.length)
                           });
                         }
                         
@@ -489,8 +553,8 @@ const AISuggestionsPage: React.FC = () => {
                         if (sectionSuggestions.workExperience?.rewrite) {
                           insights.push({
                             type: 'positive',
-                            title: 'Experience Enhancement',
-                            description: 'Work experience descriptions have been optimized'
+                            title: insightMessages.experienceEnhancement.title,
+                            description: insightMessages.experienceEnhancement.description
                           });
                         }
                         
@@ -506,8 +570,8 @@ const AISuggestionsPage: React.FC = () => {
                         if (missingSections.length > 0) {
                           insights.push({
                             type: 'warning',
-                            title: 'Missing Sections',
-                            description: `Consider adding: ${missingSections.join(', ')}`
+                            title: insightMessages.missingSections.title,
+                            description: insightMessages.missingSections.description(missingSections)
                           });
                         }
                         
@@ -995,132 +1059,133 @@ const AISuggestionsPage: React.FC = () => {
 
             {activeTab === 'skills' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                      <CardTitle className="text-green-700">MERN Stack Skills</CardTitle>
-                      <CardDescription>Core technologies for the role</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Database className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-medium">MongoDB</span>
-                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                            Experience Available
-                            </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Code className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-medium">Express.js</span>
-                          <Badge variant="outline" className="text-xs">
-                            To Learn
-                          </Badge>
-                      </div>
-                        <div className="flex items-center gap-2">
-                          <Code className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-medium">React.js</span>
-                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                            Experience Available
-                          </Badge>
+                {/* Current Skills Analysis */}
+                {(suggestions as any).sectionSuggestions?.skills && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Settings className="w-5 h-5 text-green-600" />
+                        Current Skills Analysis
+                      </CardTitle>
+                      <CardDescription>Your existing skills organized by category</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {(() => {
+                          const existingSkills = (suggestions as any).sectionSuggestions.skills.existing || {};
+                          const skillCategories = Object.keys(existingSkills);
+                          
+                          if (skillCategories.length === 0) {
+                            return (
+                              <div className="text-center p-6 text-gray-500">
+                                <Code className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                                <p className="text-sm italic">No skills data available</p>
+                              </div>
+                            );
+                          }
+                          
+                          return (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {skillCategories.map((category) => (
+                                <div key={category} className="bg-gray-50 rounded-lg p-4 border">
+                                  <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                                    {category === 'Languages' && <Code className="w-4 h-4 text-blue-600" />}
+                                    {category === 'Frameworks' && <GitBranch className="w-4 h-4 text-purple-600" />}
+                                    {category === 'Cloud' && <Cloud className="w-4 h-4 text-blue-600" />}
+                                    {category === 'Databases' && <Database className="w-4 h-4 text-green-600" />}
+                                    {category === 'DevOps' && <Settings className="w-4 h-4 text-orange-600" />}
+                                    {category === 'Testing' && <CheckCircle className="w-4 h-4 text-green-600" />}
+                                    {category === 'Tools' && <Settings className="w-4 h-4 text-gray-600" />}
+                                    {category === 'Frontend' && <Code className="w-4 h-4 text-pink-600" />}
+                                    {category === 'Messaging/Event-Driven' && <GitBranch className="w-4 h-4 text-indigo-600" />}
+                                    {!['Languages', 'Frameworks', 'Cloud', 'Databases', 'DevOps', 'Testing', 'Tools', 'Frontend', 'Messaging/Event-Driven'].includes(category) && <Code className="w-4 h-4 text-gray-600" />}
+                                    {category}
+                                  </h4>
+                                  <div className="text-sm text-gray-700 whitespace-pre-line">
+                                    {existingSkills[category]}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                        <div className="flex items-center gap-2">
-                          <Code className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-medium">Node.js</span>
-                          <Badge variant="outline" className="text-xs">
-                            To Learn
-                          </Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                      <CardTitle className="text-blue-700">Transferable Skills</CardTitle>
-                      <CardDescription>Skills that apply to the role</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Cloud className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-medium">AWS Experience</span>
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
-                            Strong
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <GitBranch className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-medium">Git & CI/CD</span>
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
-                            Strong
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Database className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-medium">Database Design</span>
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
-                            Strong
-                          </Badge>
-                      </div>
-                        <div className="flex items-center gap-2">
-                          <Code className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-medium">RESTful APIs</span>
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
-                            Strong
-                          </Badge>
-                        </div>
+                          );
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
-                </div>
+                )}
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Skills Gap Analysis</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="text-center p-4 bg-red-50 rounded-lg border-l-4 border-red-500">
-                          <div className="text-2xl font-bold text-red-600">Critical</div>
-                          <div className="text-sm text-gray-600">MERN Projects</div>
-                        </div>
-                        <div className="text-center p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
-                          <div className="text-2xl font-bold text-yellow-600">High</div>
-                          <div className="text-sm text-gray-600">Express.js & Node.js</div>
-                        </div>
-                        <div className="text-center p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
-                          <div className="text-2xl font-bold text-green-600">Low</div>
-                          <div className="text-sm text-gray-600">React.js & MongoDB</div>
-                        </div>
+                {/* Suggested Skills */}
+                {(suggestions as any).sectionSuggestions?.skills?.rewrite && Object.keys((suggestions as any).sectionSuggestions.skills.rewrite).length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Star className="w-5 h-5 text-purple-600" />
+                        Suggested Skills to Add
+                      </CardTitle>
+                      <CardDescription>New skills recommended to better match the job requirements</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {Object.entries((suggestions as any).sectionSuggestions.skills.rewrite).map(([category, skills]) => (
+                          <div key={category} className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-500">
+                            <h4 className="font-medium text-purple-900 mb-2 flex items-center gap-2">
+                              <Plus className="w-4 h-4" />
+                              Add to {category}
+                            </h4>
+                            <div className="text-sm text-purple-800">
+                              {String(skills)}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Skills Recommendations */}
+                {(suggestions as any).sectionSuggestions?.skills?.recommendations && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Target className="w-5 h-5 text-blue-600" />
+                        Skills Enhancement Recommendations
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2">
+                        {getSafeArray((suggestions as any).sectionSuggestions.skills.recommendations).map((rec, index) => (
+                          <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
+                            <ArrowRight className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                            {rec}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
 
             {activeTab === 'action-plan' && (
               <div className="space-y-6">
+                {/* Priority Actions */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Target className="w-5 h-5 text-blue-600" />
                       Priority Improvement Actions
                     </CardTitle>
-                    <CardDescription>Recommended actions based on analysis</CardDescription>
+                    <CardDescription>Recommended actions based on AI analysis</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       {(() => {
                         const actions = getSafeArray((suggestions as any).topRecommendations);
-                        console.log('Action plan recommendations:', (suggestions as any).topRecommendations);
-                        console.log('Processed actions:', actions);
                         
                         if (actions.length === 0) {
                           return (
                             <div className="text-center p-6 text-gray-500">
+                              <Target className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                               <p className="text-sm italic">No specific action items available at this time.</p>
                               <p className="text-xs mt-2">The AI analysis may not have generated specific recommendations yet.</p>
                             </div>
@@ -1142,12 +1207,72 @@ const AISuggestionsPage: React.FC = () => {
                   </CardContent>
                 </Card>
 
+                {/* Section-Specific Actions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-purple-600" />
+                      Section-Specific Improvements
+                    </CardTitle>
+                    <CardDescription>Detailed recommendations for each resume section</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {(() => {
+                        const sectionSuggestions = (suggestions as any).sectionSuggestions || {};
+                        const sections = Object.keys(sectionSuggestions);
+                        
+                        if (sections.length === 0) {
+                          return (
+                            <div className="text-center p-6 text-gray-500">
+                              <Settings className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                              <p className="text-sm italic">No section-specific recommendations available.</p>
+                            </div>
+                          );
+                        }
+                        
+                        return sections.map((sectionKey) => {
+                          const section = sectionSuggestions[sectionKey];
+                          const sectionName = sectionKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                          const hasRecommendations = section.recommendations && Array.isArray(section.recommendations) && section.recommendations.length > 0;
+                          
+                          if (!hasRecommendations) return null;
+                          
+                          return (
+                            <div key={sectionKey} className="bg-gray-50 rounded-lg p-4 border">
+                              <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                {sectionKey === 'professionalSummary' && <Code className="w-4 h-4 text-blue-600" />}
+                                {sectionKey === 'workExperience' && <Briefcase className="w-4 h-4 text-green-600" />}
+                                {sectionKey === 'skills' && <Settings className="w-4 h-4 text-purple-600" />}
+                                {sectionKey === 'projects' && <GitBranch className="w-4 h-4 text-orange-600" />}
+                                {sectionKey === 'education' && <GraduationCap className="w-4 h-4 text-indigo-600" />}
+                                {sectionKey === 'certifications' && <Award className="w-4 h-4 text-yellow-600" />}
+                                {!['professionalSummary', 'workExperience', 'skills', 'projects', 'education', 'certifications'].includes(sectionKey) && <Settings className="w-4 h-4 text-gray-600" />}
+                                {sectionName}
+                              </h4>
+                              <ul className="space-y-2">
+                                {getSafeArray(section.recommendations).map((rec, index) => (
+                                  <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
+                                    <ArrowRight className="w-3 h-3 text-gray-500 mt-1 flex-shrink-0" />
+                                    {rec}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Score and Progress
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
                     <CardHeader>
                       <CardTitle className="text-green-700 flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5" />
-                        Overall Score
+                        <TrendingUp className="w-5 h-5" />
+                        Current Score
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1155,7 +1280,21 @@ const AISuggestionsPage: React.FC = () => {
                         <div className={`text-5xl font-bold mb-2 ${getScoreColor(suggestions.overallScore)}`}>
                           {suggestions.overallScore || 0}%
                         </div>
-                        <p className="text-sm text-gray-600">Your resume compatibility score</p>
+                        <p className="text-sm text-gray-600 mb-3">Resume compatibility score</p>
+                        <div className="text-xs text-gray-500">
+                          {(() => {
+                            const score = suggestions.overallScore || 0;
+                            const feedbackMessages = [
+                              { min: 80, message: 'Excellent match!' },
+                              { min: 60, message: 'Good match, room for improvement' },
+                              { min: 40, message: 'Needs significant improvement' },
+                              { min: 0, message: 'Poor match - major changes needed' }
+                            ];
+                            
+                            const feedback = feedbackMessages.find(f => score >= f.min);
+                            return feedback?.message || 'Score analysis unavailable';
+                          })()}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -1163,32 +1302,48 @@ const AISuggestionsPage: React.FC = () => {
                   <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
                     <CardHeader>
                       <CardTitle className="text-purple-700 flex items-center gap-2">
-                        <Star className="w-5 h-5" />
-                        Next Steps
+                        <Clock className="w-5 h-5" />
+                        Implementation Timeline
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          Develop MERN stack projects
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          Add missing work experience dates
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          Create comprehensive skills section
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          Apply changes to resume template
-                        </div>
+                      <div className="space-y-3">
+                        {(() => {
+                          const timelineItems = [
+                            {
+                              priority: 'immediate',
+                              color: 'red',
+                              timeframe: 'Immediate (1-2 days)',
+                              description: 'Update professional summary and key skills'
+                            },
+                            {
+                              priority: 'short',
+                              color: 'yellow', 
+                              timeframe: 'Short-term (1-2 weeks)',
+                              description: 'Enhance work experience descriptions and add projects'
+                            },
+                            {
+                              priority: 'long',
+                              color: 'green',
+                              timeframe: 'Long-term (1-2 months)', 
+                              description: 'Gain additional certifications and skills'
+                            }
+                          ];
+                          
+                          return timelineItems.map((item, index) => (
+                            <div key={index}>
+                              <div className="flex items-center gap-2 text-sm text-gray-700">
+                                <div className={`w-2 h-2 bg-${item.color}-500 rounded-full`}></div>
+                                <span className="font-medium">{item.timeframe}</span>
+                              </div>
+                              <div className="text-xs text-gray-600 ml-4">{item.description}</div>
+                            </div>
+                          ));
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
-                </div>
+                </div> */}
               </div>
             )}
           </div>
@@ -1198,123 +1353,34 @@ const AISuggestionsPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex justify-between items-center">
             <Button variant="outline" onClick={handleGoBack}>
-              Review Later
+              {(() => {
+                const buttonTexts = {
+                  reviewLater: 'Review Later',
+                  back: 'Back',
+                  cancel: 'Cancel'
+                };
+                return buttonTexts.reviewLater;
+              })()}
             </Button>
             <div className="flex gap-3">
-              <Button 
-                variant="outline"
-                onClick={() => setShowJobDescription(!showJobDescription)}
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                {showJobDescription ? 'Hide' : 'View'} Job Description
-              </Button>
               <Button 
                 onClick={handleApplyChanges}
                 className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Apply Suggestions
+                {(() => {
+                  const actionTexts = {
+                    applySuggestions: 'Apply Suggestions',
+                    applyChanges: 'Apply Changes',
+                    updateResume: 'Update Resume'
+                  };
+                  return actionTexts.applySuggestions;
+                })()}
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Job Description Modal/Section */}
-        {showJobDescription && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-8">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Job Description Details</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowJobDescription(false)}
-              >
-                ✕
-              </Button>
-            </div>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Job Title</h4>
-                <p className="text-sm text-gray-700">{state.designation}</p>
-              </div>
-              
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Experience Level</h4>
-                <p className="text-sm text-gray-700">{jobDescription.experienceLevel}</p>
-              </div>
-              
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Job Summary</h4>
-                <p className="text-sm text-gray-700 whitespace-pre-line">{jobDescription.jobSummary}</p>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Key Responsibilities</h4>
-                <ul className="list-disc list-inside space-y-1">
-                  {getSafeArray(jobDescription.keyResponsibilities).map((responsibility, index) => (
-                    <li key={index} className="text-sm text-gray-700">{responsibility}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Required Skills</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h5 className="font-medium text-gray-800 mb-1">Technical Skills</h5>
-                    <ul className="list-disc list-inside space-y-1">
-                      {getSafeArray(jobDescription.requiredSkills?.technical).map((skill, index) => (
-                        <li key={index} className="text-sm text-gray-600">{skill}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h5 className="font-medium text-gray-800 mb-1">Programming Languages</h5>
-                    <ul className="list-disc list-inside space-y-1">
-                      {getSafeArray(jobDescription.requiredSkills?.programming).map((skill, index) => (
-                        <li key={index} className="text-sm text-gray-600">{skill}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Tools & Technologies</h4>
-                <div className="flex flex-wrap gap-2">
-                  {getSafeArray(jobDescription.requiredSkills?.tools).map((tool, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {tool}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Salary Range</h4>
-                <p className="text-sm text-gray-700">{jobDescription.salaryRange}</p>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Educational Requirements</h4>
-                <ul className="list-disc list-inside space-y-1">
-                  {getSafeArray(jobDescription.educationalRequirements).map((requirement, index) => (
-                    <li key={index} className="text-sm text-gray-700">{requirement}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Benefits</h4>
-                <ul className="list-disc list-inside space-y-1">
-                  {getSafeArray(jobDescription.benefits).map((benefit, index) => (
-                    <li key={index} className="text-sm text-gray-700">{benefit}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

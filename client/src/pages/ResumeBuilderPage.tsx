@@ -235,7 +235,7 @@ interface ResumeData {
   projects: Array<{
     id: string;
     name: string;
-    techStack: string;
+    techStack: string | null;
     startDate: string;
     endDate: string;
     description: string;
@@ -245,7 +245,7 @@ interface ResumeData {
     id: string;
     certificateName: string;
     link: string;
-    issueDate: string;
+    issueDate: string | null;
     instituteName: string;
   }>;
   references: Array<{
@@ -576,6 +576,10 @@ const ResumeBuilderPage = () => {
           if (!techStack || techStack.trim() === '') {
             const description = project.Description || project.description || '';
             techStack = extractTechStackFromDescription(description);
+            // If extraction returns empty string, set to null to avoid showing placeholder
+            if (!techStack || techStack.trim() === '') {
+              techStack = null;
+            }
           }
           
           return {
@@ -589,14 +593,11 @@ const ResumeBuilderPage = () => {
           };
         }),
         certifications: (location.state.improvedResumeData.certifications || []).map((cert: any) => {
-          let issueDate = cert.issueDate || cert.startDate || cert['Start Date'] || cert['Issue Date'] || '';
+          let issueDate: string | null = cert.issueDate || cert.startDate || cert['Start Date'] || cert['Issue Date'] || '';
           
-          // If issue date is missing, generate a dummy date (6-24 months ago)
+          // If issue date is empty, set to null to avoid showing placeholder
           if (!issueDate || issueDate.trim() === '') {
-            const monthsAgo = Math.floor(Math.random() * 19) + 6; // 6-24 months ago
-            const date = new Date();
-            date.setMonth(date.getMonth() - monthsAgo);
-            issueDate = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            issueDate = null;
           }
           
           return {
@@ -708,6 +709,10 @@ const ResumeBuilderPage = () => {
           if (!techStack || techStack.trim() === '') {
             const description = project.Description || project.description || project.summary || '';
             techStack = extractTechStackFromDescription(description);
+            // If extraction returns empty string, set to null to avoid showing placeholder
+            if (!techStack || techStack.trim() === '') {
+              techStack = null;
+            }
           }
           
           return {
@@ -721,14 +726,11 @@ const ResumeBuilderPage = () => {
           };
         }),
         certifications: (extractedData.certifications || []).map((cert: any) => {
-          let issueDate = cert.issueDate || cert.startDate || cert['Start Date'] || cert['Issue Date'] || '';
+          let issueDate: string | null = cert.issueDate || cert.startDate || cert['Start Date'] || cert['Issue Date'] || '';
           
-          // If issue date is missing, generate a dummy date (6-24 months ago)
+          // If issue date is empty, set to null to avoid showing placeholder
           if (!issueDate || issueDate.trim() === '') {
-            const monthsAgo = Math.floor(Math.random() * 19) + 6; // 6-24 months ago
-            const date = new Date();
-            date.setMonth(date.getMonth() - monthsAgo);
-            issueDate = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            issueDate = null;
           }
           
           return {
@@ -1138,11 +1140,15 @@ const ResumeBuilderPage = () => {
               // Convert AI project suggestions to resume format
               const aiProjects = rewrites.projects.map((aiProject: any) => {
                 const description = aiProject.rewrite || aiProject.existing || '';
-                let techStack = '';
+                let techStack: string | null = '';
                 
                 // Try to extract tech stack from description
                 if (description) {
                   techStack = extractTechStackFromDescription(description);
+                  // If extraction returns empty string, set to null to avoid showing placeholder
+                  if (!techStack || techStack.trim() === '') {
+                    techStack = null;
+                  }
                 }
                 
                 return {
@@ -1577,6 +1583,10 @@ const ResumeBuilderPage = () => {
           if (!techStack || techStack.trim() === '') {
             const description = project.Description || '';
             techStack = extractTechStackFromDescription(description);
+            // If extraction returns empty string, set to null to avoid showing placeholder
+            if (!techStack || techStack.trim() === '') {
+              techStack = null;
+            }
           }
           
           return {
@@ -1592,12 +1602,9 @@ const ResumeBuilderPage = () => {
         certifications: defaultData.certifications?.map((cert: any) => {
           let issueDate = cert.issueDate || cert.startDate || '';
           
-          // If issue date is missing, generate a dummy date (6-24 months ago)
+          // If issue date is empty, set to null to avoid showing placeholder
           if (!issueDate || issueDate.trim() === '') {
-            const monthsAgo = Math.floor(Math.random() * 19) + 6; // 6-24 months ago
-            const date = new Date();
-            date.setMonth(date.getMonth() - monthsAgo);
-            issueDate = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            issueDate = null;
           }
           
           return {
@@ -3169,7 +3176,7 @@ const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove }: {
               <Input
                 value={project.techStack}
                 onChange={(e) => onUpdate(project.id, 'techStack', e.target.value)}
-                placeholder="e.g., React, Node.js, MongoDB"
+                placeholder={project.techStack && project.techStack.trim() !== "" ? "" : "e.g., React, Node.js, MongoDB"}
               />
             </div>
 
@@ -3256,7 +3263,7 @@ const CertificationsSection = ({ certifications, onAdd, onUpdate, onRemove }: {
                  <Input
                 value={cert.issueDate}
                 onChange={(e) => onUpdate(cert.id, 'issueDate', e.target.value)}
-                   placeholder="e.g., Jan 2023"
+                   placeholder={cert.issueDate && cert.issueDate.trim() !== "" ? "" : "e.g., Jan 2023"}
                  />
              </div>
 

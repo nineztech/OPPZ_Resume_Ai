@@ -185,31 +185,139 @@ class AISuggestionServiceOptimized:
         else:
             target_experience = self._get_intelligent_default_experience(sector, designation)
             logger.info(f"🎯 Using intelligent default experience level: {target_experience}")
+        
+        # Extract level from target_experience for the prompt
+        experience_level_short = target_experience.split()[0] if target_experience else "Mid"
 
         prompt = f"""
         You are an expert global job market analyst and HR recruiter.
 
-        TASK: Create a **realistic, ATS-friendly job description (JD)** for the role of "{designation}" in the {sector} sector for {country}.
+        TASK: Create a **comprehensive, detailed, ATS-friendly job description (JD)** for the role of "{designation}" in the {sector} sector for {country}.
         The JD must reflect exactly the **{target_experience}** career stage of the candidate.
 
         CRITICAL REQUIREMENTS:
         - Return ONLY valid JSON (no markdown, no code fences, no explanations, no text before or after)
         - Start your response with {{ and end with }}
-        - Include realistic job requirements, responsibilities, and qualifications
+        - Create a DETAILED job description following the comprehensive structure below
         - Ensure the JD is ATS-friendly with relevant keywords
         - Match the experience level: {target_experience}
         - Include sector-specific terminology and requirements
         - Consider country-specific job market standards for {country}
+        - Include all required fields as specified in the structure
 
-        REQUIRED JSON FORMAT (return exactly this structure):
+        REQUIRED DETAILED JSON FORMAT (return exactly this structure):
         {{
-            "jobDescription": "Complete job description text here...",
+            "req_id": "string",
+            "title": "{designation}",
+            "level": "{experience_level_short}",
+            "alt_titles": ["Alternative Title 1", "Alternative Title 2", "Alternative Title 3"],
+            "department": "Department Name",
+            "team_name": "Team Name",
+            "reports_to": "Reporting Manager",
+            "employment_type": "Full-time",
+            "work_model": "Hybrid",
+            "location": {{
+                "city": "City Name",
+                "state": "State/Province",
+                "country": "{country}",
+                "onsite_days_per_week": 3
+            }},
+            "visa_work_auth": {{
+                "sponsor": true,
+                "note": "Work authorization details"
+            }},
+            "mission": "2-3 lines describing what the team builds and why it matters",
+            "impact_summary": "Brief description of the candidate's impact and responsibilities",
+            "responsibilities": [
+                "Responsibility 1 - outcome focused",
+                "Responsibility 2 - outcome focused",
+                "Responsibility 3 - outcome focused",
+                "Responsibility 4 - outcome focused",
+                "Responsibility 5 - outcome focused",
+                "Responsibility 6 - outcome focused"
+            ],
+            "must_have_qualifications": [
+                "Essential qualification 1",
+                "Essential qualification 2",
+                "Essential qualification 3",
+                "Essential qualification 4",
+                "Essential qualification 5"
+            ],
+            "nice_to_have_qualifications": [
+                "Preferred qualification 1",
+                "Preferred qualification 2",
+                "Preferred qualification 3",
+                "Preferred qualification 4"
+            ],
+            "tech_stack": {{
+                "languages": ["Language 1", "Language 2", "Language 3"],
+                "frameworks": ["Framework 1", "Framework 2"],
+                "datastores": ["Database 1", "Database 2"],
+                "cloud": ["Cloud Platform"],
+                "messaging": ["Messaging System"],
+                "devops": ["DevOps Tool 1", "DevOps Tool 2"],
+                "observability": ["Monitoring Tool 1", "Monitoring Tool 2"]
+            }},
+            "kpis": [
+                "KPI 1 with specific metrics",
+                "KPI 2 with specific metrics",
+                "KPI 3 with specific metrics"
+            ],
+            "screening_questions": [
+                "Technical question 1",
+                "Technical question 2",
+                "Experience question 3"
+            ],
+            "education": "Education requirements",
+            "certifications": ["Relevant certification 1", "Relevant certification 2"],
+            "compensation": {{
+                "base_range_usd": [80000, 120000],
+                "bonus_target_pct": 10,
+                "equity": "Equity details"
+            }},
+            "benefits": [
+                "Benefit 1",
+                "Benefit 2",
+                "Benefit 3",
+                "Benefit 4"
+            ],
+            "interview_process": [
+                "Interview stage 1",
+                "Interview stage 2",
+                "Interview stage 3"
+            ],
+            "industry": "{sector}",
+            "function": "Function Name",
+            "keywords": [
+                "Keyword 1", "Keyword 2", "Keyword 3", "Keyword 4", "Keyword 5",
+                "Keyword 6", "Keyword 7", "Keyword 8", "Keyword 9", "Keyword 10"
+            ],
+            "eeo_statement": "Equal opportunity employer statement",
+            "posting": {{
+                "date_posted": "{datetime.datetime.utcnow().strftime('%Y-%m-%d')}",
+                "valid_through": "2025-12-31",
+                "application_instructions": "Application instructions"
+            }},
+            "seo": {{
+                "title": "SEO optimized title",
+                "meta_description": "SEO meta description"
+            }},
+            "jobDescription": "Complete job description text combining mission, responsibilities, qualifications, and other details in a readable format",
             "sector": "{sector}",
             "country": "{country}",
             "designation": "{designation}",
             "experienceLevel": "{target_experience}",
             "generatedAt": "{datetime.datetime.utcnow().isoformat()}Z"
         }}
+
+        DETAILED JD CREATION CHECKLIST:
+        1. Define role basics: title, level, location, work model, employment type
+        2. Clarify mission: 2-3 lines on what team builds and why it matters
+        3. List 6-10 responsibilities: outcomes first, then activities
+        4. Separate Must-Have vs Nice-to-Have skills; keep must-haves minimal and testable
+        5. Specify tech stack clearly (languages, frameworks, cloud, DB, tooling)
+        6. Add compliance & logistics: compensation range, benefits, EEO, work auth, interview process
+        7. Include ATS/SEO metadata: keywords, alt job titles, function, industry, screening questions
 
         IMPORTANT: Your response must be valid JSON that can be parsed directly. Do not include any text outside the JSON object.
         """
@@ -301,72 +409,136 @@ class AISuggestionServiceOptimized:
 
         OVERALL SCORE CALCULATION RULES (MANDATORY DYNAMIC SCORING):
         - Calculate overallScore using this EXACT formula with specific weights and criteria:
+        - **CRITICAL**: Role/Position matching is the PRIMARY factor and heavily weighted
         
         SCORING FORMULA (Total: 100 points):
-        1. Skills Match (25 points): Count matching skills between resume and JD
+        1. **ROLE/POSITION MATCH (40 points)**: Most critical factor - how well resume role matches JD title
+           - Perfect role match: 40 points (exact title match or very close)
+           - Strong role match: 30-35 points (similar role with same responsibilities)
+           - Moderate role match: 20-25 points (related role but different focus)
+           - Weak role match: 10-15 points (different role but transferable skills)
+           - No role match: 0-5 points (completely different role/industry)
+           - Maximum: 40 points
+        
+        2. Skills Match (20 points): Count matching skills between resume and JD
            - Exact matches: 3 points each
            - Similar/related skills: 2 points each  
            - Missing critical skills: -2 points each
-           - Maximum: 25 points
-        
-        2. Experience Relevance (20 points): How well work experience aligns with JD requirements
-           - Role relevance: 0-8 points (0=none, 8=perfect match)
-           - Industry relevance: 0-6 points (0=none, 6=same industry)
-           - Achievement quality: 0-6 points (0=none, 6=quantified results)
            - Maximum: 20 points
         
-        3. Keyword Density (15 points): Important JD keywords present in resume
-           - Critical keywords: 2 points each (max 8 points)
-           - Important keywords: 1 point each (max 4 points)
-           - Nice-to-have keywords: 0.5 points each (max 3 points)
+        3. Experience Relevance (15 points): How well work experience aligns with JD requirements
+           - Role relevance: 0-6 points (0=none, 6=perfect match)
+           - Industry relevance: 0-5 points (0=none, 5=same industry)
+           - Achievement quality: 0-4 points (0=none, 4=quantified results)
            - Maximum: 15 points
         
-        4. Professional Summary Quality (15 points): How well summary matches JD
-           - Keyword alignment: 0-5 points
-           - Experience level match: 0-4 points
-           - Value proposition clarity: 0-3 points
-           - Quantified achievements: 0-3 points
-           - Maximum: 15 points
-        
-        5. Education/Certifications (10 points): Educational background relevance
-           - Degree relevance: 0-4 points
-           - Certification relevance: 0-3 points
-           - Additional training: 0-3 points
+        4. Keyword Density (10 points): Important JD keywords present in resume
+           - Critical keywords: 2 points each (max 6 points)
+           - Important keywords: 1 point each (max 3 points)
+           - Nice-to-have keywords: 0.5 points each (max 1 point)
            - Maximum: 10 points
         
-        6. Project Relevance (10 points): How well projects demonstrate required skills
-           - Technology stack match: 0-4 points
-           - Project complexity: 0-3 points
-           - Results/impact shown: 0-3 points
-           - Maximum: 10 points
+        5. Professional Summary Quality (8 points): How well summary matches JD
+           - Keyword alignment: 0-3 points
+           - Experience level match: 0-3 points
+           - Value proposition clarity: 0-2 points
+           - Maximum: 8 points
         
-        7. Overall Presentation (5 points): Resume structure and professionalism
-           - Format consistency: 0-2 points
-           - Grammar/spelling: 0-2 points
-           - Length appropriateness: 0-1 point
-           - Maximum: 5 points
+        6. Education/Certifications (4 points): Educational background relevance
+           - Degree relevance: 0-2 points
+           - Certification relevance: 0-2 points
+           - Maximum: 4 points
+        
+        7. Project Relevance (3 points): How well projects demonstrate required skills
+           - Technology stack match: 0-1 point
+           - Project complexity: 0-1 point
+           - Results/impact shown: 0-1 point
+           - Maximum: 3 points
         
         FINAL SCORE CALCULATION:
         - Add all 7 category scores (should total 0-100)
-        - Apply experience level multiplier:
-          * Entry level: multiply by 1.0
-          * Mid level: multiply by 1.0  
-          * Senior level: multiply by 1.0
+        - **ROLE MATCH MULTIPLIER**: Apply strict multiplier based on role matching:
+          * Perfect/Strong role match: multiply by 1.0 (no penalty)
+          * Moderate role match: multiply by 0.8 (20% penalty)
+          * Weak role match: multiply by 0.6 (40% penalty)
+          * No role match: multiply by 0.4 (60% penalty)
         - Round to the nearest integer (e.g., 73, 84, 92)
         - NEVER use round numbers ending in 0 or 5 unless truly calculated
         - Score range: 0 to 100
+        - **TARGET SCORES**: Perfect role match should score 80%+, weak/no match should score <50%
         
         SCORING EXAMPLES:
-        - Skills: 8 exact matches (24) + 3 similar (6) - 2 missing (4) = 22/25
-        - Experience: Role (6) + Industry (5) + Achievements (4) = 15/20
-        - Keywords: 4 critical (8) + 6 important (6) + 4 nice-to-have (2) = 16/15 (capped)
-        - Summary: Keywords (4) + Level (3) + Value (2) + Quantified (2) = 11/15
-        - Education: Degree (3) + Certs (2) + Training (1) = 6/10
-        - Projects: Tech (3) + Complexity (2) + Results (2) = 7/10
-        - Presentation: Format (2) + Grammar (2) + Length (1) = 5/5
-        - Total: 22+15+15+11+6+7+5 = 81
+        **PERFECT ROLE MATCH EXAMPLE:**
+        - Role Match: Perfect match (40/40) - Software Engineer resume for Software Engineer JD
+        - Skills: 6 exact matches (18) + 2 similar (4) - 1 missing (2) = 20/20
+        - Experience: Role (6) + Industry (5) + Achievements (4) = 15/15
+        - Keywords: 3 critical (6) + 4 important (4) = 10/10
+        - Summary: Keywords (3) + Level (3) + Value (2) = 8/8
+        - Education: Degree (2) + Certs (2) = 4/4
+        - Projects: Tech (1) + Complexity (1) + Results (1) = 3/3
+        - Total: 40+20+15+10+8+4+3 = 100 * 1.0 = 100 (Perfect match)
+        
+        **MODERATE ROLE MATCH EXAMPLE:**
+        - Role Match: Moderate match (25/40) - Frontend Developer resume for Full-Stack Engineer JD
+        - Skills: 4 exact matches (12) + 3 similar (6) - 2 missing (4) = 14/20
+        - Experience: Role (4) + Industry (4) + Achievements (3) = 11/15
+        - Keywords: 2 critical (4) + 3 important (3) = 7/10
+        - Summary: Keywords (2) + Level (2) + Value (1) = 5/8
+        - Education: Degree (1) + Certs (1) = 2/4
+        - Projects: Tech (1) + Complexity (1) + Results (0) = 2/3
+        - Total: 25+14+11+7+5+2+2 = 66 * 0.8 = 53 (Moderate match with penalty)
+        
+        **WEAK ROLE MATCH EXAMPLE:**
+        - Role Match: Weak match (12/40) - Marketing Manager resume for Software Engineer JD
+        - Skills: 1 exact match (3) + 2 similar (4) - 5 missing (10) = -3/20 (capped at 0)
+        - Experience: Role (1) + Industry (1) + Achievements (1) = 3/15
+        - Keywords: 0 critical (0) + 1 important (1) = 1/10
+        - Summary: Keywords (1) + Level (1) + Value (0) = 2/8
+        - Education: Degree (0) + Certs (0) = 0/4
+        - Projects: Tech (0) + Complexity (0) + Results (0) = 0/3
+        - Total: 12+0+3+1+2+0+0 = 18 * 0.6 = 11 (Weak match with penalty)
         
         CRITICAL: Always calculate using the exact formula above. Never return generic scores like 75, 80, 85, 90, 95, 100.
+
+        **ROLE MATCHING ANALYSIS REQUIREMENTS:**
+        - Analyze the resume's primary role/position against the JD title from the job description
+        - Look for exact matches: "Software Engineer" vs "Software Engineer" = Perfect match (40 points)
+        - Look for strong matches: "Frontend Developer" vs "Full-Stack Engineer" = Strong match (30-35 points)
+        - Look for moderate matches: "Data Analyst" vs "Software Engineer" = Moderate match (20-25 points)
+        - Look for weak matches: "Marketing Manager" vs "Software Engineer" = Weak match (10-15 points)
+        - Look for no matches: "Teacher" vs "Software Engineer" = No match (0-5 points)
+        - Consider role responsibilities, not just titles
+        - Consider industry relevance and transferable skills
+        - Apply the appropriate multiplier based on match quality
+
+        **ROLE MISMATCH DETECTION (CRITICAL):**
+        - BEFORE calculating the score, analyze if the resume is significantly better suited for a DIFFERENT role than the applied designation
+        - Check ALL these areas for role indicators:
+          * Work Experience: Job titles, responsibilities, achievements
+          * Skills: Technical skills, tools, technologies used
+          * Projects: Project types, technologies, complexity
+          * Education: Degree field, coursework, specialization
+          * Certifications: Industry-specific certifications
+          * Professional Summary: Career focus, expertise areas
+        - If the resume shows STRONG evidence of being suited for a different role (e.g., Full-Stack Developer resume applied for Product Manager), include a "roleMismatchWarning" field
+        - Only show mismatch warning if there's CLEAR evidence the resume is better suited for another specific role
+        - Do NOT show mismatch warning if the resume could reasonably fit both roles
+        - Format: "This resume appears to be better suited for [DETECTED_ROLE] based on your work experience, skills, and projects. Consider applying for [DETECTED_ROLE] positions instead."
+
+        **ROLE MISMATCH EXAMPLES:**
+        - Full-Stack Developer resume → Product Manager application: MISMATCH (technical skills vs business focus)
+        - Software Engineer resume → Marketing Manager application: MISMATCH (technical background vs marketing)
+        - Data Scientist resume → Sales Representative application: MISMATCH (analytical vs sales skills)
+        - Project Manager resume → Software Engineer application: MISMATCH (management vs technical)
+        - Business Analyst resume → Product Manager application: NO MISMATCH (both business-focused)
+        - Software Engineer resume → Technical Product Manager application: NO MISMATCH (both tech-related)
+
+        **DETECTION CRITERIA:**
+        - Look for 3+ strong indicators pointing to a different role
+        - Consider the PRIMARY focus of the resume (what the person does most)
+        - Check if the resume shows expertise in a completely different domain
+        - Verify that the suggested role makes sense based on the evidence
+        - Be conservative - only warn when there's a clear mismatch
 
         REPETITION RULES:
         - Do NOT repeat strong action verbs (e.g., "implemented", "developed", "managed").
@@ -456,6 +628,7 @@ class AISuggestionServiceOptimized:
         {{
             "overallScore": <calculate_using_exact_formula_above_0_to_100>,
             "analysisTimestamp": "{datetime.datetime.utcnow().isoformat()}Z",
+            "roleMismatchWarning": null,
             "sectionSuggestions": {{
                 "professionalSummary": {{
                     "existing": "",

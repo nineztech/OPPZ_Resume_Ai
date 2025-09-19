@@ -38,7 +38,7 @@ interface TemplateData {
   projects?: Array<{
     Name: string;
     Description: string;
-    Tech_Stack: string;
+    Tech_Stack: string | null;
     Start_Date?: string;
     End_Date?: string;
     Link?: string;
@@ -46,7 +46,7 @@ interface TemplateData {
   certifications?: Array<{
     certificateName: string;
     instituteName: string;
-    issueDate?: string;
+    issueDate?: string | null;
     link?: string;
   }>;
   additionalInfo: {
@@ -519,13 +519,15 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
                            }}>
                              {project.Name || 'Project Name'}
                            </h3>
-                           <span className="text-sm" style={{ 
-                             fontSize: '10px',
-                             color: '#666',
-                             letterSpacing: '0.2px'
-                           }}>
-                             {project.Tech_Stack || 'Tech Stack'}
-                           </span>
+                           {project.Tech_Stack && project.Tech_Stack.trim() !== '' && (
+                             <span className="text-sm" style={{ 
+                               fontSize: '10px',
+                               color: '#666',
+                               letterSpacing: '0.2px'
+                             }}>
+                               {project.Tech_Stack}
+                             </span>
+                           )}
                          </div>
                                                {(project.Start_Date || project.End_Date) ? (
                             <div className="font-bold " style={{ 
@@ -700,7 +702,7 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
                       )}
                     </div>
                   </div>
-                  {cert.issueDate ? (
+                  {cert.issueDate && cert.issueDate.trim() !== '' ? (
                     <div className="font-bold" style={{ 
                       fontSize: '11px',
                       fontWeight: 'bold',
@@ -709,17 +711,7 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
                     }}>
                       {cert.issueDate}
                     </div>
-                  ) : (
-                    <div className="font-bold" style={{ 
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                      letterSpacing: '0.2px',
-                      color: '#666666',
-                      fontStyle: 'italic'
-                    }}>
-                      Issue Date
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               ))
             ) : (
@@ -734,15 +726,6 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
                   }}>
                     <span style={{ fontWeight: 'bold' }}>Certificate Name</span> - <span style={{ color: '#666666' }}>Issuing Organization</span>
                   </div>
-                </div>
-                <div className="font-bold" style={{ 
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  letterSpacing: '0.2px',
-                  color: '#666666',
-                  fontStyle: 'italic'
-                }}>
-                  Issue Date
                 </div>
               </div>
             )}
