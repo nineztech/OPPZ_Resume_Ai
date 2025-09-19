@@ -528,6 +528,18 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
                                {project.Tech_Stack}
                              </span>
                            )}
+                           {project.Link && project.Link.trim() && (
+                             <span className="text-sm" style={{ 
+                               fontSize: '10px',
+                               color: '#2c5282',
+                               textDecoration: 'underline',
+                               marginLeft: '4px'
+                             }}>
+                               <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>
+                                 Link
+                               </a>
+                             </span>
+                           )}
                          </div>
                                                {(project.Start_Date || project.End_Date) ? (
                             <div className="font-bold " style={{ 
@@ -564,13 +576,6 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
                                   <span className="mr-2" style={{ fontWeight: 'bold', color: color || '#2c5282' }}>•</span>
                                   <span className="leading-tight" style={{ lineHeight: '1.2', color: '#000000', fontWeight: '500' }}>
                                     {part}
-                                    {idx === descriptionParts.length - 1 && project.Link && project.Link.trim() && (
-                                      <span style={{ marginLeft: '4px' }}>
-                                        <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>
-                                          Link
-                                        </a>
-                                      </span>
-                                    )}
                                   </span>
                                 </div>
                               ))}

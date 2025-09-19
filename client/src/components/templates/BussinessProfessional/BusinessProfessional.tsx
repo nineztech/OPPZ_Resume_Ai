@@ -528,6 +528,18 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
                                {project.Tech_Stack}
                              </span>
                            )}
+                           {project.Link && project.Link.trim() && (
+                             <span className="text-sm" style={{ 
+                               fontSize: '10px',
+                               color: '#2c5282',
+                               textDecoration: 'underline',
+                               marginLeft: '4px'
+                             }}>
+                               <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>
+                                 Link
+                               </a>
+                             </span>
+                           )}
                          </div>
                                                {(project.Start_Date || project.End_Date) ? (
                             <div className="font-bold " style={{ 
@@ -563,13 +575,6 @@ const ResumePDF: React.FC<EliteModernProps> = ({ data, color, visibleSections })
                           marginBottom: '8px'
                         }}>
                           {project.Description}
-                          {project.Link && project.Link.trim() && (
-                            <span style={{ marginLeft: '4px' }}>
-                              <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#2c5282', textDecoration: 'underline' }}>
-                                Link
-                              </a>
-                            </span>
-                          )}
                         </div>
                       ) : (
                         <div style={{ 
