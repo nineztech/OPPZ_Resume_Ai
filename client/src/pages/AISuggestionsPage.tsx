@@ -117,7 +117,7 @@ const AISuggestionsPage: React.FC = () => {
         education: (state.suggestions as any).sectionSuggestions?.education?.rewrite || null,
         // Pass the full projects array with name, existing, rewrite, recommendations
         projects: (state.suggestions as any).sectionSuggestions?.projects || null,
-        certifications: (state.suggestions as any).sectionSuggestions?.certifications?.rewrite || null
+        certifications: (state.suggestions as any).sectionSuggestions?.certifications || null
       }
         };
     
@@ -614,30 +614,115 @@ const AISuggestionsPage: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Suggested Certifications</h4>
-                          <div className="space-y-2">
-                            {getSafeArray((suggestions as any).sectionSuggestions.certifications.rewrite).map((cert, index) => (
-                              <div key={index} className="text-sm text-gray-700 p-3 bg-yellow-50 rounded border-l-4 border-yellow-500">
-                                {cert}
+                        {(() => {
+                          const certifications = (suggestions as any).sectionSuggestions?.certifications;
+                          
+                          // Check if certifications exist and is valid
+                          if (!certifications) {
+                            return (
+                              <div className="text-sm text-gray-500 italic">
+                                No certification suggestions available.
+                              </div>
+                            );
+                          }
+                          
+                          // Handle certifications as array of objects (new structure)
+                          if (Array.isArray(certifications) && certifications.length > 0) {
+                            return (
+                              <div className="space-y-4">
+                                {certifications.map((cert, index) => {
+                                  // Ensure cert is an object and has the expected structure
+                                  if (!cert || typeof cert !== 'object') {
+                                    return null;
+                                  }
+                                  
+                                  return (
+                                    <div key={index} className="border rounded-lg p-4 bg-yellow-50">
+                                      <div className="space-y-3">
+                                        <div>
+                                          <h5 className="font-medium text-gray-800 mb-1">Certificate Name</h5>
+                                          <div className="text-sm text-gray-700 p-2 bg-white rounded border">
+                                            {String(cert.certificateName || cert.name || 'Certificate name not specified')}
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <h5 className="font-medium text-gray-800 mb-1">Issuing Organization</h5>
+                                          <div className="text-sm text-gray-700 p-2 bg-white rounded border">
+                                            {String(cert.instituteName || cert.issuer || cert.organization || 'Organization not specified')}
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <h5 className="font-medium text-gray-800 mb-1">Issue Date</h5>
+                                          <div className="text-sm text-gray-700 p-2 bg-white rounded border">
+                                            {String(cert.issueDate || cert.startDate || cert.endDate || 'Date not specified')}
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <h5 className="font-medium text-gray-800 mb-1">Description</h5>
+                                          <div className="text-sm text-gray-700 p-2 bg-white rounded border">
+                                            {String(cert.rewrite || cert.existing || 'No description available')}
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <h5 className="font-medium text-gray-800 mb-1">Recommendations</h5>
+                                          <ul className="space-y-1">
+                                            {getSafeArray(cert.recommendations || []).map((rec, recIndex) => (
+                                              <li key={recIndex} className="text-sm text-gray-700 flex items-start gap-2">
+                                                <ArrowRight className="w-3 h-3 text-yellow-500 mt-1 flex-shrink-0" />
+                                                {String(rec)}
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          }
+                          
+                          // Handle certifications as object (fallback)
+                          if (certifications && typeof certifications === 'object' && !Array.isArray(certifications)) {
+                            return (
+                              <>
+                                <div>
+                                  <h4 className="font-medium text-gray-900 mb-2">Current Certifications</h4>
+                                  <div className="text-sm text-gray-700 p-3 bg-gray-50 rounded border">
+                                    {String(certifications.existing || 'No certifications currently listed in resume')}
+                                  </div>
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-gray-900 mb-2">Suggested Certification Enhancements</h4>
+                                  <div className="text-sm text-gray-700 p-3 bg-yellow-50 rounded border-l-4 border-yellow-500">
+                                    {String(certifications.rewrite || 'No specific certification suggestions available at this time.')}
+                                  </div>
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-gray-900 mb-2">Recommendations</h4>
+                                  <ul className="space-y-1">
+                                    {getSafeArray(certifications.recommendations || []).map((rec, index) => (
+                                      <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
+                                        <ArrowRight className="w-3 h-3 text-yellow-500 mt-1 flex-shrink-0" />
+                                        {String(rec)}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </>
+                            );
+                          }
+                          
+                          // Fallback for unexpected data structure
+                          return (
+                            <div className="text-sm text-gray-500 italic">
+                              No certification suggestions available.
                             </div>
-                          ))}
-                        </div>
+                          );
+                        })()}
                       </div>
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Recommendations</h4>
-                          <ul className="space-y-1">
-                            {getSafeArray((suggestions as any).sectionSuggestions.certifications.recommendations).map((rec, index) => (
-                              <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
-                                <ArrowRight className="w-3 h-3 text-yellow-500 mt-1 flex-shrink-0" />
-                                {rec}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
                 )}
               </div>
             )}

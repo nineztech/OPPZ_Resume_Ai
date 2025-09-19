@@ -1191,8 +1191,39 @@ const ResumeBuilderPage = () => {
           if (rewrites.certifications && rewrites.certifications !== null) {
             console.log('Applying certifications rewrites:', rewrites.certifications);
             
-            // Handle certifications as a single rewrite string
-            if (typeof rewrites.certifications === 'string' && rewrites.certifications.trim()) {
+            // Handle certifications as array of objects (new structure)
+            if (Array.isArray(rewrites.certifications) && rewrites.certifications.length > 0) {
+              rewrites.certifications.forEach((certRewrite: any, index: number) => {
+                if (certRewrite && typeof certRewrite === 'object') {
+                  const newCertification = {
+                    id: `ai-cert-${index}-${Date.now()}`,
+                    certificateName: certRewrite.certificateName || certRewrite.name || '',
+                    link: certRewrite.link || '',
+                    issueDate: certRewrite.issueDate || certRewrite.startDate || '',
+                    instituteName: certRewrite.instituteName || certRewrite.issuer || certRewrite.organization || ''
+                  };
+                  
+                  processedData.certifications.push(newCertification);
+                  changesSet.add(`certification-${processedData.certifications.length - 1}-ai-rewrite`);
+                } else if (typeof certRewrite === 'string' && certRewrite.trim()) {
+                  // Handle string format (legacy support)
+                  const newCertification = {
+                    id: `ai-cert-${index}-${Date.now()}`,
+                    certificateName: certRewrite,
+                    link: '',
+                    issueDate: '',
+                    instituteName: ''
+                  };
+                  
+                  processedData.certifications.push(newCertification);
+                  changesSet.add(`certification-${processedData.certifications.length - 1}-ai-rewrite`);
+                }
+              });
+              
+              console.log('Applied certifications rewrite as new certifications');
+            }
+            // Handle certifications as a single rewrite string (legacy support)
+            else if (typeof rewrites.certifications === 'string' && rewrites.certifications.trim()) {
               const rewriteText = rewrites.certifications;
               
               // Split by lines and filter out empty ones
@@ -1215,23 +1246,6 @@ const ResumeBuilderPage = () => {
               });
               
               console.log('Applied certifications rewrite as new certifications');
-            }
-            // Handle certifications as array (legacy support)
-            else if (Array.isArray(rewrites.certifications) && rewrites.certifications.length > 0) {
-              rewrites.certifications.forEach((certRewrite: string, index: number) => {
-                if (certRewrite) {
-                  const newCertification = {
-                    id: `ai-cert-${index}-${Date.now()}`,
-                    certificateName: certRewrite,
-                    link: '',
-                    issueDate: '',
-                    instituteName: ''
-                  };
-                  
-                  processedData.certifications.push(newCertification);
-                  changesSet.add(`certification-${processedData.certifications.length - 1}-ai-rewrite`);
-                }
-              });
             }
           }
           

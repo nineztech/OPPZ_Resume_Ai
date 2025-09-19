@@ -2,7 +2,7 @@
 Pydantic models for AI suggestion service response validation
 """
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, root_validator
 from datetime import datetime
 
 
@@ -90,12 +90,29 @@ class EducationSuggestion(BaseModel):
 
 class CertificationsSuggestion(BaseModel):
     """Model for certifications suggestions"""
-    name: str = Field(default="", description="Certification name")
+    certificateName: str = Field(default="", description="Certification name")
     existing: str = Field(default="", description="Existing certification content")
     rewrite: str = Field(default="", description="Suggested rewritten content")
-    startDate: str = Field(default="", description="Start date")
-    endDate: str = Field(default="", description="End date")
+    issueDate: str = Field(default="", description="Issue date")
+    instituteName: str = Field(default="", description="Issuing organization name")
     recommendations: List[str] = Field(default_factory=list, description="Recommendations for improvement")
+
+    @root_validator(pre=True)
+    def handle_legacy_field_names(cls, values):
+        """Handle legacy field names and map them to new field names"""
+        if isinstance(values, dict):
+            # Map old field names to new field names
+            if 'name' in values and 'certificateName' not in values:
+                values['certificateName'] = values.get('name', '')
+            if 'startDate' in values and 'issueDate' not in values:
+                values['issueDate'] = values.get('startDate', '')
+            if 'endDate' in values and 'issueDate' not in values:
+                values['issueDate'] = values.get('endDate', '')
+            if 'issuer' in values and 'instituteName' not in values:
+                values['instituteName'] = values.get('issuer', '')
+            if 'organization' in values and 'instituteName' not in values:
+                values['instituteName'] = values.get('organization', '')
+        return values
 
     @validator('recommendations', pre=True)
     def validate_recommendations(cls, v):
