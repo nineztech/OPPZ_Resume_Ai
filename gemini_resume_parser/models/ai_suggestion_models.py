@@ -155,10 +155,10 @@ class AIComparisonResponse(BaseModel):
         """Ensure score is between 0-100"""
         if not isinstance(v, int):
             try:
-                v = int(v)
+                v = int(round(float(v)))
             except (ValueError, TypeError):
                 v = 0
-        return max(0, min(100, v))
+        return max(0, min(100, int(v)))
 
     @validator('analysisTimestamp')
     def validate_timestamp(cls, v):

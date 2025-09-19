@@ -299,14 +299,74 @@ class AISuggestionServiceOptimized:
         - For certifications: Use "issueDate" (not "startDate", "endDate", "start_date", or "end_date")
         - These field names must match exactly what the frontend expects for proper data display
 
-        OVERALL SCORE CALCULATION RULES:
-        - Calculate overallScore based on how well the resume matches the job description requirements
-        - Score 90-100: Excellent match - resume perfectly aligns with JD requirements, strong keywords, relevant experience
-        - Score 80-89: Very good match - resume mostly aligns with JD, minor improvements needed
-        - Score 70-79: Good match - resume has potential but needs significant improvements to align with JD
-        - Score 60-69: Fair match - resume has some relevant elements but major improvements needed
-        - Score 50-59: Poor match - resume lacks many JD requirements, substantial improvements needed
-        - Score 0-49: Very poor match - resume significantly misaligned with JD requirements
+        OVERALL SCORE CALCULATION RULES (MANDATORY DYNAMIC SCORING):
+        - Calculate overallScore using this EXACT formula with specific weights and criteria:
+        
+        SCORING FORMULA (Total: 100 points):
+        1. Skills Match (25 points): Count matching skills between resume and JD
+           - Exact matches: 3 points each
+           - Similar/related skills: 2 points each  
+           - Missing critical skills: -2 points each
+           - Maximum: 25 points
+        
+        2. Experience Relevance (20 points): How well work experience aligns with JD requirements
+           - Role relevance: 0-8 points (0=none, 8=perfect match)
+           - Industry relevance: 0-6 points (0=none, 6=same industry)
+           - Achievement quality: 0-6 points (0=none, 6=quantified results)
+           - Maximum: 20 points
+        
+        3. Keyword Density (15 points): Important JD keywords present in resume
+           - Critical keywords: 2 points each (max 8 points)
+           - Important keywords: 1 point each (max 4 points)
+           - Nice-to-have keywords: 0.5 points each (max 3 points)
+           - Maximum: 15 points
+        
+        4. Professional Summary Quality (15 points): How well summary matches JD
+           - Keyword alignment: 0-5 points
+           - Experience level match: 0-4 points
+           - Value proposition clarity: 0-3 points
+           - Quantified achievements: 0-3 points
+           - Maximum: 15 points
+        
+        5. Education/Certifications (10 points): Educational background relevance
+           - Degree relevance: 0-4 points
+           - Certification relevance: 0-3 points
+           - Additional training: 0-3 points
+           - Maximum: 10 points
+        
+        6. Project Relevance (10 points): How well projects demonstrate required skills
+           - Technology stack match: 0-4 points
+           - Project complexity: 0-3 points
+           - Results/impact shown: 0-3 points
+           - Maximum: 10 points
+        
+        7. Overall Presentation (5 points): Resume structure and professionalism
+           - Format consistency: 0-2 points
+           - Grammar/spelling: 0-2 points
+           - Length appropriateness: 0-1 point
+           - Maximum: 5 points
+        
+        FINAL SCORE CALCULATION:
+        - Add all 7 category scores (should total 0-100)
+        - Apply experience level multiplier:
+          * Entry level: multiply by 1.0
+          * Mid level: multiply by 1.0  
+          * Senior level: multiply by 1.0
+        - Round to the nearest integer (e.g., 73, 84, 92)
+        - NEVER use round numbers ending in 0 or 5 unless truly calculated
+        - Score range: 0 to 100
+        
+        SCORING EXAMPLES:
+        - Skills: 8 exact matches (24) + 3 similar (6) - 2 missing (4) = 22/25
+        - Experience: Role (6) + Industry (5) + Achievements (4) = 15/20
+        - Keywords: 4 critical (8) + 6 important (6) + 4 nice-to-have (2) = 16/15 (capped)
+        - Summary: Keywords (4) + Level (3) + Value (2) + Quantified (2) = 11/15
+        - Education: Degree (3) + Certs (2) + Training (1) = 6/10
+        - Projects: Tech (3) + Complexity (2) + Results (2) = 7/10
+        - Presentation: Format (2) + Grammar (2) + Length (1) = 5/5
+        - Total: 22+15+15+11+6+7+5 = 81
+        
+        CRITICAL: Always calculate using the exact formula above. Never return generic scores like 75, 80, 85, 90, 95, 100.
 
         REPETITION RULES:
         - Do NOT repeat strong action verbs (e.g., "implemented", "developed", "managed").
@@ -394,7 +454,7 @@ class AISuggestionServiceOptimized:
 
         REQUIRED OUTPUT SCHEMA (MUST INCLUDE ALL SECTIONS):
         {{
-            "overallScore": <calculate_dynamic_score_based_on_resume_jd_match>,
+            "overallScore": <calculate_using_exact_formula_above_0_to_100>,
             "analysisTimestamp": "{datetime.datetime.utcnow().isoformat()}Z",
             "sectionSuggestions": {{
                 "professionalSummary": {{
@@ -451,9 +511,19 @@ class AISuggestionServiceOptimized:
             ]
         }}
         
+        SCORING IMPLEMENTATION REQUIREMENTS:
+        - You MUST calculate the overallScore using the exact 7-category formula provided above
+        - Count actual matches, keywords, and elements from the resume and job description
+        - Apply the specific point values for each category as defined
+        - Sum all 7 categories and round to the nearest integer
+        - The final score should reflect the actual analysis, not a generic estimate
+        - Examples of good scores: 67, 73, 81, 89, 92
+        - Examples of bad scores: 70, 75, 80, 85, 90, 95, 100 (unless truly calculated)
+        
         REMEMBER: 
         - NEVER omit sections - return empty values instead of missing sections!
-        - overallScore MUST be a number between 0-100, never "NA" or text!
+        - overallScore MUST be an integer between 0-100, never "NA" or text!
+        - Use the exact scoring formula - do not estimate or round to multiples of 5!
         
         IMPORTANT: Your response must be valid JSON that can be parsed directly. Do not include any text outside the JSON object.
         """
