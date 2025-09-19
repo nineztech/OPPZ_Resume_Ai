@@ -121,6 +121,202 @@ class ResumeImprovementService:
         
         return missing_sections
     
+    def _process_skills_suggestions(self, parsed_resume_data: Dict[str, Any], suggestions: Dict[str, List[str]]) -> Dict[str, Any]:
+        """
+        Process ADD_SKILLS suggestions and enhance the skills section using AI
+        No fallback logic - relies on robust AI prompting for skills enhancement
+        
+        Args:
+            parsed_resume_data: Original parsed resume data
+            suggestions: Extracted suggestions from ATS analysis
+            
+        Returns:
+            Enhanced resume data with improved skills section
+        """
+        enhanced_data = parsed_resume_data.copy()
+        
+        # Get skills suggestions from skills_match_alignment category
+        skills_suggestions = suggestions.get("skills_match_alignment", [])
+        
+        if not skills_suggestions:
+            return enhanced_data
+        
+        # Use AI to intelligently enhance skills section
+        try:
+            enhanced_skills = self._ai_enhance_skills_section(parsed_resume_data, skills_suggestions)
+            if enhanced_skills:
+                enhanced_data["skills"] = enhanced_skills
+        except Exception as e:
+            logger.warning(f"AI skills enhancement failed: {e}. Using original skills.")
+        
+        return enhanced_data
+    
+    def _ai_enhance_skills_section(self, parsed_resume_data: Dict[str, Any], skills_suggestions: List[str]) -> Dict[str, Any]:
+        """
+        Use AI to intelligently enhance the skills section based on ATS suggestions
+        Follows the same approach as AI suggestion service - no fallback logic
+        
+        Args:
+            parsed_resume_data: Original parsed resume data
+            skills_suggestions: List of ADD_SKILLS suggestions from ATS analysis
+            
+        Returns:
+            Enhanced skills section in frontend format
+        """
+        try:
+            # Format skills suggestions for AI processing
+            suggestions_text = "\n".join([f"- {suggestion}" for suggestion in skills_suggestions])
+            
+            # Get current skills for context
+            current_skills = parsed_resume_data.get("skills", {})
+            
+            prompt = f"""
+            You are an expert resume skills specialist. Enhance the skills section based on ATS suggestions.
+            
+            CRITICAL RULES:
+            - Return ONLY valid JSON (no markdown, no code fences, no explanations)
+            - Start your response with {{ and end with }}
+            - ONLY suggest skills that can be added to EXISTING categories shown in the resume
+            - Do NOT create new category objects or suggest new skill categories
+            - Only add missing skills to existing categories
+            - If a skill doesn't fit any existing category, do NOT suggest it
+            - Focus on enhancing existing skill categories with relevant missing skills
+            - In the response: Return skills as a DIRECT object with category names as keys
+            - CRITICAL: ONLY include the NEW skills being added, NOT the existing skills
+            - Format: If existing has "Languages: JavaScript" and you need to add "Java", response should be {{"Languages": "Java"}} NOT {{"Languages": "JavaScript, Java"}}
+            - NEVER include existing skills in the response - only show the new skills being added
+            - NEVER use "General" wrapper - return skills directly as category: skills pairs
+            - If a category has no new skills to add, do NOT include that category in the response at all
+            - Do NOT suggest "New Category: skills" - only use existing categories
+            - NEVER suggest "General" as a skill category - avoid generic categories
+            
+            CURRENT SKILLS STRUCTURE:
+            {json.dumps(current_skills, indent=2)}
+            
+            ATS SKILLS SUGGESTIONS TO APPLY:
+            {suggestions_text}
+            
+            REQUIRED OUTPUT FORMAT:
+            Return ONLY the new skills to be added in this exact format:
+            {{
+                "Languages": "Java, Python",
+                "Database": "PostgreSQL",
+                "Cloud": "AWS"
+            }}
+            
+            IMPORTANT: 
+            - Only include categories that have NEW skills to add
+            - Each category value should be a comma-separated string of NEW skills only
+            - Do NOT include existing skills
+            - If no new skills can be added to any category, return {{}}
+            """
+            
+            response = self.model.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an expert resume skills specialist. Generate enhanced skills based on ATS suggestions."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                top_p=0.8,
+                max_tokens=1000
+            )
+            
+            response_text = response.choices[0].message.content.strip()
+            
+            # Clean and parse the response
+            if response_text.startswith("```json"):
+                response_text = response_text.replace("```json", "").replace("```", "").strip()
+            elif response_text.startswith("```"):
+                response_text = response_text.replace("```", "").strip()
+            
+            # Parse the JSON response
+            new_skills = json.loads(response_text)
+            
+            # Log the response for debugging
+            logger.info(f"AI returned new skills: {new_skills}")
+            logger.info(f"Current skills before merge: {current_skills}")
+            
+            # Merge new skills with existing skills
+            if new_skills and isinstance(new_skills, dict) and new_skills:
+                enhanced_skills = self._merge_new_skills_with_existing(current_skills, new_skills)
+                logger.info(f"Enhanced skills after merge: {enhanced_skills}")
+                return enhanced_skills
+            
+            # If no new skills to add, return existing skills
+            logger.info("No new skills to add, returning existing skills")
+            return current_skills
+            
+        except Exception as e:
+            logger.error(f"AI skills enhancement failed: {e}")
+            return parsed_resume_data.get("skills", {})
+    
+    def _merge_new_skills_with_existing(self, existing_skills: Dict[str, Any], new_skills: Dict[str, str]) -> Dict[str, Any]:
+        """
+        Merge new skills with existing skills, avoiding duplicates
+        
+        Args:
+            existing_skills: Current skills structure
+            new_skills: New skills to add (category: comma-separated string format)
+            
+        Returns:
+            Merged skills structure
+        """
+        logger.info(f"Merging skills - Existing: {existing_skills}, New: {new_skills}")
+        
+        # Start with a deep copy of existing skills
+        merged_skills = {}
+        if existing_skills:
+            for category, skills_list in existing_skills.items():
+                if isinstance(skills_list, list):
+                    merged_skills[category] = skills_list.copy()
+                else:
+                    merged_skills[category] = []
+        else:
+            merged_skills = {}
+        
+        logger.info(f"Initial merged skills: {merged_skills}")
+        
+        for category, skills_string in new_skills.items():
+            if not skills_string or not isinstance(skills_string, str):
+                logger.info(f"Skipping empty or invalid skills string for category {category}")
+                continue
+                
+            # Parse comma-separated skills
+            new_skills_list = [skill.strip() for skill in skills_string.split(",") if skill.strip()]
+            logger.info(f"Parsed new skills for {category}: {new_skills_list}")
+            
+            if not new_skills_list:
+                logger.info(f"No valid skills found for category {category}")
+                continue
+                
+            # Initialize category if it doesn't exist
+            if category not in merged_skills:
+                merged_skills[category] = []
+                logger.info(f"Created new category {category}")
+            
+            # Ensure category is a list
+            if not isinstance(merged_skills[category], list):
+                merged_skills[category] = []
+                logger.info(f"Converted category {category} to list")
+            
+            # Add new skills that don't already exist
+            existing_skills_lower = [s.lower() for s in merged_skills[category]]
+            added_skills = []
+            for skill in new_skills_list:
+                if skill.lower() not in existing_skills_lower:
+                    merged_skills[category].append(skill)
+                    added_skills.append(skill)
+                else:
+                    logger.info(f"Skill '{skill}' already exists in category {category}")
+            
+            if added_skills:
+                logger.info(f"Added skills to {category}: {added_skills}")
+        
+        logger.info(f"Final merged skills: {merged_skills}")
+        return merged_skills
+    
+    
     def _generate_improved_resume(self, parsed_resume_data: Dict[str, Any], suggestions: Dict[str, List[str]], ats_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate an improved resume by applying ATS suggestions
@@ -136,8 +332,11 @@ class ResumeImprovementService:
         # Detect missing sections
         missing_sections = self._detect_missing_sections(parsed_resume_data)
         
+        # Process ADD_SKILLS suggestions first to enhance skills section
+        enhanced_resume_data = self._process_skills_suggestions(parsed_resume_data, suggestions)
+        
         # Create a comprehensive prompt for resume improvement
-        prompt = self._create_improvement_prompt(parsed_resume_data, suggestions, ats_analysis, missing_sections)
+        prompt = self._create_improvement_prompt(enhanced_resume_data, suggestions, ats_analysis, missing_sections)
         
         try:
             logger.info("Generating improved resume with OpenAI API")
@@ -609,19 +808,15 @@ class ResumeImprovementService:
         frontend_format["summary"] = improved_resume.get("summary") or original_resume.get("summary", "")
         frontend_format["objective"] = improved_resume.get("objective") or original_resume.get("objective", "")
         
-        # Skills section - merge existing skills with new skills from ATS suggestions
+        # Skills section - use improved skills if available, otherwise use original
         improved_skills = improved_resume.get("skills")
         original_skills = original_resume.get("skills")
         
-        if improved_skills and original_skills:
-            # Merge existing skills with new skills from ATS suggestions
-            merged_skills = self._merge_skills_sections(original_skills, improved_skills)
-            frontend_format["skills"] = merged_skills
-        elif improved_skills:
-            # Only improved skills available
+        if improved_skills:
+            # Use AI-enhanced skills (already merged with existing skills)
             frontend_format["skills"] = improved_skills
         elif original_skills:
-            # Only original skills available
+            # Use original skills if no improvements
             frontend_format["skills"] = original_skills
         else:
             # No skills section exists, leave empty
@@ -1139,147 +1334,7 @@ class ResumeImprovementService:
         
         return summary
     
-    def _merge_skills_sections(self, original_skills: Any, improved_skills: Any) -> Dict[str, Any]:
-        """
-        Merge existing skills with new skills from ATS suggestions
-        ALWAYS preserves ALL existing skills and adds new ones from ATS suggestions
-        Removes duplicates across the entire skills section
-        
-        Args:
-            original_skills: Original skills from resume
-            improved_skills: Skills with ATS suggestions applied
-            
-        Returns:
-            Merged skills section with both existing and new skills, no duplicates
-        """
-        # First, collect ALL existing skills from original resume
-        all_existing_skills = self._extract_all_skills(original_skills)
-        
-        # Then, collect new skills from improved resume
-        all_new_skills = self._extract_all_skills(improved_skills)
-        
-        # Remove duplicates across entire skills section
-        existing_lower = [s.lower() for s in all_existing_skills]
-        unique_new_skills = [skill for skill in all_new_skills if skill.lower() not in existing_lower]
-        
-        # Combine: ALL existing + unique new skills
-        all_combined_skills = all_existing_skills + unique_new_skills
-        
-        # Distribute skills back to appropriate categories
-        return self._distribute_skills_to_categories(all_combined_skills, original_skills)
     
-    def _extract_all_skills(self, skills: Any) -> List[str]:
-        """
-        Extract all skills from any skills format (dict, list, etc.)
-        
-        Args:
-            skills: Skills in any format
-            
-        Returns:
-            List of all skills found
-        """
-        all_skills = []
-        
-        if isinstance(skills, dict):
-            for category, skill_list in skills.items():
-                if isinstance(skill_list, list):
-                    all_skills.extend(skill_list)
-        elif isinstance(skills, list):
-            all_skills.extend(skills)
-        
-        # Remove empty strings and None values
-        return [skill for skill in all_skills if skill and str(skill).strip()]
-    
-    def _distribute_skills_to_categories(self, all_skills: List[str], original_skills: Any) -> Dict[str, Any]:
-        """
-        Distribute skills back to appropriate categories based on original structure
-        Intelligently categorizes skills into technical, soft, tools, and frameworks
-        
-        Args:
-            all_skills: Combined list of all skills
-            original_skills: Original skills structure to maintain format
-            
-        Returns:
-            Skills distributed to appropriate categories
-        """
-        # Smart categorization of skills
-        technical_keywords = ['python', 'java', 'javascript', 'c++', 'c#', 'sql', 'html', 'css', 'php', 'ruby', 'go', 'rust', 'swift', 'kotlin', 'typescript', 'machine learning', 'ai', 'data science', 'algorithms', 'programming', 'coding', 'development', 'software']
-        soft_keywords = ['communication', 'leadership', 'teamwork', 'problem solving', 'critical thinking', 'adaptability', 'creativity', 'time management', 'project management', 'collaboration', 'mentoring', 'presentation', 'negotiation', 'analytical']
-        tools_keywords = ['git', 'docker', 'kubernetes', 'jenkins', 'jira', 'confluence', 'slack', 'trello', 'asana', 'figma', 'photoshop', 'excel', 'powerpoint', 'tableau', 'postman', 'vs code', 'intellij', 'eclipse']
-        framework_keywords = ['react', 'angular', 'vue', 'node.js', 'express', 'django', 'flask', 'spring', 'hibernate', 'bootstrap', 'jquery', 'webpack', 'babel', 'jest', 'cypress', 'tensorflow', 'pytorch', 'scikit-learn']
-        
-        # Initialize categories
-        categorized_skills = {
-            "technical": [],
-            "soft": [],
-            "tools": [],
-            "frameworks": []
-        }
-        
-        # If original skills had a specific structure, try to maintain it
-        if isinstance(original_skills, dict):
-            # Use original categories if they exist
-            for category in original_skills.keys():
-                if category not in categorized_skills:
-                    categorized_skills[category] = []
-        
-        # Categorize each skill intelligently
-        for skill in all_skills:
-            skill_lower = skill.lower()
-            categorized = False
-            
-            # Check for framework keywords first (more specific)
-            for keyword in framework_keywords:
-                if keyword in skill_lower:
-                    categorized_skills["frameworks"].append(skill)
-                    categorized = True
-                    break
-            
-            if not categorized:
-                # Check for tools keywords
-                for keyword in tools_keywords:
-                    if keyword in skill_lower:
-                        categorized_skills["tools"].append(skill)
-                        categorized = True
-                        break
-            
-            if not categorized:
-                # Check for soft skills keywords
-                for keyword in soft_keywords:
-                    if keyword in skill_lower:
-                        categorized_skills["soft"].append(skill)
-                        categorized = True
-                        break
-            
-            if not categorized:
-                # Check for technical keywords
-                for keyword in technical_keywords:
-                    if keyword in skill_lower:
-                        categorized_skills["technical"].append(skill)
-                        categorized = True
-                        break
-            
-            # If no category found, default to technical
-            if not categorized:
-                categorized_skills["technical"].append(skill)
-        
-        # Remove empty categories unless they existed in original
-        if isinstance(original_skills, dict):
-            # Keep original structure
-            result = {}
-            for category in original_skills.keys():
-                if category in categorized_skills:
-                    result[category] = categorized_skills[category]
-                else:
-                    result[category] = []
-            # Add any new categories that have skills
-            for category, skills_list in categorized_skills.items():
-                if category not in result and skills_list:
-                    result[category] = skills_list
-            return result
-        else:
-            # Return all categories, remove empty ones
-            return {k: v for k, v in categorized_skills.items() if v}
 
 
 

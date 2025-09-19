@@ -519,27 +519,6 @@ const ATSResultsPage: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Show section-specific recommendations from API */}
-                          {results.recommendations.length > 0 && (
-                            <div>
-                              <h4 className="font-semibold text-purple-800 mb-3 flex items-center">
-                                <div className="w-4 h-4 mr-2 bg-purple-500 rounded-full flex items-center justify-center">
-                                  <span className="text-white text-xs">⭐</span>
-                                </div>
-                                AI Recommendations
-                              </h4>
-                              <div className="space-y-2">
-                                {results.recommendations.slice(0, 2).map((recommendation, index) => (
-                                  <div key={index} className="flex items-start space-x-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                                    <div className="w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
-                                      <span className="text-white text-xs font-bold">•</span>
-                                    </div>
-                                    <span className="text-sm text-purple-800">{recommendation}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
 
                         </div>
                       </div>
@@ -565,19 +544,6 @@ const ATSResultsPage: React.FC = () => {
             )}
 
 
-            {/* Recommendations Section */}
-            {results.recommendations.length > 0 && (
-              <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-                <h3 className="text-lg font-semibold text-blue-900 mb-4">💡 Pro Tips</h3>
-                <div className="space-y-3">
-                  {results.recommendations.map((recommendation, index) => (
-                    <div key={index} className="text-sm text-blue-800">
-                      • {recommendation}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
