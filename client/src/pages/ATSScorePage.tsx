@@ -1224,6 +1224,7 @@ const ATSScorePage: React.FC = () => {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-8"
         >
+          {analysisType === 'standard' ? (
           <Card>
             <CardHeader>
               <CardTitle>Upload Your Resume</CardTitle>
@@ -1272,16 +1273,59 @@ const ATSScorePage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Resume Upload */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Upload Your Resume</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      dragActive 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                  >
+                    {!selectedFile && <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-700">
+                      {selectedFile ? (
+                        <div className="text-green-600">
+                          <CheckCircle className="w-5 h-5 mx-auto mb-1" />
+                          <p className="font-medium text-xs">{selectedFile.name}</p>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-medium text-gray-700">
+                          Drop your resume here or click to browse
+                        </p>
+                      )}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Supports PDF, DOCX, and TXT files (max 10MB)
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.txt"
+                      onChange={(e) => handleFileChange(e.target.files)}
+                      className="hidden"
+                      id="resume-upload"
+                    />
+                    <label htmlFor="resume-upload">
+                      <Button variant="outline" size="sm" className="mt-3" asChild>
+                        <span className="cursor-pointer">Choose File</span>
+                      </Button>
+                    </label>
+                  </div>
+                </CardContent>
+              </Card>
 
-        {/* Job Description Input (for job-specific analysis) */}
-        {analysisType === 'job-specific' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="mb-8"
-          >
+              {/* Job Description Upload */}
             <Card>
               <CardHeader>
                 <CardTitle>Job Description</CardTitle>
@@ -1301,7 +1345,7 @@ const ATSScorePage: React.FC = () => {
                       }}
                       className="text-blue-600"
                     />
-                    <span>Paste job description text</span>
+                      <span className="text-sm">Paste text</span>
                   </label>
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input
@@ -1315,24 +1359,24 @@ const ATSScorePage: React.FC = () => {
                       }}
                       className="text-blue-600"
                     />
-                    <span>Upload job description file</span>
+                      <span className="text-sm">Upload file</span>
                   </label>
                 </div>
 
                 {/* Text Input */}
                 {jdInputType === 'text' && (
                   <Textarea
-                    placeholder="Paste the job description here to analyze how well your resume matches the specific role..."
+                      placeholder="Paste the job description here..."
                     value={jobDescription}
                     onChange={(e) => setJobDescription(e.target.value)}
-                    className="min-h-[150px]"
+                      className="min-h-[120px]"
                   />
                 )}
 
                 {/* File Input */}
                 {jdInputType === 'file' && (
                   <div
-                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
                       jdDragActive 
                         ? 'border-blue-500 bg-blue-50' 
                         : 'border-gray-300 hover:border-gray-400'
@@ -1341,8 +1385,8 @@ const ATSScorePage: React.FC = () => {
                     onDragOver={handleJdDragOver}
                     onDragLeave={handleJdDragLeave}
                   >
-                    <FileText className="w-8 h-8 text-gray-400 mx-auto mb-3" />
-                    <div className="space-y-2">
+                      <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <div className="space-y-1">
                       <p className="text-sm font-medium text-gray-700">
                         {jobDescriptionFile ? jobDescriptionFile.name : 'Drop job description file here or click to browse'}
                       </p>
@@ -1358,7 +1402,7 @@ const ATSScorePage: React.FC = () => {
                       id="jd-upload"
                     />
                     <label htmlFor="jd-upload">
-                      <Button variant="outline" size="sm" className="mt-3" asChild>
+                        <Button variant="outline" size="sm" className="mt-2" asChild>
                         <span className="cursor-pointer">Choose File</span>
                       </Button>
                     </label>
@@ -1366,8 +1410,9 @@ const ATSScorePage: React.FC = () => {
                 )}
               </CardContent>
             </Card>
-          </motion.div>
+            </div>
         )}
+        </motion.div>
 
         {/* Analyze Button */}
         <motion.div
