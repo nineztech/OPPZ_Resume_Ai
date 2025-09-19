@@ -298,7 +298,7 @@ const AISuggestionsPage: React.FC = () => {
                             );
                           }
                           
-                          return recommendations.slice(0, 3).map((rec, index) => (
+                          return recommendations.slice(0, 5).map((rec, index) => (
                             <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                               <div className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5 flex-shrink-0">
                                 {index + 1}
@@ -315,26 +315,231 @@ const AISuggestionsPage: React.FC = () => {
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-amber-700">
                         <AlertTriangle className="w-5 h-5" />
-                        Critical Issues
+                        Section Analysis
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2">
-                        <div className="text-sm text-red-600 p-2 bg-red-50 rounded border-l-4 border-red-500">
-                          Missing MERN Stack Projects
-                        </div>
-                        <div className="text-sm text-red-600 p-2 bg-red-50 rounded border-l-4 border-red-500">
-                          Incomplete Work Experience Dates
-                        </div>
-                        <div className="text-sm text-red-600 p-2 bg-red-50 rounded border-l-4 border-red-500">
-                          Missing Skills Section
-                        </div>
+                      <div className="space-y-3">
+                        {(() => {
+                          const sectionSuggestions = (suggestions as any).sectionSuggestions || {};
+                          const sections = Object.keys(sectionSuggestions);
+                          
+                          if (sections.length === 0) {
+                            return (
+                              <div className="text-sm text-gray-500 italic">
+                                No section analysis available at this time.
+                              </div>
+                            );
+                          }
+                          
+                          // Create a priority order for sections
+                          const sectionPriority = [
+                            'professionalSummary',
+                            'workExperience', 
+                            'skills',
+                            'projects',
+                            'education',
+                            'certifications'
+                          ];
+                          
+                          const orderedSections = sectionPriority.filter(section => 
+                            sections.includes(section) && sectionSuggestions[section]
+                          );
+                          
+                          return orderedSections.slice(0, 4).map((sectionKey) => {
+                            const section = sectionSuggestions[sectionKey];
+                            const sectionName = sectionKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                            
+                            // Determine if section needs attention based on content
+                            const hasIssues = !section.existing || 
+                              (Array.isArray(section.existing) && section.existing.length === 0) ||
+                              (typeof section.existing === 'string' && section.existing.trim() === '') ||
+                              (typeof section.existing === 'object' && Object.keys(section.existing).length === 0);
+                            
+                            const hasRecommendations = section.recommendations && 
+                              Array.isArray(section.recommendations) && 
+                              section.recommendations.length > 0;
+                            
+                            return (
+                              <div key={sectionKey} className={`p-3 rounded border-l-4 ${
+                                hasIssues 
+                                  ? 'bg-red-50 border-red-500' 
+                                  : hasRecommendations 
+                                    ? 'bg-yellow-50 border-yellow-500'
+                                    : 'bg-green-50 border-green-500'
+                              }`}>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-gray-800">
+                                    {sectionName}
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    {hasIssues ? (
+                                      <AlertTriangle className="w-4 h-4 text-red-500" />
+                                    ) : hasRecommendations ? (
+                                      <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                                    ) : (
+                                      <CheckCircle className="w-4 h-4 text-green-500" />
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  {hasIssues 
+                                    ? 'Needs content' 
+                                    : hasRecommendations 
+                                      ? 'Can be improved'
+                                      : 'Well structured'
+                                  }
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
+                {/* Dynamic Score Breakdown */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="w-5 h-5 text-blue-600" />
+                      Resume Analysis Summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600 mb-1">
+                          {suggestions.overallScore || 0}%
+                        </div>
+                        <div className="text-sm text-gray-600">Overall Score</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {(suggestions.overallScore || 0) >= 80 ? 'Excellent' : 
+                           (suggestions.overallScore || 0) >= 60 ? 'Good' : 
+                           (suggestions.overallScore || 0) >= 40 ? 'Needs Improvement' : 'Poor'}
+                        </div>
+                      </div>
+                      
+                      <div className="text-center p-4 bg-green-50 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600 mb-1">
+                          {(() => {
+                            const sectionSuggestions = (suggestions as any).sectionSuggestions || {};
+                            const sections = Object.keys(sectionSuggestions);
+                            return sections.length;
+                          })()}
+                        </div>
+                        <div className="text-sm text-gray-600">Sections Analyzed</div>
+                        <div className="text-xs text-gray-500 mt-1">AI reviewed sections</div>
+                      </div>
+                      
+                      <div className="text-center p-4 bg-purple-50 rounded-lg">
+                        <div className="text-2xl font-bold text-purple-600 mb-1">
+                          {getSafeArray((suggestions as any).topRecommendations).length}
+                        </div>
+                        <div className="text-sm text-gray-600">Recommendations</div>
+                        <div className="text-xs text-gray-500 mt-1">Action items provided</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
+                {/* Dynamic Key Insights */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Star className="w-5 h-5 text-purple-600" />
+                      Key Insights
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(() => {
+                        const sectionSuggestions = (suggestions as any).sectionSuggestions || {};
+                        const insights = [];
+                        
+                        // Check for professional summary insights
+                        if (sectionSuggestions.professionalSummary?.rewrite) {
+                          insights.push({
+                            type: 'positive',
+                            title: 'Professional Summary',
+                            description: 'AI has provided an enhanced version of your professional summary'
+                          });
+                        }
+                        
+                        // Check for skills insights
+                        if (sectionSuggestions.skills?.rewrite) {
+                          insights.push({
+                            type: 'positive',
+                            title: 'Skills Enhancement',
+                            description: 'New skills have been suggested to better match the job requirements'
+                          });
+                        }
+                        
+                        // Check for project insights
+                        if (sectionSuggestions.projects && Array.isArray(sectionSuggestions.projects) && sectionSuggestions.projects.length > 0) {
+                          insights.push({
+                            type: 'positive',
+                            title: 'Project Recommendations',
+                            description: `${sectionSuggestions.projects.length} project suggestions provided`
+                          });
+                        }
+                        
+                        // Check for work experience insights
+                        if (sectionSuggestions.workExperience?.rewrite) {
+                          insights.push({
+                            type: 'positive',
+                            title: 'Experience Enhancement',
+                            description: 'Work experience descriptions have been optimized'
+                          });
+                        }
+                        
+                        // Check for missing sections
+                        const missingSections = [];
+                        if (!sectionSuggestions.projects || (Array.isArray(sectionSuggestions.projects) && sectionSuggestions.projects.length === 0)) {
+                          missingSections.push('Projects');
+                        }
+                        if (!sectionSuggestions.certifications || (Array.isArray(sectionSuggestions.certifications) && sectionSuggestions.certifications.length === 0)) {
+                          missingSections.push('Certifications');
+                        }
+                        
+                        if (missingSections.length > 0) {
+                          insights.push({
+                            type: 'warning',
+                            title: 'Missing Sections',
+                            description: `Consider adding: ${missingSections.join(', ')}`
+                          });
+                        }
+                        
+                        return insights.slice(0, 4).map((insight, index) => (
+                          <div key={index} className={`p-3 rounded-lg border-l-4 ${
+                            insight.type === 'positive' 
+                              ? 'bg-green-50 border-green-500' 
+                              : insight.type === 'warning'
+                                ? 'bg-yellow-50 border-yellow-500'
+                                : 'bg-blue-50 border-blue-500'
+                          }`}>
+                            <div className="flex items-center gap-2 mb-1">
+                              {insight.type === 'positive' ? (
+                                <CheckCircle className="w-4 h-4 text-green-600" />
+                              ) : insight.type === 'warning' ? (
+                                <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                              ) : (
+                                <Star className="w-4 h-4 text-blue-600" />
+                              )}
+                              <span className="text-sm font-medium text-gray-800">
+                                {insight.title}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              {insight.description}
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             )}
 
