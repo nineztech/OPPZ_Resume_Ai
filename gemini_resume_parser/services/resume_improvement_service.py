@@ -44,7 +44,17 @@ class ResumeImprovementService:
         Returns:
             Dictionary containing the improved resume data
         """
-        logger.info("Starting resume improvement with ATS suggestions")
+        logger.info("🔍 DEBUG: Starting resume improvement with ATS suggestions")
+        logger.info(f"🔍 DEBUG: ATS analysis keys: {list(ats_analysis.keys())}")
+        
+        # Debug the ATS analysis structure
+        if "detailed_feedback" in ats_analysis:
+            logger.info(f"🔍 DEBUG: Detailed feedback categories: {list(ats_analysis['detailed_feedback'].keys())}")
+            if "repetition_avoidance" in ats_analysis["detailed_feedback"]:
+                repetition_feedback = ats_analysis["detailed_feedback"]["repetition_avoidance"]
+                logger.info(f"🔍 DEBUG: Repetition avoidance feedback structure: {list(repetition_feedback.keys())}")
+                if "suggestions" in repetition_feedback:
+                    logger.info(f"🔍 DEBUG: Raw repetition suggestions from ATS: {repetition_feedback['suggestions']}")
         
         # Extract suggestions from ATS analysis
         suggestions = self._extract_suggestions(ats_analysis)
@@ -52,7 +62,7 @@ class ResumeImprovementService:
         # Generate improved resume based ONLY on ATS suggestions
         improved_resume = self._generate_improved_resume(parsed_resume_data, suggestions, ats_analysis)
         
-        logger.info("Successfully generated improved resume")
+        logger.info("🔍 DEBUG: Successfully generated improved resume")
         return improved_resume
     
     def _extract_suggestions(self, ats_analysis: Dict[str, Any]) -> Dict[str, List[str]]:
@@ -65,6 +75,8 @@ class ResumeImprovementService:
         Returns:
             Dictionary of suggestions organized by category
         """
+        logger.info("🔍 DEBUG: Starting suggestion extraction from ATS analysis")
+        
         suggestions = {
             "achievements_impact_metrics": [],
             "clarity_brevity": [],
@@ -80,13 +92,41 @@ class ResumeImprovementService:
         
         # Extract suggestions from detailed feedback
         if "detailed_feedback" in ats_analysis:
+            logger.info("🔍 DEBUG: Found detailed_feedback section in ATS analysis")
             for category, feedback in ats_analysis["detailed_feedback"].items():
+                logger.info(f"🔍 DEBUG: Processing category: {category}")
                 if isinstance(feedback, dict) and "suggestions" in feedback:
-                    suggestions[category] = feedback["suggestions"]
+                    category_suggestions = feedback["suggestions"]
+                    suggestions[category] = category_suggestions
+                    logger.info(f"🔍 DEBUG: Extracted {len(category_suggestions)} suggestions for {category}")
+                    
+                    # Special debug for repetition_avoidance
+                    if category == "repetition_avoidance":
+                        logger.info("🔍 DEBUG: REPETITION_AVOIDANCE suggestions found:")
+                        for i, suggestion in enumerate(category_suggestions, 1):
+                            logger.info(f"🔍 DEBUG:   Suggestion {i}: {suggestion}")
+                    
+                    # Debug all other categories too
+                    else:
+                        logger.info(f"🔍 DEBUG: {category.upper()} suggestions found:")
+                        for i, suggestion in enumerate(category_suggestions, 1):
+                            logger.info(f"🔍 DEBUG:   Suggestion {i}: {suggestion}")
+                else:
+                    logger.info(f"🔍 DEBUG: No suggestions found for category {category}")
+        else:
+            logger.warning("🔍 DEBUG: No detailed_feedback section found in ATS analysis")
         
         # Extract general recommendations
         if "recommendations" in ats_analysis:
             suggestions["general_recommendations"] = ats_analysis["recommendations"]
+            logger.info(f"🔍 DEBUG: Extracted {len(ats_analysis['recommendations'])} general recommendations")
+            for i, rec in enumerate(ats_analysis["recommendations"], 1):
+                logger.info(f"🔍 DEBUG:   General recommendation {i}: {rec}")
+        
+        # Debug summary
+        total_suggestions = sum(len(suggestions[cat]) for cat in suggestions)
+        logger.info(f"🔍 DEBUG: Total suggestions extracted: {total_suggestions}")
+        logger.info(f"🔍 DEBUG: Repetition avoidance suggestions: {len(suggestions['repetition_avoidance'])}")
         
         return suggestions
     
@@ -329,6 +369,24 @@ class ResumeImprovementService:
         Returns:
             Improved resume data
         """
+        logger.info("🔍 DEBUG: Starting resume improvement generation")
+        logger.info(f"🔍 DEBUG: Total suggestion categories received: {len(suggestions)}")
+        
+        # Debug repetition suggestions specifically
+        repetition_suggestions = suggestions.get("repetition_avoidance", [])
+        logger.info(f"🔍 DEBUG: Repetition avoidance suggestions count: {len(repetition_suggestions)}")
+        if repetition_suggestions:
+            logger.info("🔍 DEBUG: Repetition suggestions details:")
+            for i, suggestion in enumerate(repetition_suggestions, 1):
+                logger.info(f"🔍 DEBUG:   Repetition suggestion {i}: {suggestion}")
+        
+        # Debug all other suggestion categories
+        for category, category_suggestions in suggestions.items():
+            if category != "repetition_avoidance" and category_suggestions:
+                logger.info(f"🔍 DEBUG: {category.upper()} suggestions count: {len(category_suggestions)}")
+                for i, suggestion in enumerate(category_suggestions, 1):
+                    logger.info(f"🔍 DEBUG:   {category} suggestion {i}: {suggestion}")
+        
         # Detect missing sections
         missing_sections = self._detect_missing_sections(parsed_resume_data)
         
@@ -337,6 +395,8 @@ class ResumeImprovementService:
         
         # Create a comprehensive prompt for resume improvement
         prompt = self._create_improvement_prompt(enhanced_resume_data, suggestions, ats_analysis, missing_sections)
+        
+        logger.info(f"🔍 DEBUG: Generated prompt length: {len(prompt)} characters")
         
         try:
             logger.info("Generating improved resume with OpenAI API")
@@ -352,8 +412,22 @@ class ResumeImprovementService:
             )
             cleaned_response = self._clean_openai_response(response.choices[0].message.content)
             
+            # Debug: Log the AI response for repetition analysis
+            logger.info("🔍 DEBUG: AI Response received for resume improvement")
+            logger.info(f"🔍 DEBUG: Response length: {len(cleaned_response)} characters")
+            
+            # Check if the response contains repetition-related changes
+            if "FIX_REPETITION" in cleaned_response:
+                logger.info("🔍 DEBUG: AI response contains FIX_REPETITION references")
+            else:
+                logger.info("🔍 DEBUG: AI response does NOT contain FIX_REPETITION references")
+            
             # Parse the improved resume
             improved_resume = json.loads(cleaned_response)
+            
+            # Debug: Check if repetition changes were made
+            logger.info("🔍 DEBUG: Analyzing AI response for repetition changes...")
+            self._debug_repetition_changes(parsed_resume_data, improved_resume)
             
             # Validate and enhance the response
             improved_resume = self._validate_improved_resume(improved_resume, parsed_resume_data)
@@ -628,6 +702,12 @@ class ResumeImprovementService:
         - MANDATORY: When "OPTIMIZE_DESCRIPTION" suggestions are provided for projects, experience, or summary - apply them precisely
         - EXPAND short descriptions by adding specific details, technical information, and quantified outcomes
         - COMPRESS long descriptions by focusing on key achievements and removing redundant information
+        - **CRITICAL FOR REPETITION FIXES**: When FIX_REPETITION suggestions are provided:
+          * Apply EVERY single FIX_REPETITION suggestion without exception
+          * If the ATS analysis detected 15 repeated words, apply ALL 15 fixes
+          * Replace each repeated word with the exact alternatives provided in the suggestion
+          * Do NOT skip any repetition fixes - this is mandatory for ATS score improvement
+          * Verify that all repeated words have been replaced before finalizing the response
 
         COMPREHENSIVE SUGGESTION APPLICATION RULES:
         - For "ADD_SKILLS" suggestions: Add ONLY the specific skills mentioned in the suggestion
@@ -642,11 +722,26 @@ class ResumeImprovementService:
         - For "ADD_PROJECT_DATES" suggestions: Add dummy start and end dates to projects with realistic 2-4 month durations
         - For "ADD_ORGANIZATION" suggestions: Infer and add organizations for certificates based on certificate names
         - For "OPTIMIZE_DESCRIPTION" suggestions: Enhance descriptions that are too short or too long as specified - expand short descriptions, compress long descriptions
-        - For "FIX_REPETITION" suggestions: Replace ALL repeated words with alternatives as specified
+        - For "FIX_REPETITION" suggestions: **CRITICAL - REPLACE ALL INSTANCES OF EVERY REPEATED WORD**:
+          * Apply EVERY FIX_REPETITION suggestion provided in the ATS analysis
+          * If 15 repeated words are detected, apply ALL 15 fixes - NO EXCEPTIONS
+          * Replace each repeated word with the specific alternatives mentioned in the suggestion
+          * Ensure NO repeated words remain after applying fixes
+          * Use the exact replacement words provided in the FIX_REPETITION suggestions
+          * Apply fixes to ALL sections where the repeated words appear
+          * **MANDATORY**: Count and verify that ALL repeated words have been replaced
         - For "FIX_FORMATTING" suggestions: Fix ONLY the formatting issues specifically mentioned
         - For "FIX_GRAMMAR" suggestions: Fix ONLY the grammar errors specifically mentioned
         - For "FIX_DATE_FORMAT" suggestions: Convert ALL dates to "MMM YYYY" format (e.g., "Jan 2025", "Dec 2024") - convert dates like "2025-01" to "Jan 2025", "01/2025" to "Jan 2025", "January 2025" to "Jan 2025", "2025" to "Jan 2025"
         - CRITICAL: If no suggestion exists for a section, leave it completely unchanged
+
+        **REPETITION FIXES VERIFICATION CHECKLIST**:
+        Before finalizing your response, verify that:
+        1. ALL FIX_REPETITION suggestions from the ATS analysis have been applied
+        2. Every repeated word mentioned in the suggestions has been replaced
+        3. No repeated words remain in the final resume
+        4. All replacement words are used exactly as specified in the suggestions
+        5. The total number of repetition fixes applied matches the number of FIX_REPETITION suggestions provided
 
         Focus on making TRANSFORMATIVE improvements that directly address ATS scoring criteria while maintaining professional authenticity.
         Ensure all improvements align with the specific feedback provided in the ATS analysis.
@@ -664,6 +759,8 @@ class ResumeImprovementService:
         Returns:
             Formatted suggestions text with action-oriented instructions
         """
+        logger.info("🔍 DEBUG: Starting suggestion formatting for prompt")
+        
         formatted_suggestions = []
         
         # Priority order for suggestions (most impactful first)
@@ -680,24 +777,60 @@ class ResumeImprovementService:
             'general_recommendations'
         ]
         
+        logger.info("🔍 DEBUG: Processing priority categories for formatting")
         for category in priority_categories:
             if category in suggestions and suggestions[category]:
                 category_name = category.replace('_', ' ').title()
                 formatted_suggestions.append(f"\n🎯 ATS SUGGESTION - {category_name}:")
-                for i, suggestion in enumerate(suggestions[category], 1):
-                    # Pass suggestions exactly as they are from ATS analysis
-                    formatted_suggestions.append(f"  APPLY EXACTLY: {suggestion}")
+                logger.info(f"🔍 DEBUG: Formatting {len(suggestions[category])} suggestions for {category}")
+                
+                # Special debug for repetition_avoidance
+                if category == "repetition_avoidance":
+                    logger.info("🔍 DEBUG: REPETITION_AVOIDANCE suggestions being formatted:")
+                    for i, suggestion in enumerate(suggestions[category], 1):
+                        logger.info(f"🔍 DEBUG:   Formatting repetition suggestion {i}: {suggestion}")
+                        formatted_suggestions.append(f"  APPLY EXACTLY: {suggestion}")
+                else:
+                    logger.info(f"🔍 DEBUG: {category.upper()} suggestions being formatted:")
+                    for i, suggestion in enumerate(suggestions[category], 1):
+                        logger.info(f"🔍 DEBUG:   Formatting {category} suggestion {i}: {suggestion}")
+                        # Pass suggestions exactly as they are from ATS analysis
+                        formatted_suggestions.append(f"  APPLY EXACTLY: {suggestion}")
                 formatted_suggestions.append("")  # Add spacing
+            else:
+                logger.info(f"🔍 DEBUG: No suggestions to format for {category}")
         
         # Add any remaining categories not in priority list
+        logger.info("🔍 DEBUG: Processing remaining categories")
         for category, suggestion_list in suggestions.items():
             if category not in priority_categories and suggestion_list:
                 category_name = category.replace('_', ' ').title()
                 formatted_suggestions.append(f"\n📈 ATS SUGGESTION - {category_name}:")
+                logger.info(f"🔍 DEBUG: Formatting {len(suggestion_list)} suggestions for remaining category {category}")
                 for i, suggestion in enumerate(suggestion_list, 1):
+                    logger.info(f"🔍 DEBUG:   Formatting remaining {category} suggestion {i}: {suggestion}")
                     formatted_suggestions.append(f"  APPLY EXACTLY: {suggestion}")
         
-        return '\n'.join(formatted_suggestions)
+        formatted_text = '\n'.join(formatted_suggestions)
+        logger.info(f"🔍 DEBUG: Formatted suggestions text length: {len(formatted_text)} characters")
+        
+        # Debug: Count FIX_REPETITION suggestions in formatted text
+        fix_repetition_count = formatted_text.count("FIX_REPETITION")
+        logger.info(f"🔍 DEBUG: FIX_REPETITION suggestions found in formatted text: {fix_repetition_count}")
+        
+        # Debug: Show a sample of the formatted text for repetition
+        repetition_section_start = formatted_text.find("🎯 ATS SUGGESTION - Repetition Avoidance:")
+        if repetition_section_start != -1:
+            repetition_section_end = formatted_text.find("\n🎯 ATS SUGGESTION -", repetition_section_start + 1)
+            if repetition_section_end == -1:
+                repetition_section_end = formatted_text.find("\n📈 ATS SUGGESTION -", repetition_section_start + 1)
+            if repetition_section_end == -1:
+                repetition_section_end = len(formatted_text)
+            
+            repetition_section = formatted_text[repetition_section_start:repetition_section_end]
+            logger.info(f"🔍 DEBUG: Repetition section in formatted text:\n{repetition_section}")
+        
+        return formatted_text
     
     def _clean_openai_response(self, response_text: str) -> str:
         """Clean OpenAI API response to extract valid JSON"""
@@ -1334,7 +1467,99 @@ class ResumeImprovementService:
         
         return summary
     
-    
+    def _debug_repetition_changes(self, original_resume: Dict[str, Any], improved_resume: Dict[str, Any]) -> None:
+        """
+        Debug method to analyze repetition changes between original and improved resume
+        
+        Args:
+            original_resume: Original resume data
+            improved_resume: Improved resume data
+        """
+        logger.info("🔍 DEBUG: Starting repetition changes analysis")
+        
+        # Define the repeated words we're looking for (from the debug logs)
+        repeated_words = [
+            'scalable', 'secure', 'microservices', 'efficient', 'improved', 'created', 
+            'deployed', 'automated', 'collaborated', 'optimized', 'integrated', 
+            'designed', 'managed', 'resolved', 'achieved'
+        ]
+        
+        # Check experience section
+        if 'experience' in original_resume and 'experience' in improved_resume:
+            logger.info("🔍 DEBUG: Analyzing experience section for repetition changes")
+            original_exp = original_resume['experience']
+            improved_exp = improved_resume['experience']
+            
+            if isinstance(original_exp, list) and isinstance(improved_exp, list):
+                for i, (orig_exp, imp_exp) in enumerate(zip(original_exp, improved_exp)):
+                    if isinstance(orig_exp, dict) and isinstance(imp_exp, dict):
+                        orig_desc = orig_exp.get('description', '')
+                        imp_desc = imp_exp.get('description', '')
+                        
+                        logger.info(f"🔍 DEBUG: Experience {i+1} - Company: {orig_exp.get('company', 'Unknown')}")
+                        
+                        # Count repeated words in original and improved
+                        for word in repeated_words:
+                            orig_count = orig_desc.lower().count(word.lower())
+                            imp_count = imp_desc.lower().count(word.lower())
+                            
+                            if orig_count > 0 or imp_count > 0:
+                                logger.info(f"🔍 DEBUG:   Word '{word}': Original={orig_count}, Improved={imp_count}")
+                                if orig_count > imp_count:
+                                    logger.info(f"🔍 DEBUG:     ✅ REPETITION REDUCED for '{word}'")
+                                elif orig_count == imp_count:
+                                    logger.info(f"🔍 DEBUG:     ⚠️ NO CHANGE for '{word}'")
+                                else:
+                                    logger.info(f"🔍 DEBUG:     ❌ REPETITION INCREASED for '{word}'")
+        
+        # Check projects section
+        if 'projects' in original_resume and 'projects' in improved_resume:
+            logger.info("🔍 DEBUG: Analyzing projects section for repetition changes")
+            original_proj = original_resume['projects']
+            improved_proj = improved_resume['projects']
+            
+            if isinstance(original_proj, list) and isinstance(improved_proj, list):
+                for i, (orig_proj, imp_proj) in enumerate(zip(original_proj, improved_proj)):
+                    if isinstance(orig_proj, dict) and isinstance(imp_proj, dict):
+                        orig_desc = orig_proj.get('description', '')
+                        imp_desc = imp_proj.get('description', '')
+                        
+                        logger.info(f"🔍 DEBUG: Project {i+1} - Name: {orig_proj.get('name', 'Unknown')}")
+                        
+                        # Count repeated words in original and improved
+                        for word in repeated_words:
+                            orig_count = orig_desc.lower().count(word.lower())
+                            imp_count = imp_desc.lower().count(word.lower())
+                            
+                            if orig_count > 0 or imp_count > 0:
+                                logger.info(f"🔍 DEBUG:   Word '{word}': Original={orig_count}, Improved={imp_count}")
+                                if orig_count > imp_count:
+                                    logger.info(f"🔍 DEBUG:     ✅ REPETITION REDUCED for '{word}'")
+                                elif orig_count == imp_count:
+                                    logger.info(f"🔍 DEBUG:     ⚠️ NO CHANGE for '{word}'")
+                                else:
+                                    logger.info(f"🔍 DEBUG:     ❌ REPETITION INCREASED for '{word}'")
+        
+        # Check summary section
+        if 'summary' in original_resume and 'summary' in improved_resume:
+            logger.info("🔍 DEBUG: Analyzing summary section for repetition changes")
+            orig_summary = original_resume.get('summary', '')
+            imp_summary = improved_resume.get('summary', '')
+            
+            for word in repeated_words:
+                orig_count = orig_summary.lower().count(word.lower())
+                imp_count = imp_summary.lower().count(word.lower())
+                
+                if orig_count > 0 or imp_count > 0:
+                    logger.info(f"🔍 DEBUG: Summary - Word '{word}': Original={orig_count}, Improved={imp_count}")
+                    if orig_count > imp_count:
+                        logger.info(f"🔍 DEBUG:   ✅ REPETITION REDUCED for '{word}'")
+                    elif orig_count == imp_count:
+                        logger.info(f"🔍 DEBUG:   ⚠️ NO CHANGE for '{word}'")
+                    else:
+                        logger.info(f"🔍 DEBUG:   ❌ REPETITION INCREASED for '{word}'")
+        
+        logger.info("🔍 DEBUG: Repetition changes analysis completed")
 
 
 
