@@ -216,18 +216,17 @@ class ResumeImprovementService:
             CRITICAL RULES:
             - Return ONLY valid JSON (no markdown, no code fences, no explanations)
             - Start your response with {{ and end with }}
-            - ONLY suggest skills that can be added to EXISTING categories shown in the resume
-            - Do NOT create new category objects or suggest new skill categories
-            - Only add missing skills to existing categories
-            - If a skill doesn't fit any existing category, do NOT suggest it
-            - Focus on enhancing existing skill categories with relevant missing skills
-            - In the response: Return skills as a DIRECT object with category names as keys
+            - Prefer adding skills to EXISTING categories shown in the resume
+            - Do NOT include proficiency modifiers or levels (e.g., "(Advanced)", "Advanced", "Intermediate", "Beginner", "Expert"). Return bare skill names only
+            - If a relevant skills category is missing but needed (e.g., "Core Skills", "Cloud", "Data Engineering"), you MAY create a NEW category object and include its skills
+            - Focus on core, designation-aligned skills first (bare names only) and then tools/frameworks
+            - In the response: Return skills as a DIRECT object with category names as keys (including any NEW categories when necessary)
             - CRITICAL: ONLY include the NEW skills being added, NOT the existing skills
-            - Format: If existing has "Languages: JavaScript" and you need to add "Java", response should be {{"Languages": "Java"}} NOT {{"Languages": "JavaScript, Java"}}
+            - Format: If existing has "Languages: JavaScript" and you need to add "Java", response should be {"Languages": "Java"} NOT {"Languages": "JavaScript, Java"}
             - NEVER include existing skills in the response - only show the new skills being added
             - NEVER use "General" wrapper - return skills directly as category: skills pairs
             - If a category has no new skills to add, do NOT include that category in the response at all
-            - Do NOT suggest "New Category: skills" - only use existing categories
+            - You MAY introduce new categories only when relevant and missing; name them clearly (e.g., "Core Skills", "Cloud", "Data Engineering")
             - NEVER suggest "General" as a skill category - avoid generic categories
             
             CURRENT SKILLS STRUCTURE:
@@ -425,6 +424,18 @@ class ResumeImprovementService:
             # Parse the improved resume
             improved_resume = json.loads(cleaned_response)
             
+            # Post-generation repetition cleanup loop: ensure no repeated words remain within the same item
+            max_refinement_iterations = 5
+            for iteration in range(max_refinement_iterations):
+                repetition_report = self._detect_repetitions_in_resume(improved_resume)
+                total_issues = sum(sum(words.values()) for words in repetition_report.get("issues_by_item", {}).values())
+                logger.info(f"🔍 DEBUG: Repetition refinement pass {iteration+1} - total repeated word counts: {total_issues}")
+                if total_issues == 0:
+                    logger.info("🔍 DEBUG: No repetition issues remain after refinement")
+                    break
+                # Ask AI to rephrase only flagged items to eliminate repetition with unique synonyms
+                improved_resume = self._rephrase_resume_to_remove_repetition(improved_resume, repetition_report)
+            
             # Debug: Check if repetition changes were made
             logger.info("🔍 DEBUG: Analyzing AI response for repetition changes...")
             self._debug_repetition_changes(parsed_resume_data, improved_resume)
@@ -514,7 +525,7 @@ class ResumeImprovementService:
         3. SECTION ENHANCEMENT (ATS Structure):
            - Ensure every section has robust, keyword-rich content
            - Add industry-specific terminology to job titles and descriptions
-           - Include technical skills with proficiency levels
+            - Include technical skills (bare names only, no proficiency levels)
            - Enhance education with relevant coursework and achievements
            - Add certifications, training, and professional development
 
@@ -707,6 +718,9 @@ class ResumeImprovementService:
           * If the ATS analysis detected 15 repeated words, apply ALL 15 fixes
           * Replace each repeated word with the exact alternatives provided in the suggestion
           * Do NOT skip any repetition fixes - this is mandatory for ATS score improvement
+          * Do NOT introduce new repetition: For each replacement, choose alternatives that are NOT already used elsewhere in the SAME section (Experience, Projects, Summary, etc.)
+          * Distribute different alternatives across instances so that no chosen synonym appears more than once within the same section
+          * Prefer alternatives that also maintain variety across the entire resume; if an alternative appears 2+ times elsewhere in the same section after replacement, select a different synonym
           * Verify that all repeated words have been replaced before finalizing the response
 
         COMPREHENSIVE SUGGESTION APPLICATION RULES:
@@ -727,9 +741,10 @@ class ResumeImprovementService:
           * If 15 repeated words are detected, apply ALL 15 fixes - NO EXCEPTIONS
           * Replace each repeated word with the specific alternatives mentioned in the suggestion
           * Ensure NO repeated words remain after applying fixes
-          * Use the exact replacement words provided in the FIX_REPETITION suggestions
+          * Use the exact replacement words provided in the FIX_REPETITION suggestions, but ensure the chosen synonyms are NOT repeated elsewhere in the same section
           * Apply fixes to ALL sections where the repeated words appear
-          * **MANDATORY**: Count and verify that ALL repeated words have been replaced
+          * Distribute different alternatives across multiple occurrences to maximize variety
+          * **MANDATORY**: Count and verify that ALL repeated words have been replaced and that no new synonym appears more than once per section
         - For "FIX_FORMATTING" suggestions: Fix ONLY the formatting issues specifically mentioned
         - For "FIX_GRAMMAR" suggestions: Fix ONLY the grammar errors specifically mentioned
         - For "FIX_DATE_FORMAT" suggestions: Convert ALL dates to "MMM YYYY" format (e.g., "Jan 2025", "Dec 2024") - convert dates like "2025-01" to "Jan 2025", "01/2025" to "Jan 2025", "January 2025" to "Jan 2025", "2025" to "Jan 2025"
@@ -1324,7 +1339,7 @@ class ResumeImprovementService:
             If no technologies are found, return an empty string.
             """
             
-            response = self.client.chat.completions.create(
+            response = self.model.chat.completions.create(
                 model=self.model_name,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.1,
@@ -1398,7 +1413,7 @@ class ResumeImprovementService:
             If no clear technologies can be determined, return an empty string.
             """
             
-            response = self.client.chat.completions.create(
+            response = self.model.chat.completions.create(
                 model=self.model_name,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
@@ -1560,6 +1575,219 @@ class ResumeImprovementService:
                         logger.info(f"🔍 DEBUG:   ❌ REPETITION INCREASED for '{word}'")
         
         logger.info("🔍 DEBUG: Repetition changes analysis completed")
+
+
+    def _detect_repetitions_in_resume(self, resume: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Detect repeated action verbs and professional terms within the same item (experience/project/summary).
+        Returns a report with per-item repeated words and counts.
+        """
+        import re
+        from collections import Counter
+        action_verbs = {
+            'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered',
+            'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured',
+            'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained',
+            'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved',
+            'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified',
+            'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced',
+            'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed',
+            'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched',
+            'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received'
+        }
+        professional_terms = {
+            'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced',
+            'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical',
+            'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined',
+            'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized',
+            'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform',
+            'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven'
+        }
+        common_words = {
+            'and', 'in', 'with', 'of', 'to', 'for', 'on', 'by', 'the', 'a', 'an', 'is', 'are', 'was', 'were',
+            'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+            'may', 'might', 'can', 'must', 'shall', 'this', 'that', 'these', 'those'
+        }
+
+        def count_repeats(text: str) -> Dict[str, int]:
+            if not text:
+                return {}
+            words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+            counts = Counter(words)
+            repeats = {}
+            for w, c in counts.items():
+                if c >= 2 and w not in common_words and (w in action_verbs or w in professional_terms):
+                    repeats[w] = c
+            return repeats
+
+        issues_by_item: Dict[str, Dict[str, int]] = {}
+
+        # Experience items (support alternate keys)
+        experience_keys = ['experience', 'work_experience', 'employment', 'workHistory']
+        for key in experience_keys:
+            exp_list = resume.get(key, []) if isinstance(resume.get(key), list) else []
+            for idx, exp in enumerate(exp_list):
+                if isinstance(exp, dict):
+                    r = count_repeats(exp.get('description', ''))
+                    if r:
+                        issues_by_item[f"{key}[{idx}]"] = r
+
+        # Project items (support alternate keys)
+        project_keys = ['projects', 'project', 'portfolio', 'personal_projects', 'projectExperience']
+        for key in project_keys:
+            proj_list = resume.get(key, []) if isinstance(resume.get(key), list) else []
+            for idx, proj in enumerate(proj_list):
+                if isinstance(proj, dict):
+                    r = count_repeats(proj.get('description', ''))
+                    if r:
+                        issues_by_item[f"{key}[{idx}]"] = r
+
+        # Summary
+        if isinstance(resume.get('summary'), str):
+            r = count_repeats(resume.get('summary', ''))
+            if r:
+                issues_by_item["summary"] = r
+        # Objective
+        if isinstance(resume.get('objective'), str):
+            r = count_repeats(resume.get('objective', ''))
+            if r:
+                issues_by_item["objective"] = r
+
+        return {"issues_by_item": issues_by_item}
+
+    def _rephrase_resume_to_remove_repetition(self, resume: Dict[str, Any], repetition_report: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ask the model to rephrase only the flagged items to eliminate repeated words with unique synonyms.
+        Ensures synonyms do not repeat within the same item.
+        """
+        try:
+            items = repetition_report.get("issues_by_item", {})
+            if not items:
+                return resume
+
+            # Build a compact rephrasing prompt; include ALL projects to enforce cross-project uniqueness
+            payload = {"experience": [], "projects": [], "summary": resume.get("summary", ""), "objective": resume.get("objective", "")}
+            flagged_project_indices: set = set()
+            for key, words in items.items():
+                if key.startswith("experience["):
+                    idx = int(key[len("experience["):].rstrip("]"))
+                    if idx < len(resume.get("experience", [])) and isinstance(resume["experience"][idx], dict):
+                        payload["experience"].append({"index": idx, "text": resume["experience"][idx].get("description", ""), "repeats": words})
+                elif key.startswith("projects["):
+                    idx = int(key[len("projects["):].rstrip("]"))
+                    if idx < len(resume.get("projects", [])) and isinstance(resume["projects"][idx], dict):
+                        payload["projects"].append({"index": idx, "text": resume["projects"][idx].get("description", ""), "repeats": words})
+                        flagged_project_indices.add(idx)
+                elif any(key.startswith(prefix) for prefix in ["work_experience[", "employment[", "workHistory["]):
+                    # Normalize alternate experience keys
+                    base_key = key.split("[")[0]
+                    idx = int(key[len(base_key)+1:].rstrip("]"))
+                    exp_list = resume.get(base_key, []) if isinstance(resume.get(base_key), list) else []
+                    if idx < len(exp_list) and isinstance(exp_list[idx], dict):
+                        payload["experience"].append({"index": idx, "text": exp_list[idx].get("description", ""), "repeats": words})
+                elif any(key.startswith(prefix) for prefix in ["project[", "portfolio[", "personal_projects[", "projectExperience["]):
+                    # Normalize alternate project keys
+                    base_key = key.split("[")[0]
+                    idx = int(key[len(base_key)+1:].rstrip("]"))
+                    proj_list = resume.get(base_key, []) if isinstance(resume.get(base_key), list) else []
+                    if idx < len(proj_list) and isinstance(proj_list[idx], dict):
+                        payload["projects"].append({"index": idx, "text": proj_list[idx].get("description", ""), "repeats": words})
+                        flagged_project_indices.add(idx)
+
+            # Ensure ALL project items are included to coordinate unique verbs across projects
+            def _append_all_projects_from(key_name: str):
+                proj_list = resume.get(key_name, []) if isinstance(resume.get(key_name), list) else []
+                for idx, proj in enumerate(proj_list):
+                    if isinstance(proj, dict) and idx not in flagged_project_indices:
+                        payload["projects"].append({"index": idx, "text": proj.get("description", ""), "repeats": {}})
+
+            if isinstance(resume.get("projects"), list):
+                _append_all_projects_from("projects")
+            else:
+                for alt_key in ["project", "portfolio", "personal_projects", "projectExperience"]:
+                    if isinstance(resume.get(alt_key), list):
+                        _append_all_projects_from(alt_key)
+
+            prompt = f"""
+            You are refining resume text to eliminate repeated action verbs and professional terms WITHIN the same item, and also ensure cross-project uniqueness of action verbs.
+            
+            RULES:
+            - Rephrase each provided item to remove all repeated words by using varied, professional synonyms.
+            - Chosen synonyms must not repeat within the same item; distribute alternatives across sentences.
+            - Across all project descriptions, ensure different action verbs are used per project. If two projects would share the same main verb (e.g., "built"), change one to a different professional verb (e.g., "engineered", "developed").
+            - When creating content for a new project (if any are missing and need to be added elsewhere), avoid reusing action verbs already present elsewhere in the resume (summary, experience, other projects). Prefer fresh, professional verbs.
+            - Do not change facts, companies, or technologies; only rephrase verbs/phrases.
+            - Keep bullets/sentences count and order consistent; end each sentence with a newline (\n).
+            - Return ONLY valid JSON with this structure and no extra commentary.
+            
+            INPUT:
+            {json.dumps(payload, ensure_ascii=False)}
+            
+            OUTPUT FORMAT:
+            {{
+              "experience": [{{"index": number, "description": "string"}}],
+              "projects": [{{"index": number, "description": "string"}}],
+              "summary": "string",
+              "objective": "string"
+            }}
+            """
+
+            response = self.model.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You rephrase resume items to remove repetition using unique synonyms within each item."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.2,
+                top_p=0.8,
+                max_tokens=1200
+            )
+
+            text = self._clean_openai_response(response.choices[0].message.content)
+            patch = json.loads(text)
+
+            # Apply returned descriptions
+            if isinstance(patch.get("experience"), list):
+                # Handle standard experience key
+                if isinstance(resume.get("experience"), list):
+                    for entry in patch["experience"]:
+                        idx = entry.get("index")
+                        if isinstance(idx, int) and 0 <= idx < len(resume["experience"]) and isinstance(resume["experience"][idx], dict):
+                            resume["experience"][idx]["description"] = entry.get("description", resume["experience"][idx].get("description", ""))
+                
+                # Handle alternate experience keys
+                for exp_key in ["work_experience", "employment", "workHistory"]:
+                    if isinstance(resume.get(exp_key), list):
+                        for entry in patch["experience"]:
+                            idx = entry.get("index")
+                            if isinstance(idx, int) and 0 <= idx < len(resume[exp_key]) and isinstance(resume[exp_key][idx], dict):
+                                resume[exp_key][idx]["description"] = entry.get("description", resume[exp_key][idx].get("description", ""))
+
+            if isinstance(patch.get("projects"), list):
+                # Handle standard projects key
+                if isinstance(resume.get("projects"), list):
+                    for entry in patch["projects"]:
+                        idx = entry.get("index")
+                        if isinstance(idx, int) and 0 <= idx < len(resume["projects"]) and isinstance(resume["projects"][idx], dict):
+                            resume["projects"][idx]["description"] = entry.get("description", resume["projects"][idx].get("description", ""))
+                
+                # Handle alternate project keys
+                for proj_key in ["project", "portfolio", "personal_projects", "projectExperience"]:
+                    if isinstance(resume.get(proj_key), list):
+                        for entry in patch["projects"]:
+                            idx = entry.get("index")
+                            if isinstance(idx, int) and 0 <= idx < len(resume[proj_key]) and isinstance(resume[proj_key][idx], dict):
+                                resume[proj_key][idx]["description"] = entry.get("description", resume[proj_key][idx].get("description", ""))
+
+            if isinstance(patch.get("summary"), str) and isinstance(resume.get("summary"), str):
+                resume["summary"] = patch.get("summary", resume.get("summary", ""))
+            if isinstance(patch.get("objective"), str) and isinstance(resume.get("objective"), str):
+                resume["objective"] = patch.get("objective", resume.get("objective", ""))
+
+            return resume
+        except Exception as e:
+            logger.warning(f"Rephrase to remove repetition failed: {e}")
+            return resume
 
 
 

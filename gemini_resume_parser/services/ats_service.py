@@ -8,6 +8,273 @@ from .openai_parser_service import OpenAIResumeParser
 
 logger = logging.getLogger(__name__)
 
+def _collect_used_power_words_from_text(text: str) -> List[str]:
+    """
+    Collect action verbs and professional terms already present in the resume text.
+    Used to avoid suggesting synonyms that are already present in the resume.
+    """
+    import re as _re
+    action_verbs = {
+        'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered',
+        'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured',
+        'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained',
+        'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved',
+        'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified',
+        'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced',
+        'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed',
+        'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched',
+        'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received',
+        'engineered', 'constructed', 'architected', 'fabricated', 'assembled', 'crafted', 'forged', 'molded',
+        'shaped', 'formed', 'generated', 'produced', 'manufactured', 'fashioned', 'devised', 'conceived',
+        'invented', 'innovated', 'pioneered', 'spearheaded', 'championed', 'advocated', 'promoted', 'endorsed',
+        'supported', 'backed', 'sponsored', 'funded', 'financed', 'invested', 'contributed', 'donated',
+        'provided', 'supplied', 'delivered', 'distributed', 'allocated', 'assigned', 'designated', 'appointed',
+        'selected', 'chosen', 'picked', 'elected', 'voted', 'decided', 'determined', 'resolved', 'settled',
+        'concluded', 'finalized', 'completed', 'finished', 'accomplished', 'achieved', 'attained', 'reached',
+        'obtained', 'acquired', 'gained', 'earned', 'won', 'secured', 'captured', 'seized', 'grasped',
+        'gripped', 'held', 'maintained', 'retained', 'preserved', 'conserved', 'protected', 'safeguarded',
+        'defended', 'shielded', 'guarded', 'watched', 'monitored', 'observed', 'tracked', 'followed',
+        'pursued', 'chased', 'hunted', 'searched', 'explored', 'investigated', 'examined', 'studied',
+        'analyzed', 'evaluated', 'assessed', 'reviewed', 'inspected', 'checked', 'verified', 'confirmed',
+        'validated', 'authenticated', 'certified', 'approved', 'endorsed', 'sanctioned', 'authorized',
+        'permitted', 'allowed', 'enabled', 'facilitated', 'assisted', 'helped', 'aided', 'supported',
+        'backed', 'sponsored', 'promoted', 'advanced', 'progressed', 'moved', 'shifted', 'transferred',
+        'relocated', 'migrated', 'transported', 'conveyed', 'carried', 'delivered', 'distributed', 'spread',
+        'extended', 'expanded', 'enlarged', 'increased', 'boosted', 'enhanced', 'improved', 'upgraded',
+        'refined', 'polished', 'perfected', 'optimized', 'maximized', 'minimized', 'reduced', 'decreased',
+        'lowered', 'diminished', 'lessened', 'cut', 'trimmed', 'slashed', 'eliminated', 'removed',
+        'deleted', 'erased', 'wiped', 'cleared', 'cleaned', 'purified', 'sanitized', 'sterilized',
+        'disinfected', 'decontaminated', 'neutralized', 'balanced', 'stabilized', 'secured', 'fixed',
+        'repaired', 'restored', 'renewed', 'refreshed', 'revitalized', 'rejuvenated', 'regenerated',
+        'rebuilt', 'reconstructed', 'reassembled', 'repaired', 'mended', 'patched', 'fixed', 'corrected',
+        'adjusted', 'modified', 'altered', 'changed', 'transformed', 'converted', 'adapted', 'customized',
+        'personalized', 'tailored', 'fitted', 'sized', 'scaled', 'proportioned', 'balanced', 'harmonized',
+        'synchronized', 'coordinated', 'orchestrated', 'conducted', 'directed', 'managed', 'administered',
+        'supervised', 'oversaw', 'controlled', 'governed', 'regulated', 'monitored', 'tracked', 'followed',
+        'pursued', 'chased', 'hunted', 'searched', 'explored', 'investigated', 'examined', 'studied',
+        'analyzed', 'evaluated', 'assessed', 'reviewed', 'inspected', 'checked', 'verified', 'confirmed',
+        'validated', 'authenticated', 'certified', 'approved', 'endorsed', 'sanctioned', 'authorized',
+        'permitted', 'allowed', 'enabled', 'facilitated', 'assisted', 'helped', 'aided', 'supported'
+    }
+    professional_terms = {
+        'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced',
+        'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical',
+        'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined',
+        'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized',
+        'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform',
+        'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven',
+        'protected', 'safe', 'guarded', 'shielded', 'defended', 'secured', 'fortified', 'reinforced',
+        'strengthened', 'hardened', 'toughened', 'solidified', 'stabilized', 'balanced', 'harmonized',
+        'synchronized', 'coordinated', 'orchestrated', 'conducted', 'directed', 'managed', 'administered',
+        'supervised', 'oversaw', 'controlled', 'governed', 'regulated', 'monitored', 'tracked', 'followed',
+        'modular', 'service-oriented', 'component-based', 'object-oriented', 'functional', 'procedural',
+        'declarative', 'imperative', 'reactive', 'event-driven', 'message-driven', 'data-driven', 'test-driven',
+        'behavior-driven', 'domain-driven', 'model-driven', 'architecture-driven', 'design-driven', 'user-driven',
+        'customer-driven', 'business-driven', 'market-driven', 'performance-driven', 'quality-driven',
+        'security-driven', 'compliance-driven', 'agile-driven', 'lean-driven', 'devops-driven', 'cloud-driven'
+    }
+    
+    # Use more comprehensive regex to capture all forms including past tense and participles
+    tokens = _re.findall(r'\b[a-zA-Z]+(?:ed|ing|s)?\b', (text or '').lower())
+    
+    # Also check for base forms - strip common endings
+    all_words = set()
+    for token in tokens:
+        all_words.add(token)
+        # Strip common verb endings to get base form
+        base = token
+        if token.endswith('ed'):
+            base = token[:-2]
+            if len(base) > 2:
+                all_words.add(base)
+        elif token.endswith('ing'):
+            base = token[:-3]
+            if len(base) > 2:
+                all_words.add(base)
+        elif token.endswith('s') and len(token) > 3:
+            base = token[:-1]
+            all_words.add(base)
+    
+    used = {t for t in all_words if t in action_verbs or t in professional_terms}
+    
+    # Log for debugging
+    logger.info(f"🔍 DEBUG: Found {len(used)} power words already used in resume: {sorted(used)}")
+    
+    return sorted(used)
+
+def _generate_fix_repetition_line(section: str, word_type: str, word: str, count: int, contexts: List[str], client: Any, model_name: str, temperature: float, top_p: float, forbidden_words: List[str], already_suggested: List[str]) -> str:
+    """
+    Use the model to generate one FIX_REPETITION suggestion line for a repeated word,
+    following the mandatory format. Returns a single-line string, or empty string on failure.
+    """
+    try:
+        # Limit to first 3 context snippets to keep prompt compact
+        context_snippets = contexts[:3] if contexts else []
+        context_text = "\n".join([f"- {c}" for c in context_snippets]) if context_snippets else "(no specific sentences available)"
+
+        banned_list = ", ".join(sorted(set((forbidden_words or []) + (already_suggested or [])))) or "(none)"
+
+        prompt = f"""
+        You are improving resume language variety. Produce EXACTLY ONE line in this format and nothing else:
+        FIX_REPETITION: [Section] - [Word Type] '[word]' used [X] times - Replace instances: [Instance 1: '[exact context]' → '[alternative1]'], [Instance 2: '[exact context]' → '[alternative2]'], [Instance 3: '[exact context]' → '[alternative3]']
+
+        Requirements:
+        - Use section: {section}
+        - Word Type is exactly: {word_type}
+        - word is exactly: {word}
+        - X is exactly: {count}
+        - Use 2-3 short, professional alternatives suitable for resumes
+        - CRITICAL: Each alternative MUST be different (no duplicates) and MUST NOT be any of these words already present elsewhere in the resume or already suggested: {banned_list}
+        - CRITICAL: Do NOT suggest 'engineered', 'created', 'developed', 'designed', 'enhanced', 'improved', 'collaborated', 'secure', 'microservices' if they appear in the banned list
+        - Avoid proposing any alternative that already appears in the provided contexts or elsewhere in the resume
+        - If no suitable single-word verb remains, REFRAME the phrase (still keeping meaning) to remove the repetition without using any banned words
+        - Distribute different alternatives across instances to avoid introducing new repetition within the same section
+        - If fewer than 3 contexts provided, still output 2-3 replacements using the available contexts
+        - Do NOT include any preface or follow-up text, no code fences, only the single line
+
+        Context sentences where the word appears (may be trimmed):
+        {context_text}
+        """
+
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": "You generate precise, single-line replacement instructions in the required format."},
+                {"role": "user", "content": prompt.strip()}
+            ],
+            temperature=0.1,
+            top_p=0.8,
+            max_tokens=200
+        )
+
+        line = response.choices[0].message.content.strip()
+        # Basic sanity check: must start with FIX_REPETITION
+        if not line.startswith("FIX_REPETITION:"):
+            import re as _re
+            m = _re.search(r"FIX_REPETITION:.*", line)
+            if m:
+                return m.group(0).strip()
+            return ""
+        return line
+    except Exception as e:
+        logger.warning(f"Failed to generate FIX_REPETITION line for '{word}' in section '{section}': {e}")
+        return ""
+
+def _augment_repetition_suggestions_with_debug(ats_response: Dict[str, Any], repetition_debug: Dict[str, Any], resume_text: str, client: Any, model_name: str, temperature: float, top_p: float) -> Dict[str, Any]:
+    """
+    Augment repetition_avoidance suggestions to include a FIX_REPETITION line for
+    every repeated word detected in the debug analysis. Avoid duplicates if the AI
+    already provided a FIX_REPETITION for a given word.
+    """
+    try:
+        import re as _re
+        detailed = ats_response.setdefault("detailed_feedback", {})
+        rep = detailed.setdefault("repetition_avoidance", {})
+        suggestions: List[str] = rep.setdefault("suggestions", [])
+
+        # Collect already-covered words from existing FIX_REPETITION suggestions
+        covered_words = set()
+        # Track alternatives already suggested to enforce global uniqueness
+        suggested_alternatives = set()
+        for s in suggestions:
+            m = _re.search(r"FIX_REPETITION:\s*[^']*'([^']+)'", s)
+            if m:
+                covered_words.add(m.group(1).strip().lower())
+            for alt in _re.findall(r"→\s*'([^']+)'", s):
+                if alt:
+                    suggested_alternatives.add(alt.strip().lower())
+
+        repetitions_found = repetition_debug.get("repetitions_found", {})
+        debug_info = repetition_debug.get("debug_info", {})
+        action_verbs_found = repetition_debug.get("action_verbs_found", {})
+
+        # Build forbidden words list from resume text (verbs/terms already present)
+        forbidden_words = set(_collect_used_power_words_from_text(resume_text))
+        logger.info(f"🔍 DEBUG: Forbidden words list (already in resume): {sorted(forbidden_words)}")
+
+        # Add all repeated words to forbidden list so they aren't suggested as alternatives
+        all_repeated_words = set()
+        for section, words in repetitions_found.items():
+            for word in words.keys():
+                all_repeated_words.add(word.lower())
+        forbidden_words.update(all_repeated_words)
+        
+        logger.info(f"🔍 DEBUG: Extended forbidden words (including repeated): {sorted(forbidden_words)}")
+
+        # If no repetitions found, remove any existing FIX_REPETITION suggestions to avoid false positives
+        if not repetitions_found:
+            logger.info("🔍 DEBUG: No repetitions found - removing any existing FIX_REPETITION suggestions")
+            suggestions[:] = [s for s in suggestions if not s.startswith("FIX_REPETITION:")]
+            return ats_response
+
+        for section, words in repetitions_found.items():
+            for word, count in words.items():
+                if word.lower() in covered_words:
+                    continue
+
+                word_type = "Action Verb" if word in action_verbs_found.get(section, {}) else "Professional Term"
+                contexts = debug_info.get(f"{section}_{word}", {}).get("contexts", [])
+                
+                # Current forbidden list for this word includes all forbidden words + already suggested
+                current_forbidden = list(forbidden_words) + list(suggested_alternatives)
+                logger.info(f"🔍 DEBUG: Generating suggestions for '{word}' avoiding these words: {sorted(current_forbidden)}")
+                
+                # Generate a single FIX_REPETITION line using the model, leveraging contexts
+                line = _generate_fix_repetition_line(section, word_type, word, count, contexts, client, model_name, temperature, top_p, current_forbidden, [])
+                if line and isinstance(line, str):
+                    suggestions.append(line)
+                    # Update global suggested_alternatives with any new alts from this line
+                    for alt in _re.findall(r"→\s*'([^']+)'", line):
+                        if alt:
+                            suggested_alternatives.add(alt.strip().lower())
+                            logger.info(f"🔍 DEBUG: Added '{alt}' to suggested alternatives list")
+
+        # Ensure negatives/specific_issues enumerate all repeated words as issues
+        rep.setdefault("negatives", [])
+        rep.setdefault("specific_issues", [])
+        existing_issue_entries = set(rep["specific_issues"]) if isinstance(rep.get("specific_issues"), list) else set()
+        for section, words in repetitions_found.items():
+            for word, count in words.items():
+                issue_text = f"Repeated word '{word}' appears {count} times in {section}"
+                if issue_text not in existing_issue_entries:
+                    rep["specific_issues"].append(issue_text)
+                    existing_issue_entries.add(issue_text)
+
+        return ats_response
+    except Exception as e:
+        logger.warning(f"Failed to augment repetition suggestions: {e}")
+        return ats_response
+
+def _mirror_skill_suggestions_into_recommendations(ats_response: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Ensure that all skills-related suggestions are present in top-level recommendations
+    to increase visibility and drive application. Avoid duplicates.
+    """
+    try:
+        detailed = ats_response.get("detailed_feedback", {}) or {}
+        recommendations = ats_response.setdefault("recommendations", [])
+        existing = set(recommendations)
+
+        # Collect suggestions from standard skills section if present
+        skills_section = detailed.get("skills_match_alignment", {}) or {}
+        for s in skills_section.get("suggestions", []) or []:
+            if s and s not in existing:
+                recommendations.append(s)
+                existing.add(s)
+
+        # Collect suggestions from JD keyword/skills section if present
+        jd_skills_section = detailed.get("keyword_match_skills", {}) or {}
+        for s in jd_skills_section.get("suggestions", []) or []:
+            if s and s not in existing:
+                recommendations.append(s)
+                existing.add(s)
+
+        ats_response["recommendations"] = recommendations
+        return ats_response
+    except Exception as e:
+        logger.warning(f"Failed to mirror skills suggestions into recommendations: {e}")
+        return ats_response
+
 class StandardATSService:
     """
     Standard ATS (Applicant Tracking System) analysis service
@@ -84,6 +351,10 @@ class StandardATSService:
         # Validate parsed data if provided
         if parsed_data:
             parsed_data = self._validate_parsed_data(parsed_data)
+        
+        # Perform comprehensive repetition analysis for debugging (needed for prompt)
+        logger.info("🔍 Performing comprehensive repetition analysis...")
+        repetition_debug = self._analyze_repetitions_debug(resume_text)
         
         prompt = f"""
         You are an expert ATS (Applicant Tracking System) analyst with 10+ years of experience in resume optimization and HR technology.
@@ -215,6 +486,14 @@ class StandardATSService:
         RESUME TEXT TO ANALYZE:
         {resume_text}
         
+        REPETITION DEBUG ANALYSIS RESULTS:
+        {repetition_debug}
+        
+        IMPORTANT: Use the repetition debug analysis results above to determine if repetitions exist. 
+        - If repetitions_found is empty or shows 0 repeated words, DO NOT generate any FIX_REPETITION suggestions
+        - Only generate FIX_REPETITION suggestions for words that are actually listed in the repetitions_found section
+        - If no repetitions are detected, focus on other aspects of language variety and professional presentation
+        
         PARSED RESUME DATA (for accurate analysis):
         {json.dumps(parsed_data, indent=2) if parsed_data else "No parsed data provided"}
         
@@ -307,10 +586,10 @@ class StandardATSService:
                 "skills_match_alignment": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Skills Match & Alignment",
-                    "description": "Comprehensive analysis of technical and soft skills alignment with industry requirements - ONLY skills-related feedback",
+                    "description": "Comprehensive analysis of technical and soft skills alignment with industry requirements - ONLY skills-related feedback. Do NOT include proficiency-level qualifiers (Advanced/Intermediate/Beginner/Expert). Prioritize core skills aligned with the person's designation/title.",
                     "positives": ["Quote specific skills listed in resume that align well", "Reference specific sections with strong skill presentation", "Identify ALL well-presented technical and soft skills"],
-                    "negatives": ["Quote specific skills that are poorly presented", "Identify specific missing skills with exact locations", "List ALL missing technical skills, programming languages, frameworks, tools", "Identify ALL missing soft skills, leadership qualities, communication abilities", "Document ALL skills that need better categorization or presentation"],
-                    "suggestions": ["Provide exact skill additions needed", "Specify which sections need skill reorganization", "ADD_SKILLS: Technical Skills - Add: [list 12-15 specific technical skills with proficiency levels]", "ADD_SKILLS: Soft Skills - Add: [list 8-10 specific soft skills]", "ADD_SKILLS: Tools & Technologies - Add: [list 10-12 specific tools and technologies]", "ADD_SKILLS: Certifications - Add: [list 5-8 relevant certifications]"],
+                    "negatives": ["Quote specific skills that are poorly presented", "Identify specific missing skills with exact locations", "List ALL missing technical skills, programming languages, frameworks, tools (bare names only, no proficiency levels)", "Identify ALL missing soft skills, leadership qualities, communication abilities", "Document ALL skills that need better categorization or presentation"],
+                    "suggestions": ["Provide exact skill additions needed (bare skill names only, no proficiency levels)", "Specify which sections need skill reorganization", "ADD_SKILLS: Technical Skills - Add: [list 12-15 core technical skills (bare names only)]", "ADD_SKILLS: Soft Skills - Add: [list 8-10 specific soft skills]", "ADD_SKILLS: Tools & Technologies - Add: [list 10-12 specific tools and technologies]", "ADD_SKILLS: Certifications - Add: [list 5-8 relevant certifications]", "ADD_SKILLS_CATEGORY: [Category Name] - Add: [comma-separated bare skill names]"],
                     "specific_issues": ["List exact skill formatting problems found", "Identify specific missing competencies with locations", "Document ALL instances of incomplete skill presentation", "Identify ALL sections with insufficient skill coverage"],
                     "improvement_examples": ["Show before/after skill presentation examples", "Provide specific skill additions needed in each section", "Demonstrate proper skill categorization and proficiency levels"],
                     "section_isolation_note": "ONLY include skills-related suggestions. Do not suggest contact, experience, education, or other section improvements in this skills section feedback."
@@ -497,6 +776,11 @@ class StandardATSService:
         MANDATORY REPETITION RECOMMENDATION FORMAT - COMPLETE COVERAGE REQUIRED:
         For EVERY repeated word detected, you MUST provide a recommendation in this exact format:
         "FIX_REPETITION: [Section] - [Word Type] '[repeated word]' used [X] times - Replace instances: [Instance 1: '[exact context]' → '[alternative1]'], [Instance 2: '[exact context]' → '[alternative2]'], [Instance 3: '[exact context]' → '[alternative3]']"
+        STRICT UNIQUENESS RULES FOR ALTERNATIVES:
+        - Do NOT suggest any alternative that already appears anywhere in the resume text.
+        - Do NOT reuse the same alternative across different FIX_REPETITION lines.
+        - If all obvious alternatives are already present, REFRAME the sentence fragment to eliminate repetition while preserving meaning (e.g., "built microservices" → "architected a microservice-based platform").
+        - Prefer concise, professional verbs; vary verbs across instances.
         
         EXAMPLE FOR COMPLETE COVERAGE:
         If these words are detected as repeated:
@@ -576,10 +860,6 @@ class StandardATSService:
         """
 
         try:
-            # Perform comprehensive repetition analysis for debugging
-            logger.info("🔍 Performing comprehensive repetition analysis...")
-            repetition_debug = self._analyze_repetitions_debug(resume_text)
-            
             logger.info(f"Generating ATS analysis with temperature={self.temperature}, top_p={self.top_p}")
             response = self.client.chat.completions.create(
                 model=self.model_name,
@@ -601,6 +881,20 @@ class StandardATSService:
             
             # Validate CSV parameters
             ats_response = self._validate_csv_parameters(ats_response)
+            
+            # Augment repetition suggestions using internal debug analysis so ALL repeated words are covered
+            ats_response = _augment_repetition_suggestions_with_debug(
+                ats_response,
+                repetition_debug,
+                resume_text,
+                self.client,
+                self.model_name,
+                self.temperature,
+                self.top_p
+            )
+
+            # Mirror skills-related suggestions into top-level recommendations for full coverage
+            ats_response = _mirror_skill_suggestions_into_recommendations(ats_response)
             
             # Apply dynamic scoring based on issues count
             ats_response = self._apply_dynamic_scoring(ats_response)
@@ -1297,7 +1591,7 @@ class StandardATSService:
 
     def _split_resume_into_sections(self, resume_text: str) -> Dict[str, str]:
         """
-        Split resume text into sections for analysis
+        Split resume text into sections for analysis with granular separation of projects and experiences
         
         Args:
             resume_text: Raw resume text
@@ -1324,6 +1618,7 @@ class StandardATSService:
         sections = {}
         current_section = "General"
         current_text = []
+        subsection_counter = 1
         
         lines = resume_text.split('\n')
         
@@ -1343,15 +1638,35 @@ class StandardATSService:
                     # Start new section
                     current_section = line
                     current_text = []
+                    subsection_counter = 1
                     is_section_header = True
                     break
             
             if not is_section_header:
-                current_text.append(line)
+                # Check if this looks like a project/experience entry (company name, project title, etc.)
+                # Pattern: Company Name, Project Title, or similar standalone entries
+                if (len(line.split()) <= 4 and 
+                    (re.match(r'^[A-Z][a-zA-Z\s&.,]+$', line) or 
+                     re.match(r'^[A-Z][a-zA-Z\s&.,]+\s*[-–]\s*[A-Z]', line))):
+                    
+                    # Save current subsection if it has content
+                    if current_text:
+                        subsection_name = f"{current_section} - Item {subsection_counter}"
+                        sections[subsection_name] = ' '.join(current_text)
+                        subsection_counter += 1
+                    
+                    # Start new subsection with this line
+                    current_text = [line]
+                else:
+                    current_text.append(line)
         
         # Save last section
         if current_text:
-            sections[current_section] = ' '.join(current_text)
+            if subsection_counter > 1:
+                subsection_name = f"{current_section} - Item {subsection_counter}"
+                sections[subsection_name] = ' '.join(current_text)
+            else:
+                sections[current_section] = ' '.join(current_text)
         
         return sections
 
@@ -1426,6 +1741,10 @@ class JDSpecificATSService:
         # Validate parsed data if provided
         if parsed_data:
             parsed_data = self._validate_parsed_data(parsed_data)
+        
+        # Perform comprehensive repetition analysis for debugging (needed for prompt)
+        logger.info("🔍 Performing comprehensive repetition analysis for JD-specific analysis...")
+        repetition_debug = self._analyze_repetitions_debug(resume_text)
         
         prompt = f"""
         You are an expert ATS (Applicant Tracking System) analyst and job matching specialist with 10+ years of experience in recruitment technology and resume optimization.
@@ -1540,6 +1859,14 @@ class JDSpecificATSService:
         RESUME TEXT TO ANALYZE:
         {resume_text}
         
+        REPETITION DEBUG ANALYSIS RESULTS:
+        {repetition_debug}
+        
+        IMPORTANT: Use the repetition debug analysis results above to determine if repetitions exist. 
+        - If repetitions_found is empty or shows 0 repeated words, DO NOT generate any FIX_REPETITION suggestions
+        - Only generate FIX_REPETITION suggestions for words that are actually listed in the repetitions_found section
+        - If no repetitions are detected, focus on other aspects of language variety and professional presentation
+        
         PARSED RESUME DATA (for accurate analysis):
         {json.dumps(parsed_data, indent=2) if parsed_data else "No parsed data provided"}
         
@@ -1623,10 +1950,10 @@ class JDSpecificATSService:
                 "keyword_match_skills": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Keyword Match & Skills",
-                    "description": "Specific analysis of keyword alignment with job requirements - ONLY keyword and skills-related feedback",
+                    "description": "Specific analysis of keyword alignment with job requirements - ONLY keyword and skills-related feedback. Do NOT include proficiency-level qualifiers (Advanced/Intermediate/Beginner/Expert) in skills. Emphasize core designation-aligned skills.",
                     "positives": ["Quote specific job-relevant keywords found in resume", "Reference specific sections with strong job keyword alignment"],
-                    "negatives": ["Quote specific missing job keywords", "Identify specific sections lacking required job terms"],
-                    "suggestions": ["Provide exact job keyword additions needed", "Specify which sections need job-specific terminology"],
+                    "negatives": ["Quote specific missing job keywords", "Identify specific sections lacking required job terms", "List missing core skills (bare names only) aligned with the job designation"],
+                    "suggestions": ["Provide exact job keyword additions needed", "Specify which sections need job-specific terminology", "ADD_SKILLS: Core Skills - Add: [list 10-15 core skills (bare names only, no proficiency)"]],
                     "specific_issues": ["List exact missing job keywords found", "Identify specific sections needing job terms with locations"],
                     "improvement_examples": ["Show before/after job keyword examples", "Provide specific job-relevant additions needed"],
                     "section_isolation_note": "ONLY include keyword and skills-related suggestions. Do not suggest contact, formatting, experience, or other section improvements in this keyword section feedback."
@@ -1794,10 +2121,6 @@ class JDSpecificATSService:
         """
 
         try:
-            # Perform comprehensive repetition analysis for debugging
-            logger.info("🔍 Performing comprehensive repetition analysis for JD-specific analysis...")
-            repetition_debug = self._analyze_repetitions_debug(resume_text)
-            
             logger.info(f"Generating JD-Specific ATS analysis with temperature={self.temperature}, top_p={self.top_p}")
             response = self.client.chat.completions.create(
                 model=self.model_name,
@@ -1817,6 +2140,20 @@ class JDSpecificATSService:
             # Enforce schema compliance
             jd_ats_response = self._enforce_jd_ats_schema_compliance(jd_ats_response)
             
+            # Augment repetition suggestions using internal debug analysis so ALL repeated words are covered
+            jd_ats_response = _augment_repetition_suggestions_with_debug(
+                jd_ats_response,
+                repetition_debug,
+                resume_text,
+                self.client,
+                self.model_name,
+                self.temperature,
+                self.top_p
+            )
+
+            # Mirror skills-related suggestions into top-level recommendations for full coverage
+            jd_ats_response = _mirror_skill_suggestions_into_recommendations(jd_ats_response)
+
             # Apply dynamic scoring based on issues count
             jd_ats_response = self._apply_dynamic_scoring(jd_ats_response)
             
