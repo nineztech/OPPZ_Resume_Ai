@@ -8,6 +8,273 @@ from .openai_parser_service import OpenAIResumeParser
 
 logger = logging.getLogger(__name__)
 
+def _collect_used_power_words_from_text(text: str) -> List[str]:
+    """
+    Collect action verbs and professional terms already present in the resume text.
+    Used to avoid suggesting synonyms that are already present in the resume.
+    """
+    import re as _re
+    action_verbs = {
+        'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered',
+        'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured',
+        'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained',
+        'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved',
+        'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified',
+        'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced',
+        'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed',
+        'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched',
+        'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received',
+        'engineered', 'constructed', 'architected', 'fabricated', 'assembled', 'crafted', 'forged', 'molded',
+        'shaped', 'formed', 'generated', 'produced', 'manufactured', 'fashioned', 'devised', 'conceived',
+        'invented', 'innovated', 'pioneered', 'spearheaded', 'championed', 'advocated', 'promoted', 'endorsed',
+        'supported', 'backed', 'sponsored', 'funded', 'financed', 'invested', 'contributed', 'donated',
+        'provided', 'supplied', 'delivered', 'distributed', 'allocated', 'assigned', 'designated', 'appointed',
+        'selected', 'chosen', 'picked', 'elected', 'voted', 'decided', 'determined', 'resolved', 'settled',
+        'concluded', 'finalized', 'completed', 'finished', 'accomplished', 'achieved', 'attained', 'reached',
+        'obtained', 'acquired', 'gained', 'earned', 'won', 'secured', 'captured', 'seized', 'grasped',
+        'gripped', 'held', 'maintained', 'retained', 'preserved', 'conserved', 'protected', 'safeguarded',
+        'defended', 'shielded', 'guarded', 'watched', 'monitored', 'observed', 'tracked', 'followed',
+        'pursued', 'chased', 'hunted', 'searched', 'explored', 'investigated', 'examined', 'studied',
+        'analyzed', 'evaluated', 'assessed', 'reviewed', 'inspected', 'checked', 'verified', 'confirmed',
+        'validated', 'authenticated', 'certified', 'approved', 'endorsed', 'sanctioned', 'authorized',
+        'permitted', 'allowed', 'enabled', 'facilitated', 'assisted', 'helped', 'aided', 'supported',
+        'backed', 'sponsored', 'promoted', 'advanced', 'progressed', 'moved', 'shifted', 'transferred',
+        'relocated', 'migrated', 'transported', 'conveyed', 'carried', 'delivered', 'distributed', 'spread',
+        'extended', 'expanded', 'enlarged', 'increased', 'boosted', 'enhanced', 'improved', 'upgraded',
+        'refined', 'polished', 'perfected', 'optimized', 'maximized', 'minimized', 'reduced', 'decreased',
+        'lowered', 'diminished', 'lessened', 'cut', 'trimmed', 'slashed', 'eliminated', 'removed',
+        'deleted', 'erased', 'wiped', 'cleared', 'cleaned', 'purified', 'sanitized', 'sterilized',
+        'disinfected', 'decontaminated', 'neutralized', 'balanced', 'stabilized', 'secured', 'fixed',
+        'repaired', 'restored', 'renewed', 'refreshed', 'revitalized', 'rejuvenated', 'regenerated',
+        'rebuilt', 'reconstructed', 'reassembled', 'repaired', 'mended', 'patched', 'fixed', 'corrected',
+        'adjusted', 'modified', 'altered', 'changed', 'transformed', 'converted', 'adapted', 'customized',
+        'personalized', 'tailored', 'fitted', 'sized', 'scaled', 'proportioned', 'balanced', 'harmonized',
+        'synchronized', 'coordinated', 'orchestrated', 'conducted', 'directed', 'managed', 'administered',
+        'supervised', 'oversaw', 'controlled', 'governed', 'regulated', 'monitored', 'tracked', 'followed',
+        'pursued', 'chased', 'hunted', 'searched', 'explored', 'investigated', 'examined', 'studied',
+        'analyzed', 'evaluated', 'assessed', 'reviewed', 'inspected', 'checked', 'verified', 'confirmed',
+        'validated', 'authenticated', 'certified', 'approved', 'endorsed', 'sanctioned', 'authorized',
+        'permitted', 'allowed', 'enabled', 'facilitated', 'assisted', 'helped', 'aided', 'supported'
+    }
+    professional_terms = {
+        'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced',
+        'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical',
+        'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined',
+        'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized',
+        'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform',
+        'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven',
+        'protected', 'safe', 'guarded', 'shielded', 'defended', 'secured', 'fortified', 'reinforced',
+        'strengthened', 'hardened', 'toughened', 'solidified', 'stabilized', 'balanced', 'harmonized',
+        'synchronized', 'coordinated', 'orchestrated', 'conducted', 'directed', 'managed', 'administered',
+        'supervised', 'oversaw', 'controlled', 'governed', 'regulated', 'monitored', 'tracked', 'followed',
+        'modular', 'service-oriented', 'component-based', 'object-oriented', 'functional', 'procedural',
+        'declarative', 'imperative', 'reactive', 'event-driven', 'message-driven', 'data-driven', 'test-driven',
+        'behavior-driven', 'domain-driven', 'model-driven', 'architecture-driven', 'design-driven', 'user-driven',
+        'customer-driven', 'business-driven', 'market-driven', 'performance-driven', 'quality-driven',
+        'security-driven', 'compliance-driven', 'agile-driven', 'lean-driven', 'devops-driven', 'cloud-driven'
+    }
+    
+    # Use more comprehensive regex to capture all forms including past tense and participles
+    tokens = _re.findall(r'\b[a-zA-Z]+(?:ed|ing|s)?\b', (text or '').lower())
+    
+    # Also check for base forms - strip common endings
+    all_words = set()
+    for token in tokens:
+        all_words.add(token)
+        # Strip common verb endings to get base form
+        base = token
+        if token.endswith('ed'):
+            base = token[:-2]
+            if len(base) > 2:
+                all_words.add(base)
+        elif token.endswith('ing'):
+            base = token[:-3]
+            if len(base) > 2:
+                all_words.add(base)
+        elif token.endswith('s') and len(token) > 3:
+            base = token[:-1]
+            all_words.add(base)
+    
+    used = {t for t in all_words if t in action_verbs or t in professional_terms}
+    
+    # Log for debugging
+    logger.info(f"🔍 DEBUG: Found {len(used)} power words already used in resume: {sorted(used)}")
+    
+    return sorted(used)
+
+def _generate_fix_repetition_line(section: str, word_type: str, word: str, count: int, contexts: List[str], client: Any, model_name: str, temperature: float, top_p: float, forbidden_words: List[str], already_suggested: List[str]) -> str:
+    """
+    Use the model to generate one FIX_REPETITION suggestion line for a repeated word,
+    following the mandatory format. Returns a single-line string, or empty string on failure.
+    """
+    try:
+        # Limit to first 3 context snippets to keep prompt compact
+        context_snippets = contexts[:3] if contexts else []
+        context_text = "\n".join([f"- {c}" for c in context_snippets]) if context_snippets else "(no specific sentences available)"
+
+        banned_list = ", ".join(sorted(set((forbidden_words or []) + (already_suggested or [])))) or "(none)"
+
+        prompt = f"""
+        You are improving resume language variety. Produce EXACTLY ONE line in this format and nothing else:
+        FIX_REPETITION: [Section] - [Word Type] '[word]' used [X] times - Replace instances: [Instance 1: '[exact context]' → '[alternative1]'], [Instance 2: '[exact context]' → '[alternative2]'], [Instance 3: '[exact context]' → '[alternative3]']
+
+        Requirements:
+        - Use section: {section}
+        - Word Type is exactly: {word_type}
+        - word is exactly: {word}
+        - X is exactly: {count}
+        - Use 2-3 short, professional alternatives suitable for resumes
+        - CRITICAL: Each alternative MUST be different (no duplicates) and MUST NOT be any of these words already present elsewhere in the resume or already suggested: {banned_list}
+        - CRITICAL: Do NOT suggest 'engineered', 'created', 'developed', 'designed', 'enhanced', 'improved', 'collaborated', 'secure', 'microservices' if they appear in the banned list
+        - Avoid proposing any alternative that already appears in the provided contexts or elsewhere in the resume
+        - If no suitable single-word verb remains, REFRAME the phrase (still keeping meaning) to remove the repetition without using any banned words
+        - Distribute different alternatives across instances to avoid introducing new repetition within the same section
+        - If fewer than 3 contexts provided, still output 2-3 replacements using the available contexts
+        - Do NOT include any preface or follow-up text, no code fences, only the single line
+
+        Context sentences where the word appears (may be trimmed):
+        {context_text}
+        """
+
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": "You generate precise, single-line replacement instructions in the required format."},
+                {"role": "user", "content": prompt.strip()}
+            ],
+            temperature=0.1,
+            top_p=0.8,
+            max_tokens=200
+        )
+
+        line = response.choices[0].message.content.strip()
+        # Basic sanity check: must start with FIX_REPETITION
+        if not line.startswith("FIX_REPETITION:"):
+            import re as _re
+            m = _re.search(r"FIX_REPETITION:.*", line)
+            if m:
+                return m.group(0).strip()
+            return ""
+        return line
+    except Exception as e:
+        logger.warning(f"Failed to generate FIX_REPETITION line for '{word}' in section '{section}': {e}")
+        return ""
+
+def _augment_repetition_suggestions_with_debug(ats_response: Dict[str, Any], repetition_debug: Dict[str, Any], resume_text: str, client: Any, model_name: str, temperature: float, top_p: float) -> Dict[str, Any]:
+    """
+    Augment repetition_avoidance suggestions to include a FIX_REPETITION line for
+    every repeated word detected in the debug analysis. Avoid duplicates if the AI
+    already provided a FIX_REPETITION for a given word.
+    """
+    try:
+        import re as _re
+        detailed = ats_response.setdefault("detailed_feedback", {})
+        rep = detailed.setdefault("repetition_avoidance", {})
+        suggestions: List[str] = rep.setdefault("suggestions", [])
+
+        # Collect already-covered words from existing FIX_REPETITION suggestions
+        covered_words = set()
+        # Track alternatives already suggested to enforce global uniqueness
+        suggested_alternatives = set()
+        for s in suggestions:
+            m = _re.search(r"FIX_REPETITION:\s*[^']*'([^']+)'", s)
+            if m:
+                covered_words.add(m.group(1).strip().lower())
+            for alt in _re.findall(r"→\s*'([^']+)'", s):
+                if alt:
+                    suggested_alternatives.add(alt.strip().lower())
+
+        repetitions_found = repetition_debug.get("repetitions_found", {})
+        debug_info = repetition_debug.get("debug_info", {})
+        action_verbs_found = repetition_debug.get("action_verbs_found", {})
+
+        # Build forbidden words list from resume text (verbs/terms already present)
+        forbidden_words = set(_collect_used_power_words_from_text(resume_text))
+        logger.info(f"🔍 DEBUG: Forbidden words list (already in resume): {sorted(forbidden_words)}")
+
+        # Add all repeated words to forbidden list so they aren't suggested as alternatives
+        all_repeated_words = set()
+        for section, words in repetitions_found.items():
+            for word in words.keys():
+                all_repeated_words.add(word.lower())
+        forbidden_words.update(all_repeated_words)
+        
+        logger.info(f"🔍 DEBUG: Extended forbidden words (including repeated): {sorted(forbidden_words)}")
+
+        # If no repetitions found, remove any existing FIX_REPETITION suggestions to avoid false positives
+        if not repetitions_found:
+            logger.info("🔍 DEBUG: No repetitions found - removing any existing FIX_REPETITION suggestions")
+            suggestions[:] = [s for s in suggestions if not s.startswith("FIX_REPETITION:")]
+            return ats_response
+
+        for section, words in repetitions_found.items():
+            for word, count in words.items():
+                if word.lower() in covered_words:
+                    continue
+
+                word_type = "Action Verb" if word in action_verbs_found.get(section, {}) else "Professional Term"
+                contexts = debug_info.get(f"{section}_{word}", {}).get("contexts", [])
+                
+                # Current forbidden list for this word includes all forbidden words + already suggested
+                current_forbidden = list(forbidden_words) + list(suggested_alternatives)
+                logger.info(f"🔍 DEBUG: Generating suggestions for '{word}' avoiding these words: {sorted(current_forbidden)}")
+                
+                # Generate a single FIX_REPETITION line using the model, leveraging contexts
+                line = _generate_fix_repetition_line(section, word_type, word, count, contexts, client, model_name, temperature, top_p, current_forbidden, [])
+                if line and isinstance(line, str):
+                    suggestions.append(line)
+                    # Update global suggested_alternatives with any new alts from this line
+                    for alt in _re.findall(r"→\s*'([^']+)'", line):
+                        if alt:
+                            suggested_alternatives.add(alt.strip().lower())
+                            logger.info(f"🔍 DEBUG: Added '{alt}' to suggested alternatives list")
+
+        # Ensure negatives/specific_issues enumerate all repeated words as issues
+        rep.setdefault("negatives", [])
+        rep.setdefault("specific_issues", [])
+        existing_issue_entries = set(rep["specific_issues"]) if isinstance(rep.get("specific_issues"), list) else set()
+        for section, words in repetitions_found.items():
+            for word, count in words.items():
+                issue_text = f"Repeated word '{word}' appears {count} times in {section}"
+                if issue_text not in existing_issue_entries:
+                    rep["specific_issues"].append(issue_text)
+                    existing_issue_entries.add(issue_text)
+
+        return ats_response
+    except Exception as e:
+        logger.warning(f"Failed to augment repetition suggestions: {e}")
+        return ats_response
+
+def _mirror_skill_suggestions_into_recommendations(ats_response: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Ensure that all skills-related suggestions are present in top-level recommendations
+    to increase visibility and drive application. Avoid duplicates.
+    """
+    try:
+        detailed = ats_response.get("detailed_feedback", {}) or {}
+        recommendations = ats_response.setdefault("recommendations", [])
+        existing = set(recommendations)
+
+        # Collect suggestions from standard skills section if present
+        skills_section = detailed.get("skills_match_alignment", {}) or {}
+        for s in skills_section.get("suggestions", []) or []:
+            if s and s not in existing:
+                recommendations.append(s)
+                existing.add(s)
+
+        # Collect suggestions from JD keyword/skills section if present
+        jd_skills_section = detailed.get("keyword_match_skills", {}) or {}
+        for s in jd_skills_section.get("suggestions", []) or []:
+            if s and s not in existing:
+                recommendations.append(s)
+                existing.add(s)
+
+        ats_response["recommendations"] = recommendations
+        return ats_response
+    except Exception as e:
+        logger.warning(f"Failed to mirror skills suggestions into recommendations: {e}")
+        return ats_response
+
 class StandardATSService:
     """
     Standard ATS (Applicant Tracking System) analysis service
@@ -85,6 +352,10 @@ class StandardATSService:
         if parsed_data:
             parsed_data = self._validate_parsed_data(parsed_data)
         
+        # Perform comprehensive repetition analysis for debugging (needed for prompt)
+        logger.info("🔍 Performing comprehensive repetition analysis...")
+        repetition_debug = self._analyze_repetitions_debug(resume_text)
+        
         prompt = f"""
         You are an expert ATS (Applicant Tracking System) analyst with 10+ years of experience in resume optimization and HR technology.
         
@@ -99,6 +370,7 @@ class StandardATSService:
         - LANGUAGE VARIETY: Use varied language within same sections, allow appropriate repetition across different sections
         - PERFECT GRAMMAR: All content must have flawless spelling, grammar, and professional language
         - CONSISTENT SCORING: Apply the same rigorous standards across all categories
+        - COMPREHENSIVE REPETITION ANALYSIS: For repetition_avoidance section, analyze ALL repeated words and provide individual FIX_REPETITION suggestions for EACH repeated word - if 15 words are repeated, provide 15 specific FIX_REPETITION suggestions
         - SPECIFIC FEEDBACK: Every suggestion must include EXACT text examples, specific section locations, and precise improvement instructions
         
         PRECISE SCORING CRITERIA - APPLY CONSISTENTLY:
@@ -184,6 +456,17 @@ class StandardATSService:
         - 50-59: Poor variety, significant repetitive language within same section, limited cross-section diversity
         - 0-49: Very poor variety, excessive repetition within same section, minimal cross-section language diversity
         
+        COMPREHENSIVE REPETITION DETECTION REQUIREMENTS - MANDATORY:
+        - FOCUS ON ACTION VERBS AND PROFESSIONAL LANGUAGE: Only detect repeated action verbs, professional terms, and descriptive words that affect resume quality
+        - IGNORE COMMON WORDS: Do not flag repetitions of common words like "and", "in", "with", "of", "to", "for", "on", "by", "the", "a", "an"
+        - IGNORE PROPER NOUNS: Do not flag repetitions of names, locations, company names, technologies, skills, universities, dates
+        - DETECT ACTION VERB REPETITIONS: Find action verbs that appear 2+ times within the same section (implemented, managed, developed, created, built, designed, etc.)
+        - DETECT PROFESSIONAL TERM REPETITIONS: Find professional descriptive words that appear 2+ times (scalable, secure, efficient, optimized, etc.)
+        - COUNT EXACT OCCURRENCES: For each relevant repeated word, count exactly how many times it appears in each section
+        - IDENTIFY WORD LOCATIONS: Note the exact context and position of each repeated word instance
+        - PROVIDE SPECIFIC ALTERNATIVES: For each repeated action verb/professional term, suggest 3-5 specific alternative words/phrases
+        - DEBUG OUTPUT: Log only relevant repetitions (action verbs and professional terms) with counts and locations
+        
         CONTACT_INFORMATION_COMPLETENESS (0-100):
         - 90-100: Complete contact info (name, phone, email, LinkedIn, location) with proper formatting
         - 80-89: Missing 1-2 non-critical contact elements, good overall contact presentation
@@ -203,6 +486,14 @@ class StandardATSService:
         RESUME TEXT TO ANALYZE:
         {resume_text}
         
+        REPETITION DEBUG ANALYSIS RESULTS:
+        {repetition_debug}
+        
+        IMPORTANT: Use the repetition debug analysis results above to determine if repetitions exist. 
+        - If repetitions_found is empty or shows 0 repeated words, DO NOT generate any FIX_REPETITION suggestions
+        - Only generate FIX_REPETITION suggestions for words that are actually listed in the repetitions_found section
+        - If no repetitions are detected, focus on other aspects of language variety and professional presentation
+        
         PARSED RESUME DATA (for accurate analysis):
         {json.dumps(parsed_data, indent=2) if parsed_data else "No parsed data provided"}
         
@@ -220,6 +511,22 @@ class StandardATSService:
         - MANDATORY PROJECT DESCRIPTION LENGTH: ALL project descriptions MUST be exactly 6-7 statements - NO EXCEPTIONS - if less than 6 statements, MUST expand to 6-7 statements - if more than 7 statements, MUST condense to 6-7 statements - this is a CRITICAL REQUIREMENT
         - PROJECT DESCRIPTION ENFORCEMENT: For EVERY project with less than 6 statements, you MUST generate exactly 6-7 statements in your suggestions - COUNT the statements and ensure they are exactly 6-7 - this is MANDATORY
         - PROJECT DESCRIPTION COUNTING: When analyzing projects, count each statement (each sentence ending with period, exclamation, or question mark) - if count is less than 6, you MUST suggest expansion to exactly 6-7 statements - if count is more than 7, you MUST suggest reduction to exactly 6-7 statements
+        
+        COMPREHENSIVE REPETITION ANALYSIS REQUIREMENTS - MANDATORY:
+        - FOCUS ON ACTION VERBS AND PROFESSIONAL TERMS: Only analyze repeated action verbs and professional descriptive words that impact resume quality
+        - IGNORE COMMON WORDS: Do not analyze repetitions of common words like "and", "in", "with", "of", "to", "for", "on", "by", "the", "a", "an"
+        - IGNORE PROPER NOUNS: Do not analyze repetitions of names, locations, company names, technologies, skills, universities, dates
+        - DETECT ACTION VERB REPETITIONS: Find action verbs that appear 2+ times within the same section (implemented, managed, developed, created, built, designed, etc.)
+        - DETECT PROFESSIONAL TERM REPETITIONS: Find professional descriptive words that appear 2+ times (scalable, secure, efficient, optimized, etc.)
+        - COUNT EXACT FREQUENCY: For each relevant repeated word, count exactly how many times it appears in each section
+        - IDENTIFY CONTEXT: Note the exact context and sentence where each repeated word appears
+        - PROVIDE SPECIFIC ALTERNATIVES: For each repeated action verb/professional term, suggest 3-5 specific alternative words/phrases
+        - DEBUG LOGGING: Include detailed debug information showing only relevant repetitions with counts and locations
+        - ENHANCEMENT EXAMPLES: Show before/after examples for every repeated action verb/professional term with specific replacements
+        - COMPREHENSIVE COVERAGE: Find ALL repeated action verbs and professional terms in the resume
+        - MANDATORY COMPLETE COVERAGE: For EVERY repeated word detected, you MUST provide a specific recommendation in the suggestions section
+        - NO PARTIAL ANALYSIS: If 12 repeated words are detected, you MUST provide 12 specific recommendations - NO EXCEPTIONS
+        - COMPLETE ISSUE COUNTING: Count ALL repeated words as issues - if 12 words are repeated, show 12 issues to fix
         
         SECTION DETECTION REQUIREMENTS:
         - Check PARSED DATA for projects: Look for "projects", "project", "portfolio" keys with actual content
@@ -279,10 +586,10 @@ class StandardATSService:
                 "skills_match_alignment": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Skills Match & Alignment",
-                    "description": "Comprehensive analysis of technical and soft skills alignment with industry requirements - ONLY skills-related feedback",
+                    "description": "Comprehensive analysis of technical and soft skills alignment with industry requirements - ONLY skills-related feedback. Do NOT include proficiency-level qualifiers (Advanced/Intermediate/Beginner/Expert). Prioritize core skills aligned with the person's designation/title.",
                     "positives": ["Quote specific skills listed in resume that align well", "Reference specific sections with strong skill presentation", "Identify ALL well-presented technical and soft skills"],
-                    "negatives": ["Quote specific skills that are poorly presented", "Identify specific missing skills with exact locations", "List ALL missing technical skills, programming languages, frameworks, tools", "Identify ALL missing soft skills, leadership qualities, communication abilities", "Document ALL skills that need better categorization or presentation"],
-                    "suggestions": ["Provide exact skill additions needed", "Specify which sections need skill reorganization", "ADD_SKILLS: Technical Skills - Add: [list 12-15 specific technical skills with proficiency levels]", "ADD_SKILLS: Soft Skills - Add: [list 8-10 specific soft skills]", "ADD_SKILLS: Tools & Technologies - Add: [list 10-12 specific tools and technologies]", "ADD_SKILLS: Certifications - Add: [list 5-8 relevant certifications]"],
+                    "negatives": ["Quote specific skills that are poorly presented", "Identify specific missing skills with exact locations", "List ALL missing technical skills, programming languages, frameworks, tools (bare names only, no proficiency levels)", "Identify ALL missing soft skills, leadership qualities, communication abilities", "Document ALL skills that need better categorization or presentation"],
+                    "suggestions": ["Provide exact skill additions needed (bare skill names only, no proficiency levels)", "Specify which sections need skill reorganization", "ADD_SKILLS: Technical Skills - Add: [list 12-15 core technical skills (bare names only)]", "ADD_SKILLS: Soft Skills - Add: [list 8-10 specific soft skills]", "ADD_SKILLS: Tools & Technologies - Add: [list 10-12 specific tools and technologies]", "ADD_SKILLS: Certifications - Add: [list 5-8 relevant certifications]", "ADD_SKILLS_CATEGORY: [Category Name] - Add: [comma-separated bare skill names]"],
                     "specific_issues": ["List exact skill formatting problems found", "Identify specific missing competencies with locations", "Document ALL instances of incomplete skill presentation", "Identify ALL sections with insufficient skill coverage"],
                     "improvement_examples": ["Show before/after skill presentation examples", "Provide specific skill additions needed in each section", "Demonstrate proper skill categorization and proficiency levels"],
                     "section_isolation_note": "ONLY include skills-related suggestions. Do not suggest contact, experience, education, or other section improvements in this skills section feedback."
@@ -354,10 +661,10 @@ class StandardATSService:
                     "title": "Repetition Avoidance",
                     "description": "Comprehensive analysis of ALL repeated language and unnecessary repetitions within same section, allowing legitimate repetition across different sections - ONLY repetition-related feedback",
                     "positives": ["Quote specific varied language examples from resume", "Reference specific sections with good word variety", "Note acceptable cross-section repetition where appropriate"],
-                    "negatives": ["Quote EVERY specific repetitive phrase found within same section", "Identify ALL sections with excessive internal repetition", "List ALL overused action verbs with exact counts", "Document ALL redundant phrases with specific locations", "Count EVERY instance of repeated words within same section"],
-                    "suggestions": ["Provide exact word replacements needed for EVERY repeated word within same section", "Specify ALL sections that need internal language variety", "FIX_REPETITION: [Section] - Word '[repeated word]' used [X] times - Replace instances: [Instance 1: word → alternative1], [Instance 2: word → alternative2], [Instance 3: word → alternative3]", "Note that cross-section repetition is acceptable when contextually appropriate"],
-                    "specific_issues": ["List EVERY exact repetitive phrase found within same section in resume with counts", "Identify ALL specific sections needing internal word variety with exact locations", "Document ALL instances of overused action verbs", "Count ALL repeated words and phrases within each section"],
-                    "improvement_examples": ["Show before/after repetition examples for EVERY repeated word within same section", "Provide specific word variety improvements needed for ALL repetitions within sections", "Demonstrate alternative word choices for EVERY overused term"],
+                    "negatives": ["Quote EVERY specific repetitive action verb found within same section", "Identify ALL sections with excessive action verb repetition", "List ALL overused action verbs with exact counts", "Document ALL redundant professional terms with specific locations", "Count EVERY instance of repeated action verbs within same section", "DEBUG: List ALL detected repeated action verbs with exact counts: Action Verb '[word]' appears [X] times in [Section]: [Context1], [Context2], [Context3]", "DEBUG: Categorize repetitions by type: Action Verbs: [list], Professional Terms: [list]", "MANDATORY: List EVERY repeated word as a separate issue - if 12 words are repeated, list ALL 12 as separate issues"],
+                    "suggestions": ["Provide exact action verb replacements needed for EVERY repeated action verb within same section", "Specify ALL sections that need internal action verb variety", "FIX_REPETITION: [Section] - Action Verb '[repeated action verb]' used [X] times - Replace instances: [Instance 1: '[exact context]' → '[alternative1]'], [Instance 2: '[exact context]' → '[alternative2]'], [Instance 3: '[exact context]' → '[alternative3]']", "ENHANCE_VARIETY: For each repeated action verb, provide 3-5 specific professional alternatives with context", "DEBUG: Show complete action verb frequency analysis for each section", "MANDATORY COMPLETE COVERAGE: For EVERY repeated word detected, provide a specific FIX_REPETITION recommendation", "NO PARTIAL ANALYSIS: If 12 repeated words are detected, provide 12 specific FIX_REPETITION recommendations", "COMPREHENSIVE RECOMMENDATIONS: Include recommendations for ALL action verbs AND professional terms", "CRITICAL: Generate ONE FIX_REPETITION suggestion for EACH repeated word - if 'created' appears 3 times, generate 1 FIX_REPETITION suggestion for 'created' with 3 specific replacements", "CRITICAL: Generate ONE FIX_REPETITION suggestion for EACH professional term - if 'scalable' appears 3 times, generate 1 FIX_REPETITION suggestion for 'scalable' with 3 specific replacements", "MANDATORY: Based on the repetition debug analysis, generate FIX_REPETITION suggestions for ALL detected repeated words", "CRITICAL: If repetition_debug_analysis shows 17 repeated words, generate 17 FIX_REPETITION suggestions", "REQUIRED: For each word in the repetition analysis, create: FIX_REPETITION: [Section] - [Word Type] '[word]' used [X] times - Replace instances: [specific replacements]", "Note that cross-section repetition is acceptable when contextually appropriate"],
+                    "specific_issues": ["List EVERY exact repetitive action verb found within same section in resume with counts", "Identify ALL specific sections needing internal action verb variety with exact locations", "Document ALL instances of overused action verbs", "Count ALL repeated action verbs within each section", "DEBUG: Complete action verb inventory: [Section1]: [action_verb1: X times], [action_verb2: Y times], [Section2]: [action_verb3: Z times]", "DEBUG: Highlight problematic repetitions: Action verbs appearing 3+ times in same section"],
+                    "improvement_examples": ["Show before/after repetition examples for EVERY repeated action verb within same section", "Provide specific action verb variety improvements needed for ALL repetitions within sections", "Demonstrate alternative action verb choices for EVERY overused term", "DEBUG: Before/After examples: 'Current: [exact repeated action verb]' → 'Improved: [varied action verb alternatives]'", "DEBUG: Show action verb replacement mapping: [Original Action Verb] → [Alternative 1, Alternative 2, Alternative 3]"],
                     "section_isolation_note": "ONLY include repetition-related suggestions. Do not suggest content, formatting, skills, or other section improvements in this repetition section feedback."
                 }},
                 "contact_information_completeness": {{
@@ -449,6 +756,47 @@ class StandardATSService:
         - Add SPECIFIC keywords: "Integrate these exact industry terms: [list 10-15 specific keywords with placement instructions]"
         - Enhance SPECIFIC sections: "In [exact section], add '[complete content with quantified metrics]'"
         
+        COMPREHENSIVE REPETITION ANALYSIS - MANDATORY DEBUGGING:
+        - FOCUS ON ACTION VERBS AND PROFESSIONAL TERMS: Only analyze repeated action verbs and professional descriptive words
+        - IGNORE COMMON WORDS: Do not analyze repetitions of common words like "and", "in", "with", "of", "to", "for", "on", "by", "the", "a", "an"
+        - IGNORE PROPER NOUNS: Do not analyze repetitions of names, locations, company names, technologies, skills, universities, dates
+        - COUNT RELEVANT REPETITIONS: Find action verbs and professional terms that appear 2+ times within the same section
+        - DEBUG OUTPUT FORMAT: "DEBUG: Action Verb '[word]' appears [X] times in [Section]: [Context1], [Context2], [Context3]"
+        - CATEGORIZE REPETITIONS: "DEBUG: Action Verbs: [list], Professional Terms: [list]"
+        - PROVIDE SPECIFIC ALTERNATIVES: For each repeated action verb/professional term, suggest 3-5 specific alternatives
+        - ENHANCEMENT EXAMPLES: Show before/after for every repeated action verb/professional term with specific replacements
+        - COMPREHENSIVE COVERAGE: Find ALL repeated action verbs and professional terms
+        - DEBUG INVENTORY: "DEBUG: Action Verb inventory: [Section1]: [word1: X times], [word2: Y times]"
+        - REPLACEMENT MAPPING: "DEBUG: [Original Action Verb] → [Alternative 1, Alternative 2, Alternative 3]"
+        - MANDATORY COMPLETE COVERAGE: For EVERY repeated word detected, you MUST provide a specific recommendation
+        - NO PARTIAL ANALYSIS: If 12 repeated words are detected, you MUST provide 12 specific recommendations - NO EXCEPTIONS
+        - COMPLETE ISSUE COUNTING: Count ALL repeated words as issues - if 12 words are repeated, show 12 issues to fix
+        - COMPREHENSIVE RECOMMENDATIONS: Include recommendations for ALL action verbs AND professional terms detected
+        
+        MANDATORY REPETITION RECOMMENDATION FORMAT - COMPLETE COVERAGE REQUIRED:
+        For EVERY repeated word detected, you MUST provide a recommendation in this exact format:
+        "FIX_REPETITION: [Section] - [Word Type] '[repeated word]' used [X] times - Replace instances: [Instance 1: '[exact context]' → '[alternative1]'], [Instance 2: '[exact context]' → '[alternative2]'], [Instance 3: '[exact context]' → '[alternative3]']"
+        STRICT UNIQUENESS RULES FOR ALTERNATIVES:
+        - Do NOT suggest any alternative that already appears anywhere in the resume text.
+        - Do NOT reuse the same alternative across different FIX_REPETITION lines.
+        - If all obvious alternatives are already present, REFRAME the sentence fragment to eliminate repetition while preserving meaning (e.g., "built microservices" → "architected a microservice-based platform").
+        - Prefer concise, professional verbs; vary verbs across instances.
+        
+        EXAMPLE FOR COMPLETE COVERAGE:
+        If these words are detected as repeated:
+        - Action Verb 'built' (4 times)
+        - Action Verb 'implemented' (3 times)  
+        - Action Verb 'designed' (2 times)
+        - Professional Term 'scalable' (2 times)
+        - Professional Term 'secure' (2 times)
+        
+        You MUST provide 5 separate recommendations:
+        1. "FIX_REPETITION: General - Action Verb 'built' used 4 times - Replace instances: [Instance 1: 'built microservices' → 'created microservices'], [Instance 2: 'built and deployed' → 'developed and deployed'], [Instance 3: 'built monitoring' → 'established monitoring'], [Instance 4: 'built CI/CD' → 'implemented CI/CD']"
+        2. "FIX_REPETITION: General - Action Verb 'implemented' used 3 times - Replace instances: [Instance 1: 'implemented fraud detection' → 'developed fraud detection'], [Instance 2: 'implemented CI/CD' → 'established CI/CD'], [Instance 3: 'implemented monitoring' → 'configured monitoring']"
+        3. "FIX_REPETITION: General - Action Verb 'designed' used 2 times - Replace instances: [Instance 1: 'designed architecture' → 'architected solution'], [Instance 2: 'designed UI' → 'created UI']"
+        4. "FIX_REPETITION: General - Professional Term 'scalable' used 2 times - Replace instances: [Instance 1: 'scalable architecture' → 'robust architecture'], [Instance 2: 'scalable solution' → 'flexible solution']"
+        5. "FIX_REPETITION: General - Professional Term 'secure' used 2 times - Replace instances: [Instance 1: 'secure authentication' → 'robust authentication'], [Instance 2: 'secure system' → 'protected system']"
+        
         COMPREHENSIVE PROBLEM DETECTION REQUIREMENTS - IDENTIFY EVERY POSSIBLE ISSUE:
         - CONTACT SECTION: Check for missing name, phone, email, LinkedIn, location, professional title, website, GitHub
         - SUMMARY SECTION: Check for missing professional summary, quantified experience, industry keywords, achievement highlights, skills mention, description length (too short/long)
@@ -534,11 +882,28 @@ class StandardATSService:
             # Validate CSV parameters
             ats_response = self._validate_csv_parameters(ats_response)
             
+            # Augment repetition suggestions using internal debug analysis so ALL repeated words are covered
+            ats_response = _augment_repetition_suggestions_with_debug(
+                ats_response,
+                repetition_debug,
+                resume_text,
+                self.client,
+                self.model_name,
+                self.temperature,
+                self.top_p
+            )
+
+            # Mirror skills-related suggestions into top-level recommendations for full coverage
+            ats_response = _mirror_skill_suggestions_into_recommendations(ats_response)
+            
             # Apply dynamic scoring based on issues count
             ats_response = self._apply_dynamic_scoring(ats_response)
             
             # Add improvement potential analysis
             ats_response = self._add_improvement_potential(ats_response)
+            
+            # Add repetition debug information
+            ats_response["repetition_debug_analysis"] = repetition_debug
             
             # Final validation
             ats_response = self._final_ats_validation(ats_response)
@@ -1096,6 +1461,215 @@ class StandardATSService:
         logger.info(f"📈 Improvement potential analysis: {current_score} → {target_score} (+{target_score - current_score} points)")
         return ats_response
 
+    def _analyze_repetitions_debug(self, resume_text: str) -> Dict[str, Any]:
+        """
+        Analyze repetitions in resume text for debugging purposes - focusing only on action verbs and professional terms
+        
+        Args:
+            resume_text: Raw resume text to analyze
+            
+        Returns:
+            Dictionary containing repetition analysis with debug information
+        """
+        logger.info("🔍 Starting comprehensive repetition analysis for debugging (action verbs and professional terms only)")
+        
+        import re
+        from collections import defaultdict, Counter
+        
+        # Define action verbs and professional terms to focus on
+        action_verbs = {
+            'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered',
+            'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured',
+            'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained',
+            'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved',
+            'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified',
+            'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced',
+            'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed',
+            'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched',
+            'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received'
+        }
+        
+        professional_terms = {
+            'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced',
+            'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical',
+            'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined',
+            'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized',
+            'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform',
+            'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven'
+        }
+        
+        # Common words to ignore
+        common_words = {
+            'and', 'in', 'with', 'of', 'to', 'for', 'on', 'by', 'the', 'a', 'an', 'is', 'are', 'was', 'were',
+            'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+            'may', 'might', 'can', 'must', 'shall', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she',
+            'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'her', 'its', 'our', 'their'
+        }
+        
+        # Split resume into sections (basic section detection)
+        sections = self._split_resume_into_sections(resume_text)
+        
+        repetition_analysis = {
+            "total_words_analyzed": 0,
+            "sections_analyzed": len(sections),
+            "repetitions_found": {},
+            "debug_info": {},
+            "action_verbs_found": {},
+            "professional_terms_found": {}
+        }
+        
+        for section_name, section_text in sections.items():
+            logger.info(f"🔍 Analyzing section: {section_name}")
+            
+            # Clean and tokenize text
+            words = re.findall(r'\b[a-zA-Z]+\b', section_text.lower())
+            word_count = Counter(words)
+            
+            # Filter for action verbs and professional terms only
+            relevant_repetitions = {}
+            action_verb_reps = {}
+            professional_term_reps = {}
+            
+            for word, count in word_count.items():
+                if count >= 2 and word not in common_words:
+                    if word in action_verbs:
+                        action_verb_reps[word] = count
+                        relevant_repetitions[word] = count
+                    elif word in professional_terms:
+                        professional_term_reps[word] = count
+                        relevant_repetitions[word] = count
+            
+            if relevant_repetitions:
+                logger.info(f"🔍 Found {len(relevant_repetitions)} relevant repeated words in {section_name}")
+                repetition_analysis["repetitions_found"][section_name] = relevant_repetitions
+                repetition_analysis["action_verbs_found"][section_name] = action_verb_reps
+                repetition_analysis["professional_terms_found"][section_name] = professional_term_reps
+                
+                # Debug logging for each relevant repetition
+                for word, count in relevant_repetitions.items():
+                    word_type = "Action Verb" if word in action_verbs else "Professional Term"
+                    logger.info(f"🔍 DEBUG: {word_type} '{word}' appears {count} times in {section_name}")
+                    
+                    # Find contexts where the word appears
+                    contexts = []
+                    sentences = re.split(r'[.!?]+', section_text)
+                    for sentence in sentences:
+                        if word.lower() in sentence.lower():
+                            contexts.append(sentence.strip()[:100] + "..." if len(sentence.strip()) > 100 else sentence.strip())
+                    
+                    repetition_analysis["debug_info"][f"{section_name}_{word}"] = {
+                        "word": word,
+                        "count": count,
+                        "contexts": contexts[:3],  # Limit to first 3 contexts
+                        "section": section_name,
+                        "type": word_type
+                    }
+            else:
+                logger.info(f"🔍 No relevant repetitions found in {section_name}")
+            
+            repetition_analysis["total_words_analyzed"] += len(words)
+        
+        # Summary logging
+        total_repetitions = sum(len(reps) for reps in repetition_analysis["repetitions_found"].values())
+        total_action_verbs = sum(len(reps) for reps in repetition_analysis["action_verbs_found"].values())
+        total_professional_terms = sum(len(reps) for reps in repetition_analysis["professional_terms_found"].values())
+        
+        logger.info(f"🔍 REPETITION ANALYSIS SUMMARY:")
+        logger.info(f"🔍 Total words analyzed: {repetition_analysis['total_words_analyzed']}")
+        logger.info(f"🔍 Sections analyzed: {repetition_analysis['sections_analyzed']}")
+        logger.info(f"🔍 Total relevant repeated words found: {total_repetitions}")
+        logger.info(f"🔍 Action verbs repeated: {total_action_verbs}")
+        logger.info(f"🔍 Professional terms repeated: {total_professional_terms}")
+        
+        for section, reps in repetition_analysis["repetitions_found"].items():
+            logger.info(f"🔍 {section}: {len(reps)} relevant repeated words")
+            for word, count in reps.items():
+                word_type = "Action Verb" if word in action_verbs else "Professional Term"
+                logger.info(f"🔍   - {word_type} '{word}': {count} times")
+        
+        return repetition_analysis
+
+    def _split_resume_into_sections(self, resume_text: str) -> Dict[str, str]:
+        """
+        Split resume text into sections for analysis with granular separation of projects and experiences
+        
+        Args:
+            resume_text: Raw resume text
+            
+        Returns:
+            Dictionary mapping section names to section text
+        """
+        import re
+        
+        # Common section headers
+        section_patterns = [
+            r'(?i)(experience|work experience|employment)',
+            r'(?i)(education|academic)',
+            r'(?i)(skills|competencies)',
+            r'(?i)(projects|portfolio)',
+            r'(?i)(certifications|certificates)',
+            r'(?i)(summary|objective|profile)',
+            r'(?i)(contact|personal information)',
+            r'(?i)(achievements|accomplishments)',
+            r'(?i)(languages)',
+            r'(?i)(references)'
+        ]
+        
+        sections = {}
+        current_section = "General"
+        current_text = []
+        subsection_counter = 1
+        
+        lines = resume_text.split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Check if line is a section header
+            is_section_header = False
+            for pattern in section_patterns:
+                if re.match(pattern, line):
+                    # Save previous section
+                    if current_text:
+                        sections[current_section] = ' '.join(current_text)
+                    
+                    # Start new section
+                    current_section = line
+                    current_text = []
+                    subsection_counter = 1
+                    is_section_header = True
+                    break
+            
+            if not is_section_header:
+                # Check if this looks like a project/experience entry (company name, project title, etc.)
+                # Pattern: Company Name, Project Title, or similar standalone entries
+                if (len(line.split()) <= 4 and 
+                    (re.match(r'^[A-Z][a-zA-Z\s&.,]+$', line) or 
+                     re.match(r'^[A-Z][a-zA-Z\s&.,]+\s*[-–]\s*[A-Z]', line))):
+                    
+                    # Save current subsection if it has content
+                    if current_text:
+                        subsection_name = f"{current_section} - Item {subsection_counter}"
+                        sections[subsection_name] = ' '.join(current_text)
+                        subsection_counter += 1
+                    
+                    # Start new subsection with this line
+                    current_text = [line]
+                else:
+                    current_text.append(line)
+        
+        # Save last section
+        if current_text:
+            if subsection_counter > 1:
+                subsection_name = f"{current_section} - Item {subsection_counter}"
+                sections[subsection_name] = ' '.join(current_text)
+            else:
+                sections[current_section] = ' '.join(current_text)
+        
+        return sections
+
 
 class JDSpecificATSService:
     """
@@ -1168,6 +1742,10 @@ class JDSpecificATSService:
         if parsed_data:
             parsed_data = self._validate_parsed_data(parsed_data)
         
+        # Perform comprehensive repetition analysis for debugging (needed for prompt)
+        logger.info("🔍 Performing comprehensive repetition analysis for JD-specific analysis...")
+        repetition_debug = self._analyze_repetitions_debug(resume_text)
+        
         prompt = f"""
         You are an expert ATS (Applicant Tracking System) analyst and job matching specialist with 10+ years of experience in recruitment technology and resume optimization.
         
@@ -1182,6 +1760,7 @@ class JDSpecificATSService:
         - LANGUAGE VARIETY: Use varied language within same sections, allow appropriate repetition across different sections
         - PERFECT GRAMMAR: All content must have flawless spelling, grammar, and professional language
         - CONSISTENT SCORING: Apply the same rigorous standards across all categories
+        - COMPREHENSIVE REPETITION ANALYSIS: For repetition_avoidance section, analyze ALL repeated words and provide individual FIX_REPETITION suggestions for EACH repeated word - if 15 words are repeated, provide 15 specific FIX_REPETITION suggestions
         
         PRECISE SCORING CRITERIA - APPLY CONSISTENTLY:
         
@@ -1250,6 +1829,17 @@ class JDSpecificATSService:
         - 50-59: Poor variety, significant repetitive language within same section, limited cross-section diversity
         - 0-49: Very poor variety, excessive repetition within same section, minimal cross-section language diversity
         
+        COMPREHENSIVE REPETITION DETECTION REQUIREMENTS - MANDATORY:
+        - FOCUS ON ACTION VERBS AND PROFESSIONAL LANGUAGE: Only detect repeated action verbs, professional terms, and descriptive words that affect resume quality
+        - IGNORE COMMON WORDS: Do not flag repetitions of common words like "and", "in", "with", "of", "to", "for", "on", "by", "the", "a", "an"
+        - IGNORE PROPER NOUNS: Do not flag repetitions of names, locations, company names, technologies, skills, universities, dates
+        - DETECT ACTION VERB REPETITIONS: Find action verbs that appear 2+ times within the same section (implemented, managed, developed, created, built, designed, etc.)
+        - DETECT PROFESSIONAL TERM REPETITIONS: Find professional descriptive words that appear 2+ times (scalable, secure, efficient, optimized, etc.)
+        - COUNT EXACT OCCURRENCES: For each relevant repeated word, count exactly how many times it appears in each section
+        - IDENTIFY WORD LOCATIONS: Note the exact context and position of each repeated word instance
+        - PROVIDE SPECIFIC ALTERNATIVES: For each repeated action verb/professional term, suggest 3-5 specific alternative words/phrases
+        - DEBUG OUTPUT: Log only relevant repetitions (action verbs and professional terms) with counts and locations
+        
         CONTACT_INFORMATION_COMPLETENESS (0-100):
         - 90-100: Complete contact info (name, phone, email, LinkedIn, location) with proper formatting
         - 80-89: Missing 1-2 non-critical contact elements, good overall contact presentation
@@ -1268,6 +1858,14 @@ class JDSpecificATSService:
         
         RESUME TEXT TO ANALYZE:
         {resume_text}
+        
+        REPETITION DEBUG ANALYSIS RESULTS:
+        {repetition_debug}
+        
+        IMPORTANT: Use the repetition debug analysis results above to determine if repetitions exist. 
+        - If repetitions_found is empty or shows 0 repeated words, DO NOT generate any FIX_REPETITION suggestions
+        - Only generate FIX_REPETITION suggestions for words that are actually listed in the repetitions_found section
+        - If no repetitions are detected, focus on other aspects of language variety and professional presentation
         
         PARSED RESUME DATA (for accurate analysis):
         {json.dumps(parsed_data, indent=2) if parsed_data else "No parsed data provided"}
@@ -1290,6 +1888,22 @@ class JDSpecificATSService:
         - MANDATORY PROJECT DESCRIPTION LENGTH: ALL project descriptions MUST be exactly 6-7 statements - NO EXCEPTIONS - if less than 6 statements, MUST expand to 6-7 statements - if more than 7 statements, MUST condense to 6-7 statements - this is a CRITICAL REQUIREMENT
         - PROJECT DESCRIPTION ENFORCEMENT: For EVERY project with less than 6 statements, you MUST generate exactly 6-7 statements in your suggestions - COUNT the statements and ensure they are exactly 6-7 - this is MANDATORY
         - PROJECT DESCRIPTION COUNTING: When analyzing projects, count each statement (each sentence ending with period, exclamation, or question mark) - if count is less than 6, you MUST suggest expansion to exactly 6-7 statements - if count is more than 7, you MUST suggest reduction to exactly 6-7 statements
+        
+        COMPREHENSIVE REPETITION ANALYSIS REQUIREMENTS - MANDATORY:
+        - FOCUS ON ACTION VERBS AND PROFESSIONAL TERMS: Only analyze repeated action verbs and professional descriptive words that impact resume quality
+        - IGNORE COMMON WORDS: Do not analyze repetitions of common words like "and", "in", "with", "of", "to", "for", "on", "by", "the", "a", "an"
+        - IGNORE PROPER NOUNS: Do not analyze repetitions of names, locations, company names, technologies, skills, universities, dates
+        - DETECT ACTION VERB REPETITIONS: Find action verbs that appear 2+ times within the same section (implemented, managed, developed, created, built, designed, etc.)
+        - DETECT PROFESSIONAL TERM REPETITIONS: Find professional descriptive words that appear 2+ times (scalable, secure, efficient, optimized, etc.)
+        - COUNT EXACT FREQUENCY: For each relevant repeated word, count exactly how many times it appears in each section
+        - IDENTIFY CONTEXT: Note the exact context and sentence where each repeated word appears
+        - PROVIDE SPECIFIC ALTERNATIVES: For each repeated action verb/professional term, suggest 3-5 specific alternative words/phrases
+        - DEBUG LOGGING: Include detailed debug information showing only relevant repetitions with counts and locations
+        - ENHANCEMENT EXAMPLES: Show before/after examples for every repeated action verb/professional term with specific replacements
+        - COMPREHENSIVE COVERAGE: Find ALL repeated action verbs and professional terms in the resume
+        - MANDATORY COMPLETE COVERAGE: For EVERY repeated word detected, you MUST provide a specific recommendation in the suggestions section
+        - NO PARTIAL ANALYSIS: If 12 repeated words are detected, you MUST provide 12 specific recommendations - NO EXCEPTIONS
+        - COMPLETE ISSUE COUNTING: Count ALL repeated words as issues - if 12 words are repeated, show 12 issues to fix
         
         SECTION DETECTION REQUIREMENTS:
         - Check PARSED DATA for projects: Look for "projects", "project", "portfolio" keys with actual content
@@ -1336,10 +1950,10 @@ class JDSpecificATSService:
                 "keyword_match_skills": {{
                     "score": <exact_score_based_on_criteria_above>,
                     "title": "Keyword Match & Skills",
-                    "description": "Specific analysis of keyword alignment with job requirements - ONLY keyword and skills-related feedback",
+                    "description": "Specific analysis of keyword alignment with job requirements - ONLY keyword and skills-related feedback. Do NOT include proficiency-level qualifiers (Advanced/Intermediate/Beginner/Expert) in skills. Emphasize core designation-aligned skills.",
                     "positives": ["Quote specific job-relevant keywords found in resume", "Reference specific sections with strong job keyword alignment"],
-                    "negatives": ["Quote specific missing job keywords", "Identify specific sections lacking required job terms"],
-                    "suggestions": ["Provide exact job keyword additions needed", "Specify which sections need job-specific terminology"],
+                    "negatives": ["Quote specific missing job keywords", "Identify specific sections lacking required job terms", "List missing core skills (bare names only) aligned with the job designation"],
+                    "suggestions": ["Provide exact job keyword additions needed", "Specify which sections need job-specific terminology", "ADD_SKILLS: Core Skills - Add: [list 10-15 core skills (bare names only, no proficiency)"]],
                     "specific_issues": ["List exact missing job keywords found", "Identify specific sections needing job terms with locations"],
                     "improvement_examples": ["Show before/after job keyword examples", "Provide specific job-relevant additions needed"],
                     "section_isolation_note": "ONLY include keyword and skills-related suggestions. Do not suggest contact, formatting, experience, or other section improvements in this keyword section feedback."
@@ -1400,10 +2014,10 @@ class JDSpecificATSService:
                     "title": "Repetition Avoidance",
                     "description": "Specific analysis of varied language and minimal unnecessary repetitions within same section, allowing legitimate repetition across different sections",
                     "positives": ["Quote specific varied language examples from resume", "Reference specific sections with good word variety", "Note acceptable cross-section repetition where appropriate"],
-                    "negatives": ["Quote specific repetitive phrases found within same section", "Identify specific sections with excessive internal repetition"],
-                    "suggestions": ["Provide exact word replacements needed within same section", "Specify which sections need internal language variety", "Note that cross-section repetition is acceptable when contextually appropriate"],
-                    "specific_issues": ["List exact repetitive phrases found within same section in resume", "Identify specific sections needing internal word variety with locations"],
-                    "improvement_examples": ["Show before/after repetition examples within same section", "Provide specific word variety improvements needed within sections"]
+                    "negatives": ["Quote specific repetitive action verbs found within same section", "Identify specific sections with excessive action verb repetition", "DEBUG: List ALL detected repeated action verbs with exact counts: Action Verb '[word]' appears [X] times in [Section]: [Context1], [Context2], [Context3]", "DEBUG: Categorize repetitions by type: Action Verbs: [list], Professional Terms: [list]", "MANDATORY: List EVERY repeated word as a separate issue - if 12 words are repeated, list ALL 12 as separate issues"],
+                    "suggestions": ["Provide exact action verb replacements needed within same section", "Specify which sections need internal action verb variety", "FIX_REPETITION: [Section] - Action Verb '[repeated action verb]' used [X] times - Replace instances: [Instance 1: '[exact context]' → '[alternative1]'], [Instance 2: '[exact context]' → '[alternative2]'], [Instance 3: '[exact context]' → '[alternative3]']", "ENHANCE_VARIETY: For each repeated action verb, provide 3-5 specific professional alternatives with context", "DEBUG: Show complete action verb frequency analysis for each section", "MANDATORY COMPLETE COVERAGE: For EVERY repeated word detected, provide a specific FIX_REPETITION recommendation", "NO PARTIAL ANALYSIS: If 12 repeated words are detected, provide 12 specific FIX_REPETITION recommendations", "COMPREHENSIVE RECOMMENDATIONS: Include recommendations for ALL action verbs AND professional terms", "CRITICAL: Generate ONE FIX_REPETITION suggestion for EACH repeated word - if 'created' appears 3 times, generate 1 FIX_REPETITION suggestion for 'created' with 3 specific replacements", "CRITICAL: Generate ONE FIX_REPETITION suggestion for EACH professional term - if 'scalable' appears 3 times, generate 1 FIX_REPETITION suggestion for 'scalable' with 3 specific replacements", "MANDATORY: Based on the repetition debug analysis, generate FIX_REPETITION suggestions for ALL detected repeated words", "CRITICAL: If repetition_debug_analysis shows 17 repeated words, generate 17 FIX_REPETITION suggestions", "REQUIRED: For each word in the repetition analysis, create: FIX_REPETITION: [Section] - [Word Type] '[word]' used [X] times - Replace instances: [specific replacements]", "Note that cross-section repetition is acceptable when contextually appropriate"],
+                    "specific_issues": ["List exact repetitive action verbs found within same section in resume", "Identify specific sections needing internal action verb variety with locations", "DEBUG: Complete action verb inventory: [Section1]: [action_verb1: X times], [action_verb2: Y times], [Section2]: [action_verb3: Z times]", "DEBUG: Highlight problematic repetitions: Action verbs appearing 3+ times in same section"],
+                    "improvement_examples": ["Show before/after repetition examples within same section", "Provide specific action verb variety improvements needed within sections", "DEBUG: Before/After examples: 'Current: [exact repeated action verb]' → 'Improved: [varied action verb alternatives]'", "DEBUG: Show action verb replacement mapping: [Original Action Verb] → [Alternative 1, Alternative 2, Alternative 3]"]
                 }},
                 "contact_information_completeness": {{
                     "score": <exact_score_based_on_criteria_above>,
@@ -1526,8 +2140,25 @@ class JDSpecificATSService:
             # Enforce schema compliance
             jd_ats_response = self._enforce_jd_ats_schema_compliance(jd_ats_response)
             
+            # Augment repetition suggestions using internal debug analysis so ALL repeated words are covered
+            jd_ats_response = _augment_repetition_suggestions_with_debug(
+                jd_ats_response,
+                repetition_debug,
+                resume_text,
+                self.client,
+                self.model_name,
+                self.temperature,
+                self.top_p
+            )
+
+            # Mirror skills-related suggestions into top-level recommendations for full coverage
+            jd_ats_response = _mirror_skill_suggestions_into_recommendations(jd_ats_response)
+
             # Apply dynamic scoring based on issues count
             jd_ats_response = self._apply_dynamic_scoring(jd_ats_response)
+            
+            # Add repetition debug information
+            jd_ats_response["repetition_debug_analysis"] = repetition_debug
             
             # Final validation
             jd_ats_response = self._final_ats_validation(jd_ats_response)
