@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { X, Download } from 'lucide-react';
+// Updated to support customization
 import { Button } from '@/components/ui/button';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 import { generatePDF, downloadPDF } from '@/services/pdfService';
@@ -9,6 +10,45 @@ interface ResumePreviewModalProps {
   onClose: () => void;
   templateId: string;
   visibleSections?: Set<string>;
+  customization?: {
+    theme: {
+      primaryColor: string;
+      secondaryColor: string;
+      textColor: string;
+      backgroundColor: string;
+      accentColor: string;
+      borderColor: string;
+      headerColor: string;
+    };
+    typography: {
+      fontFamily: {
+        header: string;
+        body: string;
+        name: string;
+      };
+      fontSize: {
+        name: number;
+        title: number;
+        headers: number;
+        body: number;
+      };
+      fontWeight: {
+        name: number;
+        headers: number;
+        body: number;
+      };
+    };
+    layout: {
+      margins: {
+        top: number;
+        bottom: number;
+        left: number;
+        right: number;
+      };
+      sectionSpacing: number;
+      lineHeight: number;
+    };
+  };
   data: {
     personalInfo: {
       name: string;
@@ -92,6 +132,7 @@ const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
   onClose,
   templateId,
   visibleSections,
+  customization,
   data,
   color
 }) => {
@@ -152,6 +193,7 @@ const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
               data={data}
               color={color}
               visibleSections={visibleSections}
+              customization={customization}
             />
           </div>
         </div>

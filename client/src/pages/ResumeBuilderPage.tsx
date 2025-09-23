@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { tokenUtils } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { API_URL } from '@/lib/apiConfig';
+// Updated for FlowCV-style customization
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -40,6 +41,14 @@ import { templates as templateData, getTemplateById } from '@/data/templates';
 import type { Template } from '@/data/templates';
 import ResumePreviewModal from '@/components/modals/ResumePreviewModal';
 import AddCustomSectionModal from '@/components/modals/AddCustomSectionModal';
+import ColorCustomizationPanel from '@/components/customization/ColorCustomizationPanel';
+import TypographyCustomizationPanel from '@/components/customization/TypographyCustomizationPanel';
+import LayoutCustomizationPanel from '@/components/customization/LayoutCustomizationPanel';
+import PresetThemesPanel from '@/components/customization/PresetThemesPanel';
+import SectionVisibilityOrderPanel from '@/components/customization/SectionVisibilityOrderPanel';
+import EntryLayoutPanel from '@/components/customization/EntryLayoutPanel';
+import NameCustomizationPanel from '@/components/customization/NameCustomizationPanel';
+import ProfessionalTitleCustomizationPanel from '@/components/customization/ProfessionalTitleCustomizationPanel';
 import { generatePDF, downloadPDF } from '@/services/pdfService';
 import { generateWord, downloadWord } from '@/services/wordService';
 
@@ -320,6 +329,161 @@ const ResumeBuilderPage = () => {
     'certifications',
     'references'
   ]));
+  
+  // FlowCV-style customization state
+  const [customization, setCustomization] = useState({
+    theme: {
+      primaryColor: '#1f2937',
+      secondaryColor: '#374151',
+      textColor: '#000000',
+      backgroundColor: '#ffffff',
+      accentColor: '#1f2937',
+      borderColor: '#1f2937',
+      headerColor: '#1f2937'
+    },
+    // FlowCV-style color customization
+    colorMode: 'basic' as 'basic' | 'advanced' | 'border',
+    accentType: 'accent' as 'accent' | 'multi' | 'image',
+    selectedPalette: null as string | null,
+    applyAccentTo: {
+      name: true,
+      headings: true,
+      headerIcons: false,
+      dotsBarsBubbles: false,
+      dates: false,
+      linkIcons: false
+    },
+    // Entry layout customization
+    entryLayout: {
+      layoutType: 'two-lines' as 'text-left-icons-right' | 'icons-left-text-right' | 'icons-text-icons' | 'two-lines',
+      titleSize: 'medium' as 'small' | 'medium' | 'large',
+      subtitleStyle: 'normal' as 'normal' | 'bold' | 'italic',
+      subtitlePlacement: 'same-line' as 'same-line' | 'next-line',
+      indentBody: false,
+      listStyle: 'bullet' as 'bullet' | 'hyphen',
+      descriptionFormat: 'paragraph' as 'paragraph' | 'points'
+    },
+    // Name customization
+    nameCustomization: {
+      size: 'm' as 'xs' | 's' | 'm' | 'l' | 'xl',
+      bold: true,
+      font: 'body' as 'body' | 'creative'
+    },
+    // Professional title customization
+    titleCustomization: {
+      size: 's' as 's' | 'm' | 'l',
+      position: 'same-line' as 'same-line' | 'below',
+      style: 'italic' as 'normal' | 'italic',
+      separationType: 'vertical-line' as 'vertical-line' | 'bullet' | 'dash' | 'space'
+    },
+    typography: {
+      fontFamily: {
+        header: 'Arial, Helvetica, Calibri, sans-serif',
+        body: 'Arial, Helvetica, Calibri, sans-serif',
+        name: 'Arial, Helvetica, Calibri, sans-serif'
+      },
+      fontSize: {
+        name: 22,
+        title: 14,
+        headers: 13,
+        body: 11
+      },
+      fontWeight: {
+        name: 700,
+        headers: 700,
+        body: 500
+      }
+    },
+    layout: {
+      margins: { top: 0, bottom: 0, left: 8, right: 8 },
+      sectionSpacing: 16,
+      lineHeight: 1.3
+    }
+  });
+  
+  const [sidebarMode, setSidebarMode] = useState<'content' | 'customize'>('content');
+  
+  // Section order state - default order
+  const [sectionOrder, setSectionOrder] = useState([
+    'basic-details',
+    'summary',
+    'skills',
+    'experience',
+    'education',
+    'projects',
+    'certifications',
+    'activities',
+    'references'
+  ]);
+  
+  // Update customization function
+  const updateCustomization = (updates: any) => {
+    setCustomization(prev => ({ ...prev, ...updates }));
+  };
+
+  // Update entry layout function
+  const updateEntryLayout = (updates: any) => {
+    setCustomization(prev => ({
+      ...prev,
+      entryLayout: { ...prev.entryLayout, ...updates }
+    }));
+  };
+
+  // Update name customization function
+  const updateNameCustomization = (updates: any) => {
+    setCustomization(prev => ({
+      ...prev,
+      nameCustomization: { ...prev.nameCustomization, ...updates }
+    }));
+  };
+
+  // Update title customization function
+  const updateTitleCustomization = (updates: any) => {
+    setCustomization(prev => ({
+      ...prev,
+      titleCustomization: { ...prev.titleCustomization, ...updates }
+    }));
+  };
+
+  // Section reordering functions
+  const moveSectionUp = (sectionId: string) => {
+    setSectionOrder(prev => {
+      const currentIndex = prev.indexOf(sectionId);
+      if (currentIndex > 0) {
+        const newOrder = [...prev];
+        [newOrder[currentIndex], newOrder[currentIndex - 1]] = [newOrder[currentIndex - 1], newOrder[currentIndex]];
+        return newOrder;
+      }
+      return prev;
+    });
+  };
+
+  const moveSectionDown = (sectionId: string) => {
+    setSectionOrder(prev => {
+      const currentIndex = prev.indexOf(sectionId);
+      if (currentIndex < prev.length - 1) {
+        const newOrder = [...prev];
+        [newOrder[currentIndex], newOrder[currentIndex + 1]] = [newOrder[currentIndex + 1], newOrder[currentIndex]];
+        return newOrder;
+      }
+      return prev;
+    });
+  };
+
+  
+  // Sync selectedColor with customization theme
+  useEffect(() => {
+    setCustomization(prev => ({
+      ...prev,
+      theme: {
+        ...prev.theme,
+        primaryColor: selectedColor,
+        accentColor: selectedColor,
+        headerColor: selectedColor,
+        borderColor: selectedColor
+      }
+    }));
+  }, [selectedColor]);
   
   // Helper function to categorize skills into appropriate categories
   const categorizeSkill = (skill: string): string => {
@@ -2053,7 +2217,7 @@ const ResumeBuilderPage = () => {
     }
   };
 
-  const sections = [
+  const baseSections = [
     { id: 'basic-details', label: 'Basic details', icon: User },
     { id: 'summary', label: 'Summary & Objective', icon: FileText },
     { id: 'skills', label: 'Skills and expertise', icon: Award },
@@ -2064,6 +2228,38 @@ const ResumeBuilderPage = () => {
     { id: 'activities', label: 'Activities', icon: Activity },
     { id: 'references', label: 'References', icon: Users }
   ];
+
+  // Create ordered sections based on sectionOrder
+  const getOrderedSections = (): Array<{
+    id: string;
+    label: string;
+    icon: any;
+  }> => {
+    const orderedSections: Array<{
+      id: string;
+      label: string;
+      icon: any;
+    }> = [];
+    
+    // Add sections in the custom order
+    sectionOrder.forEach(sectionId => {
+      const section = baseSections.find(s => s.id === sectionId);
+      if (section) {
+        orderedSections.push(section);
+      }
+    });
+    
+    // Add any sections not in the order (like custom sections)
+    baseSections.forEach(section => {
+      if (!sectionOrder.includes(section.id)) {
+        orderedSections.push(section);
+      }
+    });
+    
+    return orderedSections;
+  };
+
+  const sections = getOrderedSections();
 
   // Add custom sections to the sections array
   const allSections = [
@@ -2370,13 +2566,16 @@ const ResumeBuilderPage = () => {
         </div>
 
         <div className="flex h-[calc(100vh-140px)]">
+          
           {/* Left Panel - Resume Preview */}
           <div className="w-[60%] bg-white border-r border-gray-200 overflow-auto custom-scrollbar">
             <div className="p-6 resume-pdf" ref={resumeRef}>
-              <TemplateRenderer
-                templateId={selectedTemplate?.id || templateId}
-                visibleSections={visibleSections}
-                data={{
+                  <TemplateRenderer
+                    templateId={selectedTemplate?.id || templateId}
+                    visibleSections={visibleSections}
+                    customization={customization}
+                    sectionOrder={sectionOrder}
+                    data={{
                   personalInfo: visibleSections.has('basic-details') ? {
                     name: resumeData.basicDetails.fullName,
                     title: resumeData.basicDetails.professionalTitle,
@@ -2434,22 +2633,57 @@ const ResumeBuilderPage = () => {
             </div>
           </div>
 
-          {/* Right Panel - Editing Panel */}
+          {/* Right Panel - Sidebar with Toggle */}
           <div className="w-[40%] bg-gray-50 overflow-auto custom-scrollbar">
-            <div className="p-6">
-              {/* Navigation */}
+              <div className="p-6">
+              {/* Sidebar Mode Toggle */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Edit Resume</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {sidebarMode === 'content' ? 'Edit Resume' : 'Customize Resume'}
+                  </h2>
+                  {sidebarMode === 'content' && (
                   <Button
-                    variant="outline"
+                      variant="outline"
                     size="sm"
-                    onClick={() => setIsCustomSectionModalOpen(true)}
+                      onClick={() => setIsCustomSectionModalOpen(true)}
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Section
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Section
                   </Button>
+                  )}
                 </div>
+                
+                {/* Mode Toggle Buttons */}
+                <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
+                  <button
+                    onClick={() => setSidebarMode('content')}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      sidebarMode === 'content'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Content
+                  </button>
+                  <button
+                    onClick={() => setSidebarMode('customize')}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      sidebarMode === 'customize'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Customize
+                  </button>
+                </div>
+              </div>
+
+              {/* Content Mode */}
+              {sidebarMode === 'content' && (
+                <div>
+                  {/* Navigation */}
+                <div className="mb-6">
                 <div className="space-y-1">
                   {allSections.map((section) => {
                     const Icon = section.icon;
@@ -2583,7 +2817,148 @@ const ResumeBuilderPage = () => {
                     );
                   })}
                 </div>
+                </div>
               </div>
+              )}
+
+              {/* Customize Mode */}
+              {sidebarMode === 'customize' && (
+                <div className="space-y-6">
+                {/* Name Customization */}
+                <NameCustomizationPanel 
+                  nameCustomization={customization.nameCustomization} 
+                  updateNameCustomization={updateNameCustomization} 
+                />
+
+                {/* Professional Title Customization */}
+                <ProfessionalTitleCustomizationPanel 
+                  titleCustomization={customization.titleCustomization} 
+                  updateTitleCustomization={updateTitleCustomization} 
+                />
+                
+                {/* Typography */}
+                <TypographyCustomizationPanel 
+                  customization={customization} 
+                  updateCustomization={updateCustomization} 
+                />
+                
+                {/* Layout */}
+                <LayoutCustomizationPanel 
+                  customization={customization} 
+                  updateCustomization={updateCustomization} 
+                />
+
+                {/* Entry Layout */}
+                <EntryLayoutPanel 
+                  entryLayout={customization.entryLayout} 
+                  updateEntryLayout={updateEntryLayout} 
+                />
+                
+                {/* Preset Themes */}
+                <PresetThemesPanel 
+                  customization={customization} 
+                  updateCustomization={updateCustomization} 
+                />
+
+                  {/* FlowCV-style Colors Panel */}
+                  <ColorCustomizationPanel 
+                    customization={customization} 
+                    updateCustomization={updateCustomization} 
+                  />
+                  
+                   {/* Section Visibility & Order */}
+                   <SectionVisibilityOrderPanel 
+                     allSections={allSections}
+                     visibleSections={visibleSections}
+                     sectionOrder={sectionOrder}
+                     toggleSectionVisibility={toggleSectionVisibility}
+                     moveSectionUp={moveSectionUp}
+                     moveSectionDown={moveSectionDown}
+                   />
+                        
+                  {/* Reset Button */}
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setCustomization({
+                          theme: {
+                            primaryColor: '#1f2937',
+                            secondaryColor: '#374151',
+                            textColor: '#000000',
+                            backgroundColor: '#ffffff',
+                            accentColor: '#1f2937',
+                            borderColor: '#1f2937',
+                            headerColor: '#1f2937'
+                          },
+                          // FlowCV-style color customization
+                          colorMode: 'basic' as 'basic' | 'advanced' | 'border',
+                          accentType: 'accent' as 'accent' | 'multi' | 'image',
+                          selectedPalette: null as string | null,
+                          applyAccentTo: {
+                            name: true,
+                            headings: true,
+                            headerIcons: false,
+                            dotsBarsBubbles: false,
+                            dates: false,
+                            linkIcons: false
+                          },
+                          // Entry layout customization
+                          entryLayout: {
+                            layoutType: 'two-lines' as 'text-left-icons-right' | 'icons-left-text-right' | 'icons-text-icons' | 'two-lines',
+                            titleSize: 'medium' as 'small' | 'medium' | 'large',
+                            subtitleStyle: 'normal' as 'normal' | 'bold' | 'italic',
+                            subtitlePlacement: 'same-line' as 'same-line' | 'next-line',
+                            indentBody: false,
+                            listStyle: 'bullet' as 'bullet' | 'hyphen',
+                            descriptionFormat: 'paragraph' as 'paragraph' | 'points'
+                          },
+                          // Name customization
+                          nameCustomization: {
+                            size: 'm' as 'xs' | 's' | 'm' | 'l' | 'xl',
+                            bold: true,
+                            font: 'body' as 'body' | 'creative'
+                          },
+                          // Professional title customization
+                          titleCustomization: {
+                            size: 's' as 's' | 'm' | 'l',
+                            position: 'same-line' as 'same-line' | 'below',
+                            style: 'italic' as 'normal' | 'italic',
+                            separationType: 'vertical-line' as 'vertical-line' | 'bullet' | 'dash' | 'space'
+                          },
+                          typography: {
+                            fontFamily: {
+                              header: 'Arial, Helvetica, Calibri, sans-serif',
+                              body: 'Arial, Helvetica, Calibri, sans-serif',
+                              name: 'Arial, Helvetica, Calibri, sans-serif'
+                            },
+                            fontSize: {
+                              name: 22,
+                              title: 14,
+                              headers: 13,
+                              body: 11
+                            },
+                            fontWeight: {
+                              name: 700,
+                              headers: 700,
+                              body: 500
+                            }
+                          },
+                          layout: {
+                            margins: { top: 0, bottom: 0, left: 8, right: 8 },
+                            sectionSpacing: 16,
+                            lineHeight: 1.3
+                          }
+                        });
+                      }}
+                      className="w-full"
+                    >
+                      Reset to Default
+                    </Button>
+                  </div>
+                          </div>
+                        )}
             </div>
           </div>
         </div>
@@ -2595,6 +2970,7 @@ const ResumeBuilderPage = () => {
         onClose={() => setIsPreviewModalOpen(false)}
         templateId={selectedTemplate?.id || templateId}
         visibleSections={visibleSections}
+        customization={customization}
         data={{
           personalInfo: visibleSections.has('basic-details') ? {
             name: resumeData.basicDetails.fullName,
@@ -3785,7 +4161,5 @@ const CustomSectionEditor = ({
     </div>
   );
 };
-
-
 
 export default ResumeBuilderPage; 

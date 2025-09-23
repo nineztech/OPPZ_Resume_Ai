@@ -94,25 +94,65 @@ interface TemplateRendererProps {
   data?: TemplateData;
   color?: string;
   visibleSections?: Set<string>;
+  sectionOrder?: string[];
+  customization?: {
+    theme: {
+      primaryColor: string;
+      secondaryColor: string;
+      textColor: string;
+      backgroundColor: string;
+      accentColor: string;
+      borderColor: string;
+      headerColor: string;
+    };
+    typography: {
+      fontFamily: {
+        header: string;
+        body: string;
+        name: string;
+      };
+      fontSize: {
+        name: number;
+        title: number;
+        headers: number;
+        body: number;
+      };
+      fontWeight: {
+        name: number;
+        headers: number;
+        body: number;
+      };
+    };
+    layout: {
+      margins: {
+        top: number;
+        bottom: number;
+        left: number;
+        right: number;
+      };
+      sectionSpacing: number;
+      lineHeight: number;
+    };
+  };
 }
 
-const TemplateRenderer: React.FC<TemplateRendererProps> = ({ templateId, data, color, visibleSections }) => {
+const TemplateRenderer: React.FC<TemplateRendererProps> = ({ templateId, data, color, visibleSections, sectionOrder, customization }) => {
   const renderTemplate = () => {
     switch (templateId) {
       case 'modern-professional':
-        return <ModernProfessional data={data} color={color} visibleSections={visibleSections} />;
+        return <ModernProfessional data={data} color={color} visibleSections={visibleSections} sectionOrder={sectionOrder} customization={customization} />;
       case 'clean-minimal':
-        return <CleanMinimal data={data} color={color} visibleSections={visibleSections} />;
+        return <CleanMinimal data={data} color={color} visibleSections={visibleSections} sectionOrder={sectionOrder} customization={customization} />;
       case 'creative-designer':
-        return <CreativeDesigner data={data} color={color} visibleSections={visibleSections} />;
+        return <CreativeDesigner data={data} color={color} visibleSections={visibleSections} sectionOrder={sectionOrder} customization={customization} />;
       case 'executive-classic':
-        return <ExecutiveClassic data={data} color={color} visibleSections={visibleSections} />;
+        return <ExecutiveClassic data={data} color={color} visibleSections={visibleSections} sectionOrder={sectionOrder} customization={customization} />;
       case 'business-professional':
-        return <BusinessProfessional data={data} color={color} visibleSections={visibleSections} />;
+        return <BusinessProfessional data={data} color={color} visibleSections={visibleSections} sectionOrder={sectionOrder} customization={customization} />;
       case 'elite-modern':
-        return <EliteModern data={data} color={color} visibleSections={visibleSections} />;
+        return <EliteModern data={data} color={color} visibleSections={visibleSections} sectionOrder={sectionOrder} customization={customization} />;
       default:
-        return <ModernProfessional data={data} color={color} visibleSections={visibleSections} />;
+        return <ModernProfessional data={data} color={color} visibleSections={visibleSections} sectionOrder={sectionOrder} customization={customization} />;
     }
   };
 
