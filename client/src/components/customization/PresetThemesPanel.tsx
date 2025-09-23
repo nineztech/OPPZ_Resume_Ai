@@ -23,7 +23,6 @@ interface PresetThemesPanelProps {
 }
 
 const PresetThemesPanel: React.FC<PresetThemesPanelProps> = ({
-  customization,
   updateCustomization
 }) => {
   return (

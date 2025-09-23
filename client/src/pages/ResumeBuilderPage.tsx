@@ -386,7 +386,8 @@ const ResumeBuilderPage = () => {
         name: 22,
         title: 14,
         headers: 13,
-        body: 11
+        body: 11,
+        subheader: 12
       },
       fontWeight: {
         name: 700,
@@ -2937,7 +2938,8 @@ const ResumeBuilderPage = () => {
                               name: 22,
                               title: 14,
                               headers: 13,
-                              body: 11
+                              body: 11,
+                              subheader: 12
                             },
                             fontWeight: {
                               name: 700,

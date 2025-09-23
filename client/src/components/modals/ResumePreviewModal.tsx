@@ -31,6 +31,7 @@ interface ResumePreviewModalProps {
         title: number;
         headers: number;
         body: number;
+        subheader: number;
       };
       fontWeight: {
         name: number;
