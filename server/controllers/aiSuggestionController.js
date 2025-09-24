@@ -24,44 +24,74 @@ const upload = multer({
   }
 });
 
-// Helper function to call Python service
+// Helper function to call Python service with fallback
 const callPythonService = (scriptName, args = []) => {
   return new Promise((resolve, reject) => {
     const pythonPath = path.join(__dirname, '../../gemini_resume_parser');
     const scriptPath = path.join(pythonPath, scriptName);
     
-    const python = spawn('python', [scriptPath, ...args], {
-      cwd: pythonPath,
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    python.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    python.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    python.on('close', (code) => {
-      if (code === 0) {
-        try {
-          const result = JSON.parse(stdout);
-          resolve(result);
-        } catch (error) {
-          reject(new Error(`Failed to parse Python output: ${error.message}`));
-        }
-      } else {
-        reject(new Error(`Python script failed with code ${code}: ${stderr}`));
+    // Define Python commands to try in order of preference
+    const pythonCommands = process.env.PYTHON_COMMAND 
+      ? [process.env.PYTHON_COMMAND]
+      : process.platform === 'win32' 
+        ? ['python', 'python3', 'py']  // Windows: try python first
+        : ['python3', 'python'];       // Linux/Mac: try python3 first
+    
+    const tryPythonCommand = (commandIndex) => {
+      if (commandIndex >= pythonCommands.length) {
+        reject(new Error(`No Python executable found. Tried commands: ${pythonCommands.join(', ')}. Please ensure Python is installed and available in PATH, or set PYTHON_COMMAND environment variable.`));
+        return;
       }
-    });
+      
+      const pythonCommand = pythonCommands[commandIndex];
+      console.log(`Attempting to spawn Python with command: ${pythonCommand}`);
+      
+      const python = spawn(pythonCommand, [scriptPath, ...args], {
+        cwd: pythonPath,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
 
-    python.on('error', (error) => {
-      reject(new Error(`Failed to start Python process: ${error.message}`));
-    });
+      let stdout = '';
+      let stderr = '';
+
+      python.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      python.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      python.on('close', (code) => {
+        if (code === 0) {
+          try {
+            const result = JSON.parse(stdout);
+            resolve(result);
+          } catch (error) {
+            reject(new Error(`Failed to parse Python output: ${error.message}`));
+          }
+        } else {
+          // If it's a "command not found" error, try next command
+          if (code === 9009 || code === 127 || stderr.includes('not found') || stderr.includes('not recognized')) {
+            console.log(`Command '${pythonCommand}' failed with code ${code}, trying next command...`);
+            tryPythonCommand(commandIndex + 1);
+          } else {
+            reject(new Error(`Python script failed with code ${code}: ${stderr}`));
+          }
+        }
+      });
+
+      python.on('error', (error) => {
+        if (error.code === 'ENOENT') {
+          console.log(`Command '${pythonCommand}' not found, trying next command...`);
+          tryPythonCommand(commandIndex + 1);
+        } else {
+          reject(new Error(`Failed to start Python process: ${error.message}`));
+        }
+      });
+    };
+    
+    tryPythonCommand(0);
   });
 };
 
