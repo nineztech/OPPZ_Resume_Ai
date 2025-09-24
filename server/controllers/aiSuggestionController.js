@@ -30,7 +30,7 @@ const callPythonService = (scriptName, args = []) => {
     const pythonPath = path.join(__dirname, '../../gemini_resume_parser');
     const scriptPath = path.join(pythonPath, scriptName);
     
-    const python = spawn('python', [scriptPath, ...args], {
+    const python = spawn('python3', [scriptPath, ...args], {
       cwd: pythonPath,
       stdio: ['pipe', 'pipe', 'pipe']
     });
