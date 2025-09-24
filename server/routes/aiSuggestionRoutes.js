@@ -4,6 +4,7 @@ import {
   getAISuggestions,
   parseResume,
   compareResumeWithJD,
+  enhanceContentWithAI,
   uploadMiddleware
 } from "../controllers/aiSuggestionController.js";
 
@@ -20,5 +21,8 @@ router.post("/parse-resume", uploadMiddleware, parseResume);
 
 // Compare resume with custom job description
 router.post("/compare-resume", compareResumeWithJD);
+
+// Enhance specific content with AI
+router.post("/enhance-content", enhanceContentWithAI);
 
 export default router;

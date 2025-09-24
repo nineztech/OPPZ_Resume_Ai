@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 // Color palette data for FlowCV-style customization
 const colorPalettes = [
@@ -13,7 +13,7 @@ const colorPalettes = [
 ];
 
 const predefinedColors = [
-  '#ffffff', '#0f766e', '#0d9488', '#14b8a6', '#0f766e', '#64748b', '#3b82f6', '#2563eb', '#1d4ed8', '#3b82f6', '#93c5fd', '#1e40af', '#7c3aed', '#a21caf', '#ec4899', '#f97316', '#000000'
+  '#ffffff', '#0f766e', '#0d9488', '#14b8a6', '#0f766e', '#64748b', '#3b82f6', '#2563eb', '#1d4ed8', '#3b82f6', '#93c5fd', '#1e40af', '#7c3aed', '#a21caf', '#ec4899', '#f97316', '#000000', 'multi'
 ];
 
 interface ColorCustomizationPanelProps {
@@ -49,6 +49,66 @@ const ColorCustomizationPanel: React.FC<ColorCustomizationPanelProps> = ({
   customization,
   updateCustomization
 }) => {
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [selectedColorIndex, setSelectedColorIndex] = useState(0);
+  const [currentColor, setCurrentColor] = useState('#000000');
+  const [hue, setHue] = useState(0);
+  const [saturation, setSaturation] = useState(100);
+  const [lightness, setLightness] = useState(50);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
+
+  // Helper functions for color conversion
+  const hslToHex = (h: number, s: number, l: number) => {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = (n: number) => {
+      const k = (n + h / 30) % 12;
+      const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  };
+
+  const hexToHsl = (hex: string) => {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0, s = 0, l = (max + min) / 2;
+
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+
+    return {
+      h: Math.round(h * 360),
+      s: Math.round(s * 100),
+      l: Math.round(l * 100)
+    };
+  };
+
+  // Close color picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
+        setShowColorPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   return (
     <div className="bg-white rounded-lg p-4 border border-gray-200">
       <h4 className="text-sm font-medium text-gray-700 mb-4">Colors</h4>
@@ -102,12 +162,12 @@ const ColorCustomizationPanel: React.FC<ColorCustomizationPanelProps> = ({
           onClick={() => updateCustomization({ accentType: 'accent' })}
           className={`px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
             customization.accentType === 'accent'
-              ? 'bg-black text-white border-2 border-black'
+              ? 'bg-gray-200 text-black border-2 border-black'
               : 'bg-gray-200 text-gray-600 border-2 border-transparent hover:bg-gray-300'
           }`}
         >
           <div className="flex items-center justify-center">
-            <div className="w-4 h-4 bg-white rounded-sm mr-1"></div>
+            <div className="w-4 h-4 bg-blue-500 rounded-sm mr-1"></div>
             <span>Accent</span>
           </div>
         </button>
@@ -125,22 +185,6 @@ const ColorCustomizationPanel: React.FC<ColorCustomizationPanelProps> = ({
               <div className="w-3 h-0.5 bg-red-500"></div>
             </div>
             <span className="ml-1">Multi</span>
-          </div>
-        </button>
-        <button
-          onClick={() => updateCustomization({ accentType: 'image' })}
-          className={`px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
-            customization.accentType === 'image'
-              ? 'bg-white text-black border-2 border-black'
-              : 'bg-gray-200 text-gray-600 border-2 border-transparent hover:bg-gray-300'
-          }`}
-        >
-          <div className="flex items-center justify-center">
-            <div className="w-4 h-4 bg-gray-300 rounded-sm mr-1" style={{
-              backgroundImage: 'repeating-conic-gradient(#000 0% 25%, transparent 0% 50%)',
-              backgroundSize: '8px 8px'
-            }}></div>
-            <span>Image</span>
           </div>
         </button>
       </div>
@@ -233,24 +277,190 @@ const ColorCustomizationPanel: React.FC<ColorCustomizationPanelProps> = ({
 
       {/* Predefined Color Palette */}
       {customization.accentType === 'accent' && (
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2 justify-center">
-            {predefinedColors.map((color, index) => (
-              <button
-                key={index}
-                onClick={() => updateCustomization({
-                  theme: { ...customization.theme, accentColor: color }
-                })}
-                className={`w-6 h-6 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
-                  customization.theme.accentColor === color
-                    ? 'border-gray-800 scale-110 shadow-md ring-2 ring-gray-300'
-                    : 'border-gray-300 hover:border-gray-500'
-                }`}
-                style={{ backgroundColor: color }}
-                title={`Select ${color}`}
-              />
-            ))}
+        <div className="mb-6 relative">
+          <div className="flex flex-wrap gap-2 justify-left">
+            {predefinedColors.map((color, index) => {
+              if (color === 'multi') {
+                return (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      if (!showColorPicker) {
+                        // Initialize color picker with current accent color
+                        const currentAccentColor = customization.theme.accentColor;
+                        if (currentAccentColor && currentAccentColor !== 'transparent') {
+                          const hsl = hexToHsl(currentAccentColor);
+                          setHue(hsl.h);
+                          setSaturation(hsl.s);
+                          setLightness(hsl.l);
+                          setCurrentColor(currentAccentColor);
+                        }
+                      }
+                      setShowColorPicker(!showColorPicker);
+                      setSelectedColorIndex(index);
+                    }}
+                    className={`w-6 h-6 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                      showColorPicker && selectedColorIndex === index
+                        ? 'border-gray-800 scale-110 shadow-md ring-2 ring-gray-300'
+                        : 'border-gray-300 hover:border-gray-500'
+                    }`}
+                    title="Color picker"
+                  >
+                    <div className="w-full h-full rounded-full" style={{
+                      background: 'conic-gradient(from 0deg, red 0deg, orange 60deg, yellow 120deg, green 180deg, blue 240deg, indigo 300deg, violet 360deg)'
+                    }}></div>
+                  </button>
+                );
+              } else {
+                return (
+                  <button
+                    key={index}
+                    onClick={() => updateCustomization({
+                      theme: { ...customization.theme, accentColor: color }
+                    })}
+                    className={`w-6 h-6 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                      customization.theme.accentColor === color
+                        ? 'border-gray-800 scale-110 shadow-md ring-2 ring-gray-300'
+                        : 'border-gray-300 hover:border-gray-500'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    title={`Select ${color}`}
+                  />
+                );
+              }
+            })}
           </div>
+          
+          {/* Color Picker Dropdown */}
+          {showColorPicker && (
+            <div 
+              ref={colorPickerRef}
+              className="absolute z-50 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4"
+              style={{ 
+                left: '50%', 
+                transform: 'translateX(-50%)',
+                top: '100%'
+              }}
+            >
+              <div className="w-64">
+                {/* Color Spectrum Square */}
+                <div className="mb-3">
+                  <div className="w-full h-32 rounded border border-gray-300 cursor-pointer relative overflow-hidden"
+                       style={{
+                         background: `linear-gradient(to bottom, transparent 0%, black 100%), linear-gradient(to right, hsl(${hue}, 100%, 50%) 0%, hsl(${hue}, 100%, 50%) 100%)`
+                       }}
+                       onMouseDown={(e) => {
+                         const rect = e.currentTarget.getBoundingClientRect();
+                         const updateColor = (clientX: number, clientY: number) => {
+                           const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+                           const y = Math.max(0, Math.min(clientY - rect.top, rect.height));
+                           const newSaturation = Math.round((x / rect.width) * 100);
+                           const newLightness = Math.round(100 - (y / rect.height) * 100);
+                           setSaturation(newSaturation);
+                           setLightness(newLightness);
+                           const hexColor = hslToHex(hue, newSaturation, newLightness);
+                           setCurrentColor(hexColor);
+                           updateCustomization({
+                             theme: { ...customization.theme, accentColor: hexColor }
+                           });
+                         };
+                         
+                         updateColor(e.clientX, e.clientY);
+                         
+                         const handleMouseMove = (moveEvent: MouseEvent) => {
+                           updateColor(moveEvent.clientX, moveEvent.clientY);
+                         };
+                         
+                         const handleMouseUp = () => {
+                           document.removeEventListener('mousemove', handleMouseMove);
+                           document.removeEventListener('mouseup', handleMouseUp);
+                         };
+                         
+                         document.addEventListener('mousemove', handleMouseMove);
+                         document.addEventListener('mouseup', handleMouseUp);
+                       }}>
+                    {/* Color picker handle */}
+                    <div 
+                      className="absolute w-3 h-3 border-2 border-white rounded-full shadow-md pointer-events-none"
+                      style={{
+                        left: `${saturation}%`,
+                        top: `${100 - lightness}%`,
+                        transform: 'translate(-50%, -50%)'
+                      }}
+                    ></div>
+                  </div>
+                </div>
+                
+                {/* Hue Slider */}
+                <div className="mb-3">
+                  <div className="w-full h-4 rounded border border-gray-300 cursor-pointer relative"
+                       style={{
+                         background: 'linear-gradient(to right, red 0%, yellow 16.66%, lime 33.33%, cyan 50%, blue 66.66%, magenta 83.33%, red 100%)'
+                       }}
+                       onMouseDown={(e) => {
+                         const rect = e.currentTarget.getBoundingClientRect();
+                         const updateHue = (clientX: number) => {
+                           const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+                           const newHue = Math.round((x / rect.width) * 360);
+                           setHue(newHue);
+                           const hexColor = hslToHex(newHue, saturation, lightness);
+                           setCurrentColor(hexColor);
+                           updateCustomization({
+                             theme: { ...customization.theme, accentColor: hexColor }
+                           });
+                         };
+                         
+                         updateHue(e.clientX);
+                         
+                         const handleMouseMove = (moveEvent: MouseEvent) => {
+                           updateHue(moveEvent.clientX);
+                         };
+                         
+                         const handleMouseUp = () => {
+                           document.removeEventListener('mousemove', handleMouseMove);
+                           document.removeEventListener('mouseup', handleMouseUp);
+                         };
+                         
+                         document.addEventListener('mousemove', handleMouseMove);
+                         document.addEventListener('mouseup', handleMouseUp);
+                       }}>
+                    {/* Hue slider handle */}
+                    <div 
+                      className="absolute w-2 h-4 border border-white rounded shadow-md pointer-events-none"
+                      style={{
+                        left: `${(hue / 360) * 100}%`,
+                        top: '0',
+                        transform: 'translateX(-50%)'
+                      }}
+                    ></div>
+                  </div>
+                </div>
+                
+                {/* Hex Input */}
+                <div className="mb-3">
+                  <input
+                    type="text"
+                    value={currentColor}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.match(/^#[0-9A-Fa-f]{6}$/)) {
+                        setCurrentColor(value);
+                        const hsl = hexToHsl(value);
+                        setHue(hsl.h);
+                        setSaturation(hsl.s);
+                        setLightness(hsl.l);
+                        updateCustomization({
+                          theme: { ...customization.theme, accentColor: value }
+                        });
+                      }
+                    }}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">HEX</div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -394,7 +394,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
       m: '14px',
       l: '16px'
     };
-    return sizes[titleCustomization?.size || 's'];
+    return sizes[titleCustomization?.size || 'm'];
   };
 
   const getTitleStyle = () => {
