@@ -24,13 +24,32 @@ const upload = multer({
   }
 });
 
-// Helper function to call Python service
+// Helper function to call Python service with automatic command detection
 const callPythonService = (scriptName, args = []) => {
   return new Promise((resolve, reject) => {
     const pythonPath = path.join(__dirname, '../../gemini_resume_parser');
     const scriptPath = path.join(pythonPath, scriptName);
     
-    const python = spawn('python', [scriptPath, ...args], {
+    // Determine the correct Python command based on environment
+    const getPythonCommand = () => {
+      // Check if PYTHON_COMMAND environment variable is set
+      if (process.env.PYTHON_COMMAND) {
+        return process.env.PYTHON_COMMAND;
+      }
+      
+      // For Railway and most production environments, use python3
+      // For local development, try python first, then python3
+      if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT) {
+        return 'python3';
+      }
+      
+      // For local development, prefer python but fallback to python3
+      return 'python';
+    };
+    
+    const pythonCommand = getPythonCommand();
+    
+    const python = spawn(pythonCommand, [scriptPath, ...args], {
       cwd: pythonPath,
       stdio: ['pipe', 'pipe', 'pipe']
     });
@@ -60,7 +79,48 @@ const callPythonService = (scriptName, args = []) => {
     });
 
     python.on('error', (error) => {
-      reject(new Error(`Failed to start Python process: ${error.message}`));
+      if (error.code === 'ENOENT') {
+        // If python command failed, try python3 as fallback
+        if (pythonCommand === 'python') {
+          console.log('Python command failed, trying python3 as fallback...');
+          const fallbackPython = spawn('python3', [scriptPath, ...args], {
+            cwd: pythonPath,
+            stdio: ['pipe', 'pipe', 'pipe']
+          });
+          
+          let fallbackStdout = '';
+          let fallbackStderr = '';
+          
+          fallbackPython.stdout.on('data', (data) => {
+            fallbackStdout += data.toString();
+          });
+          
+          fallbackPython.stderr.on('data', (data) => {
+            fallbackStderr += data.toString();
+          });
+          
+          fallbackPython.on('close', (code) => {
+            if (code === 0) {
+              try {
+                const result = JSON.parse(fallbackStdout);
+                resolve(result);
+              } catch (error) {
+                reject(new Error(`Failed to parse Python output: ${error.message}`));
+              }
+            } else {
+              reject(new Error(`Python script failed with code ${code}: ${fallbackStderr}`));
+            }
+          });
+          
+          fallbackPython.on('error', (fallbackError) => {
+            reject(new Error(`Both 'python' and 'python3' commands failed. Please ensure Python is installed and available in PATH. Original error: ${error.message}, Fallback error: ${fallbackError.message}`));
+          });
+        } else {
+          reject(new Error(`Python executable not found. Tried command: ${pythonCommand}. Please ensure Python is installed and available in PATH, or set PYTHON_COMMAND environment variable.`));
+        }
+      } else {
+        reject(new Error(`Failed to start Python process: ${error.message}`));
+      }
     });
   });
 };
