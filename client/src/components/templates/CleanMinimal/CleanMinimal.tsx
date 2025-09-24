@@ -88,6 +88,47 @@ interface CleanMinimalProps {
   data?: TemplateData;
   color?: string;
   visibleSections?: Set<string>;
+  sectionOrder?: string[];
+  customization?: {
+    theme: {
+      primaryColor: string;
+      secondaryColor: string;
+      textColor: string;
+      backgroundColor: string;
+      accentColor: string;
+      borderColor: string;
+      headerColor: string;
+    };
+    typography: {
+      fontFamily: {
+        header: string;
+        body: string;
+        name: string;
+      };
+      fontSize: {
+        name: number;
+        title: number;
+        headers: number;
+        body: number;
+        subheader: number;
+      };
+      fontWeight: {
+        name: number;
+        headers: number;
+        body: number;
+      };
+    };
+    layout: {
+      margins: {
+        top: number;
+        bottom: number;
+        left: number;
+        right: number;
+      };
+      sectionSpacing: number;
+      lineHeight: number;
+    };
+  };
 }
 
 const cleanMinimalTemplateData: TemplateData = {

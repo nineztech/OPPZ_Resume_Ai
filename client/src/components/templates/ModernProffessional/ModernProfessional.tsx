@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 interface TemplateData {
   personalInfo: {
@@ -88,11 +88,87 @@ interface CleanMinimalProps {
   data?: TemplateData;
   color?: string;
   visibleSections?: Set<string>;
+  sectionOrder?: string[];
+  customization?: {
+    theme: {
+      primaryColor: string;
+      secondaryColor: string;
+      textColor: string;
+      backgroundColor: string;
+      accentColor: string;
+      borderColor: string;
+      headerColor: string;
+    };
+    // FlowCV-style color customization
+    colorMode?: 'basic' | 'advanced' | 'border';
+    accentType?: 'accent' | 'multi' | 'image';
+    selectedPalette?: string | null;
+    applyAccentTo?: {
+      name: boolean;
+      headings: boolean;
+      headerIcons: boolean;
+      dotsBarsBubbles: boolean;
+      dates: boolean;
+      linkIcons: boolean;
+    };
+    // Entry layout customization
+    entryLayout?: {
+      layoutType: 'text-left-icons-right' | 'icons-left-text-right' | 'icons-text-icons' | 'two-lines';
+      titleSize: 'small' | 'medium' | 'large';
+      subtitleStyle: 'normal' | 'bold' | 'italic';
+      subtitlePlacement: 'same-line' | 'next-line';
+      indentBody: boolean;
+      listStyle: 'bullet' | 'hyphen';
+      descriptionFormat: 'paragraph' | 'points';
+    };
+    // Name customization
+    nameCustomization?: {
+      size: 'xs' | 's' | 'm' | 'l' | 'xl';
+      bold: boolean;
+      font: 'body' | 'creative';
+    };
+    // Professional title customization
+    titleCustomization?: {
+      size: 's' | 'm' | 'l';
+      position: 'same-line' | 'below';
+      style: 'normal' | 'italic';
+      separationType: 'vertical-line' | 'bullet' | 'dash' | 'space';
+    };
+    typography: {
+      fontFamily: {
+        header: string;
+        body: string;
+        name: string;
+      };
+      fontSize: {
+        name: number;
+        title: number;
+        headers: number;
+        body: number;
+        subheader: number;
+      };
+      fontWeight: {
+        name: number;
+        headers: number;
+        body: number;
+      };
+    };
+    layout: {
+      margins: {
+        top: number;
+        bottom: number;
+        left: number;
+        right: number;
+      };
+      sectionSpacing: number;
+      lineHeight: number;
+    };
+  };
 }
 
 const cleanMinimalTemplateData: TemplateData = {
   personalInfo: {
-    name: 'Nikhil Dundu',
+    name: 'Nikhil Dund',
     title: 'Supply Chain Analyst',
     address: 'AZ USA',
     email: 'ndundu1804@gmail.com',
@@ -206,9 +282,34 @@ const cleanMinimalTemplateData: TemplateData = {
   }
 };
 
-const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }) => {
+const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, sectionOrder, customization }) => {
   // Use the passed data prop if available, otherwise fall back to default data
   const templateData = data || cleanMinimalTemplateData;
+
+  // Function to load Google Fonts dynamically
+  const loadGoogleFont = (fontFamily: string) => {
+    // Extract the primary font name from the font family string
+    const fontName = fontFamily.split(',')[0].replace(/['"]/g, '').replace(/\s+/g, '+');
+    
+    // Check if font is already loaded
+    const existingLink = document.querySelector(`link[href*="${fontName}"]`);
+    if (existingLink) return;
+
+    // Create link element to load Google Font
+    const link = document.createElement('link');
+    link.href = `https://fonts.googleapis.com/css2?family=${fontName}:wght@300;400;500;600;700&display=swap`;
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+  };
+
+  // Load fonts when customization changes
+  useEffect(() => {
+    if (customization?.typography?.fontFamily) {
+      loadGoogleFont(customization.typography.fontFamily.name);
+      loadGoogleFont(customization.typography.fontFamily.header);
+      loadGoogleFont(customization.typography.fontFamily.body);
+    }
+  }, [customization?.typography?.fontFamily]);
   
   // Default visible sections if not provided
   const sections = visibleSections || new Set([
@@ -221,67 +322,144 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
     'certifications'
   ]);
 
-  return (
-    <div className="max-w-4xl mx-auto px-2 mt-0 bg-white" style={{ 
-      fontFamily: 'Arial, Helvetica, Calibri, sans-serif',
-      fontSize: '11px',
-      lineHeight: '1.3'
-    }}>
-      {/* Header */}
-      <div className="text-center mb-0">
-        {templateData.personalInfo && (
-          <>
-            <h1 className="text-2xl py-0 my-0 mb-0 font-bold" style={{ 
-              fontSize: '22px',
-              fontWeight: 'bold',
-              letterSpacing: '1px',
-              color: color || '#1f2937'
-            }}>
-              {templateData.personalInfo.name || 'Your Full Name'}
-            </h1>
-            <div className="text-lg font-semibold mb-0" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
-              {templateData.personalInfo.title || 'Your Professional Title'}
-            </div>
-            <div className="text-sm" style={{ fontSize: '11px' }}>
-              {templateData.personalInfo.address || 'Your Location'}
-              {(templateData.personalInfo.address || templateData.personalInfo.phone || templateData.personalInfo.email) && ' | '}
-              {templateData.personalInfo.phone || 'Your Phone'}
-              {(templateData.personalInfo.phone || templateData.personalInfo.email) && ' | '}
-              {templateData.personalInfo.email || 'your.email@example.com'}
-              {templateData.personalInfo.linkedin && (
-                <> | <a href={templateData.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>LinkedIn</a></>
-              )}
-              {templateData.personalInfo.github && (
-                <> | <a href={templateData.personalInfo.github} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>GitHub</a></>
-              )}
-              {templateData.personalInfo.website && !templateData.personalInfo.linkedin && !templateData.personalInfo.github && (
-                <> | {templateData.personalInfo.website}</>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+  // Default section order if not provided
+  const defaultSectionOrder = [
+    'basic-details',
+    'summary',
+    'skills',
+    'experience',
+    'education',
+    'projects',
+    'certifications',
+    'activities',
+    'references'
+  ];
 
-      {/* Summary */}
-      {sections.has('summary') && (
-        <div className="mb-0 mt-0" style={{ position: 'relative' }}>
+  // Helper functions for entry layout
+  const getTitleSize = () => {
+    const entryLayout = customization?.entryLayout;
+    const sizes = {
+      small: '10px',
+      medium: '11px',
+      large: '12px'
+    };
+    return sizes[entryLayout?.titleSize || 'medium'];
+  };
+
+  const getSubtitleStyle = () => {
+    const entryLayout = customization?.entryLayout;
+    return {
+      fontWeight: entryLayout?.subtitleStyle === 'bold' ? 'bold' : 'normal',
+      fontStyle: entryLayout?.subtitleStyle === 'italic' ? 'italic' : 'normal'
+    };
+  };
+
+  const getDescriptionStyle = () => {
+    const entryLayout = customization?.entryLayout;
+    return {
+      marginLeft: entryLayout?.indentBody ? '16px' : '0px'
+    };
+  };
+
+  // Helper functions for name customization
+  const getNameSize = () => {
+    const nameCustomization = customization?.nameCustomization;
+    const sizes = {
+      xs: '16px',
+      s: '18px',
+      m: '22px',
+      l: '26px',
+      xl: '30px'
+    };
+    return sizes[nameCustomization?.size || 'm'];
+  };
+
+  const getNameFontWeight = () => {
+    const nameCustomization = customization?.nameCustomization;
+    return nameCustomization?.bold ? 'bold' : 'normal';
+  };
+
+  const getNameFontFamily = () => {
+    const nameCustomization = customization?.nameCustomization;
+    return nameCustomization?.font === 'creative' 
+      ? 'Georgia, Times New Roman, serif' 
+      : 'var(--font-family-name)';
+  };
+
+  // Helper functions for title customization
+  const getProfessionalTitleSize = () => {
+    const titleCustomization = customization?.titleCustomization;
+    const sizes = {
+      s: '12px',
+      m: '14px',
+      l: '16px'
+    };
+    return sizes[titleCustomization?.size || 's'];
+  };
+
+  const getTitleStyle = () => {
+    const titleCustomization = customization?.titleCustomization;
+    return {
+      fontStyle: titleCustomization?.style === 'italic' ? 'italic' : 'normal'
+    };
+  };
+
+  const shouldShowTitleBelow = () => {
+    const titleCustomization = customization?.titleCustomization;
+    return titleCustomization?.position === 'below';
+  };
+
+  const getSeparationCharacter = () => {
+    const titleCustomization = customization?.titleCustomization;
+    const separationType = titleCustomization?.separationType || 'vertical-line';
+    
+    switch (separationType) {
+      case 'vertical-line':
+        return '|';
+      case 'bullet':
+        return '•';
+      case 'dash':
+        return '—';
+      case 'space':
+        return ' ';
+      default:
+        return '|';
+    }
+  };
+
+
+
+  // Helper function for entry layout
+  const getEntryLayout = () => {
+    return customization?.entryLayout?.layoutType || 'two-lines';
+  };
+
+  const orderedSections = sectionOrder || defaultSectionOrder;
+
+  // Function to render sections in order
+  const renderOrderedSections = () => {
+    const sectionComponents: { [key: string]: React.ReactElement } = {
+      'summary': (
+        <div key="summary" style={{ position: 'relative', marginBottom: 'var(--section-spacing)' }}>
           <h2 className="text-left font-bold mb-0 uppercase" style={{ 
-            fontSize: '13px',
-            fontWeight: 'bold',
+            fontSize: 'var(--font-size-headers)',
+            fontWeight: 'var(--font-weight-headers)',
+            fontFamily: 'var(--font-family-header)',
             letterSpacing: '0.5px',
             lineHeight: '2.5',
-            color: color || '#1f2937'
+            color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
           }}>
             SUMMARY
           </h2>
-          <div className="w-full border-t-2 border-gray-800 -mt-2 mb-2"></div>
+          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--border-color)' }}></div>
           <div className="ml-0 mt-0 mb-0 p-0" >
             <div className="text-sm" style={{ 
-              fontSize: '12px',
-              lineHeight: '1.4',
+              fontSize: 'var(--font-size-body)',
+              fontFamily: 'var(--font-family-body)',
+              lineHeight: 'var(--line-height)',
               textAlign: 'justify',
-              color: '#000000',
-              fontWeight: '500'
+              color: 'var(--text-color)',
+              fontWeight: 'var(--font-weight-body)'
             }}>
               {templateData.summary && templateData.summary.trim() !== '' 
                 ? templateData.summary 
@@ -289,21 +467,20 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
             </div>
           </div>
         </div>
-      )}
-
-      {/* Technical Skills */}
-      {sections.has('skills') && (
-        <div className="mb-0 mt-0">
+      ),
+      'skills': (
+        <div key="skills" style={{ marginBottom: 'var(--section-spacing)' }}>
           <h2 className="text-left font-bold mb-0 uppercase" style={{ 
-            fontSize: '13px',
-            fontWeight: 'bold',
+            fontSize: 'var(--font-size-headers)',
+            fontWeight: 'var(--font-weight-headers)',
+            fontFamily: 'var(--font-family-header)',
             letterSpacing: '0.5px',
-              lineHeight: '2.5',
-            color: color || '#1f2937'
+            lineHeight: '2.5',
+            color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
           }}>
             TECHNICAL SKILLS
           </h2>
-          <div className="w-full border-t-2 border-gray-800 -mt-2 mb-2"></div>
+          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--border-color)' }}></div>
           <div className="space-y-0">
             {templateData.skills?.technical && templateData.skills.technical !== null && templateData.skills.technical !== undefined ? (
               typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
@@ -319,11 +496,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                   
                   return (
                     <div key={category} className="text-sm" style={{ 
-                      fontSize: '11px',
-                      lineHeight: '1.3',
-                      color: '#000000'
+                      fontSize: 'var(--font-size-body)',
+                      lineHeight: 'var(--line-height)',
+                      color: 'var(--text-color)'
                     }}>
-                      <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
+                      <span className="font-bold" style={{ fontWeight: 'var(--font-weight-headers)', color: 'var(--header-color)', fontSize: 'var(--font-size-subheader)' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
                     </div>
                   );
                 }).filter(Boolean) // Remove null entries
@@ -337,20 +514,20 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                     const [key, value] = skill.split(':', 2);
                     return (
                       <div key={index} className="text-sm" style={{ 
-                        fontSize: '11px',
-                        lineHeight: '1.3',
-                        color: '#000000'
+                        fontSize: 'var(--font-size-body)',
+                        lineHeight: 'var(--line-height)',
+                        color: 'var(--text-color)'
                       }}>
-                        <span className="font-bold" style={{ fontWeight: 'bold' }}>{key.trim()}:</span> {value.trim()}
+                        <span className="font-bold" style={{ fontWeight: 'var(--font-weight-headers)', color: 'var(--header-color)', fontSize: 'var(--font-size-subheader)' }}>{key.trim()}:</span> {value.trim()}
                       </div>
                     );
                   } else {
                     // Fallback for skills without colon
                     return (
                       <div key={index} className="text-sm" style={{ 
-                        fontSize: '11px',
-                        lineHeight: '1.3',
-                        color: '#000000'
+                        fontSize: 'var(--font-size-body)',
+                        lineHeight: 'var(--line-height)',
+                        color: 'var(--text-color)'
                       }}>
                         {skill}
                       </div>
@@ -360,8 +537,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
               ) : (
                 // Show placeholder when no skills are present
                 <div className="text-sm" style={{ 
-                  fontSize: '11px',
-                  lineHeight: '1.3',
+                  fontSize: 'var(--font-size-body)',
+                  lineHeight: 'var(--line-height)',
                   color: '#666666',
                   fontStyle: 'italic'
                 }}>
@@ -371,8 +548,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
             ) : (
               // Show placeholder when no skills are present
               <div className="text-sm" style={{ 
-                fontSize: '11px',
-                lineHeight: '1.3',
+                fontSize: 'var(--font-size-body)',
+                lineHeight: 'var(--line-height)',
                 color: '#666666',
                 fontStyle: 'italic'
               }}>
@@ -381,68 +558,364 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
             )}
           </div>
         </div>
-      )}
-
-      {/* Professional Experience */}
-      {sections.has('experience') && (
-        <div className="mb-0 ">
-          <h2 className="text-left font-bold mt-2 uppercase" style={{ 
-            fontSize: '13px',
-            fontWeight: 'bold',
+      ),
+      'experience': (
+        <div key="experience" style={{ marginBottom: 'var(--section-spacing)' }}>
+          <h2 className="text-left font-bold  uppercase" style={{ 
+            fontSize: 'var(--font-size-headers)',
+            fontWeight: 'var(--font-weight-headers)',
+            fontFamily: 'var(--font-family-header)',
             lineHeight: '2.5',  
             letterSpacing: '0.5px',
-            color: color || '#1f2937'
+            color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
           }}>
             PROFESSIONAL EXPERIENCE
           </h2>
-          <div className="w-full border-t-2 border-gray-800 -mt-2 mb-2"></div>
+          <div className="w-full border-t-2 -mt-2 mb-0" style={{ borderColor: 'var(--border-color)' }}></div>
           <div className="-space-y-2">
             {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
               templateData.experience.map((exp, index) => {
-                return (
-                  <div key={index} >
-                    
-                    <div className="flex justify-between items-start ">
-                      <div className="flex-1">
-                        <h3 className="font-bold" style={{ 
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          letterSpacing: '0.3px'
-                        }}>
-                          {exp.title || 'Job Title'}
-                        </h3>
-                        <p className="text-gray-600 -mt-2 mb-2 mb-1" style={{ 
-                          fontSize: '10px',
-                          fontWeight: '500',
-                           letterSpacing: '0.2px'
-                        }}>
-                          <b>{exp.company || 'Company Name'}</b>
-                          {exp.location && exp.location.trim() && (
-                            <span style={{ color: '#666666' }}> • {exp.location}</span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="font-bold text-right mt-2" style={{ 
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        letterSpacing: '0.2px'
-                      }}>
-                        {exp.dates || 'Start Date - End Date'}
-                      </div>
-                    </div>
-                    <div className="ml-0 mt-0">
-                      {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
-                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#000000', fontWeight: '500', textAlign: 'justify' }}>
-                          {exp.achievements.join(' ')}
+                const entryLayout = customization?.entryLayout;
+                const titleSize = getTitleSize();
+                const subtitleStyle = getSubtitleStyle();
+                const descriptionStyle = getDescriptionStyle();
+                const layoutType = getEntryLayout();
+                
+                // Handle subtitle placement
+                const shouldShowSubtitleOnSameLine = entryLayout?.subtitlePlacement === 'same-line';
+                
+                // Extract designation from title field (remove company name after —)
+                const getDesignationFromTitle = (title: string) => {
+                  const parts = title.split('—');
+                  if (parts.length >= 2) {
+                    // Take only the designation part (before —) and remove any company name after —
+                    const designationPart = parts[0].trim();
+                    return designationPart;
+                  }
+                  return title;
+                };
+                
+                const designation = getDesignationFromTitle(exp.title || '');
+                
+                // Extract company name from title field
+                const getCompanyFromTitle = (title: string) => {
+                  const parts = title.split('—');
+                  if (parts.length >= 2) {
+                    // Take the company part (after —)
+                    const companyPart = parts[1].trim();
+                    return companyPart;
+                  }
+                  return '';
+                };
+                
+                const companyFromTitle = getCompanyFromTitle(exp.title || '');
+                
+                // Render based on layout type
+                const renderLayout = () => {
+                  switch (layoutType) {
+                    case 'text-left-icons-right':
+                      return (
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            {shouldShowSubtitleOnSameLine ? (
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }} >
+                                <h3 className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
+                                  margin: 0
+                                }}>
+                                  {companyFromTitle || exp.company || 'Company Name'}
+                                  {designation && designation.trim() && (
+                                    <span style={{ color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)' }}> | {designation}</span>
+                                  )}
+                                  {exp.location && exp.location.trim() && (
+                                    <span style={{ color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)' }}> | {exp.location}</span>
+                                  )}
+                                </h3>
+                              </div>
+                            ) : (
+                              <>
+                                <h3 className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+                                }}>
+                                  {companyFromTitle || exp.company || 'Company Name'}
+                                  {exp.location && exp.location.trim() && (
+                                    <span style={{ color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)' }}> | {exp.location}</span>
+                                  )}
+                                </h3>
+                                <p className="text-gray-600 -mt-2 mb-1" style={{ 
+                                  fontSize: 'var(--font-size-body)',
+                                  letterSpacing: '0.2px',
+                                  fontWeight: 'bold',
+                                  fontStyle: subtitleStyle.fontStyle
+                                }}>
+                                  {designation || 'Job Title'}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 ml-2">
+                            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                            <div className="font-bold text-right" style={{ 
+                              fontSize: titleSize,
+                              fontWeight: 'var(--font-weight-headers)',
+                              letterSpacing: '0.2px'
+                            }}>
+                              <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
+                                {exp.dates || 'Start Date - End Date'}
+                              </span>
+                            </div>
+                          </div>
                         </div>
+                      );
+
+                    case 'icons-left-text-right':
+                      return (
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                            <div className="flex-1">
+                              {shouldShowSubtitleOnSameLine ? (
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                  <h3 className="font-bold" style={{ 
+                                    fontSize: 'var(--font-size-subheader)',
+                                    fontWeight: 'var(--font-weight-headers)',
+                                    letterSpacing: '0.3px',
+                                    color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
+                                    margin: 0
+                                  }}>
+                                    {companyFromTitle || exp.company || 'Company Name'}
+                                    {exp.title && exp.title.trim() && (
+                                      <span style={{ color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)' }}> | {exp.title}</span>
+                                    )}
+                                    {exp.location && exp.location.trim() && (
+                                      <span style={{ color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)' }}> | {exp.location}</span>
+                                    )}
+                                  </h3>
+                                </div>
+                              ) : (
+                                <>
+                                  <h3 className="font-bold" style={{ 
+                                    fontSize: 'var(--font-size-subheader)',
+                                    fontWeight: 'var(--font-weight-headers)',
+                                    letterSpacing: '0.3px',
+                                    color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+                                  }}>
+                                    {companyFromTitle || exp.company || 'Company Name'}
+                                    {exp.location && exp.location.trim() && (
+                                      <span style={{ color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)' }}> | {exp.location}</span>
+                                    )}
+                                  </h3>
+                                  <p className="text-gray-600 -mt-2 mb-1" style={{ 
+                                    fontSize: 'var(--font-size-body)',
+                                    letterSpacing: '0.2px',
+                                    ...subtitleStyle
+                                  }}>
+                                    {designation || 'Job Title'}
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="font-bold text-right mt-2" style={{ 
+                            fontSize: titleSize,
+                            fontWeight: 'var(--font-weight-headers)',
+                            letterSpacing: '0.2px'
+                          }}>
+                            <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
+                              {exp.dates || 'Start Date - End Date'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+
+                    case 'icons-text-icons':
+                      return (
+                        <div className="flex justify-between items-start">
+                          <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                          <div className="flex-1 mx-2">
+                            {shouldShowSubtitleOnSameLine ? (
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                <h3 className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
+                                  margin: 0
+                                }}>
+                                  {companyFromTitle || exp.company || 'Company Name'}
+                                  {designation && designation.trim() && (
+                                    <span style={{ color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)' }}> | {designation}</span>
+                                  )}
+                                  {exp.location && exp.location.trim() && (
+                                    <span style={{ color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)' }}> | {exp.location}</span>
+                                  )}
+                                </h3>
+                              </div>
+                            ) : (
+                              <>
+                                <h3 className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+                                }}>
+                                  {companyFromTitle || exp.company || 'Company Name'}
+                                  {exp.location && exp.location.trim() && (
+                                    <span style={{ color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)' }}> | {exp.location}</span>
+                                  )}
+                                </h3>
+                                <p className="text-gray-600 -mt-2 mb-1" style={{ 
+                                  fontSize: 'var(--font-size-body)',
+                                  letterSpacing: '0.2px',
+                                  fontWeight: 'bold',
+                                  fontStyle: subtitleStyle.fontStyle
+                                }}>
+                                  {designation || 'Job Title'}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-bold text-right" style={{ 
+                              fontSize: titleSize,
+                              fontWeight: 'var(--font-weight-headers)',
+                              letterSpacing: '0.2px'
+                            }}>
+                              <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
+                                {exp.dates || 'Start Date - End Date'}
+                              </span>
+                            </div>
+                            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                          </div>
+                        </div>
+                      );
+
+                    case 'two-lines':
+                    default:
+                      return (
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            {shouldShowSubtitleOnSameLine ? (
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                <h3 className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
+                                  margin: 0
+                                }}>
+                                  {companyFromTitle || exp.company || 'Company Name'}
+                                  {designation && designation.trim() && (
+                                    <span style={{ color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)' }}> | {designation}</span>
+                                  )}
+                                  {exp.location && exp.location.trim() && (
+                                    <span style={{ color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)' }}> | {exp.location}</span>
+                                  )}
+                                </h3>
+                              </div>
+                            ) : (
+                              <>
+                                <h3 className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+                                }}>
+                                  {companyFromTitle || exp.company || 'Company Name'}
+                                  {exp.location && exp.location.trim() && (
+                                    <span style={{ color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)' }}> | {exp.location}</span>
+                                  )}
+                                </h3>
+                                <p className="text-gray-600 -mt-2 mb-1" style={{ 
+                                  fontSize: 'var(--font-size-body)',
+                                  letterSpacing: '0.2px',
+                                  fontWeight: 'bold',
+                                  fontStyle: subtitleStyle.fontStyle
+                                }}>
+                                  {designation || 'Job Title'}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                          <div className="font-bold text-right mt-2" style={{ 
+                            fontSize: titleSize,
+                            fontWeight: 'var(--font-weight-headers)',
+                            letterSpacing: '0.2px'
+                          }}>
+                            <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
+                              {exp.dates || 'Start Date - End Date'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                  }
+                };
+                
+                return (
+                  <div key={index}>
+                    {renderLayout()}
+                    <div className="ml-0 mt-0" style={descriptionStyle}>
+                      {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
+                        customization?.entryLayout?.descriptionFormat === 'points' ? (
+                          exp.achievements.map((achievement, idx) => (
+                            <div key={idx} className="flex items-start" style={{ fontSize: 'var(--font-size-body)', marginBottom: '2px' }}>
+                              <span className="mr-2" style={{ fontWeight: 'bold', color: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--header-color)' }}>
+                                {customization?.entryLayout?.listStyle === 'bullet' ? '•' : '–'}
+                              </span>
+                              <span className="leading-tight" style={{ lineHeight: 'var(--line-height)', color: 'var(--text-color)', fontWeight: 'var(--font-weight-body)' }}>
+                                {achievement}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <div style={{ fontSize: 'var(--font-size-body)', lineHeight: 'var(--line-height)', color: 'var(--text-color)', fontWeight: 'var(--font-weight-body)', textAlign: 'justify' }}>
+                            {exp.achievements.join(' ')}
+                          </div>
+                        )
                       ) : exp.description ? (
                         // Fallback to description if no achievements array
-                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#000000', fontWeight: '500', textAlign: 'justify' }}>
-                          {exp.description}
-                        </div>
+                        customization?.entryLayout?.descriptionFormat === 'points' ? (
+                          (() => {
+                            const newlineParts = exp.description.split(/\n+/g).map(s => s.trim()).filter(Boolean);
+                            if (newlineParts.length > 1) {
+                              return newlineParts.map((sentence, idx) => (
+                                <div key={idx} className="flex items-start" style={{ fontSize: 'var(--font-size-body)', marginBottom: '2px' }}>
+                                  <span className="mr-2" style={{ fontWeight: 'bold', color: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--header-color)' }}>
+                                    {customization?.entryLayout?.listStyle === 'bullet' ? '•' : '–'}
+                                  </span>
+                                  <span className="leading-tight" style={{ lineHeight: 'var(--line-height)', color: 'var(--text-color)', fontWeight: 'var(--font-weight-body)' }}>
+                                    {sentence}
+                                  </span>
+                                </div>
+                              ));
+                            }
+                            
+                            // Fallback to single description for legacy format
+                            return (
+                              <div className="flex items-start" style={{ fontSize: 'var(--font-size-body)', marginBottom: '2px' }}>
+                                <span className="mr-2" style={{ fontWeight: 'bold', color: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--header-color)' }}>
+                                  {customization?.entryLayout?.listStyle === 'bullet' ? '•' : '–'}
+                                </span>
+                                <span className="leading-tight" style={{ lineHeight: 'var(--line-height)', color: 'var(--text-color)', fontWeight: 'var(--font-weight-body)' }}>
+                                  {exp.description}
+                                </span>
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <div style={{ fontSize: 'var(--font-size-body)', lineHeight: 'var(--line-height)', color: 'var(--text-color)', fontWeight: 'var(--font-weight-body)', textAlign: 'justify' }}>
+                            {exp.description}
+                          </div>
+                        )
                       ) : (
                         // Show placeholder when no content
-                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
+                        <div style={{ fontSize: 'var(--font-size-body)', lineHeight: 'var(--line-height)', color: '#666666', fontWeight: 'var(--font-weight-body)', fontStyle: 'italic', textAlign: 'justify' }}>
                           Describe your key responsibilities and achievements...
                         </div>
                       )}
@@ -452,164 +925,712 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
               })
             ) : (
               // Show placeholder when no experience entries
-              <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
+              <div style={{ fontSize: 'var(--font-size-body)', lineHeight: 'var(--line-height)', color: '#666666', fontWeight: 'var(--font-weight-body)', fontStyle: 'italic', textAlign: 'justify' }}>
                 Add your work experience here...
               </div>
             )}
           </div>
         </div>
-      )}
-
-     
-
-      {/* Projects */}
-      {sections.has('projects') && (
-        <div className=" mt-0">
+      ),
+      'projects': (
+        <div key="projects" style={{ marginBottom: 'var(--section-spacing)' }}>
           <h2 className="text-left font-bold mb-0 uppercase" style={{ 
-            fontSize: '13px',
-            fontWeight: 'bold',
+            fontSize: 'var(--font-size-headers)',
+            fontWeight: 'var(--font-weight-headers)',
+            fontFamily: 'var(--font-family-header)',
             letterSpacing: '0.5px',
             lineHeight: '2.5',  
-            color: color || '#1f2937'
+            color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
           }}>
             PROJECTS
           </h2>
-          <div className="w-full border-t-2 border-gray-800 -mt-2 mb-2 mb-2"></div>
-          <div className="-space-y-2 -mt-4">
+          <div className="w-full border-t-2 -mt-2 mb-0" style={{ borderColor: 'var(--border-color)' }}></div>
+          <div className="-space-y-2 -mt-1">
             {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
-              templateData.projects.map((project, index) => (
-                <div key={index} style={{ marginBottom: '-10px' }}>
-                                     <div className="-mb-1.5">
-                       <div className="flex justify-between items-center">
-                         <div className="flex items-center gap-2">
-                           <h3 className="font-bold" style={{ 
-                             fontSize: '11px',
-                             fontWeight: 'bold',
-                             letterSpacing: '0.3px'
-                           }}>
-                             {project.Name || 'Project Name'}
-                           </h3>
-                           <span className="text-sm" style={{ 
-                             fontSize: '10px',
-                             color: '#666',
-                             letterSpacing: '0.2px'
-                           }}>
-                             {project.Tech_Stack || 'Tech Stack'}
-                           </span>
-                         </div>
-                                               {(project.Start_Date || project.End_Date) ? (
+              templateData.projects.map((project, index) => {
+                const entryLayout = customization?.entryLayout;
+                const titleSize = getTitleSize();
+                const subtitleStyle = getSubtitleStyle();
+                const descriptionStyle = getDescriptionStyle();
+                const layoutType = getEntryLayout();
+                
+                // Handle subtitle placement
+                const shouldShowSubtitleOnSameLine = entryLayout?.subtitlePlacement === 'same-line';
+                
+                // Render based on layout type
+                const renderLayout = () => {
+                  switch (layoutType) {
+                    case 'text-left-icons-right':
+                      return (
+                        <div className="flex justify-between items-center ">
+                          <div className="flex-1 ">
+                            {shouldShowSubtitleOnSameLine ? (
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                <h3 className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
+                                  margin: 0
+                                }}>
+                                  {project.Name || 'Project Name'}
+                                </h3>
+                                <span style={{ 
+                                  fontSize: 'var(--font-size-body)',
+                                  color: '#666',
+                                  letterSpacing: '0.2px',
+                                  ...subtitleStyle
+                                }}>
+                                  {project.Tech_Stack || 'Tech Stack'}
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                <h3 className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+                                }}>
+                                  {project.Name || 'Project Name'}
+                                </h3>
+                                <span className="text-sm" style={{ 
+                                  fontSize: 'var(--font-size-body)',
+                                  color: '#666',
+                                  letterSpacing: '0.2px',
+                                  ...subtitleStyle
+                                }}>
+                                  {project.Tech_Stack || 'Tech Stack'}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 ml-2">
+                            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
                             <div className="font-bold" style={{ 
-                              fontSize: '11px',
-                              fontWeight: 'bold'
+                              fontSize: titleSize,
+                              fontWeight: 'var(--font-weight-headers)',
+                              letterSpacing: '0.2px'
                             }}>
-                              {project.Start_Date && project.End_Date 
-                                ? `${project.Start_Date} - ${project.End_Date}`
-                                : project.Start_Date || project.End_Date
-                              }
+                              {(project.Start_Date || project.End_Date) ? (
+                                <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
+                                  {project.Start_Date && project.End_Date 
+                                    ? `${project.Start_Date} - ${project.End_Date}`
+                                    : project.Start_Date || project.End_Date
+                                  }
+                                </span>
+                              ) : (
+                                <span style={{ 
+                                  color: '#666666',
+                                  fontStyle: 'italic'
+                                }}>
+                                  Start Date - End Date
+                                </span>
+                              )}
                             </div>
-                          ) : (
-                            <div className="font-bold" style={{ 
-                              fontSize: '11px',
-                              fontWeight: 'bold',
-                              color: '#666666',
-                              fontStyle: 'italic'
-                            }}>
-                              Start Date - End Date
-                            </div>
-                          )}
-                       </div>
-                     </div>
-                    <div className="space-y-0 ml-0 mt-0">
-                      {project.Description ? (
-                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#000000', fontWeight: '500', textAlign: 'justify' }}>
-                          {project.Description}
-                          {project.Link && project.Link.trim() && (
-                            <span style={{ color: '#0077b5', textDecoration: 'underline', marginLeft: '4px' }}>
-                              <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>
-                                View Project
-                              </a>
-                            </span>
-                          )}
+                          </div>
                         </div>
+                      );
+
+                    case 'icons-left-text-right':
+                      return (
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                            <div className="flex-1">
+                              {shouldShowSubtitleOnSameLine ? (
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                  <h3 className="font-bold" style={{ 
+                                    fontSize: titleSize,
+                                    fontWeight: 'var(--font-weight-headers)',
+                                    letterSpacing: '0.3px',
+                                    color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
+                                    margin: 0
+                                  }}>
+                                    {project.Name || 'Project Name'}
+                                  </h3>
+                                  <span style={{ 
+                                    fontSize: 'var(--font-size-body)',
+                                    color: '#666',
+                                    letterSpacing: '0.2px',
+                                    ...subtitleStyle
+                                  }}>
+                                    {project.Tech_Stack || 'Tech Stack'}
+                                  </span>
+                                </div>
+                              ) : (
+                                <>
+                                  <h3 className="font-bold" style={{ 
+                                    fontSize: titleSize,
+                                    fontWeight: 'var(--font-weight-headers)',
+                                    letterSpacing: '0.3px',
+                                    color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+                                  }}>
+                                    {project.Name || 'Project Name'}
+                                  </h3>
+                                  <span className="text-sm" style={{ 
+                                    fontSize: 'var(--font-size-body)',
+                                    color: '#666',
+                                    letterSpacing: '0.2px',
+                                    ...subtitleStyle
+                                  }}>
+                                    {project.Tech_Stack || 'Tech Stack'}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="font-bold" style={{ 
+                            fontSize: titleSize,
+                            fontWeight: 'var(--font-weight-headers)',
+                            letterSpacing: '0.2px'
+                          }}>
+                            {(project.Start_Date || project.End_Date) ? (
+                              <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
+                                {project.Start_Date && project.End_Date 
+                                  ? `${project.Start_Date} - ${project.End_Date}`
+                                  : project.Start_Date || project.End_Date
+                                }
+                              </span>
+                            ) : (
+                              <span style={{ 
+                                color: '#666666',
+                                fontStyle: 'italic'
+                              }}>
+                                Start Date - End Date
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+
+                    case 'icons-text-icons':
+                      return (
+                        <div className="flex justify-between items-center">
+                          <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                          <div className="flex-1 mx-2">
+                            {shouldShowSubtitleOnSameLine ? (
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                <h3 className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
+                                  margin: 0
+                                }}>
+                                  {project.Name || 'Project Name'}
+                                </h3>
+                                <span style={{ 
+                                  fontSize: 'var(--font-size-body)',
+                                  color: '#666',
+                                  letterSpacing: '0.2px',
+                                  ...subtitleStyle
+                                }}>
+                                  {project.Tech_Stack || 'Tech Stack'}
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                <h3 className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+                                }}>
+                                  {project.Name || 'Project Name'}
+                                </h3>
+                                <span className="text-sm" style={{ 
+                                  fontSize: 'var(--font-size-body)',
+                                  color: '#666',
+                                  letterSpacing: '0.2px',
+                                  ...subtitleStyle
+                                }}>
+                                  {project.Tech_Stack || 'Tech Stack'}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-bold" style={{ 
+                              fontSize: titleSize,
+                              fontWeight: 'var(--font-weight-headers)',
+                              letterSpacing: '0.2px'
+                            }}>
+                              {(project.Start_Date || project.End_Date) ? (
+                                <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
+                                  {project.Start_Date && project.End_Date 
+                                    ? `${project.Start_Date} - ${project.End_Date}`
+                                    : project.Start_Date || project.End_Date
+                                  }
+                                </span>
+                              ) : (
+                                <span style={{ 
+                                  color: '#666666',
+                                  fontStyle: 'italic'
+                                }}>
+                                  Start Date - End Date
+                                </span>
+                              )}
+                            </div>
+                            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                          </div>
+                        </div>
+                      );
+
+                    case 'two-lines':
+                    default:
+                      return (
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            {shouldShowSubtitleOnSameLine ? (
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                <h3 className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
+                                  margin: 0
+                                }}>
+                                  {project.Name || 'Project Name'}
+                                </h3>
+                                <span style={{ 
+                                  fontSize: 'var(--font-size-body)',
+                                  color: '#666',
+                                  letterSpacing: '0.2px',
+                                  ...subtitleStyle
+                                }}>
+                                  {project.Tech_Stack || 'Tech Stack'}
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                <h3 className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+                                }}>
+                                  {project.Name || 'Project Name'}
+                                </h3>
+                                <span className="text-sm" style={{ 
+                                  fontSize: 'var(--font-size-body)',
+                                  color: '#666',
+                                  letterSpacing: '0.2px',
+                                  ...subtitleStyle
+                                }}>
+                                  {project.Tech_Stack || 'Tech Stack'}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          <div className="font-bold" style={{ 
+                            fontSize: titleSize,
+                            fontWeight: 'var(--font-weight-headers)',
+                            letterSpacing: '0.2px'
+                          }}>
+                            {(project.Start_Date || project.End_Date) ? (
+                              <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
+                                {project.Start_Date && project.End_Date 
+                                  ? `${project.Start_Date} - ${project.End_Date}`
+                                  : project.Start_Date || project.End_Date
+                                }
+                              </span>
+                            ) : (
+                              <span style={{ 
+                                color: '#666666',
+                                fontStyle: 'italic'
+                              }}>
+                                Start Date - End Date
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                  }
+                };
+                
+                return (
+                  <div key={index} style={{ marginBottom: '-10px' }}>
+                    <div className="-mb-1.5">
+                      {renderLayout()}
+                    </div>
+                    <div className="ml-0 mt-0" style={descriptionStyle}>
+                      {project.Description ? (
+                        customization?.entryLayout?.descriptionFormat === 'points' ? (
+                          (() => {
+                            // Split description by sentences and create bullet points
+                            const descriptionParts = project.Description.split(/\.\s+/).map(s => s.trim()).filter(Boolean);
+                            return (
+                              <>
+                                {descriptionParts.map((part, idx) => (
+                                  <div key={idx} className="flex items-start" style={{ fontSize: 'var(--font-size-body)', marginBottom: '2px' }}>
+                                    <span className="mr-2" style={{ fontWeight: 'bold', color: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--header-color)' }}>
+                                      {customization?.entryLayout?.listStyle === 'bullet' ? '•' : '–'}
+                                    </span>
+                                    <span className="leading-tight" style={{ lineHeight: 'var(--line-height)', color: 'var(--text-color)', fontWeight: 'var(--font-weight-body)' }}>
+                                      {part}{part.endsWith('.') ? '' : '.'}
+                                    </span>
+                                  </div>
+                                ))}
+                                {project.Link && project.Link.trim() && (
+                                  <div className="flex items-start" style={{ fontSize: 'var(--font-size-body)', marginBottom: '2px' }}>
+                                    <span className="mr-2" style={{ fontWeight: 'bold', color: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--header-color)' }}>
+                                      {customization?.entryLayout?.listStyle === 'bullet' ? '•' : '–'}
+                                    </span>
+                                    <span className="leading-tight" style={{ lineHeight: 'var(--line-height)', color: 'var(--text-color)', fontWeight: 'var(--font-weight-body)' }}>
+                                      <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: customization?.applyAccentTo?.linkIcons ? 'var(--accent-color)' : '#0077b5', textDecoration: 'underline' }}>
+                                        View Project
+                                      </a>
+                                    </span>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()
+                        ) : (
+                          <div style={{ fontSize: 'var(--font-size-body)', lineHeight: 'var(--line-height)', color: 'var(--text-color)', fontWeight: 'var(--font-weight-body)', textAlign: 'justify' }}>
+                            {project.Description}
+                            {project.Link && project.Link.trim() && (
+                              <span style={{ color: '#0077b5', textDecoration: 'underline', marginLeft: '4px' }}>
+                                <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: customization?.applyAccentTo?.linkIcons ? 'var(--accent-color)' : '#0077b5', textDecoration: 'underline' }}>
+                                  View Project
+                                </a>
+                              </span>
+                            )}
+                          </div>
+                        )
                       ) : (
-                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
+                        <div style={{ fontSize: 'var(--font-size-body)', lineHeight: 'var(--line-height)', color: '#666666', fontWeight: 'var(--font-weight-body)', fontStyle: 'italic', textAlign: 'justify' }}>
                           Describe your project details...
                         </div>
                       )}
                     </div>
                   </div>
-              ))
+                );
+              })
             ) : (
               // Show placeholder when no projects
-              <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
+              <div style={{ fontSize: 'var(--font-size-body)', lineHeight: 'var(--line-height)', color: '#666666', fontWeight: 'var(--font-weight-body)', fontStyle: 'italic', textAlign: 'justify' }}>
                 Add your projects here...
               </div>
             )}
           </div>
         </div>
-      )}
-      
-      {/* Education */}
-      {sections.has('education') && (
-        <div className="mb-0 ">
-          <h2 className="text-left font-bold mt-4 uppercase" style={{ 
-            fontSize: '13px',
-            fontWeight: 'bold',
+      ),
+      'education': (
+        <div key="education" style={{ marginBottom: 'var(--section-spacing)' }}>
+          <h2 className="text-left font-bold uppercase" style={{ 
+            fontSize: 'var(--font-size-headers)',
+            fontWeight: 'var(--font-weight-headers)',
+            fontFamily: 'var(--font-family-header)',
             lineHeight: '2.5',  
             letterSpacing: '0.5px',
-            color: color || '#1f2937'
+            color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
           }}>
             EDUCATION
           </h2>
-          <div className="w-full border-t-2 border-gray-800 -mt-2 mb-2"></div>
+          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--border-color)' }}></div>
           <div className="space-y-0">
             {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
-              templateData.education.map((edu, index) => (
-                <div key={index} className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
-                  <div>
-                    <div className="font-bold" style={{ 
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                      letterSpacing: '0.3px'
-                    }}>
-                      {edu.institution || 'Institution Name'}
-                      {edu.location && edu.location.trim() && (
-                        <span style={{ fontWeight: 'bold' }}> | {edu.location}</span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#000000' }}>
-                      {edu.degree || 'Degree/Program'}
-                    </div>
+              templateData.education.map((edu, index) => {
+                const entryLayout = customization?.entryLayout;
+                const titleSize = getTitleSize();
+                const subtitleStyle = getSubtitleStyle();
+                const layoutType = getEntryLayout();
+                
+                // Handle subtitle placement
+                const shouldShowSubtitleOnSameLine = entryLayout?.subtitlePlacement === 'same-line';
+                
+                // Render based on layout type
+                const renderLayout = () => {
+                  switch (layoutType) {
+                    case 'text-left-icons-right':
+                      return (
+                        <div className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
+                          <div className="flex-1">
+                            {shouldShowSubtitleOnSameLine ? (
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                <div className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
+                                  margin: 0
+                                }}>
+                                  {edu.institution || 'Institution Name'}
+                                </div>
+                                <span style={{ 
+                                  fontSize: 'var(--font-size-body)',
+                                  color: '#666666',
+                                  ...subtitleStyle
+                                }}>
+                                  {edu.degree || 'Degree/Program'}
+                                  {edu.location && edu.location.trim() && (
+                                    <span> | {edu.location}</span>
+                                  )}
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+                                }}>
+                                  {edu.institution || 'Institution Name'}
+                                  {edu.location && edu.location.trim() && (
+                                    <span style={{ fontWeight: 'var(--font-weight-headers)' }}> | {edu.location}</span>
+                                  )}
+                                </div>
+                                <div style={{ 
+                                  fontSize: 'var(--font-size-body)', 
+                                  letterSpacing: '0.2px', 
+                                  color: 'var(--text-color)',
+                                  ...subtitleStyle
+                                }}>
+                                  {edu.degree || 'Degree/Program'}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 ml-2">
+                            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                            <div className="font-bold" style={{ 
+                              fontSize: titleSize,
+                              fontWeight: 'var(--font-weight-headers)',
+                              letterSpacing: '0.2px'
+                            }}>
+                              <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
+                                {edu.dates || 'Graduation Year'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+
+                    case 'icons-left-text-right':
+                      return (
+                        <div className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                            <div className="flex-1">
+                              {shouldShowSubtitleOnSameLine ? (
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                  <div className="font-bold" style={{ 
+                                    fontSize: titleSize,
+                                    fontWeight: 'var(--font-weight-headers)',
+                                    letterSpacing: '0.3px',
+                                    color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
+                                    margin: 0
+                                  }}>
+                                    {edu.institution || 'Institution Name'}
+                                  </div>
+                                <span style={{ 
+                                  fontSize: 'var(--font-size-body)',
+                                  color: '#666666',
+                                  ...subtitleStyle
+                                }}>
+                                    {edu.degree || 'Degree/Program'}
+                                    {edu.location && edu.location.trim() && (
+                                      <span> | {edu.location}</span>
+                                    )}
+                                  </span>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="font-bold" style={{ 
+                                    fontSize: titleSize,
+                                    fontWeight: 'var(--font-weight-headers)',
+                                    letterSpacing: '0.3px',
+                                    color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+                                  }}>
+                                    {edu.institution || 'Institution Name'}
+                                    {edu.location && edu.location.trim() && (
+                                      <span style={{ fontWeight: 'var(--font-weight-headers)' }}> | {edu.location}</span>
+                                    )}
+                                  </div>
+                                  <div style={{ 
+                                    fontSize: 'var(--font-size-body)', 
+                                    letterSpacing: '0.2px', 
+                                    color: 'var(--text-color)',
+                                    ...subtitleStyle
+                                  }}>
+                                    {edu.degree || 'Degree/Program'}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="font-bold" style={{ 
+                            fontSize: titleSize,
+                            fontWeight: 'var(--font-weight-headers)',
+                            letterSpacing: '0.2px'
+                          }}>
+                            <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
+                              {edu.dates || 'Graduation Year'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+
+                    case 'icons-text-icons':
+                      return (
+                        <div className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
+                          <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                          <div className="flex-1 mx-2">
+                            {shouldShowSubtitleOnSameLine ? (
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                <div className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
+                                  margin: 0
+                                }}>
+                                  {edu.institution || 'Institution Name'}
+                                </div>
+                                <span style={{ 
+                                  fontSize: 'var(--font-size-body)',
+                                  color: '#666666',
+                                  ...subtitleStyle
+                                }}>
+                                  {edu.degree || 'Degree/Program'}
+                                  {edu.location && edu.location.trim() && (
+                                    <span> | {edu.location}</span>
+                                  )}
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+                                }}>
+                                  {edu.institution || 'Institution Name'}
+                                  {edu.location && edu.location.trim() && (
+                                    <span style={{ fontWeight: 'var(--font-weight-headers)' }}> | {edu.location}</span>
+                                  )}
+                                </div>
+                                <div style={{ 
+                                  fontSize: 'var(--font-size-body)', 
+                                  letterSpacing: '0.2px', 
+                                  color: 'var(--text-color)',
+                                  ...subtitleStyle
+                                }}>
+                                  {edu.degree || 'Degree/Program'}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-bold" style={{ 
+                              fontSize: titleSize,
+                              fontWeight: 'var(--font-weight-headers)',
+                              letterSpacing: '0.2px'
+                            }}>
+                              <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
+                                {edu.dates || 'Graduation Year'}
+                              </span>
+                            </div>
+                            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                          </div>
+                        </div>
+                      );
+
+                    case 'two-lines':
+                    default:
+                      return (
+                        <div className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
+                          <div>
+                            {shouldShowSubtitleOnSameLine ? (
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                <div className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
+                                  margin: 0
+                                }}>
+                                  {edu.institution || 'Institution Name'}
+                                </div>
+                                <span style={{ 
+                                  fontSize: 'var(--font-size-body)',
+                                  color: '#666666',
+                                  ...subtitleStyle
+                                }}>
+                                  {edu.degree || 'Degree/Program'}
+                                  {edu.location && edu.location.trim() && (
+                                    <span> | {edu.location}</span>
+                                  )}
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="font-bold" style={{ 
+                                  fontSize: 'var(--font-size-subheader)',
+                                  fontWeight: 'var(--font-weight-headers)',
+                                  letterSpacing: '0.3px',
+                                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+                                }}>
+                                  {edu.institution || 'Institution Name'}
+                                  {edu.location && edu.location.trim() && (
+                                    <span style={{ fontWeight: 'var(--font-weight-headers)' }}> | {edu.location}</span>
+                                  )}
+                                </div>
+                                <div style={{ 
+                                  fontSize: 'var(--font-size-body)', 
+                                  letterSpacing: '0.2px', 
+                                  color: 'var(--text-color)',
+                                  ...subtitleStyle
+                                }}>
+                                  {edu.degree || 'Degree/Program'}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <div className="font-bold" style={{ 
+                            fontSize: titleSize,
+                            fontWeight: 'var(--font-weight-headers)',
+                            letterSpacing: '0.2px'
+                          }}>
+                            <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
+                              {edu.dates || 'Graduation Year'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                  }
+                };
+                
+                return (
+                  <div key={index}>
+                    {renderLayout()}
                   </div>
-                  <div className="font-bold" style={{ 
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    letterSpacing: '0.2px'
-                  }}>
-                    {edu.dates || 'Graduation Year'}
-                    </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               // Show placeholder when no education entries
               <div className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
                 <div>
                   <div className="font-bold" style={{ 
-                    fontSize: '11px',
-                    fontWeight: 'bold',
+                    fontSize: 'var(--font-size-body)',
+                    fontWeight: 'var(--font-weight-headers)',
                     letterSpacing: '0.3px',
                     color: '#666666',
                     fontStyle: 'italic'
                   }}>
                     Institution Name | Location
                   </div>
-                  <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#666666', fontStyle: 'italic' }}>
+                  <div style={{ fontSize: 'var(--font-size-body)', letterSpacing: '0.2px', color: '#666666', fontStyle: 'italic' }}>
                     Degree/Program
                   </div>
                 </div>
                 <div className="font-bold" style={{ 
-                  fontSize: '11px',
-                  fontWeight: 'bold',
+                  fontSize: 'var(--font-size-body)',
+                  fontWeight: 'var(--font-weight-headers)',
                   letterSpacing: '0.2px',
                   color: '#666666',
                   fontStyle: 'italic'
@@ -620,35 +1641,34 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
             )}
           </div>
         </div>
-      )}
-
-      {/* Certifications */}
-      {sections.has('certifications') && (
-        <div className="mb-0 mt-0">
-          <h2 className="text-left font-bold mb-0 uppercase" style={{ 
-            fontSize: '13px',
-            fontWeight: 'bold',
+      ),
+      'certifications': (
+        <div key="certifications" style={{ marginBottom: 'var(--section-spacing)' }}>
+          <h2 className="text-left font-bold mb-0 mt-4 uppercase" style={{ 
+            fontSize: 'var(--font-size-headers)',
+            fontWeight: 'var(--font-weight-headers)',
+            fontFamily: 'var(--font-family-header)',
             letterSpacing: '0.5px',
             lineHeight: '2.5',  
-            color: color || '#1f2937'
+            color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
           }}>
             CERTIFICATIONS
           </h2>
-          <div className="w-full border-t-2 border-gray-800 -mt-2 mb-2"></div>
+          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--border-color)' }}></div>
           <div className="space-y-0">
             {Array.isArray(templateData.certifications) && templateData.certifications.length > 0 ? (
               templateData.certifications.map((cert, index) => (
                 <div key={index} className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
                   <div>
                     <div style={{ 
-                      fontSize: '11px',
+                      fontSize: 'var(--font-size-body)',
                       letterSpacing: '0.2px',
-                      color: '#000000'
+                      color: 'var(--text-color)'
                     }}>
-                      <span style={{ fontWeight: 'bold' }}>{cert.certificateName || 'Certificate Name'}</span> - <span style={{ color: '#000000' }}>{cert.instituteName || 'Issuing Organization'}</span>
+                      <span style={{ fontWeight: 'var(--font-weight-headers)', fontSize: 'var(--font-size-subheader)' }}>{cert.certificateName || 'Certificate Name'}</span> - <span style={{ color: 'var(--text-color)' }}>{cert.instituteName || 'Issuing Organization'}</span>
                       {cert.link && cert.link.trim() && (
                         <span style={{ marginLeft: '8px' }}>
-                          <a href={cert.link} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline', fontSize: '10px' }}>
+                          <a href={cert.link} target="_blank" rel="noopener noreferrer" style={{ color: customization?.applyAccentTo?.linkIcons ? 'var(--accent-color)' : '#0077b5', textDecoration: 'underline', fontSize: 'var(--font-size-body)' }}>
                             View Certificate
                           </a>
                         </span>
@@ -657,16 +1677,16 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
                   </div>
                   {cert.issueDate ? (
                     <div className="font-bold" style={{ 
-                      fontSize: '11px',
-                      fontWeight: 'bold',
+                      fontSize: 'var(--font-size-body)',
+                      fontWeight: 'var(--font-weight-headers)',
                       letterSpacing: '0.2px'
                     }}>
                       {cert.issueDate}
                     </div>
                   ) : (
                     <div className="font-bold" style={{ 
-                      fontSize: '11px',
-                      fontWeight: 'bold',
+                      fontSize: 'var(--font-size-body)',
+                      fontWeight: 'var(--font-weight-headers)',
                       letterSpacing: '0.2px',
                       color: '#666666',
                       fontStyle: 'italic'
@@ -681,17 +1701,17 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
               <div className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
                 <div>
                   <div style={{ 
-                    fontSize: '11px',
+                    fontSize: 'var(--font-size-body)',
                     letterSpacing: '0.2px',
                     color: '#666666',
                     fontStyle: 'italic'
                   }}>
-                    <span style={{ fontWeight: 'bold' }}>Certificate Name</span> - <span style={{ color: '#666666' }}>Issuing Organization</span>
+                    <span style={{ fontWeight: 'var(--font-weight-headers)', fontSize: 'var(--font-size-subheader)' }}>Certificate Name</span> - <span style={{ color: '#666666' }}>Issuing Organization</span>
                   </div>
                 </div>
                 <div className="font-bold" style={{ 
-                  fontSize: '11px',
-                  fontWeight: 'bold',
+                  fontSize: 'var(--font-size-body)',
+                  fontWeight: 'var(--font-weight-headers)',
                   letterSpacing: '0.2px',
                   color: '#666666',
                   fontStyle: 'italic'
@@ -702,10 +1722,175 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }
             )}
           </div>
         </div>
-      )}
+      )
+    };
+
+    // Render sections in the specified order
+    return orderedSections.map(sectionId => {
+      if (sections.has(sectionId) && sectionComponents[sectionId]) {
+        return sectionComponents[sectionId];
+      }
+      return null;
+    }).filter(Boolean);
+  };
+
+  // Apply customization or use defaults
+  const theme = customization?.theme || {
+    primaryColor: color || '#1f2937',
+    secondaryColor: '#374151',
+    textColor: '#000000',
+    backgroundColor: '#ffffff',
+    accentColor: color || '#1f2937',
+    borderColor: '#1f2937',
+    headerColor: color || '#1f2937'
+  };
+
+  const typography = customization?.typography || {
+    fontFamily: {
+      header: 'Arial, Helvetica, Calibri, sans-serif',
+      body: 'Arial, Helvetica, Calibri, sans-serif',
+      name: 'Arial, Helvetica, Calibri, sans-serif'
+    },
+    fontSize: {
+      name: 22,
+      title: 14,
+      headers: 13,
+      body: 11,
+      subheader: 10
+    },
+    fontWeight: {
+      name: 700,
+      headers: 700,
+      body: 500
+    }
+  };
+
+  const layout = customization?.layout || {
+    margins: { top: 0, bottom: 0, left: 8, right: 8 },
+    sectionSpacing: 16,
+    lineHeight: 1.3
+  };
+
+  // Create CSS custom properties for dynamic theming
+  const customStyles = {
+    '--primary-color': theme.primaryColor,
+    '--secondary-color': theme.secondaryColor,
+    '--text-color': theme.textColor,
+    '--background-color': theme.backgroundColor,
+    '--accent-color': theme.accentColor,
+    '--border-color': theme.borderColor,
+    '--header-color': theme.headerColor,
+    '--font-family-header': typography.fontFamily.header,
+    '--font-family-body': typography.fontFamily.body,
+    '--font-family-name': typography.fontFamily.name,
+    '--font-size-name': `${typography.fontSize.name}px`,
+    '--font-size-title': `${typography.fontSize.title}px`,
+    '--font-size-headers': `${typography.fontSize.headers}px`,
+    '--font-size-body': `${typography.fontSize.body}px`,
+    '--font-size-subheader': `${typography.fontSize.subheader}px`,
+    '--font-weight-name': typography.fontWeight.name,
+    '--font-weight-headers': typography.fontWeight.headers,
+    '--font-weight-body': typography.fontWeight.body,
+    '--section-spacing': `${layout.sectionSpacing}px`,
+    '--line-height': layout.lineHeight,
+    fontFamily: typography.fontFamily.body,
+    fontSize: `${typography.fontSize.body}px`,
+    lineHeight: layout.lineHeight,
+    marginTop: `${layout.margins.top}px`,
+    marginBottom: `${layout.margins.bottom}px`,
+    marginLeft: `${layout.margins.left}px`,
+    marginRight: `${layout.margins.right}px`,
+    backgroundColor: theme.backgroundColor
+  } as React.CSSProperties;
+
+  return (
+    <div className="max-w-4xl mx-auto px-2 mt-0 bg-white" style={customStyles}>
+      {/* Header */}
+      <div className="text-center mb-0 -mt-4">
+        {templateData.personalInfo && (
+          <>
+            {shouldShowTitleBelow() ? (
+              <>
+                <h1 className="text-2xl py-0 my-0 -mb-3 font-bold" style={{
+                  fontSize: getNameSize(),
+                  fontWeight: getNameFontWeight(),
+                  fontFamily: getNameFontFamily(),
+                  letterSpacing: '1px',
+                  color: customization?.applyAccentTo?.name ? 'var(--accent-color)' : 'var(--header-color)'
+                }}>
+                  {templateData.personalInfo.name || 'Your Full Name'}
+                </h1>
+                <div className="text-lg font-semibold mb-0 mt-1" style={{ 
+                  fontSize: getProfessionalTitleSize(), 
+                  fontWeight: '600', 
+                  fontFamily: 'var(--font-family-body)',
+                  color: 'var(--secondary-color)',
+                  ...getTitleStyle()
+                }}>
+                  {templateData.personalInfo.title || 'Your Professional Title'}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center gap-1 -mb-3">
+                <h1 className="font-bold" style={{
+                  fontSize: getNameSize(),
+                  fontWeight: getNameFontWeight(),
+                  fontFamily: getNameFontFamily(),
+                  letterSpacing: '1px',
+                  color: customization?.applyAccentTo?.name ? 'var(--accent-color)' : 'var(--header-color)',
+                  margin: 0
+                }}>
+                  {templateData.personalInfo.name || 'Your Full Name'}
+                </h1>
+                <span style={{
+                  fontSize: customization?.titleCustomization?.separationType === 'vertical-line' ? 
+                    `${parseInt(getProfessionalTitleSize()) + 2}px` : 
+                    getProfessionalTitleSize(),
+                  color: 'var(--secondary-color)',
+                  margin: '0 2px'
+                }}>
+                  {getSeparationCharacter()}
+                </span>
+                <div className="font-semibold" style={{ 
+                  fontSize: getProfessionalTitleSize(), 
+                  fontWeight: '600', 
+                  fontFamily: 'var(--font-family-body)',
+                  color: 'var(--secondary-color)',
+                  ...getTitleStyle(),
+                  margin: 0
+                }}>
+                  {templateData.personalInfo.title || 'Your Professional Title'}
+                </div>
+              </div>
+            )}
+            <div className="text-sm" style={{ 
+              fontSize: 'var(--font-size-body)',
+              fontFamily: 'var(--font-family-body)',
+              color: 'var(--text-color)'
+            }}>
+              {templateData.personalInfo.address || 'Your Location'}
+              {(templateData.personalInfo.address || templateData.personalInfo.phone || templateData.personalInfo.email) && ' | '}
+              {templateData.personalInfo.phone || 'Your Phone'}
+              {(templateData.personalInfo.phone || templateData.personalInfo.email) && ' | '}
+              {templateData.personalInfo.email || 'your.email@example.com'}
+              {templateData.personalInfo.linkedin && (
+                <> | <a href={templateData.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: customization?.applyAccentTo?.linkIcons ? 'var(--accent-color)' : '#0077b5', textDecoration: 'underline' }}>LinkedIn</a></>
+              )}
+              {templateData.personalInfo.github && (
+                <> | <a href={templateData.personalInfo.github} target="_blank" rel="noopener noreferrer" style={{ color: customization?.applyAccentTo?.linkIcons ? 'var(--accent-color)' : '#0077b5', textDecoration: 'underline' }}>GitHub</a></>
+              )}
+              {templateData.personalInfo.website && !templateData.personalInfo.linkedin && !templateData.personalInfo.github && (
+                <> | {templateData.personalInfo.website}</>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Render sections in order */}
+      {renderOrderedSections()}
     </div>
   );
 };
 
 export default ResumePDF;
-
