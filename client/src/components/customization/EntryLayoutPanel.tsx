@@ -17,86 +17,11 @@ const EntryLayoutPanel: React.FC<EntryLayoutPanelProps> = ({
   entryLayout,
   updateEntryLayout
 }) => {
-  // Entry Layout Preview Options
-  const layoutOptions = [
-    {
-      id: 'text-left-icons-right',
-      name: 'Text Left, Icons Right',
-      preview: (
-        <div className="flex items-center justify-between w-full p-2">
-          <div className="flex-1">
-            <div className="w-20 h-2 bg-gray-400 rounded mb-1"></div>
-          </div>
-          <div className="flex items-center gap-2 ml-2">
-            <div className="w-4 h-4 bg-gray-400 rounded"></div>
-            <div className="w-4 h-4 bg-gray-400 rounded"></div>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'icons-left-text-right',
-      name: 'Icons Left, Text Right',
-      preview: (
-        <div className="flex items-center justify-between w-full p-2">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-gray-400 rounded"></div>
-            <div className="w-4 h-4 bg-gray-400 rounded"></div>
-          </div>
-          <div className="flex-1 ml-2">
-            <div className="w-20 h-2 bg-gray-400 rounded"></div>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'icons-text-icons',
-      name: 'Icons, Text, Icons',
-      preview: (
-        <div className="flex items-center justify-between w-full p-2">
-          <div className="w-4 h-4 bg-gray-400 rounded"></div>
-          <div className="flex-1 mx-2">
-            <div className="w-16 h-2 bg-gray-400 rounded"></div>
-          </div>
-          <div className="w-4 h-4 bg-gray-400 rounded"></div>
-        </div>
-      )
-    },
-    {
-      id: 'two-lines',
-      name: 'Two Lines',
-      preview: (
-        <div className="w-full p-2">
-          <div className="w-24 h-2 bg-gray-400 rounded mb-1"></div>
-          <div className="w-20 h-2 bg-gray-400 rounded"></div>
-        </div>
-      )
-    }
-  ];
 
   return (
     <div className="bg-white rounded-lg p-4 border border-gray-200">
       <h4 className="text-sm font-medium text-gray-700 mb-4">Entry Layout</h4>
       
-      {/* Entry Layout Preview Options */}
-      <div className="mb-6">
-        <div className="grid grid-cols-2 gap-3">
-          {layoutOptions.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => updateEntryLayout({ layoutType: option.id })}
-              className={`p-3 rounded-lg border-2 transition-all duration-200 ${
-                entryLayout.layoutType === option.id
-                  ? 'border-purple-500 bg-purple-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              {option.preview}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Title & Subtitle Size */}
       <div className="mb-4">
         <label className="block text-xs text-gray-600 mb-2">Title & subtitle size</label>
