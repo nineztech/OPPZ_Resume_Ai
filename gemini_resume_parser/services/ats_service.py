@@ -54,7 +54,7 @@ def _collect_used_power_words_from_text(text: str) -> List[str]:
         'pursued', 'chased', 'hunted', 'searched', 'explored', 'investigated', 'examined', 'studied',
         'analyzed', 'evaluated', 'assessed', 'reviewed', 'inspected', 'checked', 'verified', 'confirmed',
         'validated', 'authenticated', 'certified', 'approved', 'endorsed', 'sanctioned', 'authorized',
-        'permitted', 'allowed', 'enabled', 'facilitated', 'assisted', 'helped', 'aided', 'supported'
+        'permitted', 'allowed', 'enabled', 'facilitated', 'assisted', 'helped', 'aided', 'supported','utilized'
     }
     professional_terms = {
         'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced',
@@ -245,6 +245,130 @@ def _augment_repetition_suggestions_with_debug(ats_response: Dict[str, Any], rep
         logger.warning(f"Failed to augment repetition suggestions: {e}")
         return ats_response
 
+def _generate_fix_achievement_line(section: str, achievement: str, context: str, client: Any, model_name: str, temperature: float, top_p: float) -> str:
+    """
+    Use the model to generate one FIX_ACHIEVEMENT suggestion line for an unquantified achievement,
+    following the mandatory format. Returns a single-line string, or empty string on failure.
+    """
+    try:
+        prompt = f"""
+        You are improving resume achievements with quantified metrics. Produce EXACTLY ONE line in this format and nothing else:
+        FIX_ACHIEVEMENT: [Section] - Achievement '[achievement excerpt]' lacks metrics - Add quantified impact: '[enhanced achievement with specific numbers, percentages, timeframes, and measurable results]'
+
+        Requirements:
+        - Use section: {section}
+        - Achievement excerpt: {achievement[:50]}...
+        - Add 2-3 specific metrics: numbers, percentages, timeframes, team sizes, cost savings, efficiency improvements
+        - Make metrics realistic and relevant to the achievement type
+        - Use professional language with strong action verbs
+        - Include measurable business impact
+        - Do NOT include any preface or follow-up text, no code fences, only the single line
+
+        Context of the achievement:
+        {context}
+        """
+
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": "You generate precise, single-line achievement enhancement instructions with quantified metrics."},
+                {"role": "user", "content": prompt.strip()}
+            ],
+            temperature=0.1,
+            top_p=0.8,
+            max_tokens=200
+        )
+
+        line = response.choices[0].message.content.strip()
+        # Basic sanity check: must start with FIX_ACHIEVEMENT
+        if not line.startswith("FIX_ACHIEVEMENT:"):
+            import re as _re
+            m = _re.search(r"FIX_ACHIEVEMENT:.*", line)
+            if m:
+                return m.group(0).strip()
+            return ""
+        return line
+    except Exception as e:
+        logger.warning(f"Failed to generate FIX_ACHIEVEMENT line for achievement in section '{section}': {e}")
+        return ""
+
+def _augment_achievement_suggestions_with_debug(ats_response: Dict[str, Any], achievement_debug: Dict[str, Any], resume_text: str, client: Any, model_name: str, temperature: float, top_p: float) -> Dict[str, Any]:
+    """
+    Augment achievements_impact_metrics suggestions to include a FIX_ACHIEVEMENT line for
+    every unquantified achievement detected in the debug analysis.
+    """
+    try:
+        import re as _re
+        detailed = ats_response.setdefault("detailed_feedback", {})
+        achievements = detailed.setdefault("achievements_impact_metrics", {})
+        suggestions: List[str] = achievements.setdefault("suggestions", [])
+
+        # Collect already-covered achievements from existing FIX_ACHIEVEMENT suggestions
+        covered_achievements = set()
+        for s in suggestions:
+            m = _re.search(r"FIX_ACHIEVEMENT:\s*[^']*'([^']+)'", s)
+            if m:
+                covered_achievements.add(m.group(1).strip().lower()[:30])  # Use first 30 chars as identifier
+
+        unquantified_achievements = achievement_debug.get("unquantified_achievements", {})
+        debug_info = achievement_debug.get("debug_info", {})
+
+        logger.info(f"🎯 DEBUG ACHIEVEMENTS: Found {len(unquantified_achievements)} sections with unquantified achievements")
+
+        # If no unquantified achievements found, remove any existing FIX_ACHIEVEMENT suggestions and clear all achievement issues
+        if not unquantified_achievements:
+            logger.info("🎯 DEBUG ACHIEVEMENTS: No unquantified achievements found - clearing all achievement-related feedback")
+            
+            # Completely clear all achievement feedback since there are no issues
+            achievements["suggestions"] = []
+            achievements["negatives"] = []
+            achievements["specific_issues"] = []
+            
+            # Set perfect score since there are no achievement issues
+            achievements["score"] = 90
+            ats_response["category_scores"]["achievements_impact_metrics"] = 90
+            
+            # Also clear any generic suggestions that might have been generated by AI
+            achievements["suggestions"] = [s for s in achievements.get("suggestions", []) if not any(
+                keyword in s.lower() for keyword in ["metric", "quantif", "achievement", "impact", "result", "measur", "specific", "number", "percentage"]
+            )]
+            
+            return ats_response
+
+        for section, achievements_list in unquantified_achievements.items():
+            for achievement in achievements_list:
+                achievement_id = achievement[:30].lower()
+                if achievement_id in covered_achievements:
+                    continue
+
+                # Get context for this achievement
+                context = debug_info.get(f"{section}_{achievement_id}", {}).get("context", achievement)
+                
+                logger.info(f"🎯 DEBUG ACHIEVEMENTS: Generating suggestion for unquantified achievement in {section}: {achievement[:50]}...")
+                
+                # Generate a single FIX_ACHIEVEMENT line using the model
+                line = _generate_fix_achievement_line(section, achievement, context, client, model_name, temperature, top_p)
+                if line and isinstance(line, str):
+                    suggestions.append(line)
+                    covered_achievements.add(achievement_id)
+
+        # Ensure negatives/specific_issues enumerate all unquantified achievements as issues
+        achievements.setdefault("negatives", [])
+        achievements.setdefault("specific_issues", [])
+        existing_issue_entries = set(achievements["specific_issues"]) if isinstance(achievements.get("specific_issues"), list) else set()
+        
+        for section, achievements_list in unquantified_achievements.items():
+            for achievement in achievements_list:
+                issue_text = f"Achievement '{achievement[:50]}...' in {section} lacks quantified metrics"
+                if issue_text not in existing_issue_entries:
+                    achievements["specific_issues"].append(issue_text)
+                    existing_issue_entries.add(issue_text)
+
+        return ats_response
+    except Exception as e:
+        logger.warning(f"Failed to augment achievement suggestions: {e}")
+        return ats_response
+
 def _mirror_skill_suggestions_into_recommendations(ats_response: Dict[str, Any]) -> Dict[str, Any]:
     """
     Ensure that all skills-related suggestions are present in top-level recommendations
@@ -352,8 +476,11 @@ class StandardATSService:
         if parsed_data:
             parsed_data = self._validate_parsed_data(parsed_data)
         
-        # Perform comprehensive repetition analysis for debugging (needed for prompt)
-        logger.info("🔍 Performing comprehensive repetition analysis...")
+        # Perform comprehensive achievements analysis for debugging (needed for prompt)
+        logger.info("🎯 Performing comprehensive achievements analysis...")
+        achievement_debug = self._analyze_achievements_debug(resume_text)
+        
+        # Still need repetition analysis for the suggestions (but without debug logging)
         repetition_debug = self._analyze_repetitions_debug(resume_text)
         
         prompt = f"""
@@ -893,6 +1020,17 @@ class StandardATSService:
                 self.top_p
             )
 
+            # Augment achievement suggestions using internal debug analysis so ALL unquantified achievements are covered
+            ats_response = _augment_achievement_suggestions_with_debug(
+                ats_response,
+                achievement_debug,
+                resume_text,
+                self.client,
+                self.model_name,
+                self.temperature,
+                self.top_p
+            )
+
             # Mirror skills-related suggestions into top-level recommendations for full coverage
             ats_response = _mirror_skill_suggestions_into_recommendations(ats_response)
             
@@ -902,8 +1040,8 @@ class StandardATSService:
             # Add improvement potential analysis
             ats_response = self._add_improvement_potential(ats_response)
             
-            # Add repetition debug information
-            ats_response["repetition_debug_analysis"] = repetition_debug
+            # Add achievement debug information
+            ats_response["achievement_debug_analysis"] = achievement_debug
             
             # Final validation
             ats_response = self._final_ats_validation(ats_response)
@@ -1471,7 +1609,7 @@ class StandardATSService:
         Returns:
             Dictionary containing repetition analysis with debug information
         """
-        logger.info("🔍 Starting comprehensive repetition analysis for debugging (action verbs and professional terms only)")
+        # Removed debug logging to reduce console output - analysis runs silently
         
         import re
         from collections import defaultdict, Counter
@@ -1486,7 +1624,7 @@ class StandardATSService:
             'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced',
             'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed',
             'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched',
-            'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received'
+            'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received', 'utilized'
         }
         
         professional_terms = {
@@ -1519,8 +1657,6 @@ class StandardATSService:
         }
         
         for section_name, section_text in sections.items():
-            logger.info(f"🔍 Analyzing section: {section_name}")
-            
             # Clean and tokenize text
             words = re.findall(r'\b[a-zA-Z]+\b', section_text.lower())
             word_count = Counter(words)
@@ -1540,15 +1676,13 @@ class StandardATSService:
                         relevant_repetitions[word] = count
             
             if relevant_repetitions:
-                logger.info(f"🔍 Found {len(relevant_repetitions)} relevant repeated words in {section_name}")
                 repetition_analysis["repetitions_found"][section_name] = relevant_repetitions
                 repetition_analysis["action_verbs_found"][section_name] = action_verb_reps
                 repetition_analysis["professional_terms_found"][section_name] = professional_term_reps
                 
-                # Debug logging for each relevant repetition
+                # Store context for each repetition (without debug logging)
                 for word, count in relevant_repetitions.items():
                     word_type = "Action Verb" if word in action_verbs else "Professional Term"
-                    logger.info(f"🔍 DEBUG: {word_type} '{word}' appears {count} times in {section_name}")
                     
                     # Find contexts where the word appears
                     contexts = []
@@ -1564,28 +1698,8 @@ class StandardATSService:
                         "section": section_name,
                         "type": word_type
                     }
-            else:
-                logger.info(f"🔍 No relevant repetitions found in {section_name}")
             
             repetition_analysis["total_words_analyzed"] += len(words)
-        
-        # Summary logging
-        total_repetitions = sum(len(reps) for reps in repetition_analysis["repetitions_found"].values())
-        total_action_verbs = sum(len(reps) for reps in repetition_analysis["action_verbs_found"].values())
-        total_professional_terms = sum(len(reps) for reps in repetition_analysis["professional_terms_found"].values())
-        
-        logger.info(f"🔍 REPETITION ANALYSIS SUMMARY:")
-        logger.info(f"🔍 Total words analyzed: {repetition_analysis['total_words_analyzed']}")
-        logger.info(f"🔍 Sections analyzed: {repetition_analysis['sections_analyzed']}")
-        logger.info(f"🔍 Total relevant repeated words found: {total_repetitions}")
-        logger.info(f"🔍 Action verbs repeated: {total_action_verbs}")
-        logger.info(f"🔍 Professional terms repeated: {total_professional_terms}")
-        
-        for section, reps in repetition_analysis["repetitions_found"].items():
-            logger.info(f"🔍 {section}: {len(reps)} relevant repeated words")
-            for word, count in reps.items():
-                word_type = "Action Verb" if word in action_verbs else "Professional Term"
-                logger.info(f"🔍   - {word_type} '{word}': {count} times")
         
         return repetition_analysis
 
@@ -1670,6 +1784,119 @@ class StandardATSService:
         
         return sections
 
+    def _analyze_achievements_debug(self, resume_text: str) -> Dict[str, Any]:
+        """
+        Analyze achievements in resume text for debugging purposes - focusing on unquantified achievements
+        
+        Args:
+            resume_text: Raw resume text to analyze
+            
+        Returns:
+            Dictionary containing achievement analysis with debug information
+        """
+        logger.info("🎯 Starting comprehensive achievement analysis for debugging (unquantified achievements)")
+        
+        import re
+        from collections import defaultdict
+        
+        # Split resume into sections
+        sections = self._split_resume_into_sections(resume_text)
+        
+        achievement_analysis = {
+            "total_sentences_analyzed": 0,
+            "sections_analyzed": len(sections),
+            "unquantified_achievements": {},
+            "debug_info": {},
+            "summary": {
+                "total_unquantified_achievements": 0,
+                "sections_with_issues": 0
+            }
+        }
+        
+        # Patterns that indicate achievements or accomplishments
+        achievement_patterns = [
+            r'\b(achieved|accomplished|delivered|completed|implemented|developed|created|built|designed|led|managed|improved|enhanced|optimized|increased|reduced|saved|transformed|established|launched)\b',
+            r'\b(responsible for|resulted in|contributed to|successfully|effectively|efficiently)\b',
+            r'\b(project|initiative|solution|system|application|feature|process|strategy)\b'
+        ]
+        
+        # Patterns that indicate quantification (if these are missing, achievement is unquantified)
+        quantification_patterns = [
+            r'\d+\.?\d*\s*%',  # percentages
+            r'\$\d+',  # money
+            r'\d+\s*(million|thousand|k|m|billion)',  # large numbers
+            r'\d+\s*(hours?|days?|weeks?|months?|years?)',  # time
+            r'\d+\s*(people|users|customers|clients|team members?)',  # people
+            r'\d+\s*(projects?|systems?|applications?)',  # counts
+            r'(increased|decreased|improved|reduced|saved|enhanced)\s+by\s+\d+',  # improvement metrics
+            r'\d+\s*(times?|fold)',  # multipliers
+        ]
+        
+        for section_name, section_text in sections.items():
+            logger.info(f"🎯 Analyzing achievements in section: {section_name}")
+            
+            # Split into sentences
+            sentences = re.split(r'[.!?]+', section_text)
+            section_unquantified = []
+            
+            for sentence in sentences:
+                sentence = sentence.strip()
+                if len(sentence) < 20:  # Skip very short sentences
+                    continue
+                    
+                achievement_analysis["total_sentences_analyzed"] += 1
+                
+                # Check if sentence describes an achievement
+                is_achievement = False
+                for pattern in achievement_patterns:
+                    if re.search(pattern, sentence, re.IGNORECASE):
+                        is_achievement = True
+                        break
+                
+                if is_achievement:
+                    # Check if achievement has quantification
+                    is_quantified = False
+                    for pattern in quantification_patterns:
+                        if re.search(pattern, sentence, re.IGNORECASE):
+                            is_quantified = True
+                            break
+                    
+                    if not is_quantified:
+                        section_unquantified.append(sentence)
+                        achievement_id = sentence[:30].lower()
+                        
+                        achievement_analysis["debug_info"][f"{section_name}_{achievement_id}"] = {
+                            "achievement": sentence,
+                            "section": section_name,
+                            "context": sentence,
+                            "issue": "lacks_quantification"
+                        }
+                        
+                        logger.info(f"🎯 DEBUG ACHIEVEMENTS: Found unquantified achievement in {section_name}: {sentence[:50]}...")
+            
+            if section_unquantified:
+                achievement_analysis["unquantified_achievements"][section_name] = section_unquantified
+                achievement_analysis["summary"]["sections_with_issues"] += 1
+            else:
+                logger.info(f"🎯 No unquantified achievements found in {section_name}")
+        
+        # Calculate summary statistics
+        total_unquantified = sum(len(achievements) for achievements in achievement_analysis["unquantified_achievements"].values())
+        achievement_analysis["summary"]["total_unquantified_achievements"] = total_unquantified
+        
+        logger.info(f"🎯 ACHIEVEMENT ANALYSIS SUMMARY:")
+        logger.info(f"🎯 Total sentences analyzed: {achievement_analysis['total_sentences_analyzed']}")
+        logger.info(f"🎯 Sections analyzed: {achievement_analysis['sections_analyzed']}")
+        logger.info(f"🎯 Total unquantified achievements found: {total_unquantified}")
+        logger.info(f"🎯 Sections with achievement issues: {achievement_analysis['summary']['sections_with_issues']}")
+        
+        for section, achievements in achievement_analysis["unquantified_achievements"].items():
+            logger.info(f"🎯 {section}: {len(achievements)} unquantified achievements")
+            for achievement in achievements:
+                logger.info(f"🎯   - Achievement: {achievement[:80]}...")
+        
+        return achievement_analysis
+
 
 class JDSpecificATSService:
     """
@@ -1742,8 +1969,11 @@ class JDSpecificATSService:
         if parsed_data:
             parsed_data = self._validate_parsed_data(parsed_data)
         
-        # Perform comprehensive repetition analysis for debugging (needed for prompt)
-        logger.info("🔍 Performing comprehensive repetition analysis for JD-specific analysis...")
+        # Perform comprehensive achievements analysis for debugging (needed for prompt)
+        logger.info("🎯 Performing comprehensive achievements analysis for JD-specific analysis...")
+        achievement_debug = self._analyze_achievements_debug(resume_text)
+        
+        # Still need repetition analysis for the suggestions (but without debug logging)
         repetition_debug = self._analyze_repetitions_debug(resume_text)
         
         prompt = f"""
@@ -2151,14 +2381,25 @@ class JDSpecificATSService:
                 self.top_p
             )
 
+            # Augment achievement suggestions using internal debug analysis so ALL unquantified achievements are covered
+            jd_ats_response = _augment_achievement_suggestions_with_debug(
+                jd_ats_response,
+                achievement_debug,
+                resume_text,
+                self.client,
+                self.model_name,
+                self.temperature,
+                self.top_p
+            )
+
             # Mirror skills-related suggestions into top-level recommendations for full coverage
             jd_ats_response = _mirror_skill_suggestions_into_recommendations(jd_ats_response)
 
             # Apply dynamic scoring based on issues count
             jd_ats_response = self._apply_dynamic_scoring(jd_ats_response)
             
-            # Add repetition debug information
-            jd_ats_response["repetition_debug_analysis"] = repetition_debug
+            # Add achievement debug information
+            jd_ats_response["achievement_debug_analysis"] = achievement_debug
             
             # Final validation
             jd_ats_response = self._final_ats_validation(jd_ats_response)
@@ -2453,6 +2694,348 @@ class JDSpecificATSService:
         validated_response = validate_and_fix(jd_ats_response, "root")
         logger.info("🔒 Completed final JD-ATS validation - response is guaranteed to be NA-free")
         return validated_response
+
+    def _validate_parsed_data(self, parsed_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate and clean parsed data to ensure accurate analysis
+        
+        Args:
+            parsed_data: Raw parsed resume data
+            
+        Returns:
+            Validated and cleaned parsed data
+        """
+        if not isinstance(parsed_data, dict):
+            logger.warning("Invalid parsed data format, returning empty dict")
+            return {}
+        
+        validated_data = {}
+        
+        # Check for common resume section keys and validate their content
+        section_mappings = {
+            "projects": ["projects", "project", "portfolio", "personal_projects"],
+            "experience": ["experience", "work_experience", "employment", "work_history"],
+            "education": ["education", "academic", "qualifications", "degrees"],
+            "contact": ["contact", "basic_details", "personal_info", "contact_info"],
+            "skills": ["skills", "competencies", "technical_skills", "soft_skills"],
+            "summary": ["summary", "objective", "profile", "professional_summary"],
+            "certifications": ["certificates", "certifications", "certificate", "licenses"],
+            "languages": ["languages", "language", "linguistic_skills"],
+            "references": ["references", "reference", "referees"]
+        }
+        
+        for section_name, possible_keys in section_mappings.items():
+            for key in possible_keys:
+                if key in parsed_data and parsed_data[key]:
+                    # Check if the data is not empty
+                    if isinstance(parsed_data[key], list) and len(parsed_data[key]) > 0:
+                        validated_data[section_name] = parsed_data[key]
+                        break
+                    elif isinstance(parsed_data[key], dict) and parsed_data[key]:
+                        validated_data[section_name] = parsed_data[key]
+                        break
+                    elif isinstance(parsed_data[key], str) and parsed_data[key].strip():
+                        validated_data[section_name] = parsed_data[key]
+                        break
+        
+        # Add any other non-empty fields
+        for key, value in parsed_data.items():
+            if key not in validated_data and value:
+                if isinstance(value, (list, dict)) and value:
+                    validated_data[key] = value
+                elif isinstance(value, str) and value.strip():
+                    validated_data[key] = value
+        
+        logger.info(f"Validated parsed data with {len(validated_data)} sections")
+        return validated_data
+
+    def _analyze_repetitions_debug(self, resume_text: str) -> Dict[str, Any]:
+        """
+        Analyze repetitions in resume text for debugging purposes - focusing only on action verbs and professional terms
+        
+        Args:
+            resume_text: Raw resume text to analyze
+            
+        Returns:
+            Dictionary containing repetition analysis with debug information
+        """
+        # Removed debug logging to reduce console output - analysis runs silently
+        
+        import re
+        from collections import defaultdict, Counter
+        
+        # Define action verbs and professional terms to focus on
+        action_verbs = {
+            'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered',
+            'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured',
+            'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained',
+            'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved',
+            'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified',
+            'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced',
+            'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed',
+            'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched',
+            'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received', 'utilized'
+        }
+        
+        professional_terms = {
+            'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced',
+            'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical',
+            'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined',
+            'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized',
+            'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform',
+            'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven'
+        }
+        
+        # Common words to ignore
+        common_words = {
+            'and', 'in', 'with', 'of', 'to', 'for', 'on', 'by', 'the', 'a', 'an', 'is', 'are', 'was', 'were',
+            'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+            'may', 'might', 'can', 'must', 'shall', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she',
+            'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'her', 'its', 'our', 'their'
+        }
+        
+        # Split resume into sections (basic section detection)
+        sections = self._split_resume_into_sections(resume_text)
+        
+        repetition_analysis = {
+            "total_words_analyzed": 0,
+            "action_verb_repetitions": {},
+            "professional_term_repetitions": {},
+            "section_analysis": {},
+            "summary": {
+                "total_action_verb_repetitions": 0,
+                "total_professional_term_repetitions": 0,
+                "most_repeated_action_verb": None,
+                "most_repeated_professional_term": None
+            }
+        }
+        
+        # Analyze each section
+        for section_name, section_text in sections.items():
+            if not section_text.strip():
+                continue
+                
+            # Clean and tokenize section text
+            words = re.findall(r'\b[a-zA-Z]+\b', section_text.lower())
+            repetition_analysis["total_words_analyzed"] += len(words)
+            
+            # Count action verbs and professional terms
+            action_verb_counts = Counter()
+            professional_term_counts = Counter()
+            
+            for word in words:
+                if word in action_verbs:
+                    action_verb_counts[word] += 1
+                elif word in professional_terms:
+                    professional_term_counts[word] += 1
+            
+            # Store repetitions (only words that appear more than once)
+            section_action_repetitions = {word: count for word, count in action_verb_counts.items() if count > 1}
+            section_professional_repetitions = {word: count for word, count in professional_term_counts.items() if count > 1}
+            
+            repetition_analysis["section_analysis"][section_name] = {
+                "action_verb_repetitions": section_action_repetitions,
+                "professional_term_repetitions": section_professional_repetitions,
+                "total_words": len(words)
+            }
+            
+            # Add to global counts
+            for word, count in section_action_repetitions.items():
+                if word not in repetition_analysis["action_verb_repetitions"]:
+                    repetition_analysis["action_verb_repetitions"][word] = 0
+                repetition_analysis["action_verb_repetitions"][word] += count
+                
+            for word, count in section_professional_repetitions.items():
+                if word not in repetition_analysis["professional_term_repetitions"]:
+                    repetition_analysis["professional_term_repetitions"][word] = 0
+                repetition_analysis["professional_term_repetitions"][word] += count
+        
+        # Calculate summary statistics
+        repetition_analysis["summary"]["total_action_verb_repetitions"] = sum(repetition_analysis["action_verb_repetitions"].values())
+        repetition_analysis["summary"]["total_professional_term_repetitions"] = sum(repetition_analysis["professional_term_repetitions"].values())
+        
+        if repetition_analysis["action_verb_repetitions"]:
+            repetition_analysis["summary"]["most_repeated_action_verb"] = max(
+                repetition_analysis["action_verb_repetitions"].items(), 
+                key=lambda x: x[1]
+            )
+        
+        if repetition_analysis["professional_term_repetitions"]:
+            repetition_analysis["summary"]["most_repeated_professional_term"] = max(
+                repetition_analysis["professional_term_repetitions"].items(), 
+                key=lambda x: x[1]
+            )
+        
+        return repetition_analysis
+
+    def _analyze_achievements_debug(self, resume_text: str) -> Dict[str, Any]:
+        """
+        Analyze achievements in resume text for debugging purposes - focusing on unquantified achievements
+        
+        Args:
+            resume_text: Raw resume text to analyze
+            
+        Returns:
+            Dictionary containing achievement analysis with debug information
+        """
+        logger.info("🎯 Starting comprehensive achievement analysis for debugging (unquantified achievements)")
+        
+        import re
+        from collections import defaultdict
+        
+        # Split resume into sections
+        sections = self._split_resume_into_sections(resume_text)
+        
+        achievement_analysis = {
+            "total_sentences_analyzed": 0,
+            "sections_analyzed": len(sections),
+            "unquantified_achievements": {},
+            "debug_info": {},
+            "summary": {
+                "total_unquantified_achievements": 0,
+                "sections_with_issues": 0
+            }
+        }
+        
+        # Patterns that indicate achievements or accomplishments
+        achievement_patterns = [
+            r'\b(achieved|accomplished|delivered|completed|implemented|developed|created|built|designed|led|managed|improved|enhanced|optimized|increased|reduced|saved|transformed|established|launched)\b',
+            r'\b(responsible for|resulted in|contributed to|successfully|effectively|efficiently)\b',
+            r'\b(project|initiative|solution|system|application|feature|process|strategy)\b'
+        ]
+        
+        # Patterns that indicate quantification (if these are missing, achievement is unquantified)
+        quantification_patterns = [
+            r'\d+\.?\d*\s*%',  # percentages
+            r'\$\d+',  # money
+            r'\d+\s*(million|thousand|k|m|billion)',  # large numbers
+            r'\d+\s*(hours?|days?|weeks?|months?|years?)',  # time
+            r'\d+\s*(people|users|customers|clients|team members?)',  # people
+            r'\d+\s*(projects?|systems?|applications?)',  # counts
+            r'(increased|decreased|improved|reduced|saved|enhanced)\s+by\s+\d+',  # improvement metrics
+            r'\d+\s*(times?|fold)',  # multipliers
+        ]
+        
+        for section_name, section_text in sections.items():
+            logger.info(f"🎯 Analyzing achievements in section: {section_name}")
+            
+            # Split into sentences
+            sentences = re.split(r'[.!?]+', section_text)
+            section_unquantified = []
+            
+            for sentence in sentences:
+                sentence = sentence.strip()
+                if len(sentence) < 20:  # Skip very short sentences
+                    continue
+                    
+                achievement_analysis["total_sentences_analyzed"] += 1
+                
+                # Check if sentence describes an achievement
+                is_achievement = False
+                for pattern in achievement_patterns:
+                    if re.search(pattern, sentence, re.IGNORECASE):
+                        is_achievement = True
+                        break
+                
+                if is_achievement:
+                    # Check if achievement has quantification
+                    is_quantified = False
+                    for pattern in quantification_patterns:
+                        if re.search(pattern, sentence, re.IGNORECASE):
+                            is_quantified = True
+                            break
+                    
+                    if not is_quantified:
+                        section_unquantified.append(sentence)
+                        achievement_id = sentence[:30].lower()
+                        
+                        achievement_analysis["debug_info"][f"{section_name}_{achievement_id}"] = {
+                            "achievement": sentence,
+                            "section": section_name,
+                            "context": sentence,
+                            "issue": "lacks_quantification"
+                        }
+                        
+                        logger.info(f"🎯 DEBUG ACHIEVEMENTS: Found unquantified achievement in {section_name}: {sentence[:50]}...")
+            
+            if section_unquantified:
+                achievement_analysis["unquantified_achievements"][section_name] = section_unquantified
+                achievement_analysis["summary"]["sections_with_issues"] += 1
+            else:
+                logger.info(f"🎯 No unquantified achievements found in {section_name}")
+        
+        # Calculate summary statistics
+        total_unquantified = sum(len(achievements) for achievements in achievement_analysis["unquantified_achievements"].values())
+        achievement_analysis["summary"]["total_unquantified_achievements"] = total_unquantified
+        
+        logger.info(f"🎯 ACHIEVEMENT ANALYSIS SUMMARY:")
+        logger.info(f"🎯 Total sentences analyzed: {achievement_analysis['total_sentences_analyzed']}")
+        logger.info(f"🎯 Sections analyzed: {achievement_analysis['sections_analyzed']}")
+        logger.info(f"🎯 Total unquantified achievements found: {total_unquantified}")
+        logger.info(f"🎯 Sections with achievement issues: {achievement_analysis['summary']['sections_with_issues']}")
+        
+        for section, achievements in achievement_analysis["unquantified_achievements"].items():
+            logger.info(f"🎯 {section}: {len(achievements)} unquantified achievements")
+            for achievement in achievements:
+                logger.info(f"🎯   - Achievement: {achievement[:80]}...")
+        
+        return achievement_analysis
+
+    def _split_resume_into_sections(self, resume_text: str) -> Dict[str, str]:
+        """
+        Split resume text into sections for analysis
+        
+        Args:
+            resume_text: Raw resume text
+            
+        Returns:
+            Dictionary with section names as keys and section text as values
+        """
+        import re
+        
+        # Define section patterns
+        section_patterns = {
+            'experience': r'(?i)(experience|work\s+history|employment|professional\s+experience)',
+            'education': r'(?i)(education|academic|qualifications|degrees)',
+            'skills': r'(?i)(skills|technical\s+skills|competencies|expertise)',
+            'projects': r'(?i)(projects|portfolio|work\s+samples)',
+            'summary': r'(?i)(summary|profile|objective|about)',
+            'certifications': r'(?i)(certifications|certificates|licenses)',
+            'achievements': r'(?i)(achievements|accomplishments|awards|honors)'
+        }
+        
+        sections = {}
+        lines = resume_text.split('\n')
+        current_section = 'other'
+        current_content = []
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Check if this line starts a new section
+            section_found = False
+            for section_name, pattern in section_patterns.items():
+                if re.match(pattern, line):
+                    # Save previous section
+                    if current_content:
+                        sections[current_section] = ' '.join(current_content)
+                    
+                    # Start new section
+                    current_section = section_name
+                    current_content = [line]
+                    section_found = True
+                    break
+            
+            if not section_found:
+                current_content.append(line)
+        
+        # Save the last section
+        if current_content:
+            sections[current_section] = ' '.join(current_content)
+        
+        return sections
 
     def _validate_score(self, score: Any) -> int:
         """
