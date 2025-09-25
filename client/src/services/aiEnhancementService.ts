@@ -51,9 +51,9 @@ export const enhanceContentWithAI = async (
         type
       }),
     });
-
+    console.log("REsponsee",response)
     const result = await response.json();
-
+    console.log("Result",result)
     if (!response.ok) {
       throw new Error(result.message || result.error || 'Failed to enhance content');
     }
