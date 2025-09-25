@@ -52,48 +52,13 @@ export const enhanceContentWithAI = async (
       }),
     });
 
-    const raw = await response.json();
+    const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(raw.message || raw.error || 'Failed to enhance content');
+      throw new Error(result.message || result.error || 'Failed to enhance content');
     }
 
-    // Normalize response to match web_ui.py shape
-    // web_ui.py returns: { success, data: { enhanced_content, original_content, type, prompt_used }, timestamp }
-    // Python CLI (enhance_content.py) returns: { success, enhanced_content, original_content, type, prompt_used }
-    const normalized: EnhanceContentResponse = (() => {
-      if (raw && typeof raw === 'object') {
-        if (raw.data && typeof raw.data === 'object' && (raw.data.enhanced_content || raw.data.original_content)) {
-          return {
-            success: Boolean(raw.success !== false),
-            data: {
-              enhanced_content: raw.data.enhanced_content,
-              original_content: raw.data.original_content,
-              type: raw.data.type,
-              prompt_used: raw.data.prompt_used
-            },
-            message: raw.message,
-            error: raw.error
-          };
-        }
-        if (raw.enhanced_content || raw.original_content) {
-          return {
-            success: Boolean(raw.success !== false),
-            data: {
-              enhanced_content: raw.enhanced_content,
-              original_content: raw.original_content,
-              type: raw.type,
-              prompt_used: raw.prompt_used
-            },
-            message: raw.message,
-            error: raw.error
-          };
-        }
-      }
-      return raw as EnhanceContentResponse;
-    })();
-
-    return normalized;
+    return result;
   } catch (error) {
     console.error('AI enhancement error:', error);
     return {

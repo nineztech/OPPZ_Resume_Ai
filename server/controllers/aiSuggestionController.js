@@ -284,27 +284,23 @@ export const enhanceContentWithAI = async (req, res) => {
     console.log(`Enhancing ${type} content with AI`);
 
     // Call Python service for content enhancement
-    const pyResult = await callPythonService('enhance_content.py', [
+    const result = await callPythonService('enhance_content.py', [
       JSON.stringify({ content: content.trim(), prompt: prompt.trim(), type })
     ]);
-
-    if (!pyResult || pyResult.success === false) {
-      throw new Error((pyResult && pyResult.error) || 'Enhancement failed');
+console.log(result)
+    if (!result) {
+      throw new Error(result.error || 'Enhancement failed');
     }
-
-    // Normalize to Flask web_ui.py response shape for consistency with client
-    const data = pyResult.data && pyResult.data.enhanced_content
-      ? pyResult.data
-      : {
-          enhanced_content: pyResult.enhanced_content,
-          original_content: pyResult.original_content,
-          type: type,
-          prompt_used: pyResult.prompt_used
-        };
 
     res.status(200).json({
       success: true,
-      data
+      data: {
+        success:true,
+        enhanced_content: result.enhanced_content,
+        original_content: result.original_content,
+        type: type,
+        prompt_used: result.prompt_used
+      }
     });
 
   } catch (error) {
