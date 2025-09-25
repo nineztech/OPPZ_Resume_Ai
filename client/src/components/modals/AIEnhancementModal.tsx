@@ -16,7 +16,7 @@ import {
 interface AIEnhancementModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onApply: (enhance_content: string) => void;
+  onApply: (enhancedContent: string) => void;
   currentContent: string;
   type: 'experience' | 'project';
   title?: string;
@@ -31,7 +31,7 @@ const AIEnhancementModal: React.FC<AIEnhancementModalProps> = ({
   title
 }) => {
   const [prompt, setPrompt] = useState('');
-  const [enhance_content, setEnhancedContent] = useState('');
+  const [enhancedContent, setEnhancedContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -108,8 +108,8 @@ const AIEnhancementModal: React.FC<AIEnhancementModalProps> = ({
   };
 
   const handleApply = () => {
-    if (enhance_content) {
-      onApply(enhance_content);
+    if (enhancedContent) {
+      onApply(enhancedContent);
       toast({
         title: 'Applied',
         description: 'Enhanced content has been applied successfully!',
@@ -234,7 +234,7 @@ const AIEnhancementModal: React.FC<AIEnhancementModalProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleCopyToClipboard(enhance_content)}
+                      onClick={() => handleCopyToClipboard(enhancedContent)}
                       className="h-6 px-2"
                     >
                       <Copy className="w-3 h-3" />
@@ -242,7 +242,7 @@ const AIEnhancementModal: React.FC<AIEnhancementModalProps> = ({
                   </div>
                   <div className="p-3 bg-green-50 rounded-lg border h-64 overflow-auto">
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                      {formatContentForDisplay(enhance_content)}
+                      {formatContentForDisplay(enhancedContent)}
                     </p>
                   </div>
                 </div>

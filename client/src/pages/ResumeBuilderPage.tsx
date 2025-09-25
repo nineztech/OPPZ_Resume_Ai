@@ -2071,13 +2071,13 @@ const ResumeBuilderPage = () => {
     });
   };
 
-  const handleAIEnhancementApply = (enhance_content: string) => {
+  const handleAIEnhancementApply = (enhancedContent: string) => {
     const { type, itemId } = aiEnhancementModal;
     
     if (type === 'experience') {
-      updateExperience(itemId, 'description', enhance_content);
+      updateExperience(itemId, 'description', enhancedContent);
     } else if (type === 'project') {
-      updateProject(itemId, 'description', enhance_content);
+      updateProject(itemId, 'description', enhancedContent);
     }
     
     // Add highlighting for the enhanced item
