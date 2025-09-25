@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Loader2, Sparkles, Copy, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { API_URL } from '@/lib/apiConfig';
+import { aiEnhancementService } from '@/services/aiEnhancementService';
 
 interface ContentEnhancementModalProps {
   isOpen: boolean;
@@ -57,39 +57,24 @@ export const ContentEnhancementModal: React.FC<ContentEnhancementModalProps> = (
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/ai/enhance-content`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content_type: contentType,
-          content_data: {
-            id: contentData?.id || 'temp',
-            description: contentData?.description || ''
-          },
-          enhancement_prompt: enhancementPrompt.trim(),
-        }),
-      });
+      const result = await aiEnhancementService.enhanceContentWithAI(
+        contentData?.description || '',
+        enhancementPrompt.trim(),
+        contentType
+      );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (result.success) {
+      if (result.success && result.data) {
         // Store results and show results modal
-        setOriginalContent(contentData?.description || '');
-        setEnhancedContent(String(result.data.enhanced_content));
-        setPromptUsed(enhancementPrompt.trim());
+        setOriginalContent(result.data.original_content);
+        setEnhancedContent(result.data.enhanced_content);
+        setPromptUsed(result.data.prompt_used);
         setShowResults(true);
         toast({
           title: 'Content Enhanced Successfully',
           description: 'Review the enhanced content and apply if satisfied.',
         });
       } else {
-        throw new Error(result.message || 'Failed to enhance content');
+        throw new Error(result.message || result.error || 'Failed to enhance content');
       }
     } catch (error) {
       console.error('Enhancement error:', error);
@@ -155,7 +140,7 @@ export const ContentEnhancementModal: React.FC<ContentEnhancementModalProps> = (
     'Include relevant technologies and tools',
     'Highlight problem-solving abilities',
     'Make it more concise and impactful',
-    'Make this description into 5 points'
+    'Make this description into 6 points'
   ];
 
   const handleSuggestionClick = (suggestion: string) => {

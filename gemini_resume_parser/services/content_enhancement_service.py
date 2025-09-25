@@ -5,6 +5,7 @@ Enhances specific content based on user prompts using AI
 import json
 import logging
 import datetime
+import sys
 from typing import Dict, Any, Optional
 from openai import OpenAI
 import os
@@ -55,6 +56,8 @@ class ContentEnhancementService:
         """
         try:
             logger.info(f"Enhancing {content_type} description")
+            logger.info(f"Original description length: {len(description)} characters")
+            logger.info(f"Enhancement prompt: {enhancement_prompt}")
             
             # Create enhancement prompt based on content type
             if content_type == "experience":
@@ -119,6 +122,7 @@ Please enhance the description based on the user's request while following the g
             }
             
             logger.info("Successfully enhanced description")
+            logger.info(f"Enhanced description length: {len(enhanced_description)} characters")
             return result
             
         except Exception as e:

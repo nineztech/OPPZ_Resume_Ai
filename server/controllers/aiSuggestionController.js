@@ -44,6 +44,8 @@ const callPythonService = (scriptName, args = []) => {
 
     python.stderr.on('data', (data) => {
       stderr += data.toString();
+      // Log Python script logs to console
+      console.log('Python logs:', data.toString().trim());
     });
 
     python.on('close', (code) => {
@@ -55,6 +57,7 @@ const callPythonService = (scriptName, args = []) => {
           reject(new Error(`Failed to parse Python output: ${error.message}`));
         }
       } else {
+        console.error('Python script stderr:', stderr);
         reject(new Error(`Python script failed with code ${code}: ${stderr}`));
       }
     });
