@@ -4,9 +4,9 @@ import {
   getAISuggestions,
   parseResume,
   compareResumeWithJD,
+  enhanceContentWithAI,
   uploadMiddleware
 } from "../controllers/aiSuggestionController.js";
-import { enhanceContent } from "../controllers/aiEnhancementController.js";
 
 const router = express.Router();
 
@@ -22,7 +22,7 @@ router.post("/parse-resume", uploadMiddleware, parseResume);
 // Compare resume with custom job description
 router.post("/compare-resume", compareResumeWithJD);
 
-// Enhance content with AI
-router.post("/enhance-content", enhanceContent);
+// Enhance specific content with AI
+router.post("/enhance-content", enhanceContentWithAI);
 
 export default router;

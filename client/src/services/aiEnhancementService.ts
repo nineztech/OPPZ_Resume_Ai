@@ -1,83 +1,130 @@
 import { API_URL } from '@/lib/apiConfig';
 
-export interface EnhancementRequest {
+export interface EnhanceContentRequest {
   content: string;
   prompt: string;
   type: 'experience' | 'project';
-  title: string;
 }
 
-export interface EnhancementResponse {
+export interface EnhanceContentResponse {
   success: boolean;
-  enhanced_content?: string;
-  original_content?: string;
-  enhancement_prompt?: string;
+  data?: {
+    enhanced_content: string;
+    original_content: string;
+    type: string;
+    prompt_used: string;
+  };
+  message?: string;
   error?: string;
 }
 
-class AIEnhancementService {
-  private baseUrl: string;
-
-  constructor() {
-    // Use Node.js server URL
-    this.baseUrl = API_URL;
-  }
-
-  /**
-   * Enhance content using AI based on user prompt
-   */
-  async enhanceContent(request: EnhancementRequest): Promise<EnhancementResponse> {
-    try {
-      const response = await fetch(`${this.baseUrl}/ai/enhance-content`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const data: EnhancementResponse = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.error || 'Enhancement failed');
-      }
-
-      return data;
-    } catch (error) {
-      console.error('AI Enhancement Service Error:', error);
-      throw error;
+/**
+ * Enhance content using AI based on user prompt
+ */
+export const enhanceContentWithAI = async (
+  content: string,
+  prompt: string,
+  type: 'experience' | 'project'
+): Promise<EnhanceContentResponse> => {
+  try {
+    // Validate input
+    if (!content || !content.trim()) {
+      throw new Error('Content cannot be empty');
     }
-  }
 
-  /**
-   * Test the connection to the AI enhancement service
-   */
-  async testConnection(): Promise<boolean> {
-    try {
-      // Test Node.js server connection
-      const response = await fetch(`${this.baseUrl}/health`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        return false;
-      }
-
-      const data = await response.json();
-      return data.status === 'healthy';
-    } catch (error) {
-      console.error('Connection test failed:', error);
-      return false;
+    if (!prompt || !prompt.trim()) {
+      throw new Error('Enhancement prompt cannot be empty');
     }
-  }
-}
 
-export const aiEnhancementService = new AIEnhancementService();
+    if (!['experience', 'project'].includes(type)) {
+      throw new Error('Type must be either "experience" or "project"');
+    }
+
+    const response = await fetch(`${API_URL}/ai/enhance-content`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content: content.trim(),
+        prompt: prompt.trim(),
+        type
+      }),
+    });
+    console.log("REsponsee",response)
+    const result = await response.json();
+    console.log("Result",result)
+    if (!response.ok) {
+      throw new Error(result.message || result.error || 'Failed to enhance content');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('AI enhancement error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      message: 'Failed to enhance content with AI'
+    };
+  }
+};
+
+/**
+ * Get enhancement suggestions for common prompts
+ */
+export const getEnhancementSuggestions = (type: 'experience' | 'project'): string[] => {
+  if (type === 'experience') {
+    return [
+      'Add more metrics and quantifiable achievements',
+      'Make it more action-oriented with strong verbs',
+      'Emphasize leadership and team collaboration',
+      'Focus on business impact and results',
+      'Include relevant technologies and tools',
+      'Highlight problem-solving abilities',
+      'Make it more concise and impactful'
+    ];
+  } else {
+    return [
+      'Add more technical details and technologies used',
+      'Emphasize problem-solving and innovation',
+      'Include project outcomes and impact',
+      'Highlight technical challenges overcome',
+      'Add metrics about performance or scale',
+      'Focus on your specific contributions',
+      'Make it more technical and detailed'
+    ];
+  }
+};
+
+/**
+ * Validate enhancement prompt
+ */
+export const validateEnhancementPrompt = (prompt: string): { isValid: boolean; error?: string } => {
+  if (!prompt || !prompt.trim()) {
+    return { isValid: false, error: 'Prompt cannot be empty' };
+  }
+
+  if (prompt.trim().length < 5) {
+    return { isValid: false, error: 'Prompt must be at least 5 characters long' };
+  }
+
+  if (prompt.trim().length > 500) {
+    return { isValid: false, error: 'Prompt must be less than 500 characters' };
+  }
+
+  return { isValid: true };
+};
+
+/**
+ * Format content for display
+ */
+export const formatContentForDisplay = (content: string): string => {
+  if (!content) return '';
+  
+  // Clean up common formatting issues
+  return content
+    .trim()
+    .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
+    .replace(/^\s+/gm, '') // Remove leading whitespace from lines
+    .replace(/\s+$/gm, ''); // Remove trailing whitespace from lines
+};

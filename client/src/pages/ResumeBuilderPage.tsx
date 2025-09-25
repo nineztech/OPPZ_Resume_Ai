@@ -44,7 +44,6 @@ import EntryLayoutPanel from '@/components/customization/EntryLayoutPanel';
 import NameCustomizationPanel from '@/components/customization/NameCustomizationPanel';
 import ProfessionalTitleCustomizationPanel from '@/components/customization/ProfessionalTitleCustomizationPanel';
 import { generatePDF, downloadPDF } from '@/services/pdfService';
-import { aiEnhancementService } from '@/services/aiEnhancementService';
 
 // Helper function to extract tech stack from project description
 const extractTechStackFromDescription = (description: string): string => {
@@ -303,13 +302,13 @@ const ResumeBuilderPage = () => {
   const [templateScrollIndex, setTemplateScrollIndex] = useState(0);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isCustomSectionModalOpen, setIsCustomSectionModalOpen] = useState(false);
-  const [isAIEnhancementModalOpen, setIsAIEnhancementModalOpen] = useState(false);
-  const [aiEnhancementData, setAiEnhancementData] = useState<{
-    id: string;
-    content: string;
-    title: string;
-    type: 'experience' | 'project';
-  } | null>(null);
+  const [aiEnhancementModal, setAiEnhancementModal] = useState({
+    isOpen: false,
+    type: 'experience' as 'experience' | 'project',
+    itemId: '',
+    currentContent: '',
+    title: ''
+  });
   const resumeRef = useRef<HTMLDivElement>(null);
   const [appliedSuggestions, setAppliedSuggestions] = useState<any>(null);
   const [highlightedChanges, setHighlightedChanges] = useState<Set<string>>(new Set());
@@ -2043,6 +2042,49 @@ const ResumeBuilderPage = () => {
     });
   };
 
+  // AI Enhancement Functions
+  const openAIEnhancementModal = (type: 'experience' | 'project', itemId: string, currentContent: string, title: string) => {
+    setAiEnhancementModal({
+      isOpen: true,
+      type,
+      itemId,
+      currentContent,
+      title
+    });
+  };
+
+  const handleExperienceEnhance = (id: string, content: string, title: string) => {
+    openAIEnhancementModal('experience', id, content, title);
+  };
+
+  const handleProjectEnhance = (id: string, content: string, title: string) => {
+    openAIEnhancementModal('project', id, content, title);
+  };
+
+  const closeAIEnhancementModal = () => {
+    setAiEnhancementModal({
+      isOpen: false,
+      type: 'experience',
+      itemId: '',
+      currentContent: '',
+      title: ''
+    });
+  };
+
+  const handleAIEnhancementApply = (enhance_content: string) => {
+    const { type, itemId } = aiEnhancementModal;
+    
+    if (type === 'experience') {
+      updateExperience(itemId, 'description', enhance_content);
+    } else if (type === 'project') {
+      updateProject(itemId, 'description', enhance_content);
+    }
+    
+    // Add highlighting for the enhanced item
+    setHighlightedChanges(prev => new Set([...prev, `${type}-${itemId}-ai-enhanced`]));
+    
+    closeAIEnhancementModal();
+  };
 
   const toggleSectionVisibility = (sectionId: string) => {
     setVisibleSections(prev => {
@@ -2069,53 +2111,6 @@ const ResumeBuilderPage = () => {
       setTemplateScrollIndex(templateScrollIndex - 1);
     } else if (direction === 'right' && templateScrollIndex < templateData.length - 3) {
       setTemplateScrollIndex(templateScrollIndex + 1);
-    }
-  };
-
-  // AI Enhancement handlers
-  const handleAIEnhancement = (id: string, content: string, title: string, type: 'experience' | 'project') => {
-    setAiEnhancementData({ id, content, title, type });
-    setIsAIEnhancementModalOpen(true);
-  };
-
-  const handleAIEnhancementClose = () => {
-    setIsAIEnhancementModalOpen(false);
-    setAiEnhancementData(null);
-  };
-
-  const handleAIEnhancementSubmit = async (prompt: string) => {
-    if (!aiEnhancementData) return;
-
-    try {
-      const response = await aiEnhancementService.enhanceContent({
-        content: aiEnhancementData.content,
-        prompt,
-        type: aiEnhancementData.type,
-        title: aiEnhancementData.title
-      });
-
-      if (response.success && response.enhanced_content) {
-        // Update the content in the resume data
-        if (aiEnhancementData.type === 'experience') {
-          updateExperience(aiEnhancementData.id, 'description', response.enhanced_content);
-        } else if (aiEnhancementData.type === 'project') {
-          updateProject(aiEnhancementData.id, 'description', response.enhanced_content);
-        }
-
-        toast({
-          title: "Content Enhanced Successfully",
-          description: "Your content has been enhanced with AI.",
-        });
-      } else {
-        throw new Error(response.error || 'Enhancement failed');
-      }
-    } catch (error) {
-      console.error('AI Enhancement Error:', error);
-      toast({
-        title: "Enhancement Failed",
-        description: error instanceof Error ? error.message : "Failed to enhance content. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -2711,7 +2706,7 @@ const ResumeBuilderPage = () => {
                                 onAdd={addExperience}
                                 onUpdate={updateExperience}
                                 onRemove={removeExperience}
-                                onEnhance={(id, content, title) => handleAIEnhancement(id, content, title, 'experience')}
+                                onEnhance={handleExperienceEnhance}
                               />
                             )}
                             {section.id === 'projects' && (
@@ -2720,7 +2715,7 @@ const ResumeBuilderPage = () => {
                                 onAdd={addProject}
                                 onUpdate={updateProject}
                                 onRemove={removeProject}
-                                onEnhance={(id, content, title) => handleAIEnhancement(id, content, title, 'project')}
+                                onEnhance={handleProjectEnhance}
                               />
                             )}
 
@@ -3007,15 +3002,15 @@ const ResumeBuilderPage = () => {
         onAdd={addCustomSection} 
       />
 
+      {/* AI Enhancement Modal */}
       <AIEnhancementModal
-        isOpen={isAIEnhancementModalOpen}
-        onClose={handleAIEnhancementClose}
-        onEnhance={handleAIEnhancementSubmit}
-        currentContent={aiEnhancementData?.content || ''}
-        title={aiEnhancementData?.title || ''}
-        type={aiEnhancementData?.type || 'experience'}
+        isOpen={aiEnhancementModal.isOpen}
+        onClose={closeAIEnhancementModal}
+        onApply={handleAIEnhancementApply}
+        currentContent={aiEnhancementModal.currentContent}
+        type={aiEnhancementModal.type}
+        title={aiEnhancementModal.title}
       />
-
     </>
   );
 }
