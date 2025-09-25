@@ -897,7 +897,7 @@ HTML_TEMPLATE = """
             document.getElementById('contentEnhancementBtn').disabled = true;
 
             try {
-                const response = await fetch('/enhance-content', {
+                const response = await fetch('/ai/enhance-content', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
