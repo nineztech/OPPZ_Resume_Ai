@@ -85,7 +85,7 @@ const AIEnhancementModal: React.FC<AIEnhancementModalProps> = ({
       const result = await enhanceContentWithAI(currentContent, prompt, type);
 
       if (result.success && result.data) {
-        setEnhancedContent(result.data.enhancedContent);
+        setEnhancedContent(result.data.enhanced_content);
         setShowPreview(true);
         toast({
           title: 'Success',

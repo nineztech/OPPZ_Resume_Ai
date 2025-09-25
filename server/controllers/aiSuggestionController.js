@@ -295,11 +295,11 @@ export const enhanceContentWithAI = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        enhancedContent: result.enhanced_content,
-        originalContent: result.original_content,
+        enhanced_content: result.enhanced_content,
+        original_content: result.original_content,
         enhancedAt: new Date().toISOString(),
         type: type,
-        promptUsed: result.prompt_used
+        prompt_used: result.prompt_used
       }
     });
 
