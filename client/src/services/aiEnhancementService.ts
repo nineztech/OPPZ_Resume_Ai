@@ -11,7 +11,6 @@ export interface EnhanceContentResponse {
   data?: {
     enhanced_content: string;
     original_content: string;
-    enhancedAt: string;
     type: string;
     prompt_used: string;
   };

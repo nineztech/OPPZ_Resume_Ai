@@ -297,7 +297,6 @@ export const enhanceContentWithAI = async (req, res) => {
       data: {
         enhanced_content: result.enhanced_content,
         original_content: result.original_content,
-        enhancedAt: new Date().toISOString(),
         type: type,
         prompt_used: result.prompt_used
       }
