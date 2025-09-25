@@ -263,43 +263,45 @@ export const compareResumeWithJD = async (req, res) => {
 // Enhance specific content with AI
 export const enhanceContentWithAI = async (req, res) => {
   try {
-    const { content, prompt, type } = req.body;
+    const { content_type, content_data, enhancement_prompt } = req.body;
 
     // Validate input
-    if (!content || !prompt || !type) {
+    if (!content_type || !content_data || !enhancement_prompt) {
       return res.status(400).json({
         success: false,
-        message: 'Content, prompt, and type are required'
+        message: 'content_type, content_data, and enhancement_prompt are required'
       });
     }
 
-    // Validate type
-    if (!['experience', 'project'].includes(type)) {
+    if (!['experience', 'project'].includes(content_type)) {
       return res.status(400).json({
         success: false,
-        message: 'Type must be either "experience" or "project"'
+        message: 'content_type must be either "experience" or "project"'
       });
     }
 
-    console.log(`Enhancing ${type} content with AI`);
+    console.log(`Enhancing ${content_type} content with AI`);
 
     // Call Python service for content enhancement
     const result = await callPythonService('enhance_content.py', [
-      JSON.stringify({ content: content.trim(), prompt: prompt.trim(), type })
+      JSON.stringify({ content_type, content_data, enhancement_prompt })
     ]);
-console.log(result)
-    if (!result) {
-      throw new Error(result.error || 'Enhancement failed');
-    }
+
+    console.log('Python script result:', JSON.stringify(result, null, 2));
+    console.log('Enhanced content:', result.data.enhanced_content);
+    console.log('Enhanced content type:', typeof result.data.enhanced_content);
+
+    // Ensure we're returning a string, not an object
+    const enhancedContentString = String(result.data.enhanced_content);
+    console.log('Enhanced content as string:', enhancedContentString);
 
     res.status(200).json({
       success: true,
       data: {
-        success:true,
-        enhanced_content: result.enhanced_content,
-        original_content: result.original_content,
-        type: type,
-        prompt_used: result.prompt_used
+        enhanced_content: enhancedContentString,
+        content_type,
+        enhancedAt: new Date().toISOString(),
+        enhancement_prompt
       }
     });
 
@@ -307,7 +309,7 @@ console.log(result)
     console.error('Content enhancement error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to enhance content with AI',
+      message: 'Failed to enhance content',
       error: error.message
     });
   }

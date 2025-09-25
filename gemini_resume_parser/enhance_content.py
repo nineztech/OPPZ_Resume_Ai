@@ -1,131 +1,88 @@
 #!/usr/bin/env python3
 """
-AI Content Enhancement Service
-Enhances specific resume content based on user prompts
+Content Enhancement Script
+Enhances experience or project descriptions based on user prompts
 """
 
-import json
 import sys
-import logging
-from services.ai_suggestion_service_optimized import AISuggestionServiceOptimized
+import json
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
+# Load environment variables from .env file
+load_dotenv()
 
-def enhance_content(content, prompt, content_type):
-    """
-    Enhance resume content using AI based on user prompt
-    
-    Args:
-        content: The original content to enhance
-        prompt: User's enhancement prompt
-        content_type: Type of content ('experience' or 'project')
-        
-    Returns:
-        Enhanced content
-    """
-    try:
-        # Initialize AI service
-        ai_service = AISuggestionServiceOptimized()
-        
-        # Create enhancement prompt based on content type
-        if content_type == 'experience':
-            enhancement_prompt = f"""
-You are a professional resume writer. Please enhance the following work experience description based on the user's request.
+# Add the services directory to the Python path
+current_dir = Path(__file__).parent
+services_dir = current_dir / 'services'
+sys.path.insert(0, str(services_dir))
 
-Original work experience description:
-{content}
-
-User's enhancement request:
-{prompt}
-
-Please provide an improved version that:
-1. Maintains the original meaning and context
-2. Incorporates the user's specific requests
-3. Uses professional, action-oriented language with strong action verbs
-4. Includes relevant keywords and quantifiable metrics where appropriate
-5. Is concise but impactful
-6. Follows best practices for resume writing
-7. Highlights achievements and impact
-8. **CRITICAL REQUIREMENT**: The enhanced description MUST have exactly 6-7 bullet points. Each point should be a separate sentence ending with a newline character (\\n). If the original has fewer than 6 points, add relevant points to reach 6-7. If it has more than 7 points, consolidate and make it more precise to reach 6-7 points.
-
-Return only the enhanced description without any additional commentary or formatting markers. Each bullet point should be on a separate line ending with \\n.
-"""
-        else:  # project
-            enhancement_prompt = f"""
-You are a professional resume writer. Please enhance the following project description based on the user's request.
-
-Original project description:
-{content}
-
-User's enhancement request:
-{prompt}
-
-Please provide an improved version that:
-1. Maintains the original meaning and context
-2. Incorporates the user's specific requests
-3. Uses professional, technical language appropriate for projects
-4. Includes relevant technologies, methodologies, and outcomes
-5. Highlights technical skills and problem-solving abilities
-6. Is concise but comprehensive
-7. Demonstrates impact and results
-8. **CRITICAL REQUIREMENT**: The enhanced description MUST have exactly 6-7 bullet points. Each point should be a separate sentence ending with a newline character (\\n). If the original has fewer than 6 points, add relevant points to reach 6-7. If it has more than 7 points, consolidate and make it more precise to reach 6-7 points.
-
-Return only the enhanced description without any additional commentary or formatting markers. Each bullet point should be on a separate line ending with \\n.
-"""
-        
-        # Get enhanced content using the retry mechanism
-        enhanced_content = ai_service._generate_with_retry(enhancement_prompt, max_tokens=800)
-        
-        return enhanced_content.strip()
-        
-    except Exception as e:
-        logger.error(f"Failed to enhance content: {str(e)}")
-        raise Exception(f"Failed to enhance content: {str(e)}")
+from content_enhancement_service import ContentEnhancementService
 
 def main():
+    """Main function to enhance content based on command line arguments"""
     try:
+        # Get the JSON data from command line arguments
         if len(sys.argv) < 2:
-            error_result = {"success": False, "error": "Missing arguments"}
-            print(json.dumps(error_result))
+            print(json.dumps({
+                "success": False,
+                "error": "No data provided"
+            }))
             sys.exit(1)
         
-        # Parse input arguments
+        # Parse the input data
         input_data = json.loads(sys.argv[1])
-        content = input_data.get('content', '').strip()
-        prompt = input_data.get('prompt', '').strip()
-        content_type = input_data.get('type', 'experience')
         
-        # Validate input
-        if not content:
-            raise ValueError("Content cannot be empty")
+        # Validate required fields
+        required_fields = ['content_type', 'content_data', 'enhancement_prompt']
+        for field in required_fields:
+            if field not in input_data:
+                print(json.dumps({
+                    "success": False,
+                    "error": f"Missing required field: {field}"
+                }))
+                sys.exit(1)
         
-        if not prompt:
-            raise ValueError("Enhancement prompt cannot be empty")
+        content_type = input_data['content_type']
+        content_data = input_data['content_data']
+        enhancement_prompt = input_data['enhancement_prompt']
         
+        # Validate content type
         if content_type not in ['experience', 'project']:
-            raise ValueError("Content type must be 'experience' or 'project'")
+            print(json.dumps({
+                "success": False,
+                "error": "content_type must be 'experience' or 'project'"
+            }))
+            sys.exit(1)
         
-        # Enhance content
-        enhanced_content = enhance_content(content, prompt, content_type)
+        # Extract description from content_data
+        description = content_data.get('description', '')
+        if not description.strip():
+            print(json.dumps({
+                "success": False,
+                "error": "Description is required in content_data"
+            }))
+            sys.exit(1)
         
-        # Return result
-        result = {
+        # Initialize enhancement service
+        enhancement_service = ContentEnhancementService()
+        
+        # Use the simplified enhance_description method
+        enhanced_result = enhancement_service.enhance_description(description, enhancement_prompt, content_type)
+        
+        # Return the enhanced content
+        print(json.dumps({
             "success": True,
-            "enhanced_content": enhanced_content,
-            "original_content": content,
-            "type": content_type,
-            "prompt_used": prompt
-        }
-        
-        print(json.dumps(result))
+            "data": enhanced_result,
+            "content_type": content_type
+        }))
         
     except Exception as e:
-        error_result = {
+        print(json.dumps({
             "success": False,
-            "error": str(e),
-            "type": "enhancement_error"
-        }
-        print(json.dumps(error_result))
+            "error": str(e)
+        }))
         sys.exit(1)
 
 if __name__ == "__main__":
