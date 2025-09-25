@@ -1,15 +1,10 @@
-import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Sparkles, Copy, RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Sparkles, ArrowRight, Copy, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { aiEnhancementService } from '@/services/aiEnhancementService';
 
@@ -30,13 +25,52 @@ export const ContentEnhancementModal: React.FC<ContentEnhancementModalProps> = (
 }) => {
   const [enhancementPrompt, setEnhancementPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [enhancedContent, setEnhancedContent] = useState('');
   const [originalContent, setOriginalContent] = useState('');
   const [promptUsed, setPromptUsed] = useState('');
+  const [promptError, setPromptError] = useState('');
   const { toast } = useToast();
 
+  // Reset state when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setEnhancementPrompt('');
+      setEnhancedContent('');
+      setShowResults(false);
+      setPromptError('');
+      setIsGenerating(false);
+    }
+  }, [isOpen]);
+
+  // Validate prompt in real-time
+  useEffect(() => {
+    if (enhancementPrompt) {
+      // Simple validation - can be enhanced based on requirements
+      if (enhancementPrompt.length < 1) {
+        setPromptError('Prompt should be at least 1 character long');
+      } else if (enhancementPrompt.length > 500) {
+        setPromptError('Prompt should not exceed 500 characters');
+      } else {
+        setPromptError('');
+      }
+    } else {
+      setPromptError('');
+    }
+  }, [enhancementPrompt]);
+
   const handleEnhance = async () => {
+    // Validate prompt
+    if (enhancementPrompt.length < 1) {
+      setPromptError('Prompt should be at least 1 character long');
+      return;
+    }
+    if (enhancementPrompt.length > 500) {
+      setPromptError('Prompt should not exceed 500 characters');
+      return;
+    }
+
     if (!contentData) {
       toast({
         title: 'No Content Available',
@@ -55,6 +89,7 @@ export const ContentEnhancementModal: React.FC<ContentEnhancementModalProps> = (
       return;
     }
 
+    setIsGenerating(true);
     setIsLoading(true);
     try {
       const result = await aiEnhancementService.enhanceContentWithAI(
@@ -85,12 +120,19 @@ export const ContentEnhancementModal: React.FC<ContentEnhancementModalProps> = (
       });
     } finally {
       setIsLoading(false);
+      setIsGenerating(false);
     }
   };
 
   const handleApplyEnhanced = () => {
-    onEnhance(enhancedContent);
-    handleClose();
+    if (enhancedContent) {
+      onEnhance(enhancedContent);
+      toast({
+        title: 'Applied',
+        description: 'Enhanced content has been applied successfully!',
+      });
+      handleClose();
+    }
   };
 
   const handleTryDifferentPrompt = () => {
@@ -110,10 +152,17 @@ export const ContentEnhancementModal: React.FC<ContentEnhancementModalProps> = (
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: 'Copied to clipboard',
-      description: 'Content has been copied to your clipboard.',
+    navigator.clipboard.writeText(text).then(() => {
+      toast({
+        title: 'Copied',
+        description: 'Content copied to clipboard!',
+      });
+    }).catch(() => {
+      toast({
+        title: 'Error',
+        description: 'Failed to copy content to clipboard.',
+        variant: 'destructive',
+      });
     });
   };
 
@@ -147,172 +196,182 @@ export const ContentEnhancementModal: React.FC<ContentEnhancementModalProps> = (
     setEnhancementPrompt(suggestion);
   };
 
+  const formatContentForDisplay = (content: string) => {
+    return content || 'No content available';
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-hidden">
-        <DialogHeader className="pb-4">
-          <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Sparkles className="h-5 w-5 text-blue-600" />
-            Enhance {contentType === 'experience' ? 'Experience' : 'Project'} with AI - {getContentTitle()}
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-blue-600" />
+            Enhance {contentType === 'experience' ? 'Experience' : 'Project'} with AI
+            {getContentTitle() && <span className="text-sm text-gray-500">- {getContentTitle()}</span>}
           </DialogTitle>
         </DialogHeader>
 
-        {!showResults ? (
-          // Input Modal
-          <div className="space-y-6 overflow-y-auto">
-            {/* Current Content Section */}
-            <div className="space-y-3">
-              <Label className="text-base font-semibold text-gray-900">
-                Current Content
-              </Label>
-              <div className="bg-gray-50 border rounded-lg p-4 max-h-40 overflow-y-auto">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                  {getCurrentDescription()}
-                </p>
-              </div>
-            </div>
-
-            {/* Enhancement Prompt Section */}
-            <div className="space-y-3">
-              <Label className="text-base font-semibold text-gray-900">
-                How would you like to enhance this content?
-              </Label>
-              <Textarea
-                placeholder="Describe how you want to improve this experience..."
-                value={enhancementPrompt}
-                onChange={(e) => setEnhancementPrompt(e.target.value)}
-                rows={4}
-                className="resize-none"
-                maxLength={500}
-              />
-              <div className="flex justify-between items-center text-xs text-gray-500">
-                <span>{enhancementPrompt.length}/500 characters</span>
-              </div>
-            </div>
-
-            {/* Quick Suggestions Section */}
-            <div className="space-y-3">
-              <Label className="text-base font-semibold text-gray-900">
-                Quick Suggestions
-              </Label>
-              <div className="flex flex-wrap gap-2">
-                {quickSuggestions.map((suggestion, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-full transition-colors"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : (
-          // Results Modal
-          <div className="space-y-6 overflow-y-auto">
-            {/* Comparison Section */}
-            <div className="grid grid-cols-2 gap-6">
-              {/* Original Content */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold text-gray-900">Original</Label>
-                  <button
-                    onClick={() => copyToClipboard(originalContent)}
-                    className="p-1 hover:bg-gray-100 rounded transition-colors"
-                  >
-                    <Copy className="h-4 w-4 text-gray-500" />
-                  </button>
-                </div>
-                <div className="bg-gray-50 border rounded-lg p-4 max-h-60 overflow-y-auto">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {originalContent}
-                  </p>
-                </div>
-              </div>
-
-              {/* Enhanced Content */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold text-green-600">Enhanced</Label>
-                  <button
-                    onClick={() => copyToClipboard(enhancedContent)}
-                    className="p-1 hover:bg-gray-100 rounded transition-colors"
-                  >
-                    <Copy className="h-4 w-4 text-gray-500" />
-                  </button>
-                </div>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-h-60 overflow-y-auto">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {enhancedContent}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Enhancement Prompt Used */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">Enhancement Prompt Used</Label>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">{promptUsed}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <DialogFooter className="pt-4 border-t">
+        <div className="flex-1 overflow-auto space-y-6">
           {!showResults ? (
             <>
+              {/* Current Content Preview */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Current Content</Label>
+                <div className="mt-2 p-3 bg-gray-50 rounded-lg border max-h-32 overflow-auto">
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                    {getCurrentDescription()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Enhancement Prompt */}
+              <div>
+                <Label htmlFor="prompt" className="text-sm font-medium text-gray-700">
+                  How would you like to enhance this content?
+                </Label>
+                <Textarea
+                  id="prompt"
+                  value={enhancementPrompt}
+                  onChange={(e) => setEnhancementPrompt(e.target.value)}
+                  placeholder={`Describe how you want to improve this ${contentType}...`}
+                  className={`mt-2 min-h-[100px] ${promptError ? 'border-red-500' : ''}`}
+                  disabled={isLoading}
+                />
+                {promptError && (
+                  <p className="mt-1 text-sm text-red-600">{promptError}</p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  {enhancementPrompt.length}/500 characters
+                </p>
+              </div>
+
+              {/* Quick Suggestions */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Quick Suggestions</Label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {quickSuggestions.map((suggestion, index) => (
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                      onClick={() => handleSuggestionClick(suggestion)}
+                    >
+                      {suggestion}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Preview Mode */
+            <div className="space-y-4">
+              {/* Comparison View */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-medium text-gray-700">Original</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(originalContent)}
+                      className="h-6 px-2"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg border h-64 overflow-auto">
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                      {formatContentForDisplay(originalContent)}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-medium text-green-700">Enhanced</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(enhancedContent)}
+                      className="h-6 px-2"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <div className="p-3 bg-green-50 rounded-lg border h-64 overflow-auto">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                      {formatContentForDisplay(enhancedContent)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Enhancement Prompt Used */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Enhancement Prompt Used</Label>
+                <div className="mt-2 p-2 bg-blue-50 rounded border-l-4 border-blue-500">
+                  <p className="text-sm text-blue-700">{promptUsed}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex items-center gap-2">
+            {showResults && (
               <Button
                 variant="outline"
-                onClick={handleClose}
+                onClick={handleTryDifferentPrompt}
                 disabled={isLoading}
+                className="flex items-center gap-2"
               >
-                Cancel
+                <RefreshCw className="w-4 h-4" />
+                Try Different Prompt
               </Button>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            
+            {!showResults ? (
               <Button
                 onClick={handleEnhance}
-                disabled={isLoading || !enhancementPrompt.trim() || !contentData}
-                className="bg-blue-600 hover:bg-blue-700"
+                disabled={isLoading || !enhancementPrompt.trim() || !!promptError || !contentData}
+                className="flex items-center gap-2"
               >
-                {isLoading ? (
+                {isGenerating ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Enhancing...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="mr-2 h-4 w-4" />
+                    <Sparkles className="w-4 h-4" />
                     Enhance with AI
                   </>
                 )}
               </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                onClick={handleTryDifferentPrompt}
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Try Different Prompt
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleClose}
-              >
-                Cancel
-              </Button>
+            ) : (
               <Button
                 onClick={handleApplyEnhanced}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                disabled={isLoading}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
               >
-                → Apply Enhanced Content
+                <ArrowRight className="w-4 h-4" />
+                Apply Enhanced Content
               </Button>
-            </>
-          )}
-        </DialogFooter>
+            )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
