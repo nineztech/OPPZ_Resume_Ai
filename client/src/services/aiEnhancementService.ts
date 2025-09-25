@@ -9,11 +9,11 @@ export interface EnhanceContentRequest {
 export interface EnhanceContentResponse {
   success: boolean;
   data?: {
-    enhanced_content: string;
-    original_content: string;
-    enhanced_at: string;
+    enhancedContent: string;
+    originalContent: string;
+    enhancedAt: string;
     type: string;
-    prompt_used: string;
+    promptUsed: string;
   };
   message?: string;
   error?: string;
