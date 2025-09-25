@@ -34,7 +34,6 @@ import { templates as templateData, getTemplateById } from '@/data/templates';
 import type { Template } from '@/data/templates';
 import ResumePreviewModal from '@/components/modals/ResumePreviewModal';
 import AddCustomSectionModal from '@/components/modals/AddCustomSectionModal';
-import AIEnhancementModal from '@/components/modals/AIEnhancementModal';
 import ColorCustomizationPanel from '@/components/customization/ColorCustomizationPanel';
 import TypographyCustomizationPanel from '@/components/customization/TypographyCustomizationPanel';
 import LayoutCustomizationPanel from '@/components/customization/LayoutCustomizationPanel';
@@ -302,13 +301,6 @@ const ResumeBuilderPage = () => {
   const [templateScrollIndex, setTemplateScrollIndex] = useState(0);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isCustomSectionModalOpen, setIsCustomSectionModalOpen] = useState(false);
-  const [aiEnhancementModal, setAiEnhancementModal] = useState({
-    isOpen: false,
-    type: 'experience' as 'experience' | 'project',
-    itemId: '',
-    currentContent: '',
-    title: ''
-  });
   const resumeRef = useRef<HTMLDivElement>(null);
   const [appliedSuggestions, setAppliedSuggestions] = useState<any>(null);
   const [highlightedChanges, setHighlightedChanges] = useState<Set<string>>(new Set());
@@ -1679,21 +1671,6 @@ const ResumeBuilderPage = () => {
           changesSet.add('summary-ai-enhanced');
         }
         
-                 // Apply experience enhancements
-         if (aiSuggestions.experienceAnalysis?.experienceEnhancements?.length > 0 && processedData.experience.length > 0) {
-           console.log('Applying experience enhancements');
-           processedData.experience = processedData.experience.map((exp: any, index: number) => {
-             const enhancement = aiSuggestions.experienceAnalysis.experienceEnhancements[index];
-             if (enhancement && exp.description) {
-               changesSet.add(`experience-${index}-ai-enhanced`);
-               return {
-                 ...exp,
-                 description: `${exp.description}\n\n• AI Enhancement: ${enhancement}`
-               };
-             }
-             return exp;
-           });
-         }
         
         console.log('Changes applied to sections:', Array.from(changesSet));
         console.log('Updated skills:', processedData.skills);
@@ -2042,49 +2019,6 @@ const ResumeBuilderPage = () => {
     });
   };
 
-  // AI Enhancement Functions
-  const openAIEnhancementModal = (type: 'experience' | 'project', itemId: string, currentContent: string, title: string) => {
-    setAiEnhancementModal({
-      isOpen: true,
-      type,
-      itemId,
-      currentContent,
-      title
-    });
-  };
-
-  const handleExperienceEnhance = (id: string, content: string, title: string) => {
-    openAIEnhancementModal('experience', id, content, title);
-  };
-
-  const handleProjectEnhance = (id: string, content: string, title: string) => {
-    openAIEnhancementModal('project', id, content, title);
-  };
-
-  const closeAIEnhancementModal = () => {
-    setAiEnhancementModal({
-      isOpen: false,
-      type: 'experience',
-      itemId: '',
-      currentContent: '',
-      title: ''
-    });
-  };
-
-  const handleAIEnhancementApply = (enhance_content: string) => {
-    const { type, itemId } = aiEnhancementModal;
-    
-    if (type === 'experience') {
-      updateExperience(itemId, 'description', enhance_content);
-    } else if (type === 'project') {
-      updateProject(itemId, 'description', enhance_content);
-    }
-    
-    // Add highlighting for the enhanced item
-    setHighlightedChanges(prev => new Set([...prev, `${type}-${itemId}-ai-enhanced`]));
-    
-    closeAIEnhancementModal();
-  };
 
   const toggleSectionVisibility = (sectionId: string) => {
     setVisibleSections(prev => {
@@ -2706,7 +2640,6 @@ const ResumeBuilderPage = () => {
                                 onAdd={addExperience}
                                 onUpdate={updateExperience}
                                 onRemove={removeExperience}
-                                onEnhance={handleExperienceEnhance}
                               />
                             )}
                             {section.id === 'projects' && (
@@ -2715,7 +2648,6 @@ const ResumeBuilderPage = () => {
                                 onAdd={addProject}
                                 onUpdate={updateProject}
                                 onRemove={removeProject}
-                                onEnhance={handleProjectEnhance}
                               />
                             )}
 
@@ -3002,15 +2934,6 @@ const ResumeBuilderPage = () => {
         onAdd={addCustomSection} 
       />
 
-      {/* AI Enhancement Modal */}
-      <AIEnhancementModal
-        isOpen={aiEnhancementModal.isOpen}
-        onClose={closeAIEnhancementModal}
-        onApply={handleAIEnhancementApply}
-        currentContent={aiEnhancementModal.currentContent}
-        type={aiEnhancementModal.type}
-        title={aiEnhancementModal.title}
-      />
     </>
   );
 }
@@ -3272,12 +3195,11 @@ const SkillsSection = ({ skills, languages, onChange }: { skills: any; languages
 };
 
 // Experience Section Component
-const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove, onEnhance }: { 
+const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove }: { 
   experience: any[]; 
   onAdd: () => void; 
   onUpdate: (id: string, field: string, value: string) => void;
   onRemove: (id: string) => void;
-  onEnhance?: (id: string, content: string, title: string) => void;
 }) => {
   // Ensure experience is always an array
   const safeExperience = Array.isArray(experience) ? experience : [];
@@ -3345,17 +3267,6 @@ const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove, onEnhance }:
             </div>
 
             <div className="flex gap-2">
-              {onEnhance && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEnhance(exp.id, exp.description, `${exp.position} at ${exp.company}`)}
-                  className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                  disabled={!exp.description || !exp.description.trim()}
-                >
-                  ✨ Enhance with AI
-                </Button>
-              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -3520,12 +3431,11 @@ const ActivitiesSection = ({ activities, onAdd, onUpdate, onRemove }: {
 };
 
 // Projects Section Component
-const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove, onEnhance }: { 
+const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove }: { 
   projects: any[]; 
   onAdd: () => void; 
   onUpdate: (id: string, field: string, value: string) => void;
   onRemove: (id: string) => void;
-  onEnhance?: (id: string, content: string, title: string) => void;
 }) => {
   return (
     <div className="space-y-4">
@@ -3589,17 +3499,6 @@ const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove, onEnhance }: {
             </div>
 
             <div className="flex gap-2">
-              {onEnhance && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEnhance(project.id, project.description, project.name)}
-                  className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                  disabled={!project.description || !project.description.trim()}
-                >
-                  ✨ Enhance with AI
-                </Button>
-              )}
               <Button
                 variant="outline"
                 size="sm"
