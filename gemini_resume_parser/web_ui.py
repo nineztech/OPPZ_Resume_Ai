@@ -13,12 +13,18 @@ from flask import Flask, render_template_string, request, jsonify, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import logging
+from dotenv import load_dotenv
 
-# Import the Gemini parser and ATS services
-from services.gemini_parser_service import GeminiResumeParser
+# Load environment variables from .env file
+load_dotenv()
+
+# Import the OpenAI parser and ATS services
+from services.openai_parser_service import OpenAIResumeParser
 from services.ats_service import StandardATSService, JDSpecificATSService
-from services.ai_suggestion_service import AISuggestionService
+from services.ai_suggestion_service_optimized import AISuggestionServiceOptimized
+from services.resume_improvement_service import ResumeImprovementService
 from utils.pdf_extractor import DocumentExtractor
+from enhance_content import enhance_content
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -28,8 +34,11 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
-# Enable CORS for all routes
-CORS(app, origins=['http://localhost:3000', 'http://localhost:5173'], supports_credentials=True)
+# Enable CORS for all routes - read URLs from environment variables
+frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+backend_url = os.getenv('BACKEND_URL', 'http://localhost:5006')
+cors_origins = [frontend_url, backend_url]
+CORS(app, origins=cors_origins, supports_credentials=True)
 
 # HTML template for the web interface
 HTML_TEMPLATE = """
@@ -433,6 +442,7 @@ HTML_TEMPLATE = """
             <button class="tab" onclick="showTab('standard-ats')">Standard ATS</button>
             <button class="tab" onclick="showTab('jd-ats')">JD-Specific ATS</button>
             <button class="tab" onclick="showTab('ai-suggestions')">AI Suggestions</button>
+            <button class="tab" onclick="showTab('content-enhancement')">Content Enhancement</button>
         </div>
 
         <!-- Resume Parsing Tab -->
@@ -564,6 +574,58 @@ HTML_TEMPLATE = """
             </div>
 
             <div class="ats-results" id="aiSuggestionsResults"></div>
+        </div>
+
+        <!-- Content Enhancement Tab -->
+        <div id="content-enhancement" class="tab-content">
+            <div class="upload-section">
+                <h3>AI Content Enhancement</h3>
+                <p style="color: #666; margin-bottom: 20px;">Enhance specific resume content (experience or project descriptions) based on your custom prompts</p>
+                <form id="contentEnhancementForm">
+                    <div style="margin: 20px 0;">
+                        <label for="contentType"><strong>Content Type:</strong></label>
+                        <div style="margin: 10px 0;">
+                            <input type="radio" id="experienceType" name="contentType" value="experience" checked>
+                            <label for="experienceType" style="margin-left: 5px;">Work Experience</label>
+                        </div>
+                        <div style="margin: 10px 0;">
+                            <input type="radio" id="projectType" name="contentType" value="project">
+                            <label for="projectType" style="margin-left: 5px;">Project Description</label>
+                        </div>
+                    </div>
+                    
+                    <div style="margin: 20px 0;">
+                        <label for="originalContent"><strong>Original Content:</strong></label>
+                        <textarea 
+                            id="originalContent" 
+                            name="originalContent" 
+                            class="job-description-input"
+                            placeholder="Paste your original work experience or project description here..."
+                            required
+                        ></textarea>
+                    </div>
+                    
+                    <div style="margin: 20px 0;">
+                        <label for="enhancementPrompt"><strong>Enhancement Prompt:</strong></label>
+                        <textarea 
+                            id="enhancementPrompt" 
+                            name="enhancementPrompt" 
+                            class="job-description-input"
+                            placeholder="Describe how you want to enhance the content. For example: 'Add more technical details and quantify achievements', 'Make it more results-oriented with metrics', 'Focus on leadership and team management aspects'..."
+                            required
+                        ></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="contentEnhancementBtn">Enhance Content</button>
+                </form>
+            </div>
+
+            <div class="loading" id="contentEnhancementLoading">
+                <div class="spinner"></div>
+                <p>Enhancing content with AI... This may take a few moments.</p>
+            </div>
+
+            <div class="ats-results" id="contentEnhancementResults"></div>
         </div>
 
         <div id="errorMessage"></div>
@@ -807,6 +869,58 @@ HTML_TEMPLATE = """
             } finally {
                 document.getElementById('aiSuggestionsLoading').style.display = 'none';
                 document.getElementById('aiSuggestionsBtn').disabled = false;
+            }
+        });
+
+        // Content Enhancement Analysis
+        document.getElementById('contentEnhancementForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const originalContent = document.getElementById('originalContent').value;
+            const enhancementPrompt = document.getElementById('enhancementPrompt').value;
+            const contentType = document.querySelector('input[name="contentType"]:checked').value;
+            
+            if (!originalContent.trim()) {
+                showError('Please enter the original content to enhance.');
+                return;
+            }
+
+            if (!enhancementPrompt.trim()) {
+                showError('Please enter an enhancement prompt.');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('contentEnhancementLoading').style.display = 'block';
+            document.getElementById('contentEnhancementResults').innerHTML = '';
+            document.getElementById('errorMessage').innerHTML = '';
+            document.getElementById('contentEnhancementBtn').disabled = true;
+
+            try {
+                const response = await fetch('/enhance-content', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: originalContent,
+                        prompt: enhancementPrompt,
+                        type: contentType
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showContentEnhancementResults(result.data);
+                } else {
+                    showError('Content enhancement failed: ' + result.error);
+                }
+            } catch (error) {
+                showError('Error: ' + error.message);
+            } finally {
+                document.getElementById('contentEnhancementLoading').style.display = 'none';
+                document.getElementById('contentEnhancementBtn').disabled = false;
             }
         });
 
@@ -1346,22 +1460,16 @@ HTML_TEMPLATE = """
                     <div class="detail-card">
                         <h4>📋 Generated Job Description</h4>
                         <div style="margin-bottom: 15px;">
-                            <strong>Title:</strong> ${data.jobDescription.jobTitle || 'N/A'}<br>
+                            <strong>Designation:</strong> ${data.jobDescription.designation || 'N/A'}<br>
+                            <strong>Sector:</strong> ${data.jobDescription.sector || 'N/A'}<br>
+                            <strong>Country:</strong> ${data.jobDescription.country || 'N/A'}<br>
                             <strong>Experience Level:</strong> ${data.jobDescription.experienceLevel || 'N/A'}<br>
-                            <strong>Salary Range:</strong> ${data.jobDescription.salaryRange || 'N/A'}
+                            <strong>Generated At:</strong> ${data.jobDescription.generatedAt || 'N/A'}
                         </div>
                         <div style="margin-bottom: 15px;">
-                            <strong>Job Summary:</strong><br>
-                            <p style="margin: 5px 0; line-height: 1.5; font-style: italic;">${data.jobDescription.jobSummary || 'N/A'}</p>
+                            <strong>Job Description:</strong><br>
+                            <p style="margin: 5px 0; line-height: 1.5; font-style: italic; white-space: pre-wrap;">${data.jobDescription.jobDescription || 'N/A'}</p>
                         </div>
-                        ${data.jobDescription.keyResponsibilities && data.jobDescription.keyResponsibilities.length > 0 ? `
-                            <div style="margin-bottom: 15px;">
-                                <strong>Key Responsibilities:</strong>
-                                <ul style="margin: 5px 0; padding-left: 20px;">
-                                    ${data.jobDescription.keyResponsibilities.slice(0, 5).map(resp => `<li>${resp}</li>`).join('')}
-                                </ul>
-                            </div>
-                        ` : ''}
                     </div>
                 `;
             }
@@ -1414,7 +1522,7 @@ HTML_TEMPLATE = """
             }
 
             // Section-by-Section Analysis
-            if (data.suggestions?.sectionAnalysis) {
+            if (data.suggestions?.sectionSuggestions) {
                 html += `
                     <div class="detail-card">
                         <h4>📊 Section-by-Section Analysis</h4>
@@ -1422,26 +1530,25 @@ HTML_TEMPLATE = """
                 `;
 
                 // Professional Summary
-                if (data.suggestions.sectionAnalysis.professionalSummary) {
-                    const summary = data.suggestions.sectionAnalysis.professionalSummary;
+                if (data.suggestions.sectionSuggestions.professionalSummary) {
+                    const summary = data.suggestions.sectionSuggestions.professionalSummary;
                     html += `
                         <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
                             <h6 style="margin-top: 0; color: #007bff;">📝 Professional Summary</h6>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <span style="font-weight: bold;">${summary.status || 'N/A'}</span>
-                                <span style="background: ${summary.score >= 80 ? '#28a745' : summary.score >= 60 ? '#ffc107' : '#dc3545'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${summary.score || 0}/100</span>
+                            <div style="margin-bottom: 10px;">
+                                <strong>Existing:</strong><br>
+                                <p style="margin: 5px 0; font-style: italic; color: #666;">${summary.existing || 'No existing summary'}</p>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <strong>Suggested Rewrite:</strong><br>
+                                <p style="margin: 5px 0; color: #007bff;">${summary.rewrite || 'No suggestions available'}</p>
                             </div>
                             ${summary.recommendations && summary.recommendations.length > 0 ? `
                                 <div style="margin-bottom: 10px;">
-                                    <strong style="font-size: 12px; color: #666;">Top Recommendations:</strong>
+                                    <strong style="font-size: 12px; color: #666;">Recommendations:</strong>
                                     <ul style="margin: 5px 0; padding-left: 15px; font-size: 12px;">
-                                        ${summary.recommendations.slice(0, 2).map(rec => `<li>${rec}</li>`).join('')}
+                                        ${summary.recommendations.slice(0, 3).map(rec => `<li>${rec}</li>`).join('')}
                                     </ul>
-                                </div>
-                            ` : ''}
-                            ${summary.suggestedRewrite ? `
-                                <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-size: 12px; font-style: italic;">
-                                    <strong>Suggestion:</strong> ${summary.suggestedRewrite}
                                 </div>
                             ` : ''}
                         </div>
@@ -1449,39 +1556,49 @@ HTML_TEMPLATE = """
                 }
 
                 // Skills Section
-                if (data.suggestions.sectionAnalysis.skillsSection) {
-                    const skills = data.suggestions.sectionAnalysis.skillsSection;
+                if (data.suggestions.sectionSuggestions.skills) {
+                    const skills = data.suggestions.sectionSuggestions.skills;
                     html += `
                         <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
                             <h6 style="margin-top: 0; color: #007bff;">🛠️ Skills Section</h6>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <span style="font-weight: bold;">${skills.status || 'N/A'}</span>
-                                <span style="background: ${skills.score >= 80 ? '#28a745' : skills.score >= 60 ? '#ffc107' : '#dc3545'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${skills.score || 0}/100</span>
-                            </div>
-                            ${skills.missingCriticalSkills && skills.missingCriticalSkills.length > 0 ? `
                                 <div style="margin-bottom: 10px;">
-                                    <strong style="font-size: 12px; color: #dc3545;">Missing Critical Skills:</strong>
-                                    <div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px;">
-                                        ${skills.missingCriticalSkills.slice(0, 5).map(skill => `
-                                            <span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px;">${skill}</span>
-                                        `).join('')}
+                                <strong>Existing Skills:</strong><br>
+                                <div style="display: flex; flex-wrap: wrap; gap: 5px; margin: 5px 0;">
+                                    ${skills.existing ? 
+                                        (Array.isArray(skills.existing) ? 
+                                            skills.existing.map(skill => `<span style="background: #e9ecef; padding: 3px 8px; border-radius: 12px; font-size: 11px;">${skill}</span>`).join('') :
+                                            Object.entries(skills.existing).map(([category, skillList]) => 
+                                                Array.isArray(skillList) ? 
+                                                    skillList.map(skill => `<span style="background: #e9ecef; padding: 3px 8px; border-radius: 12px; font-size: 11px;" title="${category}">${skill}</span>`).join('') :
+                                                    `<span style="background: #e9ecef; padding: 3px 8px; border-radius: 12px; font-size: 11px;" title="${category}">${skillList}</span>`
+                                            ).join('')
+                                        ) :
+                                        '<span style="color: #666; font-style: italic;">No existing skills</span>'
+                                    }
                                     </div>
                                 </div>
-                            ` : ''}
-                            ${skills.skillGapAnalysis ? `
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; font-size: 11px;">
-                                    <div style="text-align: center;">
-                                        <div style="font-weight: bold; color: #007bff;">${skills.skillGapAnalysis.technical?.score || 0}</div>
-                                        <div style="color: #666;">Technical</div>
+                            <div style="margin-bottom: 10px;">
+                                <strong>Suggested Additions:</strong><br>
+                                <div style="display: flex; flex-wrap: wrap; gap: 5px; margin: 5px 0;">
+                                    ${skills.rewrite ? 
+                                        (Array.isArray(skills.rewrite) ? 
+                                            skills.rewrite.map(skill => `<span style="background: #007bff; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;">${skill}</span>`).join('') :
+                                            Object.entries(skills.rewrite).map(([category, skillList]) => 
+                                                Array.isArray(skillList) ? 
+                                                    skillList.map(skill => `<span style="background: #007bff; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;" title="${category}">${skill}</span>`).join('') :
+                                                    `<span style="background: #007bff; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;" title="${category}">${skillList}</span>`
+                                            ).join('')
+                                        ) :
+                                        '<span style="color: #666; font-style: italic;">No new skills suggested</span>'
+                                    }
                                     </div>
-                                    <div style="text-align: center;">
-                                        <div style="font-weight: bold; color: #28a745;">${skills.skillGapAnalysis.soft?.score || 0}</div>
-                                        <div style="color: #666;">Soft Skills</div>
                                     </div>
-                                    <div style="text-align: center;">
-                                        <div style="font-weight: bold; color: #ffc107;">${skills.skillGapAnalysis.leadership?.score || 0}</div>
-                                        <div style="color: #666;">Leadership</div>
-                                    </div>
+                            ${skills.recommendations && skills.recommendations.length > 0 ? `
+                                <div style="margin-bottom: 10px;">
+                                    <strong style="font-size: 12px; color: #666;">Recommendations:</strong>
+                                    <ul style="margin: 5px 0; padding-left: 15px; font-size: 12px;">
+                                        ${skills.recommendations.slice(0, 3).map(rec => `<li>${rec}</li>`).join('')}
+                                    </ul>
                                 </div>
                             ` : ''}
                         </div>
@@ -1489,79 +1606,156 @@ HTML_TEMPLATE = """
                 }
 
                 // Work Experience
-                if (data.suggestions.sectionAnalysis.workExperience) {
-                    const experience = data.suggestions.sectionAnalysis.workExperience;
+                if (data.suggestions.sectionSuggestions.workExperience && data.suggestions.sectionSuggestions.workExperience.length > 0) {
                     html += `
                         <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
                             <h6 style="margin-top: 0; color: #007bff;">💼 Work Experience</h6>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <span style="font-weight: bold;">${experience.status || 'N/A'}</span>
-                                <span style="background: ${experience.score >= 80 ? '#28a745' : experience.score >= 60 ? '#ffc107' : '#dc3545'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${experience.score || 0}/100</span>
+                    `;
+                    
+                    data.suggestions.sectionSuggestions.workExperience.forEach((exp, index) => {
+                        html += `
+                            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <div style="font-weight: bold; color: #007bff; margin-bottom: 8px;">${exp.role || 'Position'}</div>
+                                <div style="margin-bottom: 8px;">
+                                    <strong>Existing:</strong><br>
+                                    <p style="margin: 3px 0; font-style: italic; color: #666; font-size: 12px;">${exp.existing || 'No existing description'}</p>
                             </div>
-                            ${experience.achievementAnalysis ? `
-                                <div style="margin-bottom: 10px; font-size: 12px;">
-                                    <strong>Achievement Analysis:</strong>
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px;">
-                                        <div>Quantified: <strong style="color: #28a745;">${experience.achievementAnalysis.quantified || 0}</strong></div>
-                                        <div>Qualitative: <strong style="color: #ffc107;">${experience.achievementAnalysis.qualitative || 0}</strong></div>
+                                <div style="margin-bottom: 8px;">
+                                    <strong>Suggested Rewrite:</strong><br>
+                                    <p style="margin: 3px 0; color: #007bff; font-size: 12px;">${exp.rewrite || 'No suggestions available'}</p>
                                     </div>
-                                    <div style="background: #f8f9fa; padding: 8px; border-radius: 5px; margin-top: 8px; font-style: italic;">
-                                        ${experience.achievementAnalysis.recommendation || 'Focus on adding quantifiable results'}
-                                    </div>
+                                ${exp.recommendations && exp.recommendations.length > 0 ? `
+                                    <div>
+                                        <strong style="font-size: 11px; color: #666;">Recommendations:</strong>
+                                        <ul style="margin: 3px 0; padding-left: 15px; font-size: 11px;">
+                                            ${exp.recommendations.slice(0, 2).map(rec => `<li>${rec}</li>`).join('')}
+                                        </ul>
                                 </div>
                             ` : ''}
-                            ${experience.careerProgression ? `
-                                <div style="font-size: 12px;">
-                                    <strong>Career Trend:</strong> 
-                                    <span style="color: ${experience.careerProgression.trend === 'Positive' ? '#28a745' : experience.careerProgression.trend === 'Negative' ? '#dc3545' : '#ffc107'}; font-weight: bold;">
-                                        ${experience.careerProgression.trend || 'N/A'}
-                                    </span>
+                        </div>
+                    `;
+                    });
+                    
+                    html += `</div>`;
+                }
+
+                // Education
+                if (data.suggestions.sectionSuggestions.education) {
+                    const education = data.suggestions.sectionSuggestions.education;
+                    html += `
+                        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
+                            <h6 style="margin-top: 0; color: #007bff;">🎓 Education</h6>
+                            <div style="margin-bottom: 10px;">
+                                <strong>Existing Education:</strong><br>
+                                <div style="margin: 5px 0;">
+                                    ${education.existing && education.existing.length > 0 ? 
+                                        education.existing.map(edu => `<div style="background: #e9ecef; padding: 5px; border-radius: 3px; margin: 2px 0; font-size: 12px;">${edu}</div>`).join('') :
+                                        '<span style="color: #666; font-style: italic;">No existing education</span>'
+                                    }
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <strong>Suggested Rewrite:</strong><br>
+                                <p style="margin: 5px 0; color: #007bff; font-size: 12px;">${education.rewrite || 'No suggestions available'}</p>
+                            </div>
+                            ${education.recommendations && education.recommendations.length > 0 ? `
+                                <div>
+                                    <strong style="font-size: 12px; color: #666;">Recommendations:</strong>
+                                    <ul style="margin: 5px 0; padding-left: 15px; font-size: 12px;">
+                                        ${education.recommendations.slice(0, 3).map(rec => `<li>${rec}</li>`).join('')}
+                                    </ul>
                                 </div>
                             ` : ''}
                         </div>
                     `;
                 }
 
-                // Education & Certifications
-                if (data.suggestions.sectionAnalysis.educationSection || data.suggestions.sectionAnalysis.certifications) {
-                    html += `
-                        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
-                            <h6 style="margin-top: 0; color: #007bff;">🎓 Education & Certifications</h6>
-                    `;
-                    
-                    if (data.suggestions.sectionAnalysis.educationSection) {
-                        const education = data.suggestions.sectionAnalysis.educationSection;
+                // Certifications
+                if (data.suggestions.sectionSuggestions.certifications) {
+                    const certifications = data.suggestions.sectionSuggestions.certifications;
                         html += `
-                            <div style="margin-bottom: 15px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                                    <span style="font-size: 12px; font-weight: bold;">Education: ${education.status || 'N/A'}</span>
-                                    <span style="background: ${education.score >= 80 ? '#28a745' : education.score >= 60 ? '#ffc107' : '#dc3545'}; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px;">${education.score || 0}</span>
+                        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
+                            <h6 style="margin-top: 0; color: #007bff;">🏆 Certifications</h6>
+                            <div style="margin-bottom: 10px;">
+                                <strong>Existing Certifications:</strong><br>
+                                <div style="margin: 5px 0;">
+                                    ${certifications.existing && certifications.existing.length > 0 ? 
+                                        certifications.existing.map(cert => `<div style="background: #e9ecef; padding: 5px; border-radius: 3px; margin: 2px 0; font-size: 12px;">${cert}</div>`).join('') :
+                                        '<span style="color: #666; font-style: italic;">No existing certifications</span>'
+                                    }
                                 </div>
-                                <div style="font-size: 11px; color: #666;">Relevance: ${education.relevanceScore || 0}%</div>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <strong>Suggested Rewrite:</strong><br>
+                                <p style="margin: 5px 0; color: #007bff; font-size: 12px;">${certifications.rewrite || 'No suggestions available'}</p>
+                            </div>
+                            ${certifications.recommendations && certifications.recommendations.length > 0 ? `
+                                <div>
+                                    <strong style="font-size: 12px; color: #666;">Recommendations:</strong>
+                                    <ul style="margin: 5px 0; padding-left: 15px; font-size: 12px;">
+                                        ${certifications.recommendations.slice(0, 3).map(rec => `<li>${rec}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
                             </div>
                         `;
                     }
                     
-                    if (data.suggestions.sectionAnalysis.certifications) {
-                        const certs = data.suggestions.sectionAnalysis.certifications;
+                // Projects
+                if (data.suggestions.sectionSuggestions.projects && data.suggestions.sectionSuggestions.projects.length > 0) {
                         html += `
-                            <div style="margin-bottom: 10px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                                    <span style="font-size: 12px; font-weight: bold;">Certifications: ${certs.status || 'N/A'}</span>
-                                    <span style="background: ${certs.score >= 80 ? '#28a745' : certs.score >= 60 ? '#ffc107' : '#dc3545'}; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px;">${certs.score || 0}</span>
+                        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
+                            <h6 style="margin-top: 0; color: #007bff;">🚀 Projects</h6>
+                    `;
+                    
+                    data.suggestions.sectionSuggestions.projects.forEach((project, index) => {
+                        html += `
+                            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <div style="font-weight: bold; color: #007bff; margin-bottom: 8px;">${project.name || 'Project'}</div>
+                                <div style="margin-bottom: 8px;">
+                                    <strong>Existing:</strong><br>
+                                    <p style="margin: 3px 0; font-style: italic; color: #666; font-size: 12px;">${project.existing || 'No existing description'}</p>
                                 </div>
-                                <div style="font-size: 11px; color: #666;">Priority: <strong>${certs.priorityLevel || 'N/A'}</strong></div>
-                                ${certs.suggestedCertifications && certs.suggestedCertifications.length > 0 ? `
-                                    <div style="font-size: 10px; color: #007bff; margin-top: 5px;">
-                                        Suggested: ${certs.suggestedCertifications.slice(0, 2).join(', ')}
+                                <div style="margin-bottom: 8px;">
+                                    <strong>Suggested Rewrite:</strong><br>
+                                    <p style="margin: 3px 0; color: #007bff; font-size: 12px;">${project.rewrite || 'No suggestions available'}</p>
+                                </div>
+                                ${project.recommendations && project.recommendations.length > 0 ? `
+                                    <div>
+                                        <strong style="font-size: 11px; color: #666;">Recommendations:</strong>
+                                        <ul style="margin: 3px 0; padding-left: 15px; font-size: 11px;">
+                                            ${project.recommendations.slice(0, 2).map(rec => `<li>${rec}</li>`).join('')}
+                                        </ul>
                                     </div>
                                 ` : ''}
                             </div>
                         `;
-                    }
+                    });
                     
                     html += `</div>`;
                 }
+
+                html += `</div></div>`;
+            }
+
+            // Top Recommendations
+            if (data.suggestions?.topRecommendations && data.suggestions.topRecommendations.length > 0) {
+                html += `
+                    <div class="detail-card">
+                        <h4>🎯 Top Recommendations</h4>
+                        <div style="display: grid; gap: 10px;">
+                `;
+                
+                data.suggestions.topRecommendations.forEach((rec, index) => {
+                    html += `
+                        <div style="border-left: 4px solid #007bff; padding-left: 15px; background: #f8f9fa; padding: 12px; border-radius: 0 8px 8px 0;">
+                            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                <span style="background: #007bff; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; margin-right: 10px;">${index + 1}</span>
+                                <span style="font-weight: bold; color: #333;">${rec}</span>
+                            </div>
+                        </div>
+                    `;
+                });
 
                 html += `</div></div>`;
             }
@@ -1717,6 +1911,109 @@ HTML_TEMPLATE = """
             resultsDiv.innerHTML = html;
         }
 
+        function showContentEnhancementResults(data) {
+            const resultsDiv = document.getElementById('contentEnhancementResults');
+            
+            if (!resultsDiv) {
+                console.error('contentEnhancementResults element not found');
+                return;
+            }
+            
+            if (!data || typeof data !== 'object') {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <h3>Error: Invalid Data Received</h3>
+                        <p>The content enhancement returned invalid data. Please try again.</p>
+                        <div class="json-output">${formatJSON(JSON.stringify(data, null, 2))}</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <h3>✨ AI Content Enhancement Results</h3>
+                
+                <div class="detail-card">
+                    <h4>📝 Enhancement Summary</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                        <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #007bff;">${data.type || 'N/A'}</div>
+                            <div style="color: #6c757d; font-size: 12px;">Content Type</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 20px; font-weight: bold; color: #28a745;">Enhanced</div>
+                            <div style="color: #6c757d; font-size: 12px;">Status</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <h4>📋 Original Content</h4>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #6c757d; margin-bottom: 20px;">
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; line-height: 1.6;">${data.original_content || 'N/A'}</pre>
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <h4>🎯 Enhancement Prompt Used</h4>
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
+                        <p style="margin: 0; line-height: 1.6; color: #856404;">${data.prompt_used || 'N/A'}</p>
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <h4>✨ Enhanced Content</h4>
+                    <div style="background: #d4edda; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745; margin-bottom: 20px;">
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; line-height: 1.6; color: #155724;">${data.enhanced_content || 'N/A'}</pre>
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <h4>📊 Enhancement Analysis</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; text-align: center;">
+                        <div style="padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 18px; font-weight: bold; color: #007bff;">${(data.enhanced_content || '').split('\\n').filter(line => line.trim()).length || 0}</div>
+                            <div style="font-size: 11px; color: #666;">Bullet Points</div>
+                        </div>
+                        <div style="padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 18px; font-weight: bold; color: #28a745;">${(data.enhanced_content || '').length || 0}</div>
+                            <div style="font-size: 11px; color: #666;">Characters</div>
+                        </div>
+                        <div style="padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 18px; font-weight: bold; color: #ffc107;">${(data.enhanced_content || '').split(' ').length || 0}</div>
+                            <div style="font-size: 11px; color: #666;">Words</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Complete JSON output (collapsible)
+            html += `
+                <div style="margin-top: 30px;">
+                    <h4 style="cursor: pointer; display: flex; align-items: center;" onclick="toggleContentEnhancementJson()">
+                        <span id="contentEnhancementJsonToggle">▶️</span> Complete Enhancement Data (JSON)
+                    </h4>
+                    <div id="contentEnhancementJsonContainer" class="json-output" style="max-height: 400px; overflow-y: auto; display: none;">
+                        ${formatJSON(JSON.stringify(data, null, 2))}
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.innerHTML = html;
+        }
+
+        function toggleContentEnhancementJson() {
+            const container = document.getElementById('contentEnhancementJsonContainer');
+            const toggle = document.getElementById('contentEnhancementJsonToggle');
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                toggle.textContent = '🔽';
+            } else {
+                container.style.display = 'none';
+                toggle.textContent = '▶️';
+            }
+        }
+
         function toggleJsonOutput() {
             const container = document.getElementById('jsonOutputContainer');
             const toggle = document.getElementById('jsonToggle');
@@ -1784,7 +2081,7 @@ def parse_resume():
         
         try:
             # Initialize parser
-            parser = GeminiResumeParser()
+            parser = OpenAIResumeParser()
             
             # Parse the resume
             logger.info(f"Parsing resume: {filename}")
@@ -2002,28 +2299,27 @@ def ai_suggestions():
         file.save(filepath)
         
         try:
-            # Initialize AI service
-            ai_service = AISuggestionService()
+            # Initialize optimized AI service
+            ai_service = AISuggestionServiceOptimized()
             
             # Step 1: Parse the resume
             logger.info(f"Parsing resume for AI suggestions: {filename}")
-            parser = GeminiResumeParser()
+            parser = OpenAIResumeParser()
             resume_data = parser.parse_resume_from_file(filepath)
             
-            # Step 2: Analyze resume experience level
-            experience_level = ai_service._analyze_experience_level(resume_data)
-            logger.info(f"Analyzed experience level from resume: {experience_level}")
+            # Step 2: Generate job description - let the service analyze experience level internally
+            logger.info(f"Generating job description for {designation} in {sector} sector, {country}")
+            job_description_response = ai_service.generate_job_description(sector, country, designation, resume_data)
             
-            # Step 3: Generate job description based on resume experience level
-            logger.info(f"Generating job description for {designation} in {sector} sector, {country} at {experience_level}")
-            job_description_dict = ai_service.generate_job_description(sector, country, designation, experience_level)
+            # Convert Pydantic model to dict for JSON serialization
+            job_description_dict = job_description_response.model_dump()
             
-            # Convert job description dict to text format for comparison
-            job_description_text = json.dumps(job_description_dict, indent=2)
-            
-            # Step 4: Get AI suggestions by comparing resume with job description
+            # Step 3: Get AI suggestions by comparing resume with job description
             logger.info("Comparing resume with job description and generating suggestions")
-            suggestions = ai_service.compare_resume_with_jd(resume_data, job_description_text)
+            suggestions_response = ai_service.compare_resume_with_jd(resume_data, job_description_dict['jobDescription'])
+            
+            # Convert Pydantic model to dict for JSON serialization
+            suggestions_dict = suggestions_response.model_dump()
             
             # Clean up temporary file
             os.unlink(filepath)
@@ -2033,7 +2329,7 @@ def ai_suggestions():
                 'data': {
                     'resumeData': resume_data,
                     'jobDescription': job_description_dict,
-                    'suggestions': suggestions,
+                    'suggestions': suggestions_dict,
                     'processedAt': str(datetime.datetime.now()),
                     'parameters': {
                         'sector': sector,
@@ -2056,17 +2352,145 @@ def ai_suggestions():
             'error': str(e)
         })
 
+@app.route('/improve-resume', methods=['POST'])
+def improve_resume():
+    """Apply ATS suggestions to improve resume"""
+    try:
+        # Check if request has JSON data
+        if not request.is_json:
+            return jsonify({
+                "success": False,
+                "error": "Request must be JSON"
+            }), 400
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        if 'parsed_resume_data' not in data:
+            return jsonify({
+                "success": False,
+                "error": "parsed_resume_data is required"
+            }), 400
+        
+        if 'ats_analysis' not in data:
+            return jsonify({
+                "success": False,
+                "error": "ats_analysis is required"
+            }), 400
+        
+        parsed_resume_data = data['parsed_resume_data']
+        ats_analysis = data['ats_analysis']
+        
+        # Initialize improvement service
+        improvement_service = ResumeImprovementService()
+        
+        # Apply ATS suggestions
+        logger.info("Applying ATS suggestions to improve resume")
+        improved_resume = improvement_service.apply_ats_suggestions(parsed_resume_data, ats_analysis)
+        
+        # Generate improvement summary
+        improvement_summary = improvement_service.get_improvement_summary(parsed_resume_data, improved_resume)
+        
+        # Add summary to the result
+        improved_resume["_improvement_summary"] = improvement_summary
+        
+        logger.info("Successfully applied ATS suggestions to resume")
+        
+        return jsonify({
+            "success": True,
+            "data": improved_resume,
+            "improvement_summary": improvement_summary,
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to improve resume: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"Failed to improve resume: {str(e)}"
+        }), 500
+
+@app.route('/enhance-content', methods=['POST'])
+def enhance_content_endpoint():
+    """Enhance specific resume content based on user prompt"""
+    try:
+        # Check if request has JSON data
+        if not request.is_json:
+            return jsonify({
+                "success": False,
+                "error": "Request must be JSON"
+            }), 400
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['content', 'prompt', 'type']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    "success": False,
+                    "error": f"{field} is required"
+                }), 400
+        
+        content = data['content']
+        prompt = data['prompt']
+        content_type = data['type']
+        
+        # Validate content type
+        if content_type not in ['experience', 'project']:
+            return jsonify({
+                "success": False,
+                "error": "Content type must be 'experience' or 'project'"
+            }), 400
+        
+        # Validate that content and prompt are not empty
+        if not content.strip():
+            return jsonify({
+                "success": False,
+                "error": "Content cannot be empty"
+            }), 400
+        
+        if not prompt.strip():
+            return jsonify({
+                "success": False,
+                "error": "Enhancement prompt cannot be empty"
+            }), 400
+        
+        # Enhance content using the enhance_content function
+        logger.info(f"Enhancing {content_type} content with user prompt")
+        enhanced_content = enhance_content(content, prompt, content_type)
+        
+        logger.info("Successfully enhanced content")
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "enhanced_content": enhanced_content,
+                "original_content": content,
+                "type": content_type,
+                "prompt_used": prompt
+            },
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to enhance content: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"Failed to enhance content: {str(e)}"
+        }), 500
+
 @app.route('/health')
 def health():
     """Health check endpoint"""
     try:
         # Test if parser can be initialized
-        parser = GeminiResumeParser()
+        parser = OpenAIResumeParser()
         model_info = parser.get_model_info()
         
         return jsonify({
             'status': 'healthy',
-            'gemini_model': model_info['model_name'],
+            'openai_model': model_info['model_name'],
             'api_key_configured': model_info['api_key_configured']
         })
     except Exception as e:
@@ -2085,6 +2509,7 @@ if __name__ == '__main__':
     print("  • Standard ATS Analysis (General optimization)")
     print("  • JD-Specific ATS Analysis (Job matching)")
     print("  • AI-Powered Resume Suggestions (Job description generation + comparison)")
+    print("  • Content Enhancement (Custom prompt-based content improvement)")
     print("\nPress Ctrl+C to stop the server")
     
     app.run(debug=True, host='0.0.0.0', port=5000)

@@ -16,13 +16,15 @@ logger = logging.getLogger(__name__)
 class GeminiResumeParser:
     """Main service class for parsing resumes using Google Gemini API"""
     
-    def __init__(self, api_key: Optional[str] = None, model_name: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, model_name: Optional[str] = None, temperature: float = 0.1, top_p: float = 0.8):
         """
         Initialize the Gemini Resume Parser
         
         Args:
             api_key: Gemini API key (if not provided, will use environment variable)
             model_name: Gemini model name (if not provided, will use default)
+            temperature: Controls randomness in responses (0.0 = deterministic, 1.0 = creative)
+            top_p: Controls diversity via nucleus sampling (0.0 = focused, 1.0 = diverse)
         """
         self.api_key = api_key or GeminiConfig.GEMINI_API_KEY
         self.model_name = model_name or GeminiConfig.GEMINI_MODEL
@@ -34,8 +36,18 @@ class GeminiResumeParser:
         # Configure Gemini
         try:
             configure(api_key=self.api_key)
-            self.model = GenerativeModel(self.model_name)
-            logger.info(f"Initialized Gemini model: {self.model_name}")
+            self.model = GenerativeModel(
+                self.model_name,
+                generation_config={
+                    "temperature": temperature,
+                    "top_p": top_p,
+                    "top_k": 40,  # Additional parameter for better consistency
+                    "max_output_tokens": 8192,  # Ensure sufficient output length
+                    "candidate_count": 1,  # Generate only one response for consistency
+                    "stop_sequences": [],  # No early stopping for complete responses
+                }
+            )
+            logger.info(f"Initialized Gemini model: {self.model_name} with temperature={temperature}, top_p={top_p}")
         except Exception as e:
             logger.error(f"Failed to initialize Gemini model: {str(e)}")
             raise

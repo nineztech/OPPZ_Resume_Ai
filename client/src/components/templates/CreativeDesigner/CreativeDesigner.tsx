@@ -7,11 +7,13 @@ interface TemplateData {
     address: string;
     email: string;
     website: string;
+    github?: string;
+    linkedin?: string;
     phone?: string;
   };
   summary: string;
   skills: {
-    technical: string[];
+    technical: string[] | { [category: string]: string[] };
     professional?: string[];
   };
   experience: Array<{
@@ -20,12 +22,14 @@ interface TemplateData {
     dates: string;
     achievements: string[];
     description?: string; // Added for fallback
+    location?: string; // Added for location display
   }>;
   education: Array<{
     degree: string;
     institution: string;
     dates: string;
     details: string[];
+    location?: string;
   }>;
   projects?: Array<{
     Name: string;
@@ -35,9 +39,14 @@ interface TemplateData {
     End_Date?: string;
     Link?: string;
   }>;
+  certifications?: Array<{
+    certificateName: string;
+    instituteName: string;
+    issueDate?: string;
+    link?: string;
+  }>;
   additionalInfo: {
     languages?: string[];
-    certifications?: string[];
     awards?: string[];
   };
   customSections?: Array<{
@@ -78,7 +87,48 @@ interface TemplateData {
 interface CleanMinimalProps {
   data?: TemplateData;
   color?: string;
-  highlightedSections?: Set<string>;
+  visibleSections?: Set<string>;
+  sectionOrder?: string[];
+  customization?: {
+    theme: {
+      primaryColor: string;
+      secondaryColor: string;
+      textColor: string;
+      backgroundColor: string;
+      accentColor: string;
+      borderColor: string;
+      headerColor: string;
+    };
+    typography: {
+      fontFamily: {
+        header: string;
+        body: string;
+        name: string;
+      };
+      fontSize: {
+        name: number;
+        title: number;
+        headers: number;
+        body: number;
+        subheader: number;
+      };
+      fontWeight: {
+        name: number;
+        headers: number;
+        body: number;
+      };
+    };
+    layout: {
+      margins: {
+        top: number;
+        bottom: number;
+        left: number;
+        right: number;
+      };
+      sectionSpacing: number;
+      lineHeight: number;
+    };
+  };
 }
 
 const cleanMinimalTemplateData: TemplateData = {
@@ -156,318 +206,541 @@ const cleanMinimalTemplateData: TemplateData = {
       details: []
     }
   ],
+  projects: [
+    {
+      Name: 'Supply Chain Optimization Dashboard',
+      Description: 'Developed a comprehensive Power BI dashboard integrating SAP and WMS data to provide real-time visibility into inventory levels, demand forecasting, and supplier performance metrics. The dashboard features interactive visualizations for inventory turnover rates, supplier lead times, and demand variability analysis. Implemented automated data refresh mechanisms connecting to multiple ERP systems including SAP MM, WM, and PP modules. Created custom DAX measures for calculating key performance indicators such as inventory carrying costs, stockout frequency, and supplier reliability scores. The solution includes mobile-responsive design enabling field managers to access critical supply chain metrics on-the-go. Integrated advanced analytics capabilities using Python scripts for predictive demand forecasting and anomaly detection. Developed user-specific security roles ensuring data confidentiality across different organizational levels. The dashboard processes over 2 million data points daily and has reduced manual reporting time by 85%. Successfully deployed across 15+ manufacturing facilities with 200+ active users. The project resulted in 20% improvement in inventory accuracy and 15% reduction in carrying costs.',
+      Tech_Stack: 'Power BI, SQL Server, SAP, Python, DAX, Azure Data Factory',
+      Start_Date: 'Jan 2023',
+      End_Date: 'Mar 2023',
+      Link: 'https://github.com/example/supply-chain-dashboard'
+    },
+    {
+      Name: 'Inventory Management System',
+      Description: 'Built an automated inventory tracking system using RFID technology and machine learning algorithms to optimize stock levels and reduce carrying costs by 15%. The system integrates with existing WMS and ERP platforms to provide real-time inventory visibility across multiple warehouse locations. Implemented RFID readers and sensors at strategic points throughout the supply chain to capture item-level data automatically. Developed machine learning models using Python and scikit-learn to predict demand patterns and optimize reorder points based on historical consumption data. Created a web-based dashboard using React and Node.js for inventory managers to monitor stock levels, set alerts, and generate automated purchase orders. The system includes barcode scanning capabilities for mobile devices enabling warehouse staff to update inventory counts in real-time. Integrated with supplier APIs to enable automated replenishment and reduce manual procurement processes. Implemented data validation rules and exception handling to ensure data integrity and system reliability. The solution processes over 50,000 inventory transactions daily and has improved inventory accuracy from 78% to 96%. Successfully reduced stockout incidents by 40% and excess inventory by 25% across all managed locations.',
+      Tech_Stack: 'Python, Machine Learning, RFID, SQL, React, Node.js, MongoDB',
+      Start_Date: 'Jun 2022',
+      End_Date: 'Dec 2022',
+      Link: 'https://github.com/example/inventory-ml'
+    }
+  ],
+  certifications: [
+    {
+      certificateName: 'Introduction to Data Analytics',
+      instituteName: 'IBM',
+      issueDate: '2023'
+    },
+    {
+      certificateName: 'Analyzing and Visualizing Data with Microsoft Power BI',
+      instituteName: 'Microsoft',
+      issueDate: '2023'
+    },
+    {
+      certificateName: 'Lean Six Sigma Green Belt',
+      instituteName: 'ASQ (American Society for Quality)',
+      issueDate: '2022'
+    }
+  ],
   additionalInfo: {
     languages: [],
-    certifications: [],
     awards: []
   }
 };
 
-const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, highlightedSections }) => {
+const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections }) => {
   // Use the passed data prop if available, otherwise fall back to default data
   const templateData = data || cleanMinimalTemplateData;
   
-  // Helper function to get highlighting styles
-  const getHighlightStyle = (sectionName: string) => {
-    return highlightedSections?.has(sectionName) ? {
-      backgroundColor: 'rgba(255, 235, 59, 0.15)',
-      borderLeft: '4px solid #ffc107',
-      paddingLeft: '8px',
-      position: 'relative' as const
-    } : {};
-  };
-  
+  // Default visible sections if not provided
+  const sections = visibleSections || new Set([
+    'basic-details',
+    'summary', 
+    'skills',
+    'experience',
+    'education',
+    'projects',
+    'certifications'
+  ]);
+
   return (
-    <div className="max-w-4xl mx-auto pt-0 px-0 pb-6 bg-white" style={{ 
-      fontFamily: 'Arial, sans-serif',
+    <div className="max-w-4xl mx-auto px-2 mt-0 bg-white" style={{ 
+      fontFamily: 'Arial, Helvetica, Calibri, sans-serif',
       fontSize: '11px',
       lineHeight: '1.3'
     }}>
       {/* Header */}
-      <div className="text-center mb-4">
-        <h1 className="text-2xl font-bold mb-1" style={{ 
-          fontSize: '22px',
-          fontWeight: 'bold',
-          letterSpacing: '1px',
-          color: color || '#1f2937'
-        }}>
-          {templateData.personalInfo?.name || 'Your Name'}
-        </h1>
-        <div className="text-lg font-semibold mb-2" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
-          {templateData.personalInfo?.title || 'Your Title'}
-        </div>
-        <div className="text-sm" style={{ fontSize: '11px' }}>
-          {templateData.personalInfo?.address || 'Your Address'} | {templateData.personalInfo?.phone || 'Your Phone'} | {templateData.personalInfo?.email || 'your.email@example.com'} | {templateData.personalInfo?.website || 'your-website.com'}
-        </div>
+      <div className="text-center mb-0">
+        {templateData.personalInfo && (
+          <>
+            <h1 className="text-2xl py-0 my-0 mb-0 font-bold" style={{ 
+              fontSize: '22px',
+              fontWeight: 'bold',
+              letterSpacing: '1px',
+              color: color || '#1f2937'
+            }}>
+              {templateData.personalInfo.name || 'Your Full Name'}
+            </h1>
+            <div className="text-lg font-semibold mb-0" style={{ fontSize: '14px', fontWeight: '600', color: color || '#374151' }}>
+              {templateData.personalInfo.title || 'Your Professional Title'}
+            </div>
+            <div className="text-sm" style={{ fontSize: '11px' }}>
+              {templateData.personalInfo.address || 'Your Location'}
+              {(templateData.personalInfo.address || templateData.personalInfo.phone || templateData.personalInfo.email) && ' | '}
+              {templateData.personalInfo.phone || 'Your Phone'}
+              {(templateData.personalInfo.phone || templateData.personalInfo.email) && ' | '}
+              {templateData.personalInfo.email || 'your.email@example.com'}
+              {templateData.personalInfo.linkedin && (
+                <> | <a href={templateData.personalInfo.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>LinkedIn</a></>
+              )}
+              {templateData.personalInfo.github && (
+                <> | <a href={templateData.personalInfo.github} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>GitHub</a></>
+              )}
+              {templateData.personalInfo.website && !templateData.personalInfo.linkedin && !templateData.personalInfo.github && (
+                <> | {templateData.personalInfo.website}</>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Summary */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          paddingBottom: '0px',
-          color: color || '#2563eb'
-        }}>
-          SUMMARY
-        </h2>
-        <p className="text-justify leading-relaxed" style={{ 
-          fontSize: '11px',
-          lineHeight: '1.4',
-          textAlign: 'justify'
-        }}>
-          {templateData.summary || 'No summary provided yet. Please add your professional summary in the sidebar.'}
-        </p>
-      </div>
+      {sections.has('summary') && (
+        <div className="mb-0 mt-0" style={{ position: 'relative' }}>
+          <h2 className="text-left font-bold mb-0 uppercase" style={{ 
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '0.5px',
+            lineHeight: '2.5',
+            color: color || '#1f2937'
+          }}>
+            SUMMARY
+          </h2>
+          <div className="ml-0 mt-0 mb-0 p-0" >
+            <div className="text-sm" style={{ 
+              fontSize: '12px',
+              lineHeight: '1.4',
+              textAlign: 'justify',
+              color: '#000000',
+              fontWeight: '500'
+            }}>
+              {templateData.summary && templateData.summary.trim() !== '' 
+                ? templateData.summary 
+                : 'Write a compelling summary of your professional background and key strengths...'}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Technical Skills */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          paddingBottom: '0px',
-          color: color || '#2563eb'
-        }}>
-          TECHNICAL SKILLS
-        </h2>
-        <div className="space-y-1">
-          {templateData.skills?.technical && typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
-            // Handle nested skills structure with categories - display as "Category: skills"
-            Object.entries(templateData.skills.technical).map(([category, skills]) => {
-              // Clean up malformed skills data by removing extra characters and fixing spacing
-              let cleanSkills: string | string[] = skills as string | string[];
-              if (typeof skills === 'string') {
-                // Fix malformed skills like "A, W, S, , (, I, d, e, n, t, i, t, y, , a, n, d, , A, c, c, e, s, s, , M, a, n, a, g, e, m, e, n, t, ,, , E, C, 2, ,, , S, 3, ,, , V, P, C, ,, , C, l, o, u, d, T, r, a, i, l, ,, , C, l, o, u, d, W, a, t, c, h, ,, , S, e, c, u, r, i, t, y, , H, u, b, ), ,, , C, l, o, u, d, , S, e, c, u, r, i, t, y, , P, o, s, t, u, r, e, , M, a, n, a, g, e, m, e, n, t, , (, C, S, P, M, )"
-                cleanSkills = skills
-                  .replace(/,\s*,/g, ',') // Remove double commas
-                  .replace(/,\s*\(/g, ' (') // Fix spacing before parentheses
-                  .replace(/\)\s*,/g, ') ') // Fix spacing after parentheses
-                  .replace(/,\s*\)/g, ')') // Remove commas before closing parentheses
-                  .replace(/\s+/g, ' ') // Normalize multiple spaces
-                  .trim();
-              }
-              
-              return (
-                <div key={category} className="text-sm" style={{ 
-                  fontSize: '11px',
-                  lineHeight: '1.3'
-                }}>
-                  <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {Array.isArray(cleanSkills) ? cleanSkills.join(', ') : cleanSkills}
-                </div>
-              );
-            })
-          ) : Array.isArray(templateData.skills?.technical) && templateData.skills.technical.length > 0 ? (
-            // Handle flat skills array (fallback)
-            <div className="text-sm" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3'
-            }}>
-              {templateData.skills.technical.join(', ')}
-            </div>
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
-            }}>
-              No technical skills added yet
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Professional Experience */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          paddingBottom: '0px',
-          color: color || '#2563eb'
-        }}>
-          PROFESSIONAL EXPERIENCE
-        </h2>
-        <div className="space-y-1">
-          {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
-            templateData.experience.map((exp, index) => (
-              <div key={index}>
-                <div className="flex justify-between items-start mb-1">
-                  <h3 className="font-bold" style={{ 
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    flex: '1'
-                  }}>
-                    {exp.title}
-                  </h3>
-                  <div className="font-bold text-right" style={{ 
-                    fontSize: '11px',
-                    fontWeight: 'bold'
-                  }}>
-                    {exp.dates}
-                  </div>
-                </div>
-                <div className="space-y-0 ml-0">
-                  {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
-                    exp.achievements.map((achievement, idx) => (
-                      <div key={idx} className="flex items-start" style={{ fontSize: '11px' }}>
-                        <span className="mr-2">•</span>
-                        <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{achievement}</span>
-                      </div>
-                    ))
-                  ) : exp.description ? (
-                    // Fallback to description if no achievements array
-                    <div className="flex items-start" style={{ fontSize: '11px' }}>
-                      <span className="mr-2">•</span>
-                      <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{exp.description}</span>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-500" style={{ 
+      {sections.has('skills') && (
+        <div className="mb-0 mt-0">
+          <h2 className="text-left font-bold mb-0 uppercase" style={{ 
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '0.5px',
+              lineHeight: '2.5',
+            color: color || '#1f2937'
+          }}>
+            TECHNICAL SKILLS
+          </h2>
+          <div className="space-y-0">
+            {templateData.skills?.technical && templateData.skills.technical !== null && templateData.skills.technical !== undefined ? (
+              typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
+                // Handle categorized skills structure - display as "Category: skills"
+                Object.entries(templateData.skills.technical).map(([category, skills]) => {
+                  // Skip empty categories
+                  if (!skills || (Array.isArray(skills) && skills.length === 0)) {
+                    return null;
+                  }
+                  
+                  // Ensure skills is an array
+                  const skillsArray = Array.isArray(skills) ? skills : [skills];
+                  
+                  return (
+                    <div key={category} className="text-sm" style={{ 
                       fontSize: '11px',
                       lineHeight: '1.3',
-                      fontStyle: 'italic'
+                      color: '#000000'
                     }}>
-                      No achievements listed
+                      <span className="font-bold" style={{ fontWeight: 'bold' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
                     </div>
-                  )}
+                  );
+                }).filter(Boolean) // Remove null entries
+              ) : Array.isArray(templateData.skills.technical) && templateData.skills.technical.length > 0 ? (
+                // Handle flat skills array - parse key-value pairs
+                templateData.skills.technical.map((skill, index) => {
+                  if (!skill || typeof skill !== 'string') return null;
+                  
+                  // Check if skill contains a colon (key-value format)
+                  if (skill.includes(':')) {
+                    const [key, value] = skill.split(':', 2);
+                    return (
+                      <div key={index} className="text-sm" style={{ 
+                        fontSize: '11px',
+                        lineHeight: '1.3',
+                        color: '#000000'
+                      }}>
+                        <span className="font-bold" style={{ fontWeight: 'bold' }}>{key.trim()}:</span> {value.trim()}
+                      </div>
+                    );
+                  } else {
+                    // Fallback for skills without colon
+                    return (
+                      <div key={index} className="text-sm" style={{ 
+                        fontSize: '11px',
+                        lineHeight: '1.3',
+                        color: '#000000'
+                      }}>
+                        {skill}
+                      </div>
+                    );
+                  }
+                })
+              ) : (
+                // Show placeholder when no skills are present
+                <div className="text-sm" style={{ 
+                  fontSize: '11px',
+                  lineHeight: '1.3',
+                  color: '#666666',
+                  fontStyle: 'italic'
+                }}>
+                  Add your technical skills here...
                 </div>
+              )
+            ) : (
+              // Show placeholder when no skills are present
+              <div className="text-sm" style={{ 
+                fontSize: '11px',
+                lineHeight: '1.3',
+                color: '#666666',
+                fontStyle: 'italic'
+              }}>
+                Add your technical skills here...
               </div>
-            ))
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
-            }}>
-              No experience added yet
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Professional Experience */}
+      {sections.has('experience') && (
+        <div className="mb-0 ">
+          <h2 className="text-left font-bold mt-2 uppercase" style={{ 
+            fontSize: '13px',
+            fontWeight: 'bold',
+            lineHeight: '2.5',  
+            letterSpacing: '0.5px',
+            color: color || '#1f2937'
+          }}>
+            PROFESSIONAL EXPERIENCE
+          </h2>
+          <div className="-space-y-2">
+            {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
+              templateData.experience.map((exp, index) => {
+                return (
+                  <div key={index} >
+                    
+                    <div className="flex justify-between items-start ">
+                      <div className="flex-1">
+                        <h3 className="font-bold" style={{ 
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          letterSpacing: '0.3px'
+                        }}>
+                          {exp.title || 'Job Title'}
+                        </h3>
+                        <p className="text-gray-600 -mt-2 mb-1" style={{ 
+                          fontSize: '10px',
+                          fontWeight: '500',
+                           letterSpacing: '0.2px'
+                        }}>
+                          <b>{exp.company || 'Company Name'}</b>
+                          {exp.location && exp.location.trim() && (
+                            <span style={{ color: '#666666' }}> • {exp.location}</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="font-bold text-right mt-2" style={{ 
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        letterSpacing: '0.2px'
+                      }}>
+                        {exp.dates || 'Start Date - End Date'}
+                      </div>
+                    </div>
+                    <div className="ml-0 mt-0">
+                      {Array.isArray(exp.achievements) && exp.achievements.length > 0 ? (
+                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#000000', fontWeight: '500', textAlign: 'justify' }}>
+                          {exp.achievements.join(' ')}
+                        </div>
+                      ) : exp.description ? (
+                        // Fallback to description if no achievements array
+                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#000000', fontWeight: '500', textAlign: 'justify' }}>
+                          {exp.description}
+                        </div>
+                      ) : (
+                        // Show placeholder when no content
+                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
+                          Describe your key responsibilities and achievements...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              // Show placeholder when no experience entries
+              <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
+                Add your work experience here...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
      
 
       {/* Projects */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          paddingBottom: '0px',
-          color: color || '#2563eb'
-        }}>
-          PROJECTS
-        </h2>
-        <div className="space-y-1">
-          {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
-            templateData.projects.map((project, index) => (
-              <div key={index}>
-                                 <div className="mb-1">
-                   <div className="flex justify-between items-center">
-                     <div className="flex items-center gap-2">
-                       <h3 className="font-bold" style={{ 
-                         fontSize: '11px',
-                         fontWeight: 'bold'
-                       }}>
-                         {project.Name}
-                       </h3>
-                       <span className="text-sm" style={{ 
-                         fontSize: '10px',
-                         color: '#666'
-                       }}>
-                         {project.Tech_Stack}
-                       </span>
+      {sections.has('projects') && (
+        <div className="mb-0 mt-0">
+          <h2 className="text-left font-bold mb-0  uppercase" style={{ 
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '0.5px',
+            lineHeight: '2.5',  
+            color: color || '#1f2937'
+          }}>
+            PROJECTS
+          </h2>
+          <div className="-space-y-2 -mt-4">
+            {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
+              templateData.projects.map((project, index) => (
+                <div key={index} style={{ marginBottom: '-10px' }}>
+                                     <div className="-mb-1.5">
+                       <div className="flex justify-between items-center">
+                         <div className="flex items-center gap-2">
+                           <h3 className="font-bold" style={{ 
+                             fontSize: '11px',
+                             fontWeight: 'bold',
+                             letterSpacing: '0.3px'
+                           }}>
+                             {project.Name || 'Project Name'}
+                           </h3>
+                           <span className="text-sm" style={{ 
+                             fontSize: '10px',
+                             color: '#666',
+                             letterSpacing: '0.2px'
+                           }}>
+                             {project.Tech_Stack || 'Tech Stack'}
+                           </span>
+                         </div>
+                                               {(project.Start_Date || project.End_Date) ? (
+                            <div className="font-bold" style={{ 
+                              fontSize: '11px',
+                              fontWeight: 'bold'
+                            }}>
+                              {project.Start_Date && project.End_Date 
+                                ? `${project.Start_Date} - ${project.End_Date}`
+                                : project.Start_Date || project.End_Date
+                              }
+                            </div>
+                          ) : (
+                            <div className="font-bold" style={{ 
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              color: '#666666',
+                              fontStyle: 'italic'
+                            }}>
+                              Start Date - End Date
+                            </div>
+                          )}
+                       </div>
                      </div>
-                                           {(project.Start_Date || project.End_Date) && (
-                        <div className="font-bold" style={{ 
-                          fontSize: '11px',
-                          fontWeight: 'bold'
-                        }}>
-                          {project.Start_Date && project.End_Date 
-                            ? `${project.Start_Date} - ${project.End_Date}`
-                            : project.Start_Date || project.End_Date
-                          }
+                    <div className="space-y-0 ml-0 mt-0">
+                      {project.Description ? (
+                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#000000', fontWeight: '500', textAlign: 'justify' }}>
+                          {project.Description}
+                          {project.Link && project.Link.trim() && (
+                            <span style={{ color: '#0077b5', textDecoration: 'underline', marginLeft: '4px' }}>
+                              <a href={project.Link} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline' }}>
+                                View Project
+                              </a>
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
+                          Describe your project details...
                         </div>
                       )}
-                   </div>
-                 </div>
-                <div className="space-y-0 ml-0">
-                  {project.Description ? (
-                    <div className="flex items-start" style={{ fontSize: '11px' }}>
-                      <span className="mr-2">•</span>
-                      <span className="leading-relaxed" style={{ lineHeight: '1.3' }}>{project.Description}</span>
                     </div>
-                  ) : (
-                    <div className="text-sm text-gray-500" style={{ 
-                      fontSize: '11px',
-                      lineHeight: '1.3',
-                      fontStyle: 'italic'
-                    }}>
-                      No project description available
-                    </div>
-                  )}
-                </div>
+                  </div>
+              ))
+            ) : (
+              // Show placeholder when no projects
+              <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666666', fontWeight: '500', fontStyle: 'italic', textAlign: 'justify' }}>
+                Add your projects here...
               </div>
-            ))
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
-            }}>
-              No projects added yet
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
-             {/* Education */}
-      <div className="mb-3">
-        <h2 className="text-left font-bold mb-2 uppercase" style={{ 
-          fontSize: '13px',
-          fontWeight: 'bold',
-          letterSpacing: '0.5px',
-          paddingBottom: '0px',
-          color: color || '#2563eb'
-        }}>
-          EDUCATION
-        </h2>
-        <div className="space-y-2">
-          {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
-            templateData.education.map((edu, index) => (
-              <div key={index} className="flex justify-between items-start">
+      )}
+      
+      {/* Education */}
+      {sections.has('education') && (
+        <div className="mb-0 ">
+          <h2 className="text-left font-bold mt-4 uppercase" style={{ 
+            fontSize: '13px',
+            fontWeight: 'bold',
+            lineHeight: '2.5',  
+            letterSpacing: '0.5px',
+            color: color || '#1f2937'
+          }}>
+            EDUCATION
+          </h2>
+          <div className="space-y-0">
+            {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
+              templateData.education.map((edu, index) => (
+                <div key={index} className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
+                  <div>
+                    <div className="font-bold" style={{ 
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      letterSpacing: '0.3px'
+                    }}>
+                      {edu.institution || 'Institution Name'}
+                      {edu.location && edu.location.trim() && (
+                        <span style={{ fontWeight: 'bold' }}> | {edu.location}</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#000000' }}>
+                      {edu.degree || 'Degree/Program'}
+                    </div>
+                  </div>
+                  <div className="font-bold" style={{ 
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    letterSpacing: '0.2px'
+                  }}>
+                    {edu.dates || 'Graduation Year'}
+                    </div>
+                </div>
+              ))
+            ) : (
+              // Show placeholder when no education entries
+              <div className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
                 <div>
                   <div className="font-bold" style={{ 
                     fontSize: '11px',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    letterSpacing: '0.3px',
+                    color: '#666666',
+                    fontStyle: 'italic'
                   }}>
-                    {edu.institution}
+                    Institution Name | Location
                   </div>
-                  <div style={{ fontSize: '11px' }}>
-                    {edu.degree}
+                  <div style={{ fontSize: '11px', letterSpacing: '0.2px', color: '#666666', fontStyle: 'italic' }}>
+                    Degree/Program
                   </div>
                 </div>
                 <div className="font-bold" style={{ 
                   fontSize: '11px',
-                  fontWeight: 'bold'
+                  fontWeight: 'bold',
+                  letterSpacing: '0.2px',
+                  color: '#666666',
+                  fontStyle: 'italic'
                 }}>
-                  {edu.dates}
+                  Graduation Year
                   </div>
               </div>
-            ))
-          ) : (
-            <div className="text-sm text-gray-500" style={{ 
-              fontSize: '11px',
-              lineHeight: '1.3',
-              fontStyle: 'italic'
-            }}>
-              No education added yet
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Certifications */}
+      {sections.has('certifications') && (
+        <div className="mb-0 mt-0">
+          <h2 className="text-left font-bold mb-0 uppercase" style={{ 
+            fontSize: '13px',
+            fontWeight: 'bold',
+            letterSpacing: '0.5px',
+            lineHeight: '2.5',  
+            color: color || '#1f2937'
+          }}>
+            CERTIFICATIONS
+          </h2>
+          <div className="space-y-0">
+            {Array.isArray(templateData.certifications) && templateData.certifications.length > 0 ? (
+              templateData.certifications.map((cert, index) => (
+                <div key={index} className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
+                  <div>
+                    <div style={{ 
+                      fontSize: '11px',
+                      letterSpacing: '0.2px',
+                      color: '#000000'
+                    }}>
+                      <span style={{ fontWeight: 'bold' }}>{cert.certificateName || 'Certificate Name'}</span> - <span style={{ color: '#000000' }}>{cert.instituteName || 'Issuing Organization'}</span>
+                      {cert.link && cert.link.trim() && (
+                        <span style={{ marginLeft: '8px' }}>
+                          <a href={cert.link} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'underline', fontSize: '10px' }}>
+                            View Certificate
+                          </a>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {cert.issueDate ? (
+                    <div className="font-bold" style={{ 
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      letterSpacing: '0.2px'
+                    }}>
+                      {cert.issueDate}
+                    </div>
+                  ) : (
+                    <div className="font-bold" style={{ 
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      letterSpacing: '0.2px',
+                      color: '#666666',
+                      fontStyle: 'italic'
+                    }}>
+                      Issue Date
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              // Show placeholder when no certifications
+              <div className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
+                <div>
+                  <div style={{ 
+                    fontSize: '11px',
+                    letterSpacing: '0.2px',
+                    color: '#666666',
+                    fontStyle: 'italic'
+                  }}>
+                    <span style={{ fontWeight: 'bold' }}>Certificate Name</span> - <span style={{ color: '#666666' }}>Issuing Organization</span>
+                  </div>
+                </div>
+                <div className="font-bold" style={{ 
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  letterSpacing: '0.2px',
+                  color: '#666666',
+                  fontStyle: 'italic'
+                }}>
+                  Issue Date
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default ResumePDF;
+

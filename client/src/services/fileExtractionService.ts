@@ -170,10 +170,10 @@ class FileExtractionService {
       const sortedBuckets = Array.from(linesMap.keys()).sort((a, b) => b - a);
 
       // 2) detect a column boundary if present
-      const xs = Array.from(new Set(items.map(i => Math.round(i.x)))).sort((a, b) => a - b);
+      const xs = Array.from(new Set(items.map((i: any) => Math.round(i.x)))).sort((a: any, b: any) => (a as number) - (b as number)) as number[];
       let columnBoundary: number | null = null;
       if (xs.length > 4) {
-        const gaps = xs.slice(1).map((v, i) => ({ gap: v - xs[i], mid: (v + xs[i]) / 2 }));
+        const gaps = xs.slice(1).map((v: number, i: number) => ({ gap: v - xs[i], mid: (v + xs[i]) / 2 }));
         const largest = gaps.reduce((p, c) => c.gap > p.gap ? c : p, { gap: 0, mid: 0 });
         const totalWidth = xs[xs.length - 1] - xs[0];
         if (largest.gap > Math.max(40, totalWidth / 5)) {

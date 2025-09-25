@@ -1,14 +1,55 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, Download } from 'lucide-react';
+// Updated to support customization
 import { Button } from '@/components/ui/button';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { generatePDF, downloadPDF } from '@/services/pdfService';
 
 interface ResumePreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   templateId: string;
+  visibleSections?: Set<string>;
+  customization?: {
+    theme: {
+      primaryColor: string;
+      secondaryColor: string;
+      textColor: string;
+      backgroundColor: string;
+      accentColor: string;
+      borderColor: string;
+      headerColor: string;
+    };
+    typography: {
+      fontFamily: {
+        header: string;
+        body: string;
+        name: string;
+      };
+      fontSize: {
+        name: number;
+        title: number;
+        headers: number;
+        body: number;
+        subheader: number;
+      };
+      fontWeight: {
+        name: number;
+        headers: number;
+        body: number;
+      };
+    };
+    layout: {
+      margins: {
+        top: number;
+        bottom: number;
+        left: number;
+        right: number;
+      };
+      sectionSpacing: number;
+      lineHeight: number;
+    };
+  };
   data: {
     personalInfo: {
       name: string;
@@ -16,11 +57,13 @@ interface ResumePreviewModalProps {
       address: string;
       email: string;
       website: string;
+      github?: string;
+      linkedin?: string;
       phone?: string;
     };
     summary: string;
     skills: {
-      technical: string[];
+      technical: string[] | { [category: string]: string[] };
       professional?: string[];
     };
     experience: Array<{
@@ -34,6 +77,14 @@ interface ResumePreviewModalProps {
       institution: string;
       dates: string;
       details: string[];
+    }>;
+    projects?: Array<{
+      Name: string;
+      Description: string;
+      Tech_Stack: string;
+      Start_Date?: string;
+      End_Date?: string;
+      Link?: string;
     }>;
     additionalInfo: {
       languages?: string[];
@@ -81,74 +132,39 @@ const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
   isOpen,
   onClose,
   templateId,
+  visibleSections,
+  customization,
   data,
   color
 }) => {
   const resumeRef = useRef<HTMLDivElement>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleDownloadPDF = async () => {
+  const handleGeneratePDF = async () => {
     if (!resumeRef.current) return;
 
     try {
-      // Create a temporary container for the resume
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.width = '800px';
-      tempContainer.style.backgroundColor = 'white';
-      tempContainer.style.padding = '40px';
-      document.body.appendChild(tempContainer);
-
-      // Clone the resume content
-      const resumeClone = resumeRef.current.cloneNode(true) as HTMLElement;
-      tempContainer.appendChild(resumeClone);
-
-      // Wait for any images to load
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Convert to canvas
-      const canvas = await html2canvas(tempContainer, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: 800,
-        height: tempContainer.scrollHeight
+      setIsGenerating(true);
+      
+      // Get the HTML content from the resume
+      const htmlContent = resumeRef.current.outerHTML;
+      
+      // Generate PDF using the service
+      const blob = await generatePDF({
+        htmlContent,
+        templateId,
+        resumeData: data
       });
 
-      // Remove temporary container
-      document.body.removeChild(tempContainer);
-
-      // Create PDF
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-
-      let position = 0;
-
-      // Add first page
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      // Add additional pages if needed
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
       // Download the PDF
-      const fileName = `${data.personalInfo.name.replace(/\s+/g, '_')}_Resume.pdf`;
-      pdf.save(fileName);
+      const filename = `${data.personalInfo.name.replace(/\s+/g, '_')}_Resume.pdf`;
+      downloadPDF(blob, filename);
+
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -177,6 +193,8 @@ const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
               templateId={templateId}
               data={data}
               color={color}
+              visibleSections={visibleSections}
+              customization={customization}
             />
           </div>
         </div>
@@ -186,9 +204,9 @@ const ResumePreviewModal: React.FC<ResumePreviewModalProps> = ({
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-          <Button onClick={handleDownloadPDF}>
-            <Download className="w-4 h-4 mr-2" />
-            Download PDF
+          <Button onClick={handleGeneratePDF} disabled={isGenerating}>
+            {isGenerating ? 'Generating...' : 'Download PDF'}
+            <Download className="w-4 h-4 ml-2" />
           </Button>
         </div>
       </div>

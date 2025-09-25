@@ -321,7 +321,8 @@ const ResumeProcessingPage = () => {
                   <div>
                     <Label className="flex items-center gap-2 mb-2">
                       <Upload className="w-3 h-3 text-gray-500" />
-                      Upload Resume (Optional)
+                      Upload Resume
+                      <span className="text-red-500">*</span>
                     </Label>
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center hover:border-purple-400 transition-colors">
                       <input
@@ -362,6 +363,7 @@ const ResumeProcessingPage = () => {
                     <Label htmlFor="sector" className="flex items-center gap-2 mb-1">
                       <Building2 className="w-3 h-3 text-gray-500" />
                       Sector/Industry
+                      <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="sector"
@@ -378,6 +380,7 @@ const ResumeProcessingPage = () => {
                     <Label htmlFor="country" className="flex items-center gap-2 mb-1">
                       <Globe className="w-3 h-3 text-gray-500" />
                       Country
+                      <span className="text-red-500">*</span>
                     </Label>
                     <select
                       id="country"
@@ -400,6 +403,7 @@ const ResumeProcessingPage = () => {
                     <Label htmlFor="designation" className="flex items-center gap-2 mb-1">
                       <User className="w-3 h-3 text-gray-500" />
                       Designation/Role
+                      <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="designation"

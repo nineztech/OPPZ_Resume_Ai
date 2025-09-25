@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Star, Download, Eye, Heart, Share2, X, Palette } from 'lucide-react';
-import { templates, getTemplateById, type Template } from '@/data/templates';
+import { Star, Eye, X, Palette } from 'lucide-react';
+import { type Template } from '@/data/templates';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 
 interface TemplatePreviewModalProps {
@@ -13,9 +13,8 @@ interface TemplatePreviewModalProps {
   onUseTemplate?: (templateId: string, selectedColor?: string) => void;
 }
 
-const TemplatePreviewModal = ({ template, isOpen, onClose, onDownload, onUseTemplate }: TemplatePreviewModalProps) => {
+const TemplatePreviewModal = ({ template, isOpen, onClose, onUseTemplate }: TemplatePreviewModalProps) => {
   const [selectedColor, setSelectedColor] = useState<string>('');
-  const [selectedFormat, setSelectedFormat] = useState<string>('PDF');
 
   // Set initial selected color when template changes
   useEffect(() => {
@@ -24,12 +23,6 @@ const TemplatePreviewModal = ({ template, isOpen, onClose, onDownload, onUseTemp
     }
   }, [template]);
 
-  // Set initial selected format when template changes
-  useEffect(() => {
-    if (template && template.formats.length > 0) {
-      setSelectedFormat('PDF'); // Default to PDF
-    }
-  }, [template]);
 
   // Update preview when color changes
   useEffect(() => {
@@ -62,18 +55,7 @@ const TemplatePreviewModal = ({ template, isOpen, onClose, onDownload, onUseTemp
     setSelectedColor(color);
   };
 
-  const handleDownload = async () => {
-    try {
-      // For frontend templates, we'll simulate download
-      console.log('Downloading template:', template!.id, 'with color:', selectedColor, 'format:', selectedFormat);
-      
-      // Call the parent handler for any additional actions
-      onDownload(template!.id, selectedColor);
-    } catch (error) {
-      console.error('Error downloading template:', error);
-      alert('Failed to download template. Please try again.');
-    }
-  };
+  
 
   const handleUseTemplate = () => {
     if (onUseTemplate) {
@@ -115,9 +97,9 @@ const TemplatePreviewModal = ({ template, isOpen, onClose, onDownload, onUseTemp
         </div>
 
         <div className="p-4 overflow-y-auto max-h-[calc(85vh-80px)]">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Template Preview - Improved UI */}
-            <div className="space-y-3">
+            <div className="space-y-3 md:col-span-2">
               <div className="relative">
                 <div className="aspect-[210/297] bg-gradient-to-b from-gray-50 to-gray-100 rounded-lg overflow-hidden shadow-sm border border-gray-200">
                   {template && (
@@ -154,7 +136,7 @@ const TemplatePreviewModal = ({ template, isOpen, onClose, onDownload, onUseTemp
               </div>
             </div>
 
-            {/* Template Details - 50% */}
+            {/* Template Details - 33% */}
             <div className="space-y-4">
               {/* Stats */}
               <div className="flex items-center justify-between">
@@ -220,57 +202,19 @@ const TemplatePreviewModal = ({ template, isOpen, onClose, onDownload, onUseTemp
                 )}
               </div>
 
-              {/* Format Options - Compact */}
-              <div>
-                <h3 className="font-semibold text-base mb-2 text-gray-900">Format</h3>
-                <div className="flex gap-1.5 flex-wrap">
-                  {template.formats.map((format, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedFormat(format)}
-                      className={`px-3 py-1 rounded-md text-xs font-medium cursor-pointer transition-all ${
-                        selectedFormat === format 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {format}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               {/* Action Buttons - Compact */}
               <div className="space-y-2 pt-2">
                 <div className="flex gap-2">
-                  <Button 
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-sm font-medium h-9"
-                    onClick={handleDownload}
-                  >
-                    <Download className="w-4 h-4 mr-1.5" />
-                    Download
-                  </Button>
                   {onUseTemplate && (
                     <Button 
-                      variant="outline"
-                      className="flex-1 text-sm font-medium h-9 border-gray-300"
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-sm font-medium h-9"
                       onClick={handleUseTemplate}
                     >
                       <Eye className="w-4 h-4 mr-1.5" />
                       Use Template
                     </Button>
                   )}
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1 text-sm font-medium h-8 border-gray-200 text-gray-600">
-                    <Heart className="w-3.5 h-3.5 mr-1.5" />
-                    Save
-                  </Button>
-                  <Button variant="outline" className="flex-1 text-sm font-medium h-8 border-gray-200 text-gray-600">
-                    <Share2 className="w-3.5 h-3.5 mr-1.5" />
-                    Share
-                  </Button>
                 </div>
               </div>
             </div>

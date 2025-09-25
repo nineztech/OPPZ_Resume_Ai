@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Main entry point for Gemini Resume Parser
+Main entry point for OpenAI Resume Parser
 Provides command-line interface and example usage
 """
 
@@ -11,8 +11,9 @@ import sys
 from pathlib import Path
 from typing import Dict, Any
 
-from services.gemini_parser_service import GeminiResumeParser
-from config.config import GeminiConfig
+from services.openai_parser_service import OpenAIResumeParser
+from services.resume_improvement_service import ResumeImprovementService
+from config.config import OpenAIConfig
 
 # Configure logging
 logging.basicConfig(
@@ -23,19 +24,19 @@ logger = logging.getLogger(__name__)
 
 def parse_resume_file(file_path: str, output_file: str = None, api_key: str = None) -> Dict[str, Any]:
     """
-    Parse a resume file using Gemini API
+    Parse a resume file using OpenAI API
     
     Args:
         file_path: Path to the resume file
         output_file: Optional output file path for JSON results
-        api_key: Optional Gemini API key
+        api_key: Optional OpenAI API key
         
     Returns:
         Parsed resume data
     """
     try:
         # Initialize parser
-        parser = GeminiResumeParser(api_key=api_key)
+        parser = OpenAIResumeParser(api_key=api_key)
         
         # Parse resume
         logger.info(f"Parsing resume: {file_path}")
@@ -51,6 +52,39 @@ def parse_resume_file(file_path: str, output_file: str = None, api_key: str = No
         
     except Exception as e:
         logger.error(f"Failed to parse resume: {str(e)}")
+        raise
+
+def apply_ats_suggestions(parsed_resume_data: Dict[str, Any], ats_analysis: Dict[str, Any], api_key: str = None) -> Dict[str, Any]:
+    """
+    Apply ATS suggestions to improve the resume
+    
+    Args:
+        parsed_resume_data: The structured resume data from parsing
+        ats_analysis: The ATS analysis results with suggestions
+        api_key: Optional Gemini API key
+        
+    Returns:
+        Improved resume data with ATS suggestions applied
+    """
+    try:
+        # Initialize improvement service
+        improvement_service = ResumeImprovementService(api_key=api_key)
+        
+        # Apply ATS suggestions
+        logger.info("Applying ATS suggestions to improve resume")
+        improved_resume = improvement_service.apply_ats_suggestions(parsed_resume_data, ats_analysis)
+        
+        # Generate improvement summary
+        improvement_summary = improvement_service.get_improvement_summary(parsed_resume_data, improved_resume)
+        
+        # Add summary to the result
+        improved_resume["_improvement_summary"] = improvement_summary
+        
+        logger.info("Successfully applied ATS suggestions to resume")
+        return improved_resume
+        
+    except Exception as e:
+        logger.error(f"Failed to apply ATS suggestions: {str(e)}")
         raise
 
 def main():
@@ -122,12 +156,12 @@ Examples:
         sys.exit(1)
 
 def example_usage():
-    """Example usage of the Gemini Resume Parser"""
-    print("=== Gemini Resume Parser - Example Usage ===\n")
+    """Example usage of the OpenAI Resume Parser"""
+    print("=== OpenAI Resume Parser - Example Usage ===\n")
     
     try:
         # Initialize parser
-        parser = GeminiResumeParser()
+        parser = OpenAIResumeParser()
         
         # Get model info
         model_info = parser.get_model_info()

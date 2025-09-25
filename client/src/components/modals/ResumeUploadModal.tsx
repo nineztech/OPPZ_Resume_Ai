@@ -29,7 +29,7 @@ const ResumeUploadModal: React.FC<ResumeUploadModalProps> = ({
     setIsAIModalOpen(true);
   };
 
-  const handleAIContinue = (data: { sector: string; country: string; designation: string }) => {
+  const handleAIContinue = (_data: { sector: string; country: string; designation: string }) => {
     // Close both modals
     setIsAIModalOpen(false);
     onClose();

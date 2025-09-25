@@ -1,373 +1,3078 @@
 import json
 import logging
+import datetime
+import re
 from typing import Dict, Any, Optional, List
-from google.generativeai import GenerativeModel
-from .gemini_parser_service import GeminiResumeParser
+from openai import OpenAI
+from .openai_parser_service import OpenAIResumeParser
 
 logger = logging.getLogger(__name__)
 
-class ATSService:
-    """Base ATS service class"""
+def _collect_used_power_words_from_text(text: str) -> List[str]:
+    """
+    Collect action verbs and professional terms already present in the resume text.
+    Used to avoid suggesting synonyms that are already present in the resume.
+    """
+    import re as _re
+    action_verbs = {
+        'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered',
+        'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured',
+        'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained',
+        'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved',
+        'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified',
+        'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced',
+        'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed',
+        'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched',
+        'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received',
+        'engineered', 'constructed', 'architected', 'fabricated', 'assembled', 'crafted', 'forged', 'molded',
+        'shaped', 'formed', 'generated', 'produced', 'manufactured', 'fashioned', 'devised', 'conceived',
+        'invented', 'innovated', 'pioneered', 'spearheaded', 'championed', 'advocated', 'promoted', 'endorsed',
+        'supported', 'backed', 'sponsored', 'funded', 'financed', 'invested', 'contributed', 'donated',
+        'provided', 'supplied', 'delivered', 'distributed', 'allocated', 'assigned', 'designated', 'appointed',
+        'selected', 'chosen', 'picked', 'elected', 'voted', 'decided', 'determined', 'resolved', 'settled',
+        'concluded', 'finalized', 'completed', 'finished', 'accomplished', 'achieved', 'attained', 'reached',
+        'obtained', 'acquired', 'gained', 'earned', 'won', 'secured', 'captured', 'seized', 'grasped',
+        'gripped', 'held', 'maintained', 'retained', 'preserved', 'conserved', 'protected', 'safeguarded',
+        'defended', 'shielded', 'guarded', 'watched', 'monitored', 'observed', 'tracked', 'followed',
+        'pursued', 'chased', 'hunted', 'searched', 'explored', 'investigated', 'examined', 'studied',
+        'analyzed', 'evaluated', 'assessed', 'reviewed', 'inspected', 'checked', 'verified', 'confirmed',
+        'validated', 'authenticated', 'certified', 'approved', 'endorsed', 'sanctioned', 'authorized',
+        'permitted', 'allowed', 'enabled', 'facilitated', 'assisted', 'helped', 'aided', 'supported',
+        'backed', 'sponsored', 'promoted', 'advanced', 'progressed', 'moved', 'shifted', 'transferred',
+        'relocated', 'migrated', 'transported', 'conveyed', 'carried', 'delivered', 'distributed', 'spread',
+        'extended', 'expanded', 'enlarged', 'increased', 'boosted', 'enhanced', 'improved', 'upgraded',
+        'refined', 'polished', 'perfected', 'optimized', 'maximized', 'minimized', 'reduced', 'decreased',
+        'lowered', 'diminished', 'lessened', 'cut', 'trimmed', 'slashed', 'eliminated', 'removed',
+        'deleted', 'erased', 'wiped', 'cleared', 'cleaned', 'purified', 'sanitized', 'sterilized',
+        'disinfected', 'decontaminated', 'neutralized', 'balanced', 'stabilized', 'secured', 'fixed',
+        'repaired', 'restored', 'renewed', 'refreshed', 'revitalized', 'rejuvenated', 'regenerated',
+        'rebuilt', 'reconstructed', 'reassembled', 'repaired', 'mended', 'patched', 'fixed', 'corrected',
+        'adjusted', 'modified', 'altered', 'changed', 'transformed', 'converted', 'adapted', 'customized',
+        'personalized', 'tailored', 'fitted', 'sized', 'scaled', 'proportioned', 'balanced', 'harmonized',
+        'synchronized', 'coordinated', 'orchestrated', 'conducted', 'directed', 'managed', 'administered',
+        'supervised', 'oversaw', 'controlled', 'governed', 'regulated', 'monitored', 'tracked', 'followed',
+        'pursued', 'chased', 'hunted', 'searched', 'explored', 'investigated', 'examined', 'studied',
+        'analyzed', 'evaluated', 'assessed', 'reviewed', 'inspected', 'checked', 'verified', 'confirmed',
+        'validated', 'authenticated', 'certified', 'approved', 'endorsed', 'sanctioned', 'authorized',
+        'permitted', 'allowed', 'enabled', 'facilitated', 'assisted', 'helped', 'aided', 'supported','utilized'
+    }
+    professional_terms = {
+        'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced',
+        'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical',
+        'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined',
+        'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized',
+        'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform',
+        'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven',
+        'protected', 'safe', 'guarded', 'shielded', 'defended', 'secured', 'fortified', 'reinforced',
+        'strengthened', 'hardened', 'toughened', 'solidified', 'stabilized', 'balanced', 'harmonized',
+        'synchronized', 'coordinated', 'orchestrated', 'conducted', 'directed', 'managed', 'administered',
+        'supervised', 'oversaw', 'controlled', 'governed', 'regulated', 'monitored', 'tracked', 'followed',
+        'modular', 'service-oriented', 'component-based', 'object-oriented', 'functional', 'procedural',
+        'declarative', 'imperative', 'reactive', 'event-driven', 'message-driven', 'data-driven', 'test-driven',
+        'behavior-driven', 'domain-driven', 'model-driven', 'architecture-driven', 'design-driven', 'user-driven',
+        'customer-driven', 'business-driven', 'market-driven', 'performance-driven', 'quality-driven',
+        'security-driven', 'compliance-driven', 'agile-driven', 'lean-driven', 'devops-driven', 'cloud-driven'
+    }
     
-    def __init__(self, api_key: str, model_name: str = "gemini-2.5-flash"):
-        self.parser = GeminiResumeParser(api_key=api_key, model_name=model_name)
-        self.model = self.parser.model
+    # Use more comprehensive regex to capture all forms including past tense and participles
+    tokens = _re.findall(r'\b[a-zA-Z]+(?:ed|ing|s)?\b', (text or '').lower())
     
-    def analyze_resume(self, resume_text: str) -> Dict[str, Any]:
-        """Base method for resume analysis"""
-        raise NotImplementedError
+    # Also check for base forms - strip common endings
+    all_words = set()
+    for token in tokens:
+        all_words.add(token)
+        # Strip common verb endings to get base form
+        base = token
+        if token.endswith('ed'):
+            base = token[:-2]
+            if len(base) > 2:
+                all_words.add(base)
+        elif token.endswith('ing'):
+            base = token[:-3]
+            if len(base) > 2:
+                all_words.add(base)
+        elif token.endswith('s') and len(token) > 3:
+            base = token[:-1]
+            all_words.add(base)
     
-    def _parse_ats_response(self, response_text: str) -> Dict[str, Any]:
-        """Parse ATS response from Gemini"""
-        try:
-            # Clean response and parse JSON
-            cleaned_response = self.parser._clean_gemini_response(response_text)
-            return json.loads(cleaned_response)
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse ATS response: {str(e)}")
-            raise ValueError("Invalid ATS response format")
+    used = {t for t in all_words if t in action_verbs or t in professional_terms}
+    
+    # Log for debugging
+    logger.info(f"🔍 DEBUG: Found {len(used)} power words already used in resume: {sorted(used)}")
+    
+    return sorted(used)
 
-class StandardATSService(ATSService):
-    """Standard ATS analysis service - general resume optimization"""
-    
-    def analyze_resume(self, resume_text: str) -> Dict[str, Any]:
+def _generate_fix_repetition_line(section: str, word_type: str, word: str, count: int, contexts: List[str], client: Any, model_name: str, temperature: float, top_p: float, forbidden_words: List[str], already_suggested: List[str]) -> str:
+    """
+    Use the model to generate one FIX_REPETITION suggestion line for a repeated word,
+    following the mandatory format. Returns a single-line string, or empty string on failure.
+    """
+    try:
+        # Limit to first 3 context snippets to keep prompt compact
+        context_snippets = contexts[:3] if contexts else []
+        context_text = "\n".join([f"- {c}" for c in context_snippets]) if context_snippets else "(no specific sentences available)"
+
+        banned_list = ", ".join(sorted(set((forbidden_words or []) + (already_suggested or [])))) or "(none)"
+
+        prompt = f"""
+        You are improving resume language variety. Produce EXACTLY ONE line in this format and nothing else:
+        FIX_REPETITION: [Section] - [Word Type] '[word]' used [X] times - Replace instances: [Instance 1: '[exact context]' → '[alternative1]'], [Instance 2: '[exact context]' → '[alternative2]'], [Instance 3: '[exact context]' → '[alternative3]']
+
+        Requirements:
+        - Use section: {section}
+        - Word Type is exactly: {word_type}
+        - word is exactly: {word}
+        - X is exactly: {count}
+        - Use 2-3 short, professional alternatives suitable for resumes
+        - CRITICAL: Each alternative MUST be different (no duplicates) and MUST NOT be any of these words already present elsewhere in the resume or already suggested: {banned_list}
+        - CRITICAL: Do NOT suggest 'engineered', 'created', 'developed', 'designed', 'enhanced', 'improved', 'collaborated', 'secure', 'microservices' if they appear in the banned list
+        - Avoid proposing any alternative that already appears in the provided contexts or elsewhere in the resume
+        - If no suitable single-word verb remains, REFRAME the phrase (still keeping meaning) to remove the repetition without using any banned words
+        - Distribute different alternatives across instances to avoid introducing new repetition within the same section
+        - If fewer than 3 contexts provided, still output 2-3 replacements using the available contexts
+        - Do NOT include any preface or follow-up text, no code fences, only the single line
+
+        Context sentences where the word appears (may be trimmed):
+        {context_text}
         """
-        Analyze resume using standard ATS criteria:
-        - Quantify impact (numbers/metrics)
-        - Summary quality
-        - Length & depth
-        - Repetition
-        - Buzzwords
-        - Overall score
-        """
-        prompt = self._get_standard_ats_prompt(resume_text)
+
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": "You generate precise, single-line replacement instructions in the required format."},
+                {"role": "user", "content": prompt.strip()}
+            ],
+            temperature=0.1,
+            top_p=0.8,
+            max_tokens=200
+        )
+
+        line = response.choices[0].message.content.strip()
+        # Basic sanity check: must start with FIX_REPETITION
+        if not line.startswith("FIX_REPETITION:"):
+            import re as _re
+            m = _re.search(r"FIX_REPETITION:.*", line)
+            if m:
+                return m.group(0).strip()
+            return ""
+        return line
+    except Exception as e:
+        logger.warning(f"Failed to generate FIX_REPETITION line for '{word}' in section '{section}': {e}")
+        return ""
+
+def _augment_repetition_suggestions_with_debug(ats_response: Dict[str, Any], repetition_debug: Dict[str, Any], resume_text: str, client: Any, model_name: str, temperature: float, top_p: float) -> Dict[str, Any]:
+    """
+    Augment repetition_avoidance suggestions to include a FIX_REPETITION line for
+    every repeated word detected in the debug analysis. Avoid duplicates if the AI
+    already provided a FIX_REPETITION for a given word.
+    """
+    try:
+        import re as _re
+        detailed = ats_response.setdefault("detailed_feedback", {})
+        rep = detailed.setdefault("repetition_avoidance", {})
+        suggestions: List[str] = rep.setdefault("suggestions", [])
+
+        # Collect already-covered words from existing FIX_REPETITION suggestions
+        covered_words = set()
+        # Track alternatives already suggested to enforce global uniqueness
+        suggested_alternatives = set()
+        for s in suggestions:
+            m = _re.search(r"FIX_REPETITION:\s*[^']*'([^']+)'", s)
+            if m:
+                covered_words.add(m.group(1).strip().lower())
+            for alt in _re.findall(r"→\s*'([^']+)'", s):
+                if alt:
+                    suggested_alternatives.add(alt.strip().lower())
+
+        repetitions_found = repetition_debug.get("repetitions_found", {})
+        debug_info = repetition_debug.get("debug_info", {})
+        action_verbs_found = repetition_debug.get("action_verbs_found", {})
+
+        # Build forbidden words list from resume text (verbs/terms already present)
+        forbidden_words = set(_collect_used_power_words_from_text(resume_text))
+        logger.info(f"🔍 DEBUG: Forbidden words list (already in resume): {sorted(forbidden_words)}")
+
+        # Add all repeated words to forbidden list so they aren't suggested as alternatives
+        all_repeated_words = set()
+        for section, words in repetitions_found.items():
+            for word in words.keys():
+                all_repeated_words.add(word.lower())
+        forbidden_words.update(all_repeated_words)
         
-        try:
-            response = self.model.generate_content(prompt)
-            return self._parse_ats_response(response.text)
-        except Exception as e:
-            logger.error(f"Standard ATS analysis failed: {str(e)}")
-            raise
-    
-    def _get_standard_ats_prompt(self, resume_text: str) -> str:
-     return f"""
-You are an **Applicant Tracking System (ATS) evaluation engine**.  
-Your task is to **strictly evaluate resumes against ATS best practices (USA/global standards)**.  
-Do NOT evaluate against any specific job description.  
+        logger.info(f"🔍 DEBUG: Extended forbidden words (including repeated): {sorted(forbidden_words)}")
 
----
-### **Critical ATS Requirements to Check**
-1. **Name Completeness**: Resume MUST have both first name AND last name clearly visible
-   - If only first name is present → Flag as critical issue
-   - If only last name is present → Flag as critical issue  
-   - If neither is clearly identifiable → Flag as critical issue
-   - Check for common name patterns: "John Smith", "J. Smith", "John S.", etc.
+        # If no repetitions found, remove any existing FIX_REPETITION suggestions to avoid false positives
+        if not repetitions_found:
+            logger.info("🔍 DEBUG: No repetitions found - removing any existing FIX_REPETITION suggestions")
+            suggestions[:] = [s for s in suggestions if not s.startswith("FIX_REPETITION:")]
+            return ats_response
 
-2. **Contact Information**: Must have at least email OR phone number
-   - If both missing → Flag as critical issue
-   - If only one present → Flag as medium issue
+        for section, words in repetitions_found.items():
+            for word, count in words.items():
+                if word.lower() in covered_words:
+                    continue
 
----
-### **Scoring Rules**
-- Provide a **score between 0–100**.  
-- Use the following **weight distribution** (must total 100):  
-  1. Formatting & Readability – 20  
-  2. Keyword Coverage (General) – 20  
-  3. Section Completeness – 25  
-  4. Achievements & Metrics – 15  
-  5. Spelling, Grammar & Consistency – 10  
-  6. Parse Accuracy – 10  
-- **Deduct 15-20 points** if name completeness issues are found
-- **Deduct 10-15 points** if contact information is incomplete
-- Ensure **category scores add up proportionally** to the overall score.
+                word_type = "Action Verb" if word in action_verbs_found.get(section, {}) else "Professional Term"
+                contexts = debug_info.get(f"{section}_{word}", {}).get("contexts", [])
+                
+                # Current forbidden list for this word includes all forbidden words + already suggested
+                current_forbidden = list(forbidden_words) + list(suggested_alternatives)
+                logger.info(f"🔍 DEBUG: Generating suggestions for '{word}' avoiding these words: {sorted(current_forbidden)}")
+                
+                # Generate a single FIX_REPETITION line using the model, leveraging contexts
+                line = _generate_fix_repetition_line(section, word_type, word, count, contexts, client, model_name, temperature, top_p, current_forbidden, [])
+                if line and isinstance(line, str):
+                    suggestions.append(line)
+                    # Update global suggested_alternatives with any new alts from this line
+                    for alt in _re.findall(r"→\s*'([^']+)'", line):
+                        if alt:
+                            suggested_alternatives.add(alt.strip().lower())
+                            logger.info(f"🔍 DEBUG: Added '{alt}' to suggested alternatives list")
 
----
-### **Output Rules**
-- Respond in **valid JSON only**.  
-- No text outside JSON.  
-- Always include `"overall_score"`, `"category_scores"`, `"detailed_feedback"`, `"extracted_text"`, `"strengths"`, `"weaknesses"`, and `"recommendations"`.  
-- Each section must have **positives**, **negatives**, and **suggestions** (non-empty arrays).  
-- Be concise but detailed in feedback (no vague answers).  
-- **SPECIFICALLY check and mention name completeness issues** in weaknesses and recommendations.
+        # Ensure negatives/specific_issues enumerate all repeated words as issues
+        rep.setdefault("negatives", [])
+        rep.setdefault("specific_issues", [])
+        existing_issue_entries = set(rep["specific_issues"]) if isinstance(rep.get("specific_issues"), list) else set()
+        for section, words in repetitions_found.items():
+            for word, count in words.items():
+                issue_text = f"Repeated word '{word}' appears {count} times in {section}"
+                if issue_text not in existing_issue_entries:
+                    rep["specific_issues"].append(issue_text)
+                    existing_issue_entries.add(issue_text)
 
----
-### **Output JSON Format**
-{{
-  "overall_score": int,
-  "category_scores": {{
-    "formatting_readability": int,
-    "keyword_coverage_general": int,
-    "section_completeness": int,
-    "achievements_metrics": int,
-    "spelling_grammar": int,
-    "parse_accuracy": int
-  }},
-  "detailed_feedback": {{
-    "formatting_readability": {{
-      "score": int,
-      "title": "Readability",
-      "description": "Ensure resume screeners can read key sections of your resume",
-      "positives": ["string"],
-      "negatives": ["string"],
-      "suggestions": ["string"]
-    }},
-    "keyword_coverage_general": {{
-      "score": int,
-      "title": "Keywords & ATS",
-      "description": "Include relevant keywords for Applicant Tracking Systems",
-      "positives": ["string"],
-      "negatives": ["string"],
-      "suggestions": ["string"]
-    }},
-    "section_completeness": {{
-      "score": int,
-      "title": "Section Completeness",
-      "description": "Ensure all essential resume sections are present and well-structured",
-      "positives": ["string"],
-      "negatives": ["string"],
-      "suggestions": ["string"]
-    }},
-    "achievements_metrics": {{
-      "score": int,
-      "title": "Quantify Impact",
-      "description": "Use numbers and metrics to demonstrate your achievements",
-      "positives": ["string"],
-      "negatives": ["string"],
-      "suggestions": ["string"]
-    }},
-    "spelling_grammar": {{
-      "score": int,
-      "title": "Language Quality",
-      "description": "Maintain professional language standards throughout your resume",
-      "positives": ["string"],
-      "negatives": ["string"],
-      "suggestions": ["string"]
-    }},
-    "parse_accuracy": {{
-      "score": int,
-      "title": "ATS Parsing",
-      "description": "Ensure your resume can be accurately parsed by ATS systems",
-      "positives": ["string"],
-      "negatives": ["string"],
-      "suggestions": ["string"]
-    }}
-  }},
-  "extracted_text": "string",
-  "strengths": ["string"],
-  "weaknesses": ["string"],
-  "recommendations": ["string"]
-}}
+        return ats_response
+    except Exception as e:
+        logger.warning(f"Failed to augment repetition suggestions: {e}")
+        return ats_response
 
----
-### Resume Text:
-{resume_text}
+def _generate_fix_achievement_line(section: str, achievement: str, context: str, client: Any, model_name: str, temperature: float, top_p: float) -> str:
+    """
+    Use the model to generate one FIX_ACHIEVEMENT suggestion line for an unquantified achievement,
+    following the mandatory format. Returns a single-line string, or empty string on failure.
+    """
+    try:
+        prompt = f"""
+        You are improving resume achievements with quantified metrics. Produce EXACTLY ONE line in this format and nothing else:
+        FIX_ACHIEVEMENT: [Section] - Achievement '[achievement excerpt]' lacks metrics - Add quantified impact: '[enhanced achievement with specific numbers, percentages, timeframes, and measurable results]'
 
-**CRITICAL NAME VALIDATION CHECKLIST**:
-1. **First Name Detection**: Look for common first names (John, Jane, Michael, Sarah, David, Emma, James, Olivia, Robert, Ava, William, Isabella, etc.)
-2. **Last Name Detection**: Look for common last names (Smith, Johnson, Williams, Brown, Jones, Garcia, Miller, Davis, etc.)
-3. **Name Pattern Analysis**: Check for formats like "John Smith", "J. Smith", "John S.", "Smith, John", "JOHN SMITH"
-4. **Contact Validation**: Verify email (contains @ symbol) and phone (contains digits)
+        Requirements:
+        - Use section: {section}
+        - Achievement excerpt: {achievement[:50]}...
+        - Add 2-3 specific metrics: numbers, percentages, timeframes, team sizes, cost savings, efficiency improvements
+        - Make metrics realistic and relevant to the achievement type
+        - Use professional language with strong action verbs
+        - Include measurable business impact
+        - Do NOT include any preface or follow-up text, no code fences, only the single line
 
-**MANDATORY WEAKNESSES TO ADD** (if found):
-- If NO first name found: "Critical: First name is missing from resume - ATS systems require complete identification for candidate tracking and database management"
-- If NO last name found: "Critical: Last name is missing from resume - ATS systems need full name for proper candidate identification and search functionality"  
-- If NO complete name found: "Critical: Complete name (first and last) is missing from resume - ATS systems cannot properly categorize or search for candidates without full names"
-- If NO email found: "Critical: Email address is missing from resume - Recruiters need email for direct communication and interview scheduling"
-- If NO phone found: "Critical: Phone number is missing from resume - Phone contact is essential for urgent communication and interview coordination"
-
-**MANDATORY RECOMMENDATIONS TO ADD** (if issues found):
-- For missing first name: "Add your first name prominently at the top of your resume header, ensuring it's clearly visible and matches your official documents"
-- For missing last name: "Include your last name alongside your first name in the resume header, using standard formatting like 'John Smith' or 'SMITH, John'"
-- For missing complete name: "Place your complete name (first and last) at the very top of your resume in a large, bold font (16-18pt) to ensure ATS systems can easily identify you"
-- For missing contact: "Add your professional email address and phone number in the header section below your name, using standard formats like 'john.smith@email.com' and '(555) 123-4567'"
-
-**DETAILED IMPROVEMENT REQUIREMENTS**:
-For each weakness identified, provide specific, actionable improvement steps that candidates can immediately implement. Focus on:
-1. **What exactly needs to be changed** (be specific about content, placement, formatting)
-2. **Where to make the change** (specific section, position on page)
-3. **How to implement it** (formatting suggestions, examples)
-4. **Why it matters** (ATS impact, recruiter perspective)
-
-Return ONLY valid JSON. Do not include explanations, notes, or extra text.
-"""
-
-
-class JDSpecificATSService(ATSService):
-    """Job Description specific ATS analysis service"""
-    
-    def analyze_resume_for_jd(self, resume_text: str, job_description: str) -> Dict[str, Any]:
+        Context of the achievement:
+        {context}
         """
-        Analyze resume against specific job description for:
-        - Keyword match score
-        - Skills alignment
-        - Experience relevance
-        - Overall fit score
-        """
-        prompt = self._get_jd_specific_prompt(resume_text, job_description)
+
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": "You generate precise, single-line achievement enhancement instructions with quantified metrics."},
+                {"role": "user", "content": prompt.strip()}
+            ],
+            temperature=0.1,
+            top_p=0.8,
+            max_tokens=200
+        )
+
+        line = response.choices[0].message.content.strip()
+        # Basic sanity check: must start with FIX_ACHIEVEMENT
+        if not line.startswith("FIX_ACHIEVEMENT:"):
+            import re as _re
+            m = _re.search(r"FIX_ACHIEVEMENT:.*", line)
+            if m:
+                return m.group(0).strip()
+            return ""
+        return line
+    except Exception as e:
+        logger.warning(f"Failed to generate FIX_ACHIEVEMENT line for achievement in section '{section}': {e}")
+        return ""
+
+def _augment_achievement_suggestions_with_debug(ats_response: Dict[str, Any], achievement_debug: Dict[str, Any], resume_text: str, client: Any, model_name: str, temperature: float, top_p: float) -> Dict[str, Any]:
+    """
+    Augment achievements_impact_metrics suggestions to include a FIX_ACHIEVEMENT line for
+    every unquantified achievement detected in the debug analysis.
+    """
+    try:
+        import re as _re
+        detailed = ats_response.setdefault("detailed_feedback", {})
+        achievements = detailed.setdefault("achievements_impact_metrics", {})
+        suggestions: List[str] = achievements.setdefault("suggestions", [])
+
+        # Collect already-covered achievements from existing FIX_ACHIEVEMENT suggestions
+        covered_achievements = set()
+        for s in suggestions:
+            m = _re.search(r"FIX_ACHIEVEMENT:\s*[^']*'([^']+)'", s)
+            if m:
+                covered_achievements.add(m.group(1).strip().lower()[:30])  # Use first 30 chars as identifier
+
+        unquantified_achievements = achievement_debug.get("unquantified_achievements", {})
+        debug_info = achievement_debug.get("debug_info", {})
+
+        logger.info(f"🎯 DEBUG ACHIEVEMENTS: Found {len(unquantified_achievements)} sections with unquantified achievements")
+
+        # If no unquantified achievements found, remove any existing FIX_ACHIEVEMENT suggestions and clear all achievement issues
+        if not unquantified_achievements:
+            logger.info("🎯 DEBUG ACHIEVEMENTS: No unquantified achievements found - clearing all achievement-related feedback")
+            
+            # Completely clear all achievement feedback since there are no issues
+            achievements["suggestions"] = []
+            achievements["negatives"] = []
+            achievements["specific_issues"] = []
+            
+            # Set perfect score since there are no achievement issues
+            achievements["score"] = 90
+            ats_response["category_scores"]["achievements_impact_metrics"] = 90
+            
+            # Also clear any generic suggestions that might have been generated by AI
+            achievements["suggestions"] = [s for s in achievements.get("suggestions", []) if not any(
+                keyword in s.lower() for keyword in ["metric", "quantif", "achievement", "impact", "result", "measur", "specific", "number", "percentage"]
+            )]
+            
+            return ats_response
+
+        for section, achievements_list in unquantified_achievements.items():
+            for achievement in achievements_list:
+                achievement_id = achievement[:30].lower()
+                if achievement_id in covered_achievements:
+                    continue
+
+                # Get context for this achievement
+                context = debug_info.get(f"{section}_{achievement_id}", {}).get("context", achievement)
+                
+                logger.info(f"🎯 DEBUG ACHIEVEMENTS: Generating suggestion for unquantified achievement in {section}: {achievement[:50]}...")
+                
+                # Generate a single FIX_ACHIEVEMENT line using the model
+                line = _generate_fix_achievement_line(section, achievement, context, client, model_name, temperature, top_p)
+                if line and isinstance(line, str):
+                    suggestions.append(line)
+                    covered_achievements.add(achievement_id)
+
+        # Ensure negatives/specific_issues enumerate all unquantified achievements as issues
+        achievements.setdefault("negatives", [])
+        achievements.setdefault("specific_issues", [])
+        existing_issue_entries = set(achievements["specific_issues"]) if isinstance(achievements.get("specific_issues"), list) else set()
         
-        try:
-            response = self.model.generate_content(prompt)
-            return self._parse_ats_response(response.text)
-        except Exception as e:
-            logger.error(f"JD-specific ATS analysis failed: {str(e)}")
-            raise
+        for section, achievements_list in unquantified_achievements.items():
+            for achievement in achievements_list:
+                issue_text = f"Achievement '{achievement[:50]}...' in {section} lacks quantified metrics"
+                if issue_text not in existing_issue_entries:
+                    achievements["specific_issues"].append(issue_text)
+                    existing_issue_entries.add(issue_text)
+
+        return ats_response
+    except Exception as e:
+        logger.warning(f"Failed to augment achievement suggestions: {e}")
+        return ats_response
+
+def _mirror_skill_suggestions_into_recommendations(ats_response: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Ensure that all skills-related suggestions are present in top-level recommendations
+    to increase visibility and drive application. Avoid duplicates.
+    """
+    try:
+        detailed = ats_response.get("detailed_feedback", {}) or {}
+        recommendations = ats_response.setdefault("recommendations", [])
+        existing = set(recommendations)
+
+        # Collect suggestions from standard skills section if present
+        skills_section = detailed.get("skills_match_alignment", {}) or {}
+        for s in skills_section.get("suggestions", []) or []:
+            if s and s not in existing:
+                recommendations.append(s)
+                existing.add(s)
+
+        # Collect suggestions from JD keyword/skills section if present
+        jd_skills_section = detailed.get("keyword_match_skills", {}) or {}
+        for s in jd_skills_section.get("suggestions", []) or []:
+            if s and s not in existing:
+                recommendations.append(s)
+                existing.add(s)
+
+        ats_response["recommendations"] = recommendations
+        return ats_response
+    except Exception as e:
+        logger.warning(f"Failed to mirror skills suggestions into recommendations: {e}")
+        return ats_response
+
+class StandardATSService:
+    """
+    Standard ATS (Applicant Tracking System) analysis service
     
-    def _get_jd_specific_prompt(self, resume_text: str, job_description: str) -> str:
-        return f"""
-        You are an expert ATS (Applicant Tracking System) and recruitment AI.  
-        Evaluate the following resume **against a specific job description** to determine **job-fit compatibility** and ATS readiness.
+    Provides comprehensive resume analysis with:
+    - Consistent scoring methodology
+    - Grammar and spelling validation
+    - Repetition detection
+    - ATS optimization recommendations
+    - Error-free output generation
+    """
+    
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini", temperature: float = 0.1, top_p: float = 0.8):
+        """
+        Initialize the Standard ATS Service
+        
+        Args:
+            api_key: OpenAI API key (if not provided, will use environment variable)
+            model_name: OpenAI model name (if not provided, will use default)
+            temperature: Controls randomness in responses (0.0 = deterministic, 1.0 = creative)
+            top_p: Controls diversity via nucleus sampling (0.0 = focused, 1.0 = diverse)
+        """
+        self.parser = OpenAIResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
+        self.client = self.parser.client
+        self.model_name = model_name
+        self.temperature = temperature
+        self.top_p = top_p
+    
+    def update_generation_parameters(self, temperature: float = None, top_p: float = None):
+        """
+        Update generation parameters for more consistent results
+        
+        Args:
+            temperature: New temperature value (0.0 = deterministic, 1.0 = creative)
+            top_p: New top_p value (0.0 = focused, 1.0 = diverse)
+        """
+        if temperature is not None:
+            self.temperature = temperature
+        if top_p is not None:
+            self.top_p = top_p
+            
+        # Update the generation parameters (OpenAI handles this in API calls)
+        logger.info(f"Updated generation parameters: temperature={self.temperature}, top_p={self.top_p}")
+    
+    def get_generation_settings(self) -> Dict[str, float]:
+        """Get current generation parameter settings"""
+        return {
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "model_name": self.model_name
+        }
 
-        ### **Critical ATS Requirements to Check FIRST**
-        1. **Name Completeness**: Resume MUST have both first name AND last name clearly visible
-           - If only first name is present → Flag as critical issue and deduct 15-20 points
-           - If only last name is present → Flag as critical issue and deduct 15-20 points  
-           - If neither is clearly identifiable → Flag as critical issue and deduct 20-25 points
-           - Check for common name patterns: "John Smith", "J. Smith", "John S.", etc.
+    def set_consistent_parameters(self):
+        """
+        Set parameters optimized for consistent ATS analysis results.
+        Uses low temperature and focused top_p for deterministic output.
+        """
+        self.update_generation_parameters(temperature=0.1, top_p=0.8)
+        logger.info("🎯 Set consistent parameters for deterministic ATS analysis")
 
-        2. **Contact Information**: Must have at least email OR phone number
-           - If both missing → Flag as critical issue and deduct 10-15 points
-           - If only one present → Flag as medium issue and deduct 5-10 points
-
-        ### **Evaluation Criteria & Scoring**
-        Provide a **score from 0–100** based on the following weighted criteria:
-
-        1. **Keyword Match & Skills Alignment (35%)**
-           - Match between resume skills and required skills in JD
-           - Relevant certifications and tools from JD appear in resume
-           - Synonyms and variations of JD keywords are also considered
-
-        2. **Experience Relevance (25%)**
-           - Years of experience match JD requirements
-           - Industry/domain alignment
-           - Role-specific accomplishments
-
-        3. **Education & Certifications (10%)**
-           - Matches educational requirements
-           - Relevant certifications present
-
-        4. **Achievements & Impact (10%)**
-           - Resume shows measurable outcomes related to JD tasks
-
-        5. **ATS-Friendly Formatting & Structure (10%)**
-           - Resume is parseable
-           - Standard headings used
-
-        6. **Soft Skills Match (5%)**
-           - Presence of leadership, communication, teamwork, problem-solving if mentioned in JD
-
-        7. **Basic ATS Compliance (5%)**
-           - Name completeness and contact information
-
-        ---
-
-        ### **Output Format (JSON only)**
-        Respond **only** in this JSON format:
-        {{
-          "overall_score": int,
-          "match_percentage": int,
-          "missing_keywords": [ "string", "string", ... ],
-          "category_scores": {{
-            "keyword_match_skills": int,
-            "experience_relevance": int,
-            "education_certifications": int,
-            "achievements_impact": int,
-            "formatting_structure": int,
-            "soft_skills_match": int
-          }},
-          "detailed_feedback": {{
-            "keyword_match_skills": {{
-              "score": int,
-              "title": "Keywords & Skills Match",
-              "description": "How well your resume matches the required keywords and skills from the job description",
-              "positives": [ "string", ... ],
-              "negatives": [ "string", ... ],
-              "suggestions": [ "string", ... ]
-            }},
-            "experience_relevance": {{
-              "score": int,
-              "title": "Work Experience",
-              "description": "Relevance of your work experience to the target role",
-              "positives": [ "string", ... ],
-              "negatives": [ "string", ... ],
-              "suggestions": [ "string", ... ]
-            }},
-            "education_certifications": {{
-              "score": int,
-              "title": "Education",
-              "description": "Educational background alignment with job requirements",
-              "positives": [ "string", ... ],
-              "negatives": [ "string", ... ],
-              "suggestions": [ "string", ... ]
-            }},
-            "achievements_impact": {{
-              "score": int,
-              "title": "Quantify Impact",
-              "description": "Measurable achievements relevant to the target role",
-              "positives": [ "string", ... ],
-              "negatives": [ "string", ... ],
-              "suggestions": [ "string", ... ]
-            }},
-            "formatting_structure": {{
-              "score": int,
-              "title": "Readability",
-              "description": "Resume format and structure for ATS compatibility",
-              "positives": [ "string", ... ],
-              "negatives": [ "string", ... ],
-              "suggestions": [ "string", ... ]
-            }},
-            "soft_skills_match": {{
-              "score": int,
-              "title": "Soft Skills Alignment",
-              "description": "Soft skills alignment with job requirements",
-              "positives": [ "string", ... ],
-              "negatives": [ "string", ... ],
-              "suggestions": [ "string", ... ]
-            }}
-          }},
-          "extracted_text": "string",
-          "strengths": [ "string", "string", ... ],
-          "weaknesses": [ "string", "string", ... ],
-          "recommendations": [ "string", "string", ... ]
-        }}
-
-        **Resume Text:**
+    def analyze_resume(self, resume_text: str, parsed_data: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Analyze resume for ATS optimization and provide comprehensive feedback
+        
+        Args:
+            resume_text: Raw resume text to analyze
+            parsed_data: Optional parsed resume data for more accurate analysis
+            
+        Returns:
+            Dictionary containing ATS analysis results with scores and recommendations
+        """
+        logger.info(f"Starting Standard ATS analysis with temperature={self.temperature}, top_p={self.top_p}")
+        
+        # Validate parsed data if provided
+        if parsed_data:
+            parsed_data = self._validate_parsed_data(parsed_data)
+        
+        # Perform comprehensive achievements analysis for debugging (needed for prompt)
+        logger.info("🎯 Performing comprehensive achievements analysis...")
+        achievement_debug = self._analyze_achievements_debug(resume_text)
+        
+        # Still need repetition analysis for the suggestions (but without debug logging)
+        repetition_debug = self._analyze_repetitions_debug(resume_text)
+        
+        prompt = f"""
+        You are an expert ATS (Applicant Tracking System) analyst with 10+ years of experience in resume optimization and HR technology.
+        
+        TASK: Perform a comprehensive ATS analysis of the provided resume with precise, consistent scoring and HIGHLY SPECIFIC, ACTIONABLE feedback that will increase the resume score by 10-15 points when applied.
+        
+        CRITICAL REQUIREMENTS - MANDATORY COMPLIANCE:
+        - Return ONLY valid JSON (no markdown, no code fences, no explanations, no additional text)
+        - NEVER omit any section - if no issues exist, return empty arrays/strings but keep the section structure
+        - ALWAYS include ALL required sections: overall_score, category_scores, detailed_feedback, extracted_text, strengths, weaknesses, recommendations
+        - Ensure all scores are integers between 0-100 (never "NA", "N/A", "None", "Null", "Unknown", or text)
+        - NEVER use placeholder values - provide HIGHLY SPECIFIC, ACTIONABLE content with EXACT text examples
+        - LANGUAGE VARIETY: Use varied language within same sections, allow appropriate repetition across different sections
+        - PERFECT GRAMMAR: All content must have flawless spelling, grammar, and professional language
+        - CONSISTENT SCORING: Apply the same rigorous standards across all categories
+        - COMPREHENSIVE REPETITION ANALYSIS: For repetition_avoidance section, analyze ALL repeated words and provide individual FIX_REPETITION suggestions for EACH repeated word - if 15 words are repeated, provide 15 specific FIX_REPETITION suggestions
+        - SPECIFIC FEEDBACK: Every suggestion must include EXACT text examples, specific section locations, and precise improvement instructions
+        
+        PRECISE SCORING CRITERIA - APPLY CONSISTENTLY:
+        
+        DYNAMIC SCORING RULES:
+        - Use precise scores (not just multiples of 5) - e.g., 87, 93, 76, 84
+        - Count total issues/problems found across all categories
+        - If total issues = 0: Apply 1.15x bonus multiplier to all category scores
+        - If total issues = 1-2: Apply 1.10x bonus multiplier to all category scores  
+        - If total issues = 3-4: Apply 1.05x bonus multiplier to all category scores
+        - If total issues = 5+: No bonus multiplier (use base scores)
+        - Final scores must be integers between 0-100 (cap at 100 if bonus exceeds)
+        
+        KEYWORD_USAGE_PLACEMENT (0-100):
+        - 90-100: Perfect keyword presence and natural placement throughout resume, critical ATS ranking terms included, excellent industry-specific terminology
+        - 80-89: Excellent keyword usage with minor gaps in placement or density, good industry keyword coverage
+        - 70-79: Good keyword coverage but some important terms missing or poorly placed, fair industry-specific language
+        - 60-69: Fair keyword usage, missing critical ATS ranking terms, limited industry-specific terminology
+        - 50-59: Poor keyword placement, limited ATS optimization, poor industry keyword coverage
+        - 0-49: Very poor keyword usage, minimal ATS ranking potential, minimal industry-relevant terminology
+        
+        SKILLS_MATCH_ALIGNMENT (0-100):
+        - 90-100: Perfect alignment of technical and soft skills with industry requirements
+        - 80-89: Excellent skills match with minor gaps in required competencies
+        - 70-79: Good skills alignment but missing some important technical/soft skills
+        - 60-69: Fair skills match, significant gaps in required competencies
+        - 50-59: Poor skills alignment, limited relevant competencies
+        - 0-49: Very poor skills match, minimal relevant skills
+        
+        FORMATTING_LAYOUT_ATS (0-100):
+        - 90-100: Perfect clean, simple, standardized formatting, fully ATS-compatible
+        - 80-89: Excellent formatting with minor ATS compatibility issues
+        - 70-79: Good formatting but some ATS parsing concerns (tables, graphics, complex layouts)
+        - 60-69: Fair formatting with significant ATS problems
+        - 50-59: Poor formatting, major ATS parsing issues
+        - 0-49: Critical formatting problems, completely ATS-incompatible
+        
+        SECTION_ORGANIZATION (0-100):
+        - 90-100: All essential sections present with proper labeling (contact, summary, experience, skills, education, projects, certificates)
+        - 80-89: Most sections complete with minor organizational issues, may be missing projects or certificates
+        - 70-79: Basic sections present but some incomplete or poorly organized, missing important sections like projects
+        - 60-69: Missing important sections (projects, certificates) or significant organizational gaps
+        - 50-59: Major sections missing (projects, certificates) or severely disorganized
+        - 0-49: Critical sections missing, resume structure incomplete, no projects or certificates
+        
+        ACHIEVEMENTS_IMPACT_METRICS (0-100):
+        - 90-100: Quantified achievements throughout with specific metrics and measurable impact
+        - 80-89: Good use of metrics with some quantified results and clear impact
+        - 70-79: Some achievements quantified but inconsistent impact measurement
+        - 60-69: Limited quantified achievements, mostly descriptive without metrics
+        - 50-59: Very few quantified results, mostly vague descriptions
+        - 0-49: No quantified achievements, all descriptions lack measurable impact
+        
+        GRAMMAR_SPELLING_QUALITY (0-100):
+        - 90-100: Perfect spelling and grammar, professional language throughout
+        - 80-89: Minor spelling/grammar issues, mostly professional quality
+        - 70-79: Some spelling/grammar errors but generally acceptable quality
+        - 60-69: Multiple spelling/grammar issues affecting professional quality
+        - 50-59: Significant spelling/grammar problems
+        - 0-49: Critical spelling/grammar errors throughout
+        
+        HEADER_CONSISTENCY (0-100):
+        - 90-100: Perfect use of standard section labels, consistent header formatting
+        - 80-89: Excellent header consistency with minor variations
+        - 70-79: Good header usage but some non-standard labels
+        - 60-69: Fair header consistency, some ATS import issues
+        - 50-59: Poor header usage, significant ATS parsing problems
+        - 0-49: Very poor header consistency, major ATS import failures
+        
+        CLARITY_BREVITY (0-100):
+        - 90-100: Perfect clarity and brevity, concise professional language
+        - 80-89: Excellent clarity with minor verbosity issues
+        - 70-79: Good clarity but some run-on sentences or unclear points
+        - 60-69: Fair clarity, some confusing or overly complex language
+        - 50-59: Poor clarity, significant readability issues
+        - 0-49: Very poor clarity, major communication problems
+        
+        REPETITION_AVOIDANCE (0-100):
+        - 90-100: Perfect varied language, no unnecessary repetitions within same section, professional diversity across all sections
+        - 80-89: Excellent language variety with minor repetitive elements within sections, good cross-section diversity
+        - 70-79: Good variety but some repetitive action verbs or phrases within same section, acceptable cross-section repetition
+        - 60-69: Fair variety, noticeable repetition within same section affecting quality, some cross-section repetition acceptable
+        - 50-59: Poor variety, significant repetitive language within same section, limited cross-section diversity
+        - 0-49: Very poor variety, excessive repetition within same section, minimal cross-section language diversity
+        
+        COMPREHENSIVE REPETITION DETECTION REQUIREMENTS - MANDATORY:
+        - FOCUS ON ACTION VERBS AND PROFESSIONAL LANGUAGE: Only detect repeated action verbs, professional terms, and descriptive words that affect resume quality
+        - IGNORE COMMON WORDS: Do not flag repetitions of common words like "and", "in", "with", "of", "to", "for", "on", "by", "the", "a", "an"
+        - IGNORE PROPER NOUNS: Do not flag repetitions of names, locations, company names, technologies, skills, universities, dates
+        - DETECT ACTION VERB REPETITIONS: Find action verbs that appear 2+ times within the same section (implemented, managed, developed, created, built, designed, etc.)
+        - DETECT PROFESSIONAL TERM REPETITIONS: Find professional descriptive words that appear 2+ times (scalable, secure, efficient, optimized, etc.)
+        - COUNT EXACT OCCURRENCES: For each relevant repeated word, count exactly how many times it appears in each section
+        - IDENTIFY WORD LOCATIONS: Note the exact context and position of each repeated word instance
+        - PROVIDE SPECIFIC ALTERNATIVES: For each repeated action verb/professional term, suggest 3-5 specific alternative words/phrases
+        - DEBUG OUTPUT: Log only relevant repetitions (action verbs and professional terms) with counts and locations
+        
+        CONTACT_INFORMATION_COMPLETENESS (0-100):
+        - 90-100: Complete contact info (name, phone, email, LinkedIn, location) with proper formatting
+        - 80-89: Missing 1-2 non-critical contact elements, good overall contact presentation
+        - 70-79: Missing important contact details (email/phone), some formatting issues
+        - 60-69: Multiple missing contact elements, poor contact information organization
+        - 50-59: Major contact information gaps, significant formatting problems
+        - 0-49: Critical contact information missing, completely inadequate contact section
+        
+        RESUME_LENGTH_OPTIMIZATION (0-100):
+        - 90-100: Perfect length for experience level, optimal content density
+        - 80-89: Appropriate length with minor adjustments needed, good content balance
+        - 70-79: Fair length optimization, some content could be condensed or expanded
+        - 60-69: Length issues (too short/long), content density problems
+        - 50-59: Poor length optimization, significant content balance issues
+        - 0-49: Inappropriate resume length, major content organization problems
+        
+        RESUME TEXT TO ANALYZE:
         {resume_text}
         
-        **Job Description:**
+        REPETITION DEBUG ANALYSIS RESULTS:
+        {repetition_debug}
+        
+        IMPORTANT: Use the repetition debug analysis results above to determine if repetitions exist. 
+        - If repetitions_found is empty or shows 0 repeated words, DO NOT generate any FIX_REPETITION suggestions
+        - Only generate FIX_REPETITION suggestions for words that are actually listed in the repetitions_found section
+        - If no repetitions are detected, focus on other aspects of language variety and professional presentation
+        
+        PARSED RESUME DATA (for accurate analysis):
+        {json.dumps(parsed_data, indent=2) if parsed_data else "No parsed data provided"}
+        
+        CRITICAL ANALYSIS REQUIREMENTS:
+        - FIRST analyze the PARSED DATA to understand what information is actually present
+        - THEN analyze the raw text for formatting, grammar, and presentation issues
+        - ONLY suggest missing elements that are genuinely absent from the parsed data
+        - PROJECT DESCRIPTION LENGTH ENFORCEMENT: For ALL projects, count the number of statements (sentences ending with period, exclamation, or question mark) - if less than 6 statements, you MUST suggest expansion to exactly 6-7 statements - if more than 7 statements, you MUST suggest reduction to exactly 6-7 statements - this is MANDATORY and CRITICAL
+        - DO NOT suggest missing elements that already exist in the parsed data
+        - Cross-reference parsed data with raw text to identify discrepancies
+        - SECTION-SPECIFIC ANALYSIS: Each section should ONLY contain suggestions relevant to that specific section
+        - NO CROSS-SECTION SUGGESTIONS: Do not include suggestions from other sections in any section's feedback
+        - IF SECTION IS COMPLETE: If a section has all required elements and is well-formatted, return empty arrays for negatives, suggestions, and specific_issues
+        - SECTION ISOLATION: Each detailed_feedback section must be completely independent and self-contained
+        - MANDATORY PROJECT DESCRIPTION LENGTH: ALL project descriptions MUST be exactly 6-7 statements - NO EXCEPTIONS - if less than 6 statements, MUST expand to 6-7 statements - if more than 7 statements, MUST condense to 6-7 statements - this is a CRITICAL REQUIREMENT
+        - PROJECT DESCRIPTION ENFORCEMENT: For EVERY project with less than 6 statements, you MUST generate exactly 6-7 statements in your suggestions - COUNT the statements and ensure they are exactly 6-7 - this is MANDATORY
+        - PROJECT DESCRIPTION COUNTING: When analyzing projects, count each statement (each sentence ending with period, exclamation, or question mark) - if count is less than 6, you MUST suggest expansion to exactly 6-7 statements - if count is more than 7, you MUST suggest reduction to exactly 6-7 statements
+        
+        COMPREHENSIVE REPETITION ANALYSIS REQUIREMENTS - MANDATORY:
+        - FOCUS ON ACTION VERBS AND PROFESSIONAL TERMS: Only analyze repeated action verbs and professional descriptive words that impact resume quality
+        - IGNORE COMMON WORDS: Do not analyze repetitions of common words like "and", "in", "with", "of", "to", "for", "on", "by", "the", "a", "an"
+        - IGNORE PROPER NOUNS: Do not analyze repetitions of names, locations, company names, technologies, skills, universities, dates
+        - DETECT ACTION VERB REPETITIONS: Find action verbs that appear 2+ times within the same section (implemented, managed, developed, created, built, designed, etc.)
+        - DETECT PROFESSIONAL TERM REPETITIONS: Find professional descriptive words that appear 2+ times (scalable, secure, efficient, optimized, etc.)
+        - COUNT EXACT FREQUENCY: For each relevant repeated word, count exactly how many times it appears in each section
+        - IDENTIFY CONTEXT: Note the exact context and sentence where each repeated word appears
+        - PROVIDE SPECIFIC ALTERNATIVES: For each repeated action verb/professional term, suggest 3-5 specific alternative words/phrases
+        - DEBUG LOGGING: Include detailed debug information showing only relevant repetitions with counts and locations
+        - ENHANCEMENT EXAMPLES: Show before/after examples for every repeated action verb/professional term with specific replacements
+        - COMPREHENSIVE COVERAGE: Find ALL repeated action verbs and professional terms in the resume
+        - MANDATORY COMPLETE COVERAGE: For EVERY repeated word detected, you MUST provide a specific recommendation in the suggestions section
+        - NO PARTIAL ANALYSIS: If 12 repeated words are detected, you MUST provide 12 specific recommendations - NO EXCEPTIONS
+        - COMPLETE ISSUE COUNTING: Count ALL repeated words as issues - if 12 words are repeated, show 12 issues to fix
+        
+        SECTION DETECTION REQUIREMENTS:
+        - Check PARSED DATA for projects: Look for "projects", "project", "portfolio" keys with actual content
+        - Check PARSED DATA for certificates: Look for "certificates", "certifications", "certificate" keys with actual content
+        - Check PARSED DATA for experience: Look for "experience", "work_experience" with company, position, dates
+        - Check PARSED DATA for education: Look for "education", "academic" with institution, degree, year
+        - Check PARSED DATA for contact: Look for "contact", "basic_details" with phone, email, location
+        - Check PARSED DATA for skills: Look for "skills", "competencies" with actual skill lists
+        - Check PARSED DATA for summary: Look for "summary", "objective", "profile" with actual content
+        - If sections exist in parsed data but are empty/incomplete, suggest improvements rather than additions
+        - If sections are completely missing from parsed data, then suggest additions
+        - Include specific feedback about missing sections in weaknesses and recommendations
+        - DATE FORMAT VALIDATION: Check ALL date fields (startDate, endDate, year, issueDate) across ALL sections for proper "MMM YYYY" format (e.g., "Jan 2025", "Dec 2024", "Mar 2023")
+        - If dates are in wrong format (e.g., "2025-01", "01/2025", "January 2025", "2025", "01-2025"), flag as date format issues in SECTION_ORGANIZATION
+        
+        SECTION-SPECIFIC FEEDBACK RULES:
+        - CONTACT SECTION: Only suggest contact-related improvements (phone, email, LinkedIn, location, formatting)
+        - SKILLS SECTION: Only suggest skills-related improvements (missing skills, categorization, formatting)
+        - EXPERIENCE SECTION: Only suggest experience-related improvements (job descriptions, achievements, formatting)
+        - EDUCATION SECTION: Only suggest education-related improvements (degrees, institutions, dates, formatting)
+        - PROJECTS SECTION: Only suggest project-related improvements (descriptions, tech stacks, outcomes, formatting) - MANDATORY: ensure all project descriptions are exactly 6-7 statements
+        - CERTIFICATIONS SECTION: Only suggest certification-related improvements (missing certs, organizations, dates)
+        - SUMMARY SECTION: Only suggest summary-related improvements (content, length, keywords, formatting)
+        - FORMATTING SECTION: Only suggest formatting-related improvements (layout, ATS compatibility, structure)
+        - GRAMMAR SECTION: Only suggest grammar and spelling improvements
+        - REPETITION SECTION: Only suggest repetition-related improvements within the same section
+        - If a section is complete and well-formatted, return empty arrays for that section's feedback
+        
+        REQUIRED OUTPUT SCHEMA (MUST INCLUDE ALL SECTIONS):
+        {{
+            "overall_score": <calculate_weighted_average_of_all_category_scores>,
+            "analysis_timestamp": "{datetime.datetime.utcnow().isoformat()}Z",
+            "category_scores": {{
+                "keyword_usage_placement": <exact_score_based_on_criteria_above>,
+                "skills_match_alignment": <exact_score_based_on_criteria_above>,
+                "formatting_layout_ats": <exact_score_based_on_criteria_above>,
+                "section_organization": <exact_score_based_on_criteria_above>,
+                "achievements_impact_metrics": <exact_score_based_on_criteria_above>,
+                "grammar_spelling_quality": <exact_score_based_on_criteria_above>,
+                "header_consistency": <exact_score_based_on_criteria_above>,
+                "clarity_brevity": <exact_score_based_on_criteria_above>,
+                "repetition_avoidance": <exact_score_based_on_criteria_above>,
+                "contact_information_completeness": <exact_score_based_on_criteria_above>,
+                "resume_length_optimization": <exact_score_based_on_criteria_above>
+            }},
+            "detailed_feedback": {{
+                "keyword_usage_placement": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Keyword Usage & Placement",
+                    "description": "Comprehensive analysis of keyword presence, placement, and ATS ranking optimization",
+                    "positives": ["Quote EXACT phrases from resume that demonstrate good keyword usage with line numbers", "Reference SPECIFIC sections with strong industry terminology and exact locations", "Identify ALL instances of effective keyword integration"],
+                    "negatives": ["Quote EXACT text that lacks important keywords with specific line/section references", "Identify SPECIFIC sections missing critical ATS terms with exact locations and missing keyword lists", "List ALL missing industry keywords, technical terms, soft skills, action verbs", "Identify ALL sections with insufficient keyword density"],
+                    "suggestions": ["Provide EXACT text replacement for specific phrases with before/after examples", "Specify EXACT sections that need keyword additions with specific keyword lists and placement instructions", "Add missing technical keywords: [list 15-20 specific technical terms]", "Add missing soft skills: [list 8-10 specific soft skills]", "Add missing action verbs: [list 10-15 power action verbs]", "Add missing industry terms: [list 12-15 industry-specific keywords]"],
+                    "specific_issues": ["List EXACT problematic text found in resume with line numbers and section names", "Identify SPECIFIC missing keywords with exact locations and industry relevance", "Document ALL instances of weak language that needs keyword enhancement", "Identify ALL sections with poor keyword optimization"],
+                    "improvement_examples": ["Show DETAILED before/after text examples with exact replacements", "Provide SPECIFIC additions needed in each section with exact positioning", "Demonstrate keyword integration in summary, experience, skills, and projects sections"]
+                }},
+                "skills_match_alignment": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Skills Match & Alignment",
+                    "description": "Comprehensive analysis of technical and soft skills alignment with industry requirements - ONLY skills-related feedback. Do NOT include proficiency-level qualifiers (Advanced/Intermediate/Beginner/Expert). Prioritize core skills aligned with the person's designation/title.",
+                    "positives": ["Quote specific skills listed in resume that align well", "Reference specific sections with strong skill presentation", "Identify ALL well-presented technical and soft skills"],
+                    "negatives": ["Quote specific skills that are poorly presented", "Identify specific missing skills with exact locations", "List ALL missing technical skills, programming languages, frameworks, tools (bare names only, no proficiency levels)", "Identify ALL missing soft skills, leadership qualities, communication abilities", "Document ALL skills that need better categorization or presentation"],
+                    "suggestions": ["Provide exact skill additions needed (bare skill names only, no proficiency levels)", "Specify which sections need skill reorganization", "ADD_SKILLS: Technical Skills - Add: [list 12-15 core technical skills (bare names only)]", "ADD_SKILLS: Soft Skills - Add: [list 8-10 specific soft skills]", "ADD_SKILLS: Tools & Technologies - Add: [list 10-12 specific tools and technologies]", "ADD_SKILLS: Certifications - Add: [list 5-8 relevant certifications]", "ADD_SKILLS_CATEGORY: [Category Name] - Add: [comma-separated bare skill names]"],
+                    "specific_issues": ["List exact skill formatting problems found", "Identify specific missing competencies with locations", "Document ALL instances of incomplete skill presentation", "Identify ALL sections with insufficient skill coverage"],
+                    "improvement_examples": ["Show before/after skill presentation examples", "Provide specific skill additions needed in each section", "Demonstrate proper skill categorization and proficiency levels"],
+                    "section_isolation_note": "ONLY include skills-related suggestions. Do not suggest contact, experience, education, or other section improvements in this skills section feedback."
+                }},
+                "formatting_layout_ats": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Formatting & Layout ATS",
+                    "description": "Analysis of clean, simple formatting and ATS compatibility - ONLY formatting-related feedback",
+                    "positives": ["Quote specific formatting elements that work well", "Reference specific sections with good ATS compatibility"],
+                    "negatives": ["Quote specific formatting problems found", "Identify specific sections with ATS parsing issues"],
+                    "suggestions": ["Provide exact formatting fixes needed", "Specify which sections need layout improvements"],
+                    "specific_issues": ["List exact formatting problems found in resume", "Identify specific ATS compatibility issues with locations"],
+                    "improvement_examples": ["Show before/after formatting examples", "Provide specific layout changes needed in each section"],
+                    "section_isolation_note": "ONLY include formatting-related suggestions. Do not suggest content, skills, experience, or other section improvements in this formatting section feedback."
+                }},
+                "section_organization": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Section Organization",
+                    "description": "Comprehensive analysis of essential resume sections and proper organization",
+                    "positives": ["Quote specific well-organized sections", "Reference specific section headers that work well", "Identify ALL properly structured sections"],
+                    "negatives": ["Quote specific section organization problems", "Identify specific missing or poorly labeled sections", "List ALL missing essential sections: Projects, Certifications, Languages, References", "Document ALL incomplete sections with missing information", "Identify ALL sections with poor organization or labeling", "List ALL certifications missing issuing organizations", "Document ALL certifications without proper organizational attribution", "List ALL project descriptions that are too short (less than 6 statements) or too long (more than 7 statements)", "Document ALL project descriptions that need length optimization for professional presentation", "List ALL dates in wrong format - must be 'MMM YYYY' format (e.g., 'Jan 2025', 'Dec 2024') - flag dates like '2025-01', '01/2025', 'January 2025', '2025', '01-2025'"],
+                    "suggestions": ["Provide exact section reorganization needed", "Specify which sections need better labeling", "ADD: Projects Section - Create comprehensive projects section with tech stacks, challenges, outcomes", "ADD: Certifications Section - Add relevant certifications with issuing organizations and dates", "ADD: Languages Section - Include language proficiencies if applicable", "IMPROVE: Section Headers - Standardize all section headers for ATS compatibility", "ADD_ORGANIZATION: Certifications Section - For EVERY certificate missing organization, infer and add appropriate issuing organization", "OPTIMIZE_PROJECT_DESCRIPTION: For project descriptions with less than 6 statements - MANDATORY: Expand to EXACTLY 6-7 statements with detailed tech stack, challenges, solutions, outcomes, and impact metrics - COUNT statements and ensure exactly 6-7", "OPTIMIZE_PROJECT_DESCRIPTION: For project descriptions with more than 7 statements - MANDATORY: Condense to EXACTLY 6-7 statements with precise, professional language focusing on key achievements and technical details - COUNT statements and ensure exactly 6-7", "FIX_DATE_FORMAT: Convert ALL dates to 'MMM YYYY' format - Change '2025-01' to 'Jan 2025', '01/2025' to 'Jan 2025', 'January 2025' to 'Jan 2025', '2025' to 'Jan 2025', '01-2025' to 'Jan 2025'"],
+                    "specific_issues": ["List exact section organization problems found", "Identify specific missing sections with exact locations", "Document ALL instances of poor section structure", "Identify ALL sections with insufficient content", "List ALL certifications that need issuing organizations added", "List ALL project descriptions with incorrect length (too short: less than 6 statements, too long: more than 7 statements) with exact project names and current statement counts", "List ALL dates in incorrect format with exact field names and current values - must be 'MMM YYYY' format"],
+                    "improvement_examples": ["Show before/after section organization examples", "Provide specific section additions needed", "Demonstrate proper section structure and content organization", "Show examples of certificates with proper organizational attribution", "Show before/after project description length examples: 'Current: [2 statements] → Optimized: [6-7 statements with tech stack, challenges, solutions, outcomes]'", "Show before/after project description length examples: 'Current: [10 statements] → Optimized: [6-7 concise, professional statements focusing on key achievements]'", "Show before/after date format examples: 'Current: 2025-01 → Fixed: Jan 2025', 'Current: 01/2025 → Fixed: Jan 2025', 'Current: January 2025 → Fixed: Jan 2025'"]
+                }},
+                "achievements_impact_metrics": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Achievements & Impact Metrics",
+                    "description": "Comprehensive analysis of quantified achievements and measurable results",
+                    "positives": ["Quote specific quantified achievements from resume", "Reference specific sections with strong metrics", "Identify ALL instances of effective quantification"],
+                    "negatives": ["Quote specific achievements that lack metrics", "Identify specific sections missing quantified results", "List ALL achievements without numbers, percentages, dollar amounts, timeframes", "Document ALL instances of vague descriptions that need quantification", "Identify ALL sections with insufficient measurable impact"],
+                    "suggestions": ["Provide exact metric additions needed", "Specify which achievements need quantification", "ENHANCE_ACHIEVEMENT: Experience Section - Add quantified metrics: team sizes, project scopes, efficiency improvements, cost savings, timeframes", "ENHANCE_ACHIEVEMENT: Projects Section - Add specific outcomes: user impact, performance gains, technical achievements", "ENHANCE_ACHIEVEMENT: Summary Section - Add quantified experience: years of experience, team leadership, project delivery"],
+                    "specific_issues": ["List exact achievements lacking metrics found", "Identify specific sections needing quantification with locations", "Document ALL instances of weak achievement descriptions", "Identify ALL sections with poor impact measurement"],
+                    "improvement_examples": ["Show before/after achievement examples with metrics", "Provide specific quantified improvements needed", "Demonstrate proper quantification in experience, projects, and summary sections"]
+                }},
+                "grammar_spelling_quality": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Grammar & Spelling Quality",
+                    "description": "Analysis of error-free professional language and quality - ONLY grammar and spelling feedback",
+                    "positives": ["Quote specific well-written sentences from resume", "Reference specific sections with excellent grammar"],
+                    "negatives": ["Quote specific grammatical errors found", "Identify specific spelling mistakes with exact locations"],
+                    "suggestions": ["Provide exact corrections for specific errors", "Specify which sentences need rewriting"],
+                    "specific_issues": ["List exact grammatical errors found in resume", "Identify specific spelling mistakes with locations"],
+                    "improvement_examples": ["Show before/after grammar correction examples", "Provide specific sentence improvements needed"],
+                    "section_isolation_note": "ONLY include grammar and spelling suggestions. Do not suggest content, formatting, skills, or other section improvements in this grammar section feedback."
+                }},
+                "header_consistency": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Header Consistency",
+                    "description": "Analysis of standard section labels and header formatting",
+                    "positives": ["Quote specific well-formatted headers from resume", "Reference specific sections with consistent labeling"],
+                    "negatives": ["Quote specific inconsistent headers found", "Identify specific non-standard section labels"],
+                    "suggestions": ["Provide exact header corrections needed", "Specify which headers need standardization"],
+                    "specific_issues": ["List exact header inconsistencies found", "Identify specific non-standard labels with locations"],
+                    "improvement_examples": ["Show before/after header examples", "Provide specific header standardization needed"]
+                }},
+                "clarity_brevity": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Clarity & Brevity",
+                    "description": "Analysis of clear, concise sentences and professional brevity",
+                    "positives": ["Quote specific clear, concise sentences from resume", "Reference specific sections with excellent brevity"],
+                    "negatives": ["Quote specific unclear or verbose sentences found", "Identify specific sections that are too wordy"],
+                    "suggestions": ["Provide exact sentence simplifications needed", "Specify which sections need condensing"],
+                    "specific_issues": ["List exact unclear sentences found in resume", "Identify specific verbose sections with locations"],
+                    "improvement_examples": ["Show before/after clarity examples", "Provide specific sentence improvements needed"]
+                }},
+                "repetition_avoidance": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Repetition Avoidance",
+                    "description": "Comprehensive analysis of ALL repeated language and unnecessary repetitions within same section, allowing legitimate repetition across different sections - ONLY repetition-related feedback",
+                    "positives": ["Quote specific varied language examples from resume", "Reference specific sections with good word variety", "Note acceptable cross-section repetition where appropriate"],
+                    "negatives": ["Quote EVERY specific repetitive action verb found within same section", "Identify ALL sections with excessive action verb repetition", "List ALL overused action verbs with exact counts", "Document ALL redundant professional terms with specific locations", "Count EVERY instance of repeated action verbs within same section", "DEBUG: List ALL detected repeated action verbs with exact counts: Action Verb '[word]' appears [X] times in [Section]: [Context1], [Context2], [Context3]", "DEBUG: Categorize repetitions by type: Action Verbs: [list], Professional Terms: [list]", "MANDATORY: List EVERY repeated word as a separate issue - if 12 words are repeated, list ALL 12 as separate issues"],
+                    "suggestions": ["Provide exact action verb replacements needed for EVERY repeated action verb within same section", "Specify ALL sections that need internal action verb variety", "FIX_REPETITION: [Section] - Action Verb '[repeated action verb]' used [X] times - Replace instances: [Instance 1: '[exact context]' → '[alternative1]'], [Instance 2: '[exact context]' → '[alternative2]'], [Instance 3: '[exact context]' → '[alternative3]']", "ENHANCE_VARIETY: For each repeated action verb, provide 3-5 specific professional alternatives with context", "DEBUG: Show complete action verb frequency analysis for each section", "MANDATORY COMPLETE COVERAGE: For EVERY repeated word detected, provide a specific FIX_REPETITION recommendation", "NO PARTIAL ANALYSIS: If 12 repeated words are detected, provide 12 specific FIX_REPETITION recommendations", "COMPREHENSIVE RECOMMENDATIONS: Include recommendations for ALL action verbs AND professional terms", "CRITICAL: Generate ONE FIX_REPETITION suggestion for EACH repeated word - if 'created' appears 3 times, generate 1 FIX_REPETITION suggestion for 'created' with 3 specific replacements", "CRITICAL: Generate ONE FIX_REPETITION suggestion for EACH professional term - if 'scalable' appears 3 times, generate 1 FIX_REPETITION suggestion for 'scalable' with 3 specific replacements", "MANDATORY: Based on the repetition debug analysis, generate FIX_REPETITION suggestions for ALL detected repeated words", "CRITICAL: If repetition_debug_analysis shows 17 repeated words, generate 17 FIX_REPETITION suggestions", "REQUIRED: For each word in the repetition analysis, create: FIX_REPETITION: [Section] - [Word Type] '[word]' used [X] times - Replace instances: [specific replacements]", "Note that cross-section repetition is acceptable when contextually appropriate"],
+                    "specific_issues": ["List EVERY exact repetitive action verb found within same section in resume with counts", "Identify ALL specific sections needing internal action verb variety with exact locations", "Document ALL instances of overused action verbs", "Count ALL repeated action verbs within each section", "DEBUG: Complete action verb inventory: [Section1]: [action_verb1: X times], [action_verb2: Y times], [Section2]: [action_verb3: Z times]", "DEBUG: Highlight problematic repetitions: Action verbs appearing 3+ times in same section"],
+                    "improvement_examples": ["Show before/after repetition examples for EVERY repeated action verb within same section", "Provide specific action verb variety improvements needed for ALL repetitions within sections", "Demonstrate alternative action verb choices for EVERY overused term", "DEBUG: Before/After examples: 'Current: [exact repeated action verb]' → 'Improved: [varied action verb alternatives]'", "DEBUG: Show action verb replacement mapping: [Original Action Verb] → [Alternative 1, Alternative 2, Alternative 3]"],
+                    "section_isolation_note": "ONLY include repetition-related suggestions. Do not suggest content, formatting, skills, or other section improvements in this repetition section feedback."
+                }},
+                "contact_information_completeness": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Contact Information Completeness",
+                    "description": "Comprehensive analysis of contact details presence, formatting, and professional presentation - ONLY contact-related feedback",
+                    "positives": ["Quote specific well-formatted contact information from resume", "Reference specific contact elements that are complete", "Identify ALL properly formatted contact details"],
+                    "negatives": ["Quote specific missing contact information", "Identify specific contact formatting problems", "List ALL missing contact elements: phone number, email address, LinkedIn profile, location, professional title", "Document ALL contact formatting issues: inconsistent formatting, missing elements, poor presentation"],
+                    "suggestions": ["Provide exact contact additions needed", "Specify which contact elements need formatting fixes", "FIX_CONTACT: Add missing phone number with proper formatting", "FIX_CONTACT: Add professional email address", "FIX_CONTACT: Add LinkedIn profile URL", "FIX_CONTACT: Add current location", "FIX_CONTACT: Add professional title"],
+                    "specific_issues": ["List exact missing contact information found", "Identify specific contact formatting problems with locations", "Document ALL instances of incomplete contact information", "Identify ALL contact formatting inconsistencies"],
+                    "improvement_examples": ["Show before/after contact information examples", "Provide specific contact improvements needed", "Demonstrate proper contact formatting and completeness"],
+                    "section_isolation_note": "ONLY include contact-related suggestions. Do not suggest skills, experience, education, or other section improvements in this contact section feedback."
+                }},
+                "resume_length_optimization": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Resume Length Optimization",
+                    "description": "Comprehensive analysis of resume length appropriateness and section-specific description optimization",
+                    "positives": ["Quote specific sections with appropriate length", "Reference specific content that is well-balanced", "Identify ALL well-sized descriptions"],
+                    "negatives": ["Quote specific sections that are too long/short", "Identify specific content that needs length adjustment", "List ALL project descriptions that are too short (less than 2 sentences)", "List ALL experience descriptions that are too short (less than 2 sentences)", "List ALL summary descriptions that are too short (less than 50 words)", "List ALL project descriptions that are too long (more than 5 sentences)", "List ALL experience descriptions that are too long (more than 5 sentences)", "List ALL summary descriptions that are too long (more than 150 words)"],
+                    "suggestions": ["Provide exact content additions/removals needed", "Specify which sections need length optimization", "OPTIMIZE_DESCRIPTION: Project Section - Current: '[exact short description]' - Expand to: '[detailed 3-4 sentence description with tech stack, challenges, outcomes, and metrics]'", "OPTIMIZE_DESCRIPTION: Experience Section - Current: '[exact short description]' - Expand to: '[detailed 3-4 sentence description with responsibilities, achievements, and quantified results]'", "OPTIMIZE_DESCRIPTION: Summary Section - Current: '[exact short summary]' - Expand to: '[comprehensive 3-4 line summary with experience, skills, achievements, and career objectives]'", "OPTIMIZE_DESCRIPTION: Project Section - Current: '[exact long description]' - Compress to: '[concise 2-3 sentence description focusing on key outcomes and tech stack]'", "OPTIMIZE_DESCRIPTION: Experience Section - Current: '[exact long description]' - Compress to: '[focused 2-3 sentence description highlighting main achievements and responsibilities]'", "OPTIMIZE_DESCRIPTION: Summary Section - Current: '[exact long summary]' - Compress to: '[concise 2-3 line summary with core competencies and value proposition]'"],
+                    "specific_issues": ["List exact length problems found in resume", "Identify specific sections needing length adjustment with locations", "Document ALL descriptions that need expansion with exact content", "Document ALL descriptions that need compression with exact content"],
+                    "improvement_examples": ["Show before/after length optimization examples", "Provide specific content density improvements needed", "Demonstrate optimal description lengths for projects, experience, and summary sections"]
+                }}
+            }},
+            "extracted_text": "Complete text content extracted from the resume",
+            "strengths": [
+                "Specific strength 1 with details",
+                "Specific strength 2 with details",
+                "Specific strength 3 with details"
+            ],
+            "weaknesses": [
+                "Specific weakness 1 with details",
+                "Specific weakness 2 with details",
+                "Specific weakness 3 with details"
+            ],
+            "recommendations": [
+                "MANDATORY: Include ALL identified issues from EVERY section in recommendations",
+                "If 5 repetition issues found, list ALL 5 repetition fixes in recommendations",
+                "If 3 sections missing dates, list ALL 3 sections with missing dates in recommendations", 
+                "If multiple description length issues, list ALL description optimization needs in recommendations",
+                "If project descriptions are too short (less than 6 statements), include 'OPTIMIZE_PROJECT_LENGTH: Expand project descriptions to 6-7 professional statements with tech stack, challenges, solutions, outcomes, and impact metrics' in recommendations",
+                "If project descriptions are too long (more than 7 statements), include 'OPTIMIZE_PROJECT_LENGTH: Condense project descriptions to 6-7 concise, professional statements focusing on key achievements and technical details' in recommendations",
+                "If experience descriptions are too short, include 'OPTIMIZE_DESCRIPTION: Expand experience descriptions' in recommendations", 
+                "If summary description is too short, include 'OPTIMIZE_DESCRIPTION: Expand summary description' in recommendations",
+                "If experience descriptions are too long, include 'OPTIMIZE_DESCRIPTION: Compress experience descriptions' in recommendations",
+                "If summary description is too long, include 'OPTIMIZE_DESCRIPTION: Compress summary description' in recommendations",
+                "If skills are unstructured, include skills restructuring in recommendations",
+                "If certificates missing organizations, include ALL organization inferences in recommendations",
+                "For EVERY certificate without issuing organization, include 'ADD_ORGANIZATION: [Certificate Name] - Add issuing organization' in recommendations",
+                "If dates are in wrong format, include 'FIX_DATE_FORMAT: Convert ALL dates to MMM YYYY format (e.g., Jan 2025, Dec 2024)' in recommendations",
+                "EVERY single issue must appear in recommendations - DO NOT limit to 5 items",
+                "Priority recommendation 1: [Most critical issue with specific action]",
+                "Priority recommendation 2: [Second critical issue with specific action]",
+                "Continue listing ALL remaining issues until EVERY problem is addressed",
+                "Include ALL missing dates from ALL sections as separate recommendation items",
+                "Include ALL repetition issues as separate recommendation items",
+                "Include ALL description length issues as separate recommendation items",
+                "Include ALL formatting issues as separate recommendation items",
+                "Include ALL grammar issues as separate recommendation items",
+                "Include ALL missing certificate organizations as separate recommendation items",
+                "TOTAL RECOMMENDATIONS SHOULD EQUAL TOTAL ISSUES FOUND"
+            ]
+        }}
+        
+        FINAL INSTRUCTIONS - CRITICAL FOR CONSISTENCY:
+        - NEVER omit sections - return empty values instead of missing sections!
+        - overall_score MUST be a weighted average of all category scores (integer 0-100)
+        - All category scores MUST be integers between 0-100 based on precise criteria above!
+        - Provide specific, actionable recommendations with clear next steps!
+        - Focus on ATS compatibility, professional presentation, and measurable improvements!
+        - Use varied, professional language - avoid repetition across sections!
+        - Ensure all feedback is specific to the actual resume content analyzed!
+        - Calculate scores based on objective criteria, not subjective opinions!
+        - Maintain consistency in scoring methodology across all categories!
+        - Apply the same rigorous standards for each parameter from the CSV criteria!
+        - Ensure consistent evaluation of keyword usage, skills match, formatting, and all other parameters!
+        - Use the exact scoring ranges provided for each category - no deviations!
+        - Provide consistent, professional feedback that matches the scoring criteria exactly!
+        
+        ULTRA-COMPREHENSIVE FEEDBACK REQUIREMENTS - MANDATORY FOR 90+ SCORE IMPROVEMENT:
+        - For POSITIVES: Quote EXACT phrases with precise locations from the actual resume that demonstrate strengths
+        - For NEGATIVES: Quote EXACT problematic text with specific replacements, missing elements with precise additions, formatting issues with exact fixes
+        - For SUGGESTIONS: Provide COMPLETE before/after text replacements that will boost scores by 5-10 points each
+        - Always reference EXACT content with QUANTIFIED improvements and INDUSTRY KEYWORDS
+        - Provide SPECIFIC text replacements: "Replace '[exact current text]' with '[complete improved text with metrics and keywords]'"
+        - Add SPECIFIC skills: "Add these exact skills to Skills section: [list 8-10 specific technical skills]"
+        - Enhance SPECIFIC achievements: "Replace '[current achievement]' with '[quantified achievement with numbers, percentages, and impact metrics]'"
+        - Fix SPECIFIC formatting: "Change '[exact formatting issue]' to '[exact formatting solution]'"
+        - Add SPECIFIC keywords: "Integrate these exact industry terms: [list 10-15 specific keywords with placement instructions]"
+        - Enhance SPECIFIC sections: "In [exact section], add '[complete content with quantified metrics]'"
+        
+        COMPREHENSIVE REPETITION ANALYSIS - MANDATORY DEBUGGING:
+        - FOCUS ON ACTION VERBS AND PROFESSIONAL TERMS: Only analyze repeated action verbs and professional descriptive words
+        - IGNORE COMMON WORDS: Do not analyze repetitions of common words like "and", "in", "with", "of", "to", "for", "on", "by", "the", "a", "an"
+        - IGNORE PROPER NOUNS: Do not analyze repetitions of names, locations, company names, technologies, skills, universities, dates
+        - COUNT RELEVANT REPETITIONS: Find action verbs and professional terms that appear 2+ times within the same section
+        - DEBUG OUTPUT FORMAT: "DEBUG: Action Verb '[word]' appears [X] times in [Section]: [Context1], [Context2], [Context3]"
+        - CATEGORIZE REPETITIONS: "DEBUG: Action Verbs: [list], Professional Terms: [list]"
+        - PROVIDE SPECIFIC ALTERNATIVES: For each repeated action verb/professional term, suggest 3-5 specific alternatives
+        - ENHANCEMENT EXAMPLES: Show before/after for every repeated action verb/professional term with specific replacements
+        - COMPREHENSIVE COVERAGE: Find ALL repeated action verbs and professional terms
+        - DEBUG INVENTORY: "DEBUG: Action Verb inventory: [Section1]: [word1: X times], [word2: Y times]"
+        - REPLACEMENT MAPPING: "DEBUG: [Original Action Verb] → [Alternative 1, Alternative 2, Alternative 3]"
+        - MANDATORY COMPLETE COVERAGE: For EVERY repeated word detected, you MUST provide a specific recommendation
+        - NO PARTIAL ANALYSIS: If 12 repeated words are detected, you MUST provide 12 specific recommendations - NO EXCEPTIONS
+        - COMPLETE ISSUE COUNTING: Count ALL repeated words as issues - if 12 words are repeated, show 12 issues to fix
+        - COMPREHENSIVE RECOMMENDATIONS: Include recommendations for ALL action verbs AND professional terms detected
+        
+        MANDATORY REPETITION RECOMMENDATION FORMAT - COMPLETE COVERAGE REQUIRED:
+        For EVERY repeated word detected, you MUST provide a recommendation in this exact format:
+        "FIX_REPETITION: [Section] - [Word Type] '[repeated word]' used [X] times - Replace instances: [Instance 1: '[exact context]' → '[alternative1]'], [Instance 2: '[exact context]' → '[alternative2]'], [Instance 3: '[exact context]' → '[alternative3]']"
+        STRICT UNIQUENESS RULES FOR ALTERNATIVES:
+        - Do NOT suggest any alternative that already appears anywhere in the resume text.
+        - Do NOT reuse the same alternative across different FIX_REPETITION lines.
+        - If all obvious alternatives are already present, REFRAME the sentence fragment to eliminate repetition while preserving meaning (e.g., "built microservices" → "architected a microservice-based platform").
+        - Prefer concise, professional verbs; vary verbs across instances.
+        
+        EXAMPLE FOR COMPLETE COVERAGE:
+        If these words are detected as repeated:
+        - Action Verb 'built' (4 times)
+        - Action Verb 'implemented' (3 times)  
+        - Action Verb 'designed' (2 times)
+        - Professional Term 'scalable' (2 times)
+        - Professional Term 'secure' (2 times)
+        
+        You MUST provide 5 separate recommendations:
+        1. "FIX_REPETITION: General - Action Verb 'built' used 4 times - Replace instances: [Instance 1: 'built microservices' → 'created microservices'], [Instance 2: 'built and deployed' → 'developed and deployed'], [Instance 3: 'built monitoring' → 'established monitoring'], [Instance 4: 'built CI/CD' → 'implemented CI/CD']"
+        2. "FIX_REPETITION: General - Action Verb 'implemented' used 3 times - Replace instances: [Instance 1: 'implemented fraud detection' → 'developed fraud detection'], [Instance 2: 'implemented CI/CD' → 'established CI/CD'], [Instance 3: 'implemented monitoring' → 'configured monitoring']"
+        3. "FIX_REPETITION: General - Action Verb 'designed' used 2 times - Replace instances: [Instance 1: 'designed architecture' → 'architected solution'], [Instance 2: 'designed UI' → 'created UI']"
+        4. "FIX_REPETITION: General - Professional Term 'scalable' used 2 times - Replace instances: [Instance 1: 'scalable architecture' → 'robust architecture'], [Instance 2: 'scalable solution' → 'flexible solution']"
+        5. "FIX_REPETITION: General - Professional Term 'secure' used 2 times - Replace instances: [Instance 1: 'secure authentication' → 'robust authentication'], [Instance 2: 'secure system' → 'protected system']"
+        
+        COMPREHENSIVE PROBLEM DETECTION REQUIREMENTS - IDENTIFY EVERY POSSIBLE ISSUE:
+        - CONTACT SECTION: Check for missing name, phone, email, LinkedIn, location, professional title, website, GitHub
+        - SUMMARY SECTION: Check for missing professional summary, quantified experience, industry keywords, achievement highlights, skills mention, description length (too short/long)
+        - EXPERIENCE SECTION: Check for missing company names, job titles, dates, locations, quantified achievements, action verbs, industry keywords, technical details, team sizes, project scopes, business impact, description length (too short/long)
+        - EDUCATION SECTION: Check for missing institution names, degrees, graduation years, GPAs, locations, relevant coursework, academic achievements, honors
+        - SKILLS SECTION: Check for missing technical skills, soft skills, tools, frameworks, programming languages, certifications, proficiency levels, industry-specific competencies, unstructured skills text that needs proper formatting
+        - PROJECTS SECTION: Check for missing project names, descriptions, tech stacks, dates, links, challenges solved, outcomes achieved, team collaboration details, description length (too short/long), project description length validation (MANDATORY: exactly 6-7 statements required - count each statement and ensure exactly 6-7)
+        - CERTIFICATIONS SECTION: Check for missing certificate names, issuing organizations, dates, expiration dates, credential IDs, skill validation, infer organizations from certificate names
+        - LANGUAGES SECTION: Check for missing language proficiency levels, certifications, relevant language skills for the role
+        - REFERENCES SECTION: Check for missing reference contact information, professional relationships, permission to contact
+        - FORMATTING ISSUES: Check for inconsistent fonts, spacing, bullet points, section headers, date formats, contact formatting, ATS compatibility
+        - KEYWORD OPTIMIZATION: Check for missing industry keywords, technical terms, soft skills, action verbs, quantified metrics, location keywords
+        - ACHIEVEMENT QUANTIFICATION: Check for missing numbers, percentages, dollar amounts, timeframes, team sizes, project scopes, efficiency improvements, cost savings
+        - GRAMMAR & SPELLING: Check for typos, grammatical errors, inconsistent tense, punctuation issues, professional language quality
+        - REPETITION ISSUES: Check for ALL repeated words within same section, ALL overused action verbs, ALL redundant phrases, lack of variety - LIST EVERY SINGLE REPETITION ISSUE
+        - SECTION COMPLETENESS: Check for missing essential sections, incomplete information, empty fields, placeholder text
+        - ATS COMPATIBILITY: Check for tables, graphics, complex formatting, non-standard fonts, header issues, parsing problems
+        - MISSING DATES ANALYSIS: Check for missing dates in ALL sections (experience, education, projects, certifications, languages, references) and list EVERY section with missing dates
+        - DESCRIPTION OPTIMIZATION: Check for descriptions that are too short (less than 2 sentences) or too long (more than 5 sentences) in ALL sections
+        
+        SPECIFIC SECTION ANALYSIS REQUIREMENTS:
+        - EXPERIENCE SECTION: Check for missing company names, job titles, dates, descriptions, locations
+        - EDUCATION SECTION: Check for missing institution names, degrees, graduation years, GPAs, locations
+        - CONTACT SECTION: Check for missing phone, email, LinkedIn, location, professional title
+        - SKILLS SECTION: Check for missing technical skills, soft skills, skill categorization
+        - PROJECTS SECTION: Check for missing project names, descriptions, tech stacks, dates, links, project description length validation (MANDATORY: exactly 6-7 statements required - count each statement and ensure exactly 6-7)
+        - CERTIFICATIONS SECTION: Check for missing certificate names, issuing organizations, dates
+        - SUMMARY SECTION: Check for missing professional summary or objective
+        - LANGUAGES SECTION: Check for missing language proficiency levels
+        - REFERENCES SECTION: Check for missing reference contact information
+        
+        ULTRA-COMPREHENSIVE SUGGESTION FORMAT FOR 90+ SCORES:
+        - SKILLS FORMAT: "ADD_SKILLS: [Section] - Missing: [exact skill list] - Add: 'Technical Skills: Python (Advanced), React.js (Expert), AWS (Intermediate), Machine Learning (Advanced), SQL (Expert), Docker (Intermediate), Git (Advanced), Agile/Scrum (Expert), Kubernetes (Intermediate), Microservices (Advanced)'"
+        - SKILLS STRUCTURE FORMAT: "STRUCTURE_SKILLS: [Section] - Current: '[unstructured skills text]' - Restructure to: 'Technical: [Java, Python, JavaScript], Soft Skills: [Communication, Leadership, Problem Solving], Tools: [Git, Docker, Jenkins], Frameworks: [React, Angular, Spring]'"
+        - ACHIEVEMENT FORMAT: "ENHANCE_ACHIEVEMENT: [Section] - Current: '[exact current text]' - Replace with: '[quantified achievement with 2-3 specific metrics, percentages, and business impact]'"
+        - KEYWORD FORMAT: "ADD_KEYWORDS: [Section] - Missing terms: [exact keyword list] - Integration: 'Naturally integrate these terms: [specific placement instructions for each keyword]'"
+        - EXPERIENCE FORMAT: "IMPROVE_EXPERIENCE: [Section] - Current: '[exact bullet point]' - Replace with: '[power verb] + [specific action] + [quantified result] + [business impact] + [relevant keywords]'"
+        - PROJECT FORMAT: "ENHANCE_PROJECT: [Section] - Current: '[exact description]' - Replace with: '[detailed project with tech stack, challenges solved, quantified outcomes, and industry keywords]'"
+        - PROJECT LENGTH FORMAT: "OPTIMIZE_PROJECT_LENGTH: [Project Name] - Current: '[X statements]' - Issue: '[too short: less than 6 statements / too long: more than 7 statements]' - Replace with: '[6-7 professional statements with tech stack, challenges, solutions, outcomes, and impact metrics]'"
+        - CONTACT FORMAT: "FIX_CONTACT: [Section] - Issue: '[exact issue]' - Solution: '[complete contact format with all required elements]'"
+        - SUMMARY FORMAT: "REWRITE_SUMMARY: [Section] - Current: '[exact text]' - Replace with: '[3-4 line professional summary with years of experience, key skills, achievements, and industry keywords]'"
+        - MISSING SECTION FORMAT: "ADD_SECTION: [Section Name] - Missing: [section description] - Add: '[complete section content with all required elements]'"
+        - FORMATTING FORMAT: "FIX_FORMATTING: [Section] - Issue: '[exact formatting problem]' - Solution: '[exact formatting fix]'"
+        - GRAMMAR FORMAT: "FIX_GRAMMAR: [Section] - Current: '[exact text with error]' - Replace with: '[corrected text]'"
+        - MISSING DATES FORMAT: "ADD_DATES: [All Sections with Missing Dates] - Missing dates in: [Experience Section: Company A, Company B], [Projects Section: Project X, Project Y], [Certifications Section: Cert A, Cert B] - Add: '[Experience: Jan 2020 - Dec 2022], [Projects: Mar 2021 - May 2021, Jun 2022 - Aug 2022], [Certifications: Issued: Jan 2023, Valid until: Jan 2026]'"
+        - PROJECT DATES FORMAT: "ADD_PROJECT_DATES: Projects Section - Missing start/end dates for: [Project Name 1, Project Name 2] - Add dummy dates: '[Project 1: Jan 2023 - Mar 2023], [Project 2: Apr 2023 - Jun 2023]' with realistic 2-4 month durations"
+        - ORGANIZATION INFERENCE FORMAT: "ADD_ORGANIZATION: [Section] - Certificate: '[certificate name]' - Inferred organization: '[Google for Google Cloud Certification, Microsoft for Azure Certification, Oracle for Oracle Database Certification, etc.]'"
+        - DESCRIPTION LENGTH FORMAT: "OPTIMIZE_DESCRIPTION: [Section] - Current: '[exact description]' - Issue: '[too short: less than 2 sentences / too long: more than 5 sentences]' - Replace with: '[optimized 2-4 sentence description with keywords and metrics]'"
+        - REPETITION FORMAT: "FIX_REPETITION: [Section] - Repeated words: '[managed, developed, implemented, created]' - Replace instances: '[First: managed → led], [Second: developed → engineered], [Third: implemented → executed], [Fourth: created → designed]'"
+        
+        PARSED DATA ANALYSIS RULES:
+        - If parsed data shows projects with dates, DO NOT suggest missing project dates
+        - If parsed data shows experience with company names, DO NOT suggest missing company names
+        - If parsed data shows education with degrees, DO NOT suggest missing degrees
+        - If parsed data shows contact info, DO NOT suggest missing contact information
+        - If parsed data shows skills, DO NOT suggest missing skills section
+        - Only suggest missing elements if they are genuinely absent from the parsed data
+        - Focus on quality improvements for existing elements rather than suggesting missing elements
+        - Check for completeness: if a field exists but is empty or incomplete, suggest improvements
+        - Check for accuracy: if a field exists but has poor content, suggest better content
+        """
+
+        try:
+            logger.info(f"Generating ATS analysis with temperature={self.temperature}, top_p={self.top_p}")
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an expert ATS (Applicant Tracking System) analyst with 10+ years of experience in resume optimization and HR technology."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=self.temperature,
+                top_p=self.top_p,
+                max_tokens=4000
+            )
+            cleaned_response = self._clean_openai_response(response.choices[0].message.content)
+            
+            # Parse the JSON response
+            ats_response = json.loads(cleaned_response)
+            
+            # Enforce schema compliance
+            ats_response = self._enforce_ats_schema_compliance(ats_response)
+            
+            # Validate CSV parameters
+            ats_response = self._validate_csv_parameters(ats_response)
+            
+            # Augment repetition suggestions using internal debug analysis so ALL repeated words are covered
+            ats_response = _augment_repetition_suggestions_with_debug(
+                ats_response,
+                repetition_debug,
+                resume_text,
+                self.client,
+                self.model_name,
+                self.temperature,
+                self.top_p
+            )
+
+            # Augment achievement suggestions using internal debug analysis so ALL unquantified achievements are covered
+            ats_response = _augment_achievement_suggestions_with_debug(
+                ats_response,
+                achievement_debug,
+                resume_text,
+                self.client,
+                self.model_name,
+                self.temperature,
+                self.top_p
+            )
+
+            # Mirror skills-related suggestions into top-level recommendations for full coverage
+            ats_response = _mirror_skill_suggestions_into_recommendations(ats_response)
+            
+            # Apply dynamic scoring based on issues count
+            ats_response = self._apply_dynamic_scoring(ats_response)
+            
+            # Add improvement potential analysis
+            ats_response = self._add_improvement_potential(ats_response)
+            
+            # Add achievement debug information
+            ats_response["achievement_debug_analysis"] = achievement_debug
+            
+            # Final validation
+            ats_response = self._final_ats_validation(ats_response)
+            
+            logger.info(f"✅ Standard ATS analysis completed successfully with overall score: {ats_response.get('overall_score', 'N/A')}")
+            return ats_response
+            
+        except json.JSONDecodeError as json_error:
+            logger.error(f"Failed to parse OpenAI JSON response for ATS analysis: {str(json_error)}")
+            logger.error(f"Raw response: {cleaned_response}")
+            raise Exception(f"Invalid JSON response from AI: {str(json_error)}")
+        except Exception as e:
+            logger.error(f"Failed to analyze resume for ATS: {str(e)}")
+            raise
+
+    def _clean_openai_response(self, response_text: str) -> str:
+        """Clean OpenAI API response to extract valid JSON"""
+        import re
+        import json
+        
+        logger.info(f"🧹 Cleaning OpenAI ATS response of {len(response_text)} characters")
+        
+        # Remove markdown code blocks
+        if response_text.startswith("```json"):
+            response_text = response_text.replace("```json", "").replace("```", "")
+        elif response_text.startswith("```"):
+            response_text = response_text.replace("```", "")
+
+        response_text = response_text.strip()
+        
+        # Try to find JSON content within markdown blocks first
+        json_pattern = r'```(?:json)?\s*(\{.*?\})\s*```'
+        match = re.search(json_pattern, response_text, re.DOTALL)
+        if match:
+            json_content = match.group(1).strip()
+            try:
+                parsed = json.loads(json_content)
+                logger.info(f"✅ Successfully extracted JSON from markdown block: {len(json_content)} characters")
+                return json_content
+            except json.JSONDecodeError:
+                logger.warning("❌ Extracted JSON from markdown block is invalid")
+        
+        # Try to find the complete JSON response
+        if response_text.startswith('{') and response_text.endswith('}'):
+            try:
+                parsed = json.loads(response_text)
+                logger.info(f"✅ Successfully parsed complete JSON: {len(response_text)} characters")
+                return response_text
+            except json.JSONDecodeError:
+                logger.warning("❌ Complete JSON parsing failed")
+        
+        # Try to find JSON object in the text
+        json_pattern = r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})'
+        match = re.search(json_pattern, response_text, re.DOTALL)
+        if match:
+            json_content = match.group(1).strip()
+            try:
+                parsed = json.loads(json_content)
+                logger.info(f"✅ Successfully extracted JSON object: {len(json_content)} characters")
+                return json_content
+            except json.JSONDecodeError:
+                logger.warning("❌ Extracted JSON object is invalid")
+        
+        logger.warning("Could not extract valid JSON from AI response")
+        return '{"error": "Invalid JSON response", "message": "Could not parse AI response"}'
+
+    def _enforce_ats_schema_compliance(self, ats_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enforces schema compliance for the ATS response.
+        Ensures all required sections are present, even if the AI skips them.
+        """
+        logger.info("🔒 Enforcing ATS schema compliance")
+        
+        # Define the complete required schema structure
+        required_sections = {
+            "overall_score": 0,
+            "analysis_timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "category_scores": {
+                "keyword_usage_placement": 0,
+                "skills_match_alignment": 0,
+                "formatting_layout_ats": 0,
+                "section_organization": 0,
+                "achievements_impact_metrics": 0,
+                "grammar_spelling_quality": 0,
+                "header_consistency": 0,
+                "clarity_brevity": 0,
+                "repetition_avoidance": 0,
+                "contact_information_completeness": 0,
+                "resume_length_optimization": 0
+            },
+            "detailed_feedback": {
+                "keyword_usage_placement": {"score": 0, "title": "Keyword Usage & Placement", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "skills_match_alignment": {"score": 0, "title": "Skills Match & Alignment", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "formatting_layout_ats": {"score": 0, "title": "Formatting & Layout ATS", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "section_organization": {"score": 0, "title": "Section Organization", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "achievements_impact_metrics": {"score": 0, "title": "Achievements & Impact Metrics", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "grammar_spelling_quality": {"score": 0, "title": "Grammar & Spelling Quality", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "header_consistency": {"score": 0, "title": "Header Consistency", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "clarity_brevity": {"score": 0, "title": "Clarity & Brevity", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "repetition_avoidance": {"score": 0, "title": "Repetition Avoidance", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "contact_information_completeness": {"score": 0, "title": "Contact Information Completeness", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "resume_length_optimization": {"score": 0, "title": "Resume Length Optimization", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []}
+            },
+            "extracted_text": "",
+            "strengths": [],
+            "weaknesses": [],
+            "recommendations": []
+        }
+        
+        # Ensure top-level structure exists
+        for key, default_value in required_sections.items():
+            if key not in ats_response:
+                ats_response[key] = default_value
+                logger.warning(f"🔒 Enforced missing top-level section: {key}")
+        
+        # Validate and fix the overall score
+        original_score = ats_response.get("overall_score", 0)
+        validated_score = self._validate_score(original_score)
+        ats_response["overall_score"] = validated_score
+        
+        # Validate and fix the analysis timestamp
+        ats_response["analysis_timestamp"] = self._validate_timestamp(ats_response.get("analysis_timestamp", ""))
+        
+        # Ensure category_scores structure exists
+        if "category_scores" not in ats_response:
+            ats_response["category_scores"] = required_sections["category_scores"]
+        
+        # Ensure each category score exists
+        for category_name, default_score in required_sections["category_scores"].items():
+            if category_name not in ats_response["category_scores"]:
+                ats_response["category_scores"][category_name] = default_score
+                logger.warning(f"🔒 Enforced missing category score: {category_name}")
+        
+        # Ensure detailed_feedback structure exists
+        if "detailed_feedback" not in ats_response:
+            ats_response["detailed_feedback"] = required_sections["detailed_feedback"]
+        
+        # Ensure each detailed feedback section has the required structure
+        for feedback_name, default_structure in required_sections["detailed_feedback"].items():
+            if feedback_name not in ats_response["detailed_feedback"]:
+                ats_response["detailed_feedback"][feedback_name] = default_structure
+                logger.warning(f"🔒 Enforced missing detailed feedback: {feedback_name}")
+            else:
+                # Ensure each feedback section has required keys
+                for key, default_value in default_structure.items():
+                    if key not in ats_response["detailed_feedback"][feedback_name]:
+                        ats_response["detailed_feedback"][feedback_name][key] = default_value
+                        logger.warning(f"🔒 Enforced missing key in {feedback_name}: {key}")
+        
+        # Ensure extracted_text exists
+        if "extracted_text" not in ats_response:
+            ats_response["extracted_text"] = ""
+        
+        # Ensure strengths exists
+        if "strengths" not in ats_response:
+            ats_response["strengths"] = []
+        
+        # Ensure weaknesses exists
+        if "weaknesses" not in ats_response:
+            ats_response["weaknesses"] = []
+        
+        # Ensure recommendations exists
+        if "recommendations" not in ats_response:
+            ats_response["recommendations"] = []
+        
+        logger.info("✅ ATS schema compliance enforcement completed")
+        return ats_response
+
+    def _final_ats_validation(self, ats_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Final validation to ensure absolutely no "NA" values exist anywhere in the response.
+        This is the last line of defense against "NA" values.
+        """
+        na_variations = [
+            'NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE', 
+            'NOT APPLICABLE', 'NOT AVAILABLE', 'NONE', 'NULL', 'UNDEFINED',
+            'UNKNOWN', 'TBD', 'TO BE DETERMINED', 'PENDING', 'INVALID',
+            'ERROR', 'FAILED', 'MISSING', 'EMPTY', 'BLANK'
+        ]
+        
+        def validate_and_fix(value, path=""):
+            if isinstance(value, str):
+                value_str = value.strip().upper()
+                if value_str in na_variations:
+                    logger.error(f"🚨 FINAL ATS VALIDATION: Found 'NA' value at {path}: '{value}' -> ''")
+                    return ""
+                return value
+            elif isinstance(value, list):
+                return [validate_and_fix(item, f"{path}[{i}]") for i, item in enumerate(value) if item is not None]
+            elif isinstance(value, dict):
+                return {k: validate_and_fix(v, f"{path}.{k}") for k, v in value.items()}
+            elif isinstance(value, (int, float)):
+                return value
+            else:
+                logger.warning(f"🚨 FINAL ATS VALIDATION: Unexpected value type at {path}: {type(value)} - {value}")
+                return value
+        
+        # Perform final validation and fix any remaining "NA" values
+        validated_response = validate_and_fix(ats_response, "root")
+        logger.info("🔒 Completed final ATS validation - response is guaranteed to be NA-free")
+        return validated_response
+
+    def _validate_score(self, score: Any) -> int:
+        """
+        Validates and ensures the score is a number between 0 and 100.
+        If it's "NA", "N/A", or an invalid type, it defaults to 0.
+        """
+        if isinstance(score, str):
+            score_str = score.strip().upper()
+            na_variations = [
+                'NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE', 
+                'NOT APPLICABLE', 'NOT AVAILABLE', 'NONE', 'NULL', 'UNDEFINED',
+                'UNKNOWN', 'TBD', 'TO BE DETERMINED', 'PENDING', 'INVALID',
+                'ERROR', 'FAILED', 'MISSING', 'EMPTY', 'BLANK'
+            ]
+            if score_str in na_variations:
+                logger.warning(f"⚠️ 'NA' score detected: '{score}', defaulting to 0.")
+                return 0
+        
+        if score is None:
+            logger.warning(f"⚠️ None score detected, defaulting to 0.")
+            return 0
+        
+        try:
+            score_int = int(score)
+            return max(0, min(100, score_int))
+        except (ValueError, TypeError):
+            logger.warning(f"⚠️ Invalid score '{score}' detected, defaulting to 0.")
+            return 0
+
+    def _validate_timestamp(self, timestamp: str) -> str:
+        """
+        Validates and ensures the timestamp is in a valid ISO format.
+        If it's not, it defaults to the current UTC timestamp.
+        """
+        try:
+            datetime.datetime.fromisoformat(timestamp)
+            return timestamp
+        except (ValueError, TypeError):
+            logger.warning(f"⚠️ Invalid timestamp '{timestamp}' detected, defaulting to current UTC timestamp.")
+            return datetime.datetime.utcnow().isoformat() + "Z"
+
+    def _validate_csv_parameters(self, ats_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validates that all CSV parameters are properly evaluated in the ATS response.
+        Ensures consistency with the CSV criteria provided.
+        """
+        logger.info("🔍 Validating CSV parameters compliance")
+        
+        # Define CSV parameters and their corresponding category scores
+        csv_parameters = {
+            "keyword_usage_placement": "Keyword Usage & Placement",
+            "skills_match_alignment": "Skills Match & Alignment", 
+            "formatting_layout_ats": "Formatting & Layout ATS",
+            "section_organization": "Section Organization",
+            "achievements_impact_metrics": "Achievements & Impact Metrics",
+            "grammar_spelling_quality": "Grammar & Spelling Quality",
+            "header_consistency": "Header Consistency",
+            "clarity_brevity": "Clarity & Brevity",
+            "repetition_avoidance": "Repetition Avoidance"
+        }
+        
+        # Validate that all CSV parameters are present and properly scored
+        for param_key, param_name in csv_parameters.items():
+            if param_key not in ats_response.get("category_scores", {}):
+                logger.warning(f"⚠️ Missing CSV parameter: {param_name} ({param_key})")
+                ats_response["category_scores"][param_key] = 0
+            
+            if param_key not in ats_response.get("detailed_feedback", {}):
+                logger.warning(f"⚠️ Missing CSV parameter feedback: {param_name} ({param_key})")
+                ats_response["detailed_feedback"][param_key] = {
+                    "score": 0,
+                    "title": param_name,
+                    "description": f"Analysis of {param_name.lower()}",
+                    "positives": [],
+                    "negatives": [],
+                    "suggestions": []
+                }
+        
+        logger.info("✅ CSV parameters validation completed")
+        return ats_response
+    
+    def _validate_parsed_data(self, parsed_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate and clean parsed data to ensure accurate analysis
+        
+        Args:
+            parsed_data: Raw parsed resume data
+            
+        Returns:
+            Validated and cleaned parsed data
+        """
+        if not isinstance(parsed_data, dict):
+            logger.warning("Invalid parsed data format, returning empty dict")
+            return {}
+        
+        validated_data = {}
+        
+        # Check for common resume section keys and validate their content
+        section_mappings = {
+            "projects": ["projects", "project", "portfolio", "personal_projects"],
+            "experience": ["experience", "work_experience", "employment", "work_history"],
+            "education": ["education", "academic", "qualifications", "degrees"],
+            "contact": ["contact", "basic_details", "personal_info", "contact_info"],
+            "skills": ["skills", "competencies", "technical_skills", "soft_skills"],
+            "summary": ["summary", "objective", "profile", "professional_summary"],
+            "certifications": ["certificates", "certifications", "certificate", "licenses"],
+            "languages": ["languages", "language", "linguistic_skills"],
+            "references": ["references", "reference", "referees"]
+        }
+        
+        for section_name, possible_keys in section_mappings.items():
+            for key in possible_keys:
+                if key in parsed_data and parsed_data[key]:
+                    # Check if the data is not empty
+                    if isinstance(parsed_data[key], list) and len(parsed_data[key]) > 0:
+                        validated_data[section_name] = parsed_data[key]
+                        break
+                    elif isinstance(parsed_data[key], dict) and parsed_data[key]:
+                        validated_data[section_name] = parsed_data[key]
+                        break
+                    elif isinstance(parsed_data[key], str) and parsed_data[key].strip():
+                        validated_data[section_name] = parsed_data[key]
+                        break
+        
+        # Add any other non-empty fields
+        for key, value in parsed_data.items():
+            if key not in validated_data and value:
+                if isinstance(value, (list, dict)) and value:
+                    validated_data[key] = value
+                elif isinstance(value, str) and value.strip():
+                    validated_data[key] = value
+        
+        logger.info(f"Validated parsed data with {len(validated_data)} sections")
+        return validated_data
+
+    def _apply_dynamic_scoring(self, ats_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Apply dynamic scoring based on issues count to boost scores when issues are minimal
+        
+        Args:
+            ats_response: ATS analysis response dictionary
+            
+        Returns:
+            Updated ATS response with dynamic scoring applied
+        """
+        logger.info("🎯 Applying dynamic scoring based on issues count")
+        
+        # Count total issues across all categories
+        total_issues = 0
+        
+        # Count issues in detailed feedback sections
+        detailed_feedback = ats_response.get("detailed_feedback", {})
+        for category, feedback in detailed_feedback.items():
+            if isinstance(feedback, dict):
+                # Count issues in negatives, specific_issues, and suggestions
+                negatives = feedback.get("negatives", [])
+                specific_issues = feedback.get("specific_issues", [])
+                suggestions = feedback.get("suggestions", [])
+                
+                # Count non-empty issues
+                category_issues = len([item for item in negatives if item and item.strip()])
+                category_issues += len([item for item in specific_issues if item and item.strip()])
+                category_issues += len([item for item in suggestions if item and item.strip()])
+                
+                total_issues += category_issues
+        
+        # Count issues in weaknesses and recommendations
+        weaknesses = ats_response.get("weaknesses", [])
+        recommendations = ats_response.get("recommendations", [])
+        
+        total_issues += len([item for item in weaknesses if item and item.strip()])
+        total_issues += len([item for item in recommendations if item and item.strip()])
+        
+        # Determine bonus multiplier based on issues count
+        if total_issues == 0:
+            bonus_multiplier = 1.15
+            logger.info(f"🎯 No issues found - applying 1.15x bonus multiplier")
+        elif total_issues <= 2:
+            bonus_multiplier = 1.10
+            logger.info(f"🎯 {total_issues} issues found - applying 1.10x bonus multiplier")
+        elif total_issues <= 4:
+            bonus_multiplier = 1.05
+            logger.info(f"🎯 {total_issues} issues found - applying 1.05x bonus multiplier")
+        else:
+            bonus_multiplier = 1.0
+            logger.info(f"🎯 {total_issues} issues found - no bonus multiplier")
+        
+        # Apply bonus to category scores
+        category_scores = ats_response.get("category_scores", {})
+        updated_scores = {}
+        
+        for category, score in category_scores.items():
+            if isinstance(score, (int, float)) and score > 0:
+                # Apply bonus and ensure score is between 0-100
+                new_score = int(round(score * bonus_multiplier))
+                new_score = min(100, max(0, new_score))
+                updated_scores[category] = new_score
+                
+                if bonus_multiplier > 1.0:
+                    logger.info(f"🎯 {category}: {score} -> {new_score} (x{bonus_multiplier})")
+            else:
+                updated_scores[category] = score
+        
+        ats_response["category_scores"] = updated_scores
+        
+        # Recalculate overall score as weighted average
+        if updated_scores:
+            overall_score = int(round(sum(updated_scores.values()) / len(updated_scores)))
+            ats_response["overall_score"] = overall_score
+            logger.info(f"🎯 Overall score recalculated: {overall_score}")
+        
+        # Add dynamic scoring info to response
+        ats_response["dynamic_scoring"] = {
+            "total_issues_found": total_issues,
+            "bonus_multiplier_applied": bonus_multiplier,
+            "scoring_method": "dynamic_issue_based"
+        }
+        
+        logger.info(f"✅ Dynamic scoring applied successfully - {total_issues} issues, {bonus_multiplier}x multiplier")
+        return ats_response
+
+    def _extract_tech_stack_from_description(self, description: str) -> str:
+        """
+        Extract tech stack from project description using AI analysis
+        
+        Args:
+            description: Project description text
+            
+        Returns:
+            Comma-separated string of technologies found
+        """
+        if not description or not description.strip():
+            return ""
+        
+        try:
+            prompt = f"""
+            Analyze the following project description and extract all technologies, frameworks, programming languages, tools, and platforms mentioned.
+            
+            PROJECT DESCRIPTION:
+            {description}
+            
+            Return ONLY a comma-separated list of technologies found. Do not include explanations or additional text.
+            Examples of what to extract:
+            - Programming languages: Python, JavaScript, Java, C++, etc.
+            - Frameworks: React, Angular, Django, Spring, etc.
+            - Databases: MySQL, MongoDB, PostgreSQL, etc.
+            - Cloud platforms: AWS, Azure, GCP, etc.
+            - Tools: Docker, Kubernetes, Git, Jenkins, etc.
+            - Libraries: NumPy, Pandas, Express.js, etc.
+            
+            If no technologies are found, return an empty string.
+            """
+            
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                top_p=0.8,
+                max_tokens=200
+            )
+            
+            tech_stack = response.choices[0].message.content.strip()
+            
+            # Clean up the response
+            tech_stack = tech_stack.replace('"', '').replace("'", "").strip()
+            
+            # Remove any non-technology words and clean up
+            tech_terms = []
+            for term in tech_stack.split(','):
+                term = term.strip()
+                if term and len(term) > 1 and not term.lower() in ['and', 'or', 'with', 'using', 'built', 'developed', 'created']:
+                    tech_terms.append(term)
+            
+            return ', '.join(tech_terms) if tech_terms else ""
+            
+        except Exception as e:
+            logger.warning(f"Failed to extract tech stack from description: {e}")
+            return ""
+
+    def _add_improvement_potential(self, ats_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Add improvement potential analysis to help users understand score improvement possibilities
+        
+        Args:
+            ats_response: ATS analysis response dictionary
+            
+        Returns:
+            Updated ATS response with improvement potential analysis
+        """
+        logger.info("📈 Adding improvement potential analysis")
+        
+        current_score = ats_response.get("overall_score", 0)
+        category_scores = ats_response.get("category_scores", {})
+        weaknesses = ats_response.get("weaknesses", [])
+        recommendations = ats_response.get("recommendations", [])
+        
+        # Calculate improvement potential based on current weaknesses
+        potential_improvement = 0
+        low_scoring_categories = []
+        
+        for category, score in category_scores.items():
+            if score < 70:
+                potential_improvement += (85 - score) * 0.8  # Realistic improvement target
+                low_scoring_categories.append({
+                    "category": category,
+                    "current_score": score,
+                    "target_score": min(95, score + 15),
+                    "improvement_potential": min(25, 85 - score)
+                })
+        
+        # Estimate target score after improvements
+        target_score = min(95, current_score + max(10, potential_improvement // len(category_scores) if category_scores else 10))
+        
+        # Create improvement roadmap
+        improvement_roadmap = []
+        if len(weaknesses) > 0:
+            improvement_roadmap.append({
+                "priority": "HIGH",
+                "action": "Address Critical Issues",
+                "description": f"Fix {len(weaknesses)} identified weaknesses",
+                "score_impact": "+5-8 points"
+            })
+        
+        if len([cat for cat in low_scoring_categories if cat["current_score"] < 60]) > 0:
+            improvement_roadmap.append({
+                "priority": "HIGH", 
+                "action": "Boost Low-Scoring Categories",
+                "description": "Focus on categories scoring below 60",
+                "score_impact": "+8-12 points"
+            })
+        
+        if len(recommendations) > 0:
+            improvement_roadmap.append({
+                "priority": "MEDIUM",
+                "action": "Apply AI Recommendations", 
+                "description": f"Implement {len(recommendations)} optimization suggestions",
+                "score_impact": "+3-6 points"
+            })
+        
+        # Add improvement potential data to response
+        ats_response["improvement_analysis"] = {
+            "current_score": current_score,
+            "target_score": target_score,
+            "improvement_potential": target_score - current_score,
+            "low_scoring_categories": low_scoring_categories,
+            "improvement_roadmap": improvement_roadmap,
+            "score_breakdown": {
+                "achievable_with_fixes": min(current_score + 8, 90),
+                "achievable_with_optimization": min(current_score + 15, 95),
+                "confidence_level": "HIGH" if len(weaknesses) > 2 else "MEDIUM"
+            }
+        }
+        
+        logger.info(f"📈 Improvement potential analysis: {current_score} → {target_score} (+{target_score - current_score} points)")
+        return ats_response
+
+    def _analyze_repetitions_debug(self, resume_text: str) -> Dict[str, Any]:
+        """
+        Analyze repetitions in resume text for debugging purposes - focusing only on action verbs and professional terms
+        
+        Args:
+            resume_text: Raw resume text to analyze
+            
+        Returns:
+            Dictionary containing repetition analysis with debug information
+        """
+        # Removed debug logging to reduce console output - analysis runs silently
+        
+        import re
+        from collections import defaultdict, Counter
+        
+        # Define action verbs and professional terms to focus on
+        action_verbs = {
+            'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered',
+            'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured',
+            'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained',
+            'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved',
+            'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified',
+            'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced',
+            'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed',
+            'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched',
+            'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received', 'utilized'
+        }
+        
+        professional_terms = {
+            'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced',
+            'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical',
+            'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined',
+            'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized',
+            'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform',
+            'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven'
+        }
+        
+        # Common words to ignore
+        common_words = {
+            'and', 'in', 'with', 'of', 'to', 'for', 'on', 'by', 'the', 'a', 'an', 'is', 'are', 'was', 'were',
+            'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+            'may', 'might', 'can', 'must', 'shall', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she',
+            'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'her', 'its', 'our', 'their'
+        }
+        
+        # Split resume into sections (basic section detection)
+        sections = self._split_resume_into_sections(resume_text)
+        
+        repetition_analysis = {
+            "total_words_analyzed": 0,
+            "sections_analyzed": len(sections),
+            "repetitions_found": {},
+            "debug_info": {},
+            "action_verbs_found": {},
+            "professional_terms_found": {}
+        }
+        
+        for section_name, section_text in sections.items():
+            # Clean and tokenize text
+            words = re.findall(r'\b[a-zA-Z]+\b', section_text.lower())
+            word_count = Counter(words)
+            
+            # Filter for action verbs and professional terms only
+            relevant_repetitions = {}
+            action_verb_reps = {}
+            professional_term_reps = {}
+            
+            for word, count in word_count.items():
+                if count >= 2 and word not in common_words:
+                    if word in action_verbs:
+                        action_verb_reps[word] = count
+                        relevant_repetitions[word] = count
+                    elif word in professional_terms:
+                        professional_term_reps[word] = count
+                        relevant_repetitions[word] = count
+            
+            if relevant_repetitions:
+                repetition_analysis["repetitions_found"][section_name] = relevant_repetitions
+                repetition_analysis["action_verbs_found"][section_name] = action_verb_reps
+                repetition_analysis["professional_terms_found"][section_name] = professional_term_reps
+                
+                # Store context for each repetition (without debug logging)
+                for word, count in relevant_repetitions.items():
+                    word_type = "Action Verb" if word in action_verbs else "Professional Term"
+                    
+                    # Find contexts where the word appears
+                    contexts = []
+                    sentences = re.split(r'[.!?]+', section_text)
+                    for sentence in sentences:
+                        if word.lower() in sentence.lower():
+                            contexts.append(sentence.strip()[:100] + "..." if len(sentence.strip()) > 100 else sentence.strip())
+                    
+                    repetition_analysis["debug_info"][f"{section_name}_{word}"] = {
+                        "word": word,
+                        "count": count,
+                        "contexts": contexts[:3],  # Limit to first 3 contexts
+                        "section": section_name,
+                        "type": word_type
+                    }
+            
+            repetition_analysis["total_words_analyzed"] += len(words)
+        
+        return repetition_analysis
+
+    def _split_resume_into_sections(self, resume_text: str) -> Dict[str, str]:
+        """
+        Split resume text into sections for analysis with granular separation of projects and experiences
+        
+        Args:
+            resume_text: Raw resume text
+            
+        Returns:
+            Dictionary mapping section names to section text
+        """
+        import re
+        
+        # Common section headers
+        section_patterns = [
+            r'(?i)(experience|work experience|employment)',
+            r'(?i)(education|academic)',
+            r'(?i)(skills|competencies)',
+            r'(?i)(projects|portfolio)',
+            r'(?i)(certifications|certificates)',
+            r'(?i)(summary|objective|profile)',
+            r'(?i)(contact|personal information)',
+            r'(?i)(achievements|accomplishments)',
+            r'(?i)(languages)',
+            r'(?i)(references)'
+        ]
+        
+        sections = {}
+        current_section = "General"
+        current_text = []
+        subsection_counter = 1
+        
+        lines = resume_text.split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Check if line is a section header
+            is_section_header = False
+            for pattern in section_patterns:
+                if re.match(pattern, line):
+                    # Save previous section
+                    if current_text:
+                        sections[current_section] = ' '.join(current_text)
+                    
+                    # Start new section
+                    current_section = line
+                    current_text = []
+                    subsection_counter = 1
+                    is_section_header = True
+                    break
+            
+            if not is_section_header:
+                # Check if this looks like a project/experience entry (company name, project title, etc.)
+                # Pattern: Company Name, Project Title, or similar standalone entries
+                if (len(line.split()) <= 4 and 
+                    (re.match(r'^[A-Z][a-zA-Z\s&.,]+$', line) or 
+                     re.match(r'^[A-Z][a-zA-Z\s&.,]+\s*[-–]\s*[A-Z]', line))):
+                    
+                    # Save current subsection if it has content
+                    if current_text:
+                        subsection_name = f"{current_section} - Item {subsection_counter}"
+                        sections[subsection_name] = ' '.join(current_text)
+                        subsection_counter += 1
+                    
+                    # Start new subsection with this line
+                    current_text = [line]
+                else:
+                    current_text.append(line)
+        
+        # Save last section
+        if current_text:
+            if subsection_counter > 1:
+                subsection_name = f"{current_section} - Item {subsection_counter}"
+                sections[subsection_name] = ' '.join(current_text)
+            else:
+                sections[current_section] = ' '.join(current_text)
+        
+        return sections
+
+    def _analyze_achievements_debug(self, resume_text: str) -> Dict[str, Any]:
+        """
+        Analyze achievements in resume text for debugging purposes - focusing on unquantified achievements
+        
+        Args:
+            resume_text: Raw resume text to analyze
+            
+        Returns:
+            Dictionary containing achievement analysis with debug information
+        """
+        logger.info("🎯 Starting comprehensive achievement analysis for debugging (unquantified achievements)")
+        
+        import re
+        from collections import defaultdict
+        
+        # Split resume into sections
+        sections = self._split_resume_into_sections(resume_text)
+        
+        achievement_analysis = {
+            "total_sentences_analyzed": 0,
+            "sections_analyzed": len(sections),
+            "unquantified_achievements": {},
+            "debug_info": {},
+            "summary": {
+                "total_unquantified_achievements": 0,
+                "sections_with_issues": 0
+            }
+        }
+        
+        # Patterns that indicate achievements or accomplishments
+        achievement_patterns = [
+            r'\b(achieved|accomplished|delivered|completed|implemented|developed|created|built|designed|led|managed|improved|enhanced|optimized|increased|reduced|saved|transformed|established|launched)\b',
+            r'\b(responsible for|resulted in|contributed to|successfully|effectively|efficiently)\b',
+            r'\b(project|initiative|solution|system|application|feature|process|strategy)\b'
+        ]
+        
+        # Patterns that indicate quantification (if these are missing, achievement is unquantified)
+        quantification_patterns = [
+            r'\d+\.?\d*\s*%',  # percentages
+            r'\$\d+',  # money
+            r'\d+\s*(million|thousand|k|m|billion)',  # large numbers
+            r'\d+\s*(hours?|days?|weeks?|months?|years?)',  # time
+            r'\d+\s*(people|users|customers|clients|team members?)',  # people
+            r'\d+\s*(projects?|systems?|applications?)',  # counts
+            r'(increased|decreased|improved|reduced|saved|enhanced)\s+by\s+\d+',  # improvement metrics
+            r'\d+\s*(times?|fold)',  # multipliers
+        ]
+        
+        for section_name, section_text in sections.items():
+            logger.info(f"🎯 Analyzing achievements in section: {section_name}")
+            
+            # Split into sentences
+            sentences = re.split(r'[.!?]+', section_text)
+            section_unquantified = []
+            
+            for sentence in sentences:
+                sentence = sentence.strip()
+                if len(sentence) < 20:  # Skip very short sentences
+                    continue
+                    
+                achievement_analysis["total_sentences_analyzed"] += 1
+                
+                # Check if sentence describes an achievement
+                is_achievement = False
+                for pattern in achievement_patterns:
+                    if re.search(pattern, sentence, re.IGNORECASE):
+                        is_achievement = True
+                        break
+                
+                if is_achievement:
+                    # Check if achievement has quantification
+                    is_quantified = False
+                    for pattern in quantification_patterns:
+                        if re.search(pattern, sentence, re.IGNORECASE):
+                            is_quantified = True
+                            break
+                    
+                    if not is_quantified:
+                        section_unquantified.append(sentence)
+                        achievement_id = sentence[:30].lower()
+                        
+                        achievement_analysis["debug_info"][f"{section_name}_{achievement_id}"] = {
+                            "achievement": sentence,
+                            "section": section_name,
+                            "context": sentence,
+                            "issue": "lacks_quantification"
+                        }
+                        
+                        logger.info(f"🎯 DEBUG ACHIEVEMENTS: Found unquantified achievement in {section_name}: {sentence[:50]}...")
+            
+            if section_unquantified:
+                achievement_analysis["unquantified_achievements"][section_name] = section_unquantified
+                achievement_analysis["summary"]["sections_with_issues"] += 1
+            else:
+                logger.info(f"🎯 No unquantified achievements found in {section_name}")
+        
+        # Calculate summary statistics
+        total_unquantified = sum(len(achievements) for achievements in achievement_analysis["unquantified_achievements"].values())
+        achievement_analysis["summary"]["total_unquantified_achievements"] = total_unquantified
+        
+        logger.info(f"🎯 ACHIEVEMENT ANALYSIS SUMMARY:")
+        logger.info(f"🎯 Total sentences analyzed: {achievement_analysis['total_sentences_analyzed']}")
+        logger.info(f"🎯 Sections analyzed: {achievement_analysis['sections_analyzed']}")
+        logger.info(f"🎯 Total unquantified achievements found: {total_unquantified}")
+        logger.info(f"🎯 Sections with achievement issues: {achievement_analysis['summary']['sections_with_issues']}")
+        
+        for section, achievements in achievement_analysis["unquantified_achievements"].items():
+            logger.info(f"🎯 {section}: {len(achievements)} unquantified achievements")
+            for achievement in achievements:
+                logger.info(f"🎯   - Achievement: {achievement[:80]}...")
+        
+        return achievement_analysis
+
+
+class JDSpecificATSService:
+    """
+    Job Description Specific ATS analysis service
+    
+    Provides comprehensive resume analysis tailored to specific job descriptions with:
+    - Job-specific keyword matching
+    - Experience level alignment
+    - Skills gap analysis
+    - ATS optimization for specific roles
+    - Consistent scoring methodology
+    """
+    
+    def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini", temperature: float = 0.1, top_p: float = 0.8):
+        """
+        Initialize the JD-Specific ATS Service
+        
+        Args:
+            api_key: OpenAI API key (if not provided, will use environment variable)
+            model_name: OpenAI model name (if not provided, will use default)
+            temperature: Controls randomness in responses (0.0 = deterministic, 1.0 = creative)
+            top_p: Controls diversity via nucleus sampling (0.0 = focused, 1.0 = diverse)
+        """
+        self.parser = OpenAIResumeParser(api_key=api_key, model_name=model_name, temperature=temperature, top_p=top_p)
+        self.client = self.parser.client
+        self.model_name = model_name
+        self.model = self.parser.model
+        self.temperature = temperature
+        self.top_p = top_p
+    
+    def update_generation_parameters(self, temperature: float = None, top_p: float = None):
+        """
+        Update generation parameters for more consistent results
+        
+        Args:
+            temperature: New temperature value (0.0 = deterministic, 1.0 = creative)
+            top_p: New top_p value (0.0 = focused, 1.0 = diverse)
+        """
+        if temperature is not None:
+            self.temperature = temperature
+        if top_p is not None:
+            self.top_p = top_p
+            
+        # Update the generation parameters (OpenAI handles this in API calls)
+        logger.info(f"Updated generation parameters: temperature={self.temperature}, top_p={self.top_p}")
+    
+    def get_generation_settings(self) -> Dict[str, float]:
+        """Get current generation parameter settings"""
+        return {
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "model_name": self.model_name
+        }
+
+    def analyze_resume_for_jd(self, resume_text: str, job_description: str, parsed_data: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Analyze resume for specific job description and provide comprehensive feedback
+        
+        Args:
+            resume_text: Raw resume text to analyze
+            job_description: Job description text to match against
+            parsed_data: Optional parsed resume data for more accurate analysis
+            
+        Returns:
+            Dictionary containing JD-specific ATS analysis results with scores and recommendations
+        """
+        logger.info(f"Starting JD-Specific ATS analysis with temperature={self.temperature}, top_p={self.top_p}")
+        
+        # Validate parsed data if provided
+        if parsed_data:
+            parsed_data = self._validate_parsed_data(parsed_data)
+        
+        # Perform comprehensive achievements analysis for debugging (needed for prompt)
+        logger.info("🎯 Performing comprehensive achievements analysis for JD-specific analysis...")
+        achievement_debug = self._analyze_achievements_debug(resume_text)
+        
+        # Still need repetition analysis for the suggestions (but without debug logging)
+        repetition_debug = self._analyze_repetitions_debug(resume_text)
+        
+        prompt = f"""
+        You are an expert ATS (Applicant Tracking System) analyst and job matching specialist with 10+ years of experience in recruitment technology and resume optimization.
+        
+        TASK: Perform a comprehensive job-specific ATS analysis comparing the resume against the provided job description with precise, consistent scoring and HIGHLY SPECIFIC, ACTIONABLE feedback that will increase both the overall score and job match percentage by 10-15 points when applied.
+        
+        CRITICAL REQUIREMENTS - MANDATORY COMPLIANCE:
+        - Return ONLY valid JSON (no markdown, no code fences, no explanations, no additional text)
+        - NEVER omit any section - if no issues exist, return empty arrays/strings but keep the section structure
+        - ALWAYS include ALL required sections: overall_score, match_percentage, missing_keywords, category_scores, detailed_feedback, extracted_text, strengths, weaknesses, recommendations
+        - Ensure all scores are integers between 0-100 (never "NA", "N/A", "None", "Null", "Unknown", or text)
+        - NEVER use placeholder values - provide specific, actionable content
+        - LANGUAGE VARIETY: Use varied language within same sections, allow appropriate repetition across different sections
+        - PERFECT GRAMMAR: All content must have flawless spelling, grammar, and professional language
+        - CONSISTENT SCORING: Apply the same rigorous standards across all categories
+        - COMPREHENSIVE REPETITION ANALYSIS: For repetition_avoidance section, analyze ALL repeated words and provide individual FIX_REPETITION suggestions for EACH repeated word - if 15 words are repeated, provide 15 specific FIX_REPETITION suggestions
+        
+        PRECISE SCORING CRITERIA - APPLY CONSISTENTLY:
+        
+        DYNAMIC SCORING RULES:
+        - Use precise scores (not just multiples of 5) - e.g., 87, 93, 76, 84
+        - Count total issues/problems found across all categories
+        - If total issues = 0: Apply 1.15x bonus multiplier to all category scores
+        - If total issues = 1-2: Apply 1.10x bonus multiplier to all category scores  
+        - If total issues = 3-4: Apply 1.05x bonus multiplier to all category scores
+        - If total issues = 5+: No bonus multiplier (use base scores)
+        - Final scores must be integers between 0-100 (cap at 100 if bonus exceeds)
+        
+        KEYWORD_MATCH_SKILLS (0-100):
+        - 90-100: Perfect keyword alignment, all required skills present, industry terms matched
+        - 80-89: Excellent keyword match with minor gaps in skill alignment
+        - 70-79: Good keyword coverage but missing some important job-specific terms
+        - 60-69: Fair keyword match, missing several critical skills/terms
+        - 50-59: Poor keyword alignment, significant gaps in required skills
+        - 0-49: Very poor keyword match, minimal alignment with job requirements
+        
+        EXPERIENCE_RELEVANCE (0-100):
+        - 90-100: Perfect experience alignment, exact role match, relevant industry background
+        - 80-89: Excellent experience match with minor gaps in role relevance
+        - 70-79: Good experience alignment but some gaps in role-specific experience
+        - 60-69: Fair experience match, missing some relevant experience areas
+        - 50-59: Poor experience alignment, significant gaps in relevant experience
+        - 0-49: Very poor experience match, minimal relevant experience
+        
+        EDUCATION_CERTIFICATIONS (0-100):
+        - 90-100: Perfect education match, all required qualifications present
+        - 80-89: Excellent education alignment with minor gaps
+        - 70-79: Good education match but missing some preferred qualifications
+        - 60-69: Fair education alignment, missing important qualifications
+        - 50-59: Poor education match, significant gaps in required qualifications
+        - 0-49: Very poor education alignment, minimal required qualifications
+        
+        ACHIEVEMENTS_IMPACT (0-100):
+        - 90-100: Quantified achievements directly relevant to job requirements
+        - 80-89: Good achievement alignment with some relevant metrics
+        - 70-79: Fair achievement relevance but missing some job-specific impact
+        - 60-69: Limited achievement alignment with job requirements
+        - 50-59: Poor achievement relevance, minimal job-specific impact
+        - 0-49: Very poor achievement alignment, no relevant impact shown
+        
+        FORMATTING_STRUCTURE (0-100):
+        - 90-100: Perfect ATS format, clear structure, job-relevant organization
+        - 80-89: Excellent formatting with minor ATS optimization issues
+        - 70-79: Good formatting but some ATS compatibility concerns
+        - 60-69: Fair formatting with significant ATS issues
+        - 50-59: Poor formatting, major ATS compatibility problems
+        - 0-49: Very poor formatting, completely ATS-incompatible
+        
+        SOFT_SKILLS_MATCH (0-100):
+        - 90-100: Perfect soft skills alignment with job requirements
+        - 80-89: Excellent soft skills match with minor gaps
+        - 70-79: Good soft skills alignment but missing some required traits
+        - 60-69: Fair soft skills match, missing important job-relevant skills
+        - 50-59: Poor soft skills alignment, significant gaps
+        - 0-49: Very poor soft skills match, minimal alignment
+        
+        REPETITION_AVOIDANCE (0-100):
+        - 90-100: Perfect varied language, no unnecessary repetitions within same section, professional diversity across all sections
+        - 80-89: Excellent language variety with minor repetitive elements within sections, good cross-section diversity
+        - 70-79: Good variety but some repetitive action verbs or phrases within same section, acceptable cross-section repetition
+        - 60-69: Fair variety, noticeable repetition within same section affecting quality, some cross-section repetition acceptable
+        - 50-59: Poor variety, significant repetitive language within same section, limited cross-section diversity
+        - 0-49: Very poor variety, excessive repetition within same section, minimal cross-section language diversity
+        
+        COMPREHENSIVE REPETITION DETECTION REQUIREMENTS - MANDATORY:
+        - FOCUS ON ACTION VERBS AND PROFESSIONAL LANGUAGE: Only detect repeated action verbs, professional terms, and descriptive words that affect resume quality
+        - IGNORE COMMON WORDS: Do not flag repetitions of common words like "and", "in", "with", "of", "to", "for", "on", "by", "the", "a", "an"
+        - IGNORE PROPER NOUNS: Do not flag repetitions of names, locations, company names, technologies, skills, universities, dates
+        - DETECT ACTION VERB REPETITIONS: Find action verbs that appear 2+ times within the same section (implemented, managed, developed, created, built, designed, etc.)
+        - DETECT PROFESSIONAL TERM REPETITIONS: Find professional descriptive words that appear 2+ times (scalable, secure, efficient, optimized, etc.)
+        - COUNT EXACT OCCURRENCES: For each relevant repeated word, count exactly how many times it appears in each section
+        - IDENTIFY WORD LOCATIONS: Note the exact context and position of each repeated word instance
+        - PROVIDE SPECIFIC ALTERNATIVES: For each repeated action verb/professional term, suggest 3-5 specific alternative words/phrases
+        - DEBUG OUTPUT: Log only relevant repetitions (action verbs and professional terms) with counts and locations
+        
+        CONTACT_INFORMATION_COMPLETENESS (0-100):
+        - 90-100: Complete contact info (name, phone, email, LinkedIn, location) with proper formatting
+        - 80-89: Missing 1-2 non-critical contact elements, good overall contact presentation
+        - 70-79: Missing important contact details (email/phone), some formatting issues
+        - 60-69: Multiple missing contact elements, poor contact information organization
+        - 50-59: Major contact information gaps, significant formatting problems
+        - 0-49: Critical contact information missing, completely inadequate contact section
+        
+        RESUME_LENGTH_OPTIMIZATION (0-100):
+        - 90-100: Perfect length for experience level, optimal content density
+        - 80-89: Appropriate length with minor adjustments needed, good content balance
+        - 70-79: Fair length optimization, some content could be condensed or expanded
+        - 60-69: Length issues (too short/long), content density problems
+        - 50-59: Poor length optimization, significant content balance issues
+        - 0-49: Inappropriate resume length, major content organization problems
+        
+        RESUME TEXT TO ANALYZE:
+        {resume_text}
+        
+        REPETITION DEBUG ANALYSIS RESULTS:
+        {repetition_debug}
+        
+        IMPORTANT: Use the repetition debug analysis results above to determine if repetitions exist. 
+        - If repetitions_found is empty or shows 0 repeated words, DO NOT generate any FIX_REPETITION suggestions
+        - Only generate FIX_REPETITION suggestions for words that are actually listed in the repetitions_found section
+        - If no repetitions are detected, focus on other aspects of language variety and professional presentation
+        
+        PARSED RESUME DATA (for accurate analysis):
+        {json.dumps(parsed_data, indent=2) if parsed_data else "No parsed data provided"}
+        
+        JOB DESCRIPTION TO MATCH AGAINST:
         {job_description}
         
-        **CRITICAL NAME VALIDATION CHECKLIST**:
-        1. **First Name Detection**: Look for common first names (John, Jane, Michael, Sarah, David, Emma, James, Olivia, Robert, Ava, William, Isabella, etc.)
-        2. **Last Name Detection**: Look for common last names (Smith, Johnson, Williams, Brown, Jones, Garcia, Miller, Davis, etc.)
-        3. **Name Pattern Analysis**: Check for formats like "John Smith", "J. Smith", "John S.", "Smith, John", "JOHN SMITH"
-        4. **Contact Validation**: Verify email (contains @ symbol) and phone (contains digits)
-
-        **MANDATORY WEAKNESSES TO ADD** (if issues found):
-        - If NO first name found: "Critical: First name is missing from resume - ATS systems require complete identification for candidate tracking and database management"
-        - If NO last name found: "Critical: Last name is missing from resume - ATS systems need full name for proper candidate identification and search functionality"  
-        - If NO complete name found: "Critical: Complete name (first and last) is missing from resume - ATS systems cannot properly categorize or search for candidates without full names"
-        - If NO email found: "Critical: Email address is missing from resume - Recruiters need email for direct communication and interview scheduling"
-        - If NO phone found: "Critical: Phone number is missing from resume - Phone contact is essential for urgent communication and interview coordination"
-
-        **MANDATORY RECOMMENDATIONS TO ADD** (if issues found):
-        - For missing first name: "Add your first name prominently at the top of your resume header, ensuring it's clearly visible and matches your official documents"
-        - For missing last name: "Include your last name alongside your first name in the resume header, using standard formatting like 'John Smith' or 'SMITH, John'"
-        - For missing complete name: "Place your complete name (first and last) at the very top of your resume in a large, bold font (16-18pt) to ensure ATS systems can easily identify you"
-        - For missing contact: "Add your professional email address and phone number in the header section below your name, using standard formats like 'john.smith@email.com' and '(555) 123-4567'"
+        CRITICAL ANALYSIS REQUIREMENTS:
+        - FIRST analyze the PARSED DATA to understand what information is actually present
+        - THEN analyze the raw text for formatting, grammar, and presentation issues
+        - ONLY suggest missing elements that are genuinely absent from the parsed data
+        - PROJECT DESCRIPTION LENGTH ENFORCEMENT: For ALL projects, count the number of statements (sentences ending with period, exclamation, or question mark) - if less than 6 statements, you MUST suggest expansion to exactly 6-7 statements - if more than 7 statements, you MUST suggest reduction to exactly 6-7 statements - this is MANDATORY and CRITICAL
+        - DO NOT suggest missing elements that already exist in the parsed data
+        - Cross-reference parsed data with job requirements to identify gaps
+        - Focus on job-relevant missing elements and improvements
+        - SECTION-SPECIFIC ANALYSIS: Each section should ONLY contain suggestions relevant to that specific section
+        - NO CROSS-SECTION SUGGESTIONS: Do not include suggestions from other sections in any section's feedback
+        - IF SECTION IS COMPLETE: If a section has all required elements and is well-formatted, return empty arrays for negatives, suggestions, and specific_issues
+        - SECTION ISOLATION: Each detailed_feedback section must be completely independent and self-contained
+        - MANDATORY PROJECT DESCRIPTION LENGTH: ALL project descriptions MUST be exactly 6-7 statements - NO EXCEPTIONS - if less than 6 statements, MUST expand to 6-7 statements - if more than 7 statements, MUST condense to 6-7 statements - this is a CRITICAL REQUIREMENT
+        - PROJECT DESCRIPTION ENFORCEMENT: For EVERY project with less than 6 statements, you MUST generate exactly 6-7 statements in your suggestions - COUNT the statements and ensure they are exactly 6-7 - this is MANDATORY
+        - PROJECT DESCRIPTION COUNTING: When analyzing projects, count each statement (each sentence ending with period, exclamation, or question mark) - if count is less than 6, you MUST suggest expansion to exactly 6-7 statements - if count is more than 7, you MUST suggest reduction to exactly 6-7 statements
         
-        **DETAILED IMPROVEMENT REQUIREMENTS**:
-        For each weakness identified, provide specific, actionable improvement steps that candidates can immediately implement. Focus on:
-        1. **What exactly needs to be changed** (be specific about content, placement, formatting)
-        2. **Where to make the change** (specific section, position on page)
-        3. **How to implement it** (formatting suggestions, examples)
-        4. **Why it matters** (ATS impact, recruiter perspective, job match relevance)
+        COMPREHENSIVE REPETITION ANALYSIS REQUIREMENTS - MANDATORY:
+        - FOCUS ON ACTION VERBS AND PROFESSIONAL TERMS: Only analyze repeated action verbs and professional descriptive words that impact resume quality
+        - IGNORE COMMON WORDS: Do not analyze repetitions of common words like "and", "in", "with", "of", "to", "for", "on", "by", "the", "a", "an"
+        - IGNORE PROPER NOUNS: Do not analyze repetitions of names, locations, company names, technologies, skills, universities, dates
+        - DETECT ACTION VERB REPETITIONS: Find action verbs that appear 2+ times within the same section (implemented, managed, developed, created, built, designed, etc.)
+        - DETECT PROFESSIONAL TERM REPETITIONS: Find professional descriptive words that appear 2+ times (scalable, secure, efficient, optimized, etc.)
+        - COUNT EXACT FREQUENCY: For each relevant repeated word, count exactly how many times it appears in each section
+        - IDENTIFY CONTEXT: Note the exact context and sentence where each repeated word appears
+        - PROVIDE SPECIFIC ALTERNATIVES: For each repeated action verb/professional term, suggest 3-5 specific alternative words/phrases
+        - DEBUG LOGGING: Include detailed debug information showing only relevant repetitions with counts and locations
+        - ENHANCEMENT EXAMPLES: Show before/after examples for every repeated action verb/professional term with specific replacements
+        - COMPREHENSIVE COVERAGE: Find ALL repeated action verbs and professional terms in the resume
+        - MANDATORY COMPLETE COVERAGE: For EVERY repeated word detected, you MUST provide a specific recommendation in the suggestions section
+        - NO PARTIAL ANALYSIS: If 12 repeated words are detected, you MUST provide 12 specific recommendations - NO EXCEPTIONS
+        - COMPLETE ISSUE COUNTING: Count ALL repeated words as issues - if 12 words are repeated, show 12 issues to fix
         
-        **JOB-SPECIFIC IMPROVEMENT GUIDANCE**:
-        When providing recommendations, always consider the specific job requirements and suggest:
-        - How to incorporate missing keywords from the job description
-        - Which experiences to highlight or rephrase to better match the role
-        - What skills to emphasize based on the job requirements
-        - How to quantify achievements in ways relevant to the target position
+        SECTION DETECTION REQUIREMENTS:
+        - Check PARSED DATA for projects: Look for "projects", "project", "portfolio" keys with actual content
+        - Check PARSED DATA for certificates: Look for "certificates", "certifications", "certificate" keys with actual content
+        - Check PARSED DATA for experience: Look for "experience", "work_experience" with company, position, dates
+        - Check PARSED DATA for education: Look for "education", "academic" with institution, degree, year
+        - Check PARSED DATA for contact: Look for "contact", "basic_details" with phone, email, location
+        - Check PARSED DATA for skills: Look for "skills", "competencies" with actual skill lists
+        - Check PARSED DATA for summary: Look for "summary", "objective", "profile" with actual content
+        - If sections exist in parsed data but are empty/incomplete, suggest job-relevant improvements rather than additions
+        - If sections are completely missing from parsed data, then suggest job-relevant additions
+        - Include specific feedback about missing sections in weaknesses and recommendations
         
-        Return ONLY the JSON output — no explanations.
+        SECTION-SPECIFIC FEEDBACK RULES:
+        - KEYWORD MATCH SECTION: Only suggest keyword-related improvements (missing job keywords, skill terms, industry terminology)
+        - EXPERIENCE RELEVANCE SECTION: Only suggest experience-related improvements (job relevance, role alignment, industry experience)
+        - EDUCATION SECTION: Only suggest education-related improvements (degrees, certifications, qualifications for the role)
+        - ACHIEVEMENTS SECTION: Only suggest achievement-related improvements (quantified results, job-relevant impact metrics)
+        - FORMATTING SECTION: Only suggest formatting-related improvements (layout, ATS compatibility, structure)
+        - SOFT SKILLS SECTION: Only suggest soft skills-related improvements (leadership, communication, teamwork for the role)
+        - REPETITION SECTION: Only suggest repetition-related improvements within the same section
+        - CONTACT SECTION: Only suggest contact-related improvements (phone, email, LinkedIn, location, formatting)
+        - LENGTH SECTION: Only suggest length-related improvements (content density, section optimization)
+        - If a section is complete and well-formatted, return empty arrays for that section's feedback
+        
+        REQUIRED OUTPUT SCHEMA (MUST INCLUDE ALL SECTIONS):
+        {{
+            "overall_score": <calculate_weighted_average_of_all_category_scores>,
+            "match_percentage": <percentage_of_job_requirements_met>,
+            "missing_keywords": ["Specific missing keyword 1", "Specific missing keyword 2"],
+            "analysis_timestamp": "{datetime.datetime.utcnow().isoformat()}Z",
+            "category_scores": {{
+                "keyword_match_skills": <exact_score_based_on_criteria_above>,
+                "experience_relevance": <exact_score_based_on_criteria_above>,
+                "education_certifications": <exact_score_based_on_criteria_above>,
+                "achievements_impact": <exact_score_based_on_criteria_above>,
+                "formatting_structure": <exact_score_based_on_criteria_above>,
+                "soft_skills_match": <exact_score_based_on_criteria_above>,
+                "repetition_avoidance": <exact_score_based_on_criteria_above>,
+                "contact_information_completeness": <exact_score_based_on_criteria_above>,
+                "resume_length_optimization": <exact_score_based_on_criteria_above>
+            }},
+            "detailed_feedback": {{
+                "keyword_match_skills": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Keyword Match & Skills",
+                    "description": "Specific analysis of keyword alignment with job requirements - ONLY keyword and skills-related feedback. Do NOT include proficiency-level qualifiers (Advanced/Intermediate/Beginner/Expert) in skills. Emphasize core designation-aligned skills.",
+                    "positives": ["Quote specific job-relevant keywords found in resume", "Reference specific sections with strong job keyword alignment"],
+                    "negatives": ["Quote specific missing job keywords", "Identify specific sections lacking required job terms", "List missing core skills (bare names only) aligned with the job designation"],
+                    "suggestions": ["Provide exact job keyword additions needed", "Specify which sections need job-specific terminology", "ADD_SKILLS: Core Skills - Add: [list 10-15 core skills (bare names only, no proficiency)"]],
+                    "specific_issues": ["List exact missing job keywords found", "Identify specific sections needing job terms with locations"],
+                    "improvement_examples": ["Show before/after job keyword examples", "Provide specific job-relevant additions needed"],
+                    "section_isolation_note": "ONLY include keyword and skills-related suggestions. Do not suggest contact, formatting, experience, or other section improvements in this keyword section feedback."
+                }},
+                "experience_relevance": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Experience Relevance",
+                    "description": "Specific analysis of experience alignment with job requirements - ONLY experience-related feedback",
+                    "positives": ["Quote specific job-relevant experience from resume", "Reference specific roles that align with job requirements"],
+                    "negatives": ["Quote specific experience that lacks job relevance", "Identify specific roles missing job-required experience"],
+                    "suggestions": ["Provide exact experience additions needed", "Specify which roles need job-relevant enhancements"],
+                    "specific_issues": ["List exact experience gaps found", "Identify specific roles needing job alignment with locations"],
+                    "improvement_examples": ["Show before/after experience examples", "Provide specific job-relevant experience improvements needed"],
+                    "section_isolation_note": "ONLY include experience-related suggestions. Do not suggest contact, formatting, skills, or other section improvements in this experience section feedback."
+                }},
+                "education_certifications": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Education & Certifications",
+                    "description": "Specific analysis of educational background match with job requirements",
+                    "positives": ["Quote specific job-relevant education from resume", "Reference specific certifications that match job requirements"],
+                    "negatives": ["Quote specific missing job-required education", "Identify specific certifications needed for the role"],
+                    "suggestions": ["Provide exact education additions needed", "Specify which certifications to pursue for this role"],
+                    "specific_issues": ["List exact education gaps found", "Identify specific missing qualifications with locations"],
+                    "improvement_examples": ["Show before/after education examples", "Provide specific job-relevant education improvements needed"]
+                }},
+                "achievements_impact": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Achievements & Impact",
+                    "description": "Specific analysis of quantified achievements and job-relevant impact",
+                    "positives": ["Quote specific job-relevant achievements from resume", "Reference specific quantified results that align with job requirements"],
+                    "negatives": ["Quote specific achievements lacking job relevance", "Identify specific results that need job-focused metrics"],
+                    "suggestions": ["Provide exact job-relevant achievement additions needed", "Specify which achievements need job-focused quantification"],
+                    "specific_issues": ["List exact achievement gaps found", "Identify specific results needing job relevance with locations"],
+                    "improvement_examples": ["Show before/after achievement examples", "Provide specific job-relevant achievement improvements needed"]
+                }},
+                "formatting_structure": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Formatting & Structure",
+                    "description": "Specific analysis of resume format and ATS compatibility for job application",
+                    "positives": ["Quote specific well-formatted sections from resume", "Reference specific formatting that enhances job application"],
+                    "negatives": ["Quote specific formatting problems found", "Identify specific sections with ATS compatibility issues"],
+                    "suggestions": ["Provide exact formatting fixes needed for job application", "Specify which sections need job-focused formatting"],
+                    "specific_issues": ["List exact formatting problems found in resume", "Identify specific ATS issues with locations"],
+                    "improvement_examples": ["Show before/after formatting examples", "Provide specific job application formatting improvements needed"]
+                }},
+                "soft_skills_match": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Soft Skills Match",
+                    "description": "Specific analysis of soft skills alignment with job requirements",
+                    "positives": ["Quote specific job-relevant soft skills from resume", "Reference specific sections with strong soft skills presentation"],
+                    "negatives": ["Quote specific missing job-required soft skills", "Identify specific sections lacking soft skills alignment"],
+                    "suggestions": ["Provide exact soft skills additions needed for this role", "Specify which sections need job-relevant soft skills"],
+                    "specific_issues": ["List exact soft skills gaps found", "Identify specific sections needing soft skills with locations"],
+                    "improvement_examples": ["Show before/after soft skills examples", "Provide specific job-relevant soft skills improvements needed"]
+                }},
+                "repetition_avoidance": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Repetition Avoidance",
+                    "description": "Specific analysis of varied language and minimal unnecessary repetitions within same section, allowing legitimate repetition across different sections",
+                    "positives": ["Quote specific varied language examples from resume", "Reference specific sections with good word variety", "Note acceptable cross-section repetition where appropriate"],
+                    "negatives": ["Quote specific repetitive action verbs found within same section", "Identify specific sections with excessive action verb repetition", "DEBUG: List ALL detected repeated action verbs with exact counts: Action Verb '[word]' appears [X] times in [Section]: [Context1], [Context2], [Context3]", "DEBUG: Categorize repetitions by type: Action Verbs: [list], Professional Terms: [list]", "MANDATORY: List EVERY repeated word as a separate issue - if 12 words are repeated, list ALL 12 as separate issues"],
+                    "suggestions": ["Provide exact action verb replacements needed within same section", "Specify which sections need internal action verb variety", "FIX_REPETITION: [Section] - Action Verb '[repeated action verb]' used [X] times - Replace instances: [Instance 1: '[exact context]' → '[alternative1]'], [Instance 2: '[exact context]' → '[alternative2]'], [Instance 3: '[exact context]' → '[alternative3]']", "ENHANCE_VARIETY: For each repeated action verb, provide 3-5 specific professional alternatives with context", "DEBUG: Show complete action verb frequency analysis for each section", "MANDATORY COMPLETE COVERAGE: For EVERY repeated word detected, provide a specific FIX_REPETITION recommendation", "NO PARTIAL ANALYSIS: If 12 repeated words are detected, provide 12 specific FIX_REPETITION recommendations", "COMPREHENSIVE RECOMMENDATIONS: Include recommendations for ALL action verbs AND professional terms", "CRITICAL: Generate ONE FIX_REPETITION suggestion for EACH repeated word - if 'created' appears 3 times, generate 1 FIX_REPETITION suggestion for 'created' with 3 specific replacements", "CRITICAL: Generate ONE FIX_REPETITION suggestion for EACH professional term - if 'scalable' appears 3 times, generate 1 FIX_REPETITION suggestion for 'scalable' with 3 specific replacements", "MANDATORY: Based on the repetition debug analysis, generate FIX_REPETITION suggestions for ALL detected repeated words", "CRITICAL: If repetition_debug_analysis shows 17 repeated words, generate 17 FIX_REPETITION suggestions", "REQUIRED: For each word in the repetition analysis, create: FIX_REPETITION: [Section] - [Word Type] '[word]' used [X] times - Replace instances: [specific replacements]", "Note that cross-section repetition is acceptable when contextually appropriate"],
+                    "specific_issues": ["List exact repetitive action verbs found within same section in resume", "Identify specific sections needing internal action verb variety with locations", "DEBUG: Complete action verb inventory: [Section1]: [action_verb1: X times], [action_verb2: Y times], [Section2]: [action_verb3: Z times]", "DEBUG: Highlight problematic repetitions: Action verbs appearing 3+ times in same section"],
+                    "improvement_examples": ["Show before/after repetition examples within same section", "Provide specific action verb variety improvements needed within sections", "DEBUG: Before/After examples: 'Current: [exact repeated action verb]' → 'Improved: [varied action verb alternatives]'", "DEBUG: Show action verb replacement mapping: [Original Action Verb] → [Alternative 1, Alternative 2, Alternative 3]"]
+                }},
+                "contact_information_completeness": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Contact Information Completeness",
+                    "description": "Specific analysis of contact details presence, formatting, and professional presentation - ONLY contact-related feedback",
+                    "positives": ["Quote specific well-formatted contact information from resume", "Reference specific contact elements that are complete"],
+                    "negatives": ["Quote specific missing contact information", "Identify specific contact formatting problems"],
+                    "suggestions": ["Provide exact contact additions needed", "Specify which contact elements need formatting fixes"],
+                    "specific_issues": ["List exact missing contact information found", "Identify specific contact formatting problems with locations"],
+                    "improvement_examples": ["Show before/after contact information examples", "Provide specific contact improvements needed"],
+                    "section_isolation_note": "ONLY include contact-related suggestions. Do not suggest skills, experience, education, or other section improvements in this contact section feedback."
+                }},
+                "resume_length_optimization": {{
+                    "score": <exact_score_based_on_criteria_above>,
+                    "title": "Resume Length Optimization",
+                    "description": "Specific analysis of resume length appropriateness for experience level and content density",
+                    "positives": ["Quote specific sections with appropriate length", "Reference specific content that is well-balanced"],
+                    "negatives": ["Quote specific sections that are too long/short", "Identify specific content that needs length adjustment"],
+                    "suggestions": ["Provide exact content additions/removals needed", "Specify which sections need length optimization"],
+                    "specific_issues": ["List exact length problems found in resume", "Identify specific sections needing length adjustment with locations"],
+                    "improvement_examples": ["Show before/after length optimization examples", "Provide specific content density improvements needed"]
+                }}
+            }},
+            "extracted_text": "Complete text content extracted from the resume",
+            "strengths": [
+                "Specific strength 1 with job relevance details",
+                "Specific strength 2 with job relevance details",
+                "Specific strength 3 with job relevance details"
+            ],
+            "weaknesses": [
+                "Specific weakness 1 with job impact details",
+                "Specific weakness 2 with job impact details",
+                "Specific weakness 3 with job impact details"
+            ],
+            "recommendations": [
+                "Priority recommendation 1 with specific job-focused action",
+                "Priority recommendation 2 with specific job-focused action", 
+                "Priority recommendation 3 with specific job-focused action",
+                "Priority recommendation 4 with specific job-focused action",
+                "Priority recommendation 5 with specific job-focused action"
+            ]
+        }}
+        
+        FINAL INSTRUCTIONS - CRITICAL FOR CONSISTENCY:
+        - NEVER omit sections - return empty values instead of missing sections!
+        - overall_score MUST be a weighted average of all category scores (integer 0-100)
+        - match_percentage MUST be calculated based on job requirements met (integer 0-100)
+        - All category scores MUST be integers between 0-100 based on precise criteria above!
+        - Provide specific, actionable recommendations with clear job-focused next steps!
+        - Focus on job-specific optimization, ATS compatibility, and measurable improvements!
+        - Use varied, professional language - avoid repetition across sections!
+        - Ensure all feedback is specific to the actual resume and job description analyzed!
+        - Calculate scores based on objective job matching criteria, not subjective opinions!
+        - Maintain consistency in scoring methodology across all categories!
+        - Analyze how well the resume matches the specific job requirements with precision!
+        
+        DETAILED FEEDBACK REQUIREMENTS - MANDATORY:
+        - For POSITIVES: Quote specific phrases, sentences, or sections from the actual resume that demonstrate job-relevant strengths
+        - For NEGATIVES: Quote specific problematic text, missing elements, or job-matching issues found in the resume
+        - For SUGGESTIONS: Provide exact text replacements, specific additions, or precise modifications needed for job alignment
+        - Always reference actual content from the resume being analyzed, not generic advice
+        - Point to specific sections (e.g., "In your Experience section under 'Software Engineer'...")
+        - Quote exact text that needs improvement (e.g., "The phrase 'did stuff' should be replaced with...")
+        - Identify specific missing job-relevant elements (e.g., "Your skills section is missing 'Python' which is required for this role")
+        - Reference specific job-matching issues (e.g., "Your experience description lacks the 'team leadership' mentioned in the job requirements")
+        - Provide concrete examples of what to add, remove, or modify in the actual resume content to better match the job
+        - For REPETITION ANALYSIS: Focus on repetition within the same section, not across different sections (e.g., using "implemented" in two different projects is acceptable)
+        
+        SPECIFIC SECTION ANALYSIS REQUIREMENTS:
+        - EXPERIENCE SECTION: Check for missing company names, job titles, dates, descriptions, locations, job-relevant keywords
+        - EDUCATION SECTION: Check for missing institution names, degrees, graduation years, GPAs, locations, job-relevant qualifications
+        - CONTACT SECTION: Check for missing phone, email, LinkedIn, location, professional title
+        - SKILLS SECTION: Check for missing technical skills, soft skills, job-required competencies, skill categorization
+        - PROJECTS SECTION: Check for missing project names, descriptions, tech stacks, dates, links, job-relevant technologies, project description length validation (MANDATORY: exactly 6-7 statements required - count each statement and ensure exactly 6-7)
+        - TECH STACK EXTRACTION: For projects with missing or empty tech stacks, analyze the project description to extract relevant technologies, frameworks, programming languages, and tools mentioned
+        - CERTIFICATIONS SECTION: Check for missing certificate names, issuing organizations, dates, job-relevant certifications
+        - SUMMARY SECTION: Check for missing professional summary or objective that aligns with job requirements
+        - LANGUAGES SECTION: Check for missing language proficiency levels, job-relevant languages
+        - REFERENCES SECTION: Check for missing reference contact information
+        
+        SUGGESTION FORMAT REQUIREMENTS:
+        - Use specific format: "MISSING: [Section] - [Specific Element] - [Job-Relevant Action Required]"
+        - Use specific format: "IMPROVE: [Section] - [Current Text] - [Job-Aligned Improvement]"
+        - Use specific format: "ADD: [Section] - [Missing Element] - [Job-Specific Addition Needed]"
+        - Use specific format: "FIX: [Section] - [Issue Description] - [Job-Matching Fix Required]"
+        - Always specify the exact section and field that needs attention
+        - Always provide the exact text or element that needs to be added/changed for job alignment
+        - Always explain what specific action is required to better match the job requirements
+        
+        PARSED DATA ANALYSIS RULES:
+        - If parsed data shows projects with dates, DO NOT suggest missing project dates
+        - If parsed data shows experience with company names, DO NOT suggest missing company names
+        - If parsed data shows education with degrees, DO NOT suggest missing degrees
+        - If parsed data shows contact info, DO NOT suggest missing contact information
+        - If parsed data shows skills, DO NOT suggest missing skills section
+        - Only suggest missing elements if they are genuinely absent from the parsed data
+        - Focus on job-relevant quality improvements for existing elements rather than suggesting missing elements
+        - Check for job relevance: if a field exists but lacks job-relevant content, suggest job-aligned improvements
+        - Check for completeness: if a field exists but is empty or incomplete, suggest job-relevant improvements
+        - Check for accuracy: if a field exists but has poor content, suggest better job-matching content
         """
+
+        try:
+            logger.info(f"Generating JD-Specific ATS analysis with temperature={self.temperature}, top_p={self.top_p}")
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are an expert ATS (Applicant Tracking System) analyst and job matching specialist with 10+ years of experience in recruitment technology and resume optimization."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=self.temperature,
+                top_p=self.top_p,
+                max_tokens=4000
+            )
+            cleaned_response = self._clean_openai_response(response.choices[0].message.content)
+            
+            # Parse the JSON response
+            jd_ats_response = json.loads(cleaned_response)
+            
+            # Enforce schema compliance
+            jd_ats_response = self._enforce_jd_ats_schema_compliance(jd_ats_response)
+            
+            # Augment repetition suggestions using internal debug analysis so ALL repeated words are covered
+            jd_ats_response = _augment_repetition_suggestions_with_debug(
+                jd_ats_response,
+                repetition_debug,
+                resume_text,
+                self.client,
+                self.model_name,
+                self.temperature,
+                self.top_p
+            )
+
+            # Augment achievement suggestions using internal debug analysis so ALL unquantified achievements are covered
+            jd_ats_response = _augment_achievement_suggestions_with_debug(
+                jd_ats_response,
+                achievement_debug,
+                resume_text,
+                self.client,
+                self.model_name,
+                self.temperature,
+                self.top_p
+            )
+
+            # Mirror skills-related suggestions into top-level recommendations for full coverage
+            jd_ats_response = _mirror_skill_suggestions_into_recommendations(jd_ats_response)
+
+            # Apply dynamic scoring based on issues count
+            jd_ats_response = self._apply_dynamic_scoring(jd_ats_response)
+            
+            # Add achievement debug information
+            jd_ats_response["achievement_debug_analysis"] = achievement_debug
+            
+            # Final validation
+            jd_ats_response = self._final_ats_validation(jd_ats_response)
+            
+            logger.info(f"✅ JD-Specific ATS analysis completed successfully with overall score: {jd_ats_response.get('overall_score', 'N/A')}")
+            return jd_ats_response
+            
+        except json.JSONDecodeError as json_error:
+            logger.error(f"Failed to parse OpenAI JSON response for JD-Specific ATS analysis: {str(json_error)}")
+            logger.error(f"Raw response: {cleaned_response}")
+            raise Exception(f"Invalid JSON response from AI: {str(json_error)}")
+        except Exception as e:
+            logger.error(f"Failed to analyze resume for JD-Specific ATS: {str(e)}")
+            raise
+
+    def _clean_openai_response(self, response_text: str) -> str:
+        """Clean OpenAI API response to extract valid JSON"""
+        import re
+        import json
+        
+        logger.info(f"🧹 Cleaning OpenAI JD-ATS response of {len(response_text)} characters")
+        
+        # Remove markdown code blocks
+        if response_text.startswith("```json"):
+            response_text = response_text.replace("```json", "").replace("```", "")
+        elif response_text.startswith("```"):
+            response_text = response_text.replace("```", "")
+
+        response_text = response_text.strip()
+        
+        # Try to find JSON content within markdown blocks first
+        json_pattern = r'```(?:json)?\s*(\{.*?\})\s*```'
+        match = re.search(json_pattern, response_text, re.DOTALL)
+        if match:
+            json_content = match.group(1).strip()
+            try:
+                parsed = json.loads(json_content)
+                logger.info(f"✅ Successfully extracted JSON from markdown block: {len(json_content)} characters")
+                return json_content
+            except json.JSONDecodeError:
+                logger.warning("❌ Extracted JSON from markdown block is invalid")
+        
+        # Try to find the complete JSON response
+        if response_text.startswith('{') and response_text.endswith('}'):
+            try:
+                parsed = json.loads(response_text)
+                logger.info(f"✅ Successfully parsed complete JSON: {len(response_text)} characters")
+                return response_text
+            except json.JSONDecodeError:
+                logger.warning("❌ Complete JSON parsing failed")
+        
+        # Try to find JSON object in the text
+        json_pattern = r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})'
+        match = re.search(json_pattern, response_text, re.DOTALL)
+        if match:
+            json_content = match.group(1).strip()
+            try:
+                parsed = json.loads(json_content)
+                logger.info(f"✅ Successfully extracted JSON object: {len(json_content)} characters")
+                return json_content
+            except json.JSONDecodeError:
+                logger.warning("❌ Extracted JSON object is invalid")
+        
+        logger.warning("Could not extract valid JSON from AI response")
+        return '{"error": "Invalid JSON response", "message": "Could not parse AI response"}'
+
+    def _enforce_jd_ats_schema_compliance(self, jd_ats_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enforces schema compliance for the JD-Specific ATS response.
+        Ensures all required sections are present, even if the AI skips them.
+        """
+        logger.info("🔒 Enforcing JD-ATS schema compliance")
+        
+        # Define the complete required schema structure
+        required_sections = {
+            "overall_score": 0,
+            "match_percentage": 0,
+            "missing_keywords": [],
+            "analysis_timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "category_scores": {
+                "keyword_match_skills": 0,
+                "experience_relevance": 0,
+                "education_certifications": 0,
+                "achievements_impact": 0,
+                "formatting_structure": 0,
+                "soft_skills_match": 0,
+                "repetition_avoidance": 0,
+                "contact_information_completeness": 0,
+                "resume_length_optimization": 0
+            },
+            "detailed_feedback": {
+                "keyword_match_skills": {"score": 0, "title": "Keyword Match & Skills", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "experience_relevance": {"score": 0, "title": "Experience Relevance", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "education_certifications": {"score": 0, "title": "Education & Certifications", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "achievements_impact": {"score": 0, "title": "Achievements & Impact", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "formatting_structure": {"score": 0, "title": "Formatting & Structure", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "soft_skills_match": {"score": 0, "title": "Soft Skills Match", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "repetition_avoidance": {"score": 0, "title": "Repetition Avoidance", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "contact_information_completeness": {"score": 0, "title": "Contact Information Completeness", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []},
+                "resume_length_optimization": {"score": 0, "title": "Resume Length Optimization", "description": "", "positives": [], "negatives": [], "suggestions": [], "specific_issues": [], "improvement_examples": []}
+            },
+            "extracted_text": "",
+            "strengths": [],
+            "weaknesses": [],
+            "recommendations": []
+        }
+        
+        # Ensure top-level structure exists
+        for key, default_value in required_sections.items():
+            if key not in jd_ats_response:
+                jd_ats_response[key] = default_value
+                logger.warning(f"🔒 Enforced missing top-level section: {key}")
+        
+        # Validate and fix the overall score
+        original_score = jd_ats_response.get("overall_score", 0)
+        validated_score = self._validate_score(original_score)
+        jd_ats_response["overall_score"] = validated_score
+        
+        # Validate and fix the match percentage
+        original_match = jd_ats_response.get("match_percentage", 0)
+        validated_match = self._validate_score(original_match)
+        jd_ats_response["match_percentage"] = validated_match
+        
+        # Validate and fix the analysis timestamp
+        jd_ats_response["analysis_timestamp"] = self._validate_timestamp(jd_ats_response.get("analysis_timestamp", ""))
+        
+        # Ensure category_scores structure exists
+        if "category_scores" not in jd_ats_response:
+            jd_ats_response["category_scores"] = required_sections["category_scores"]
+        
+        # Ensure each category score exists
+        for category_name, default_score in required_sections["category_scores"].items():
+            if category_name not in jd_ats_response["category_scores"]:
+                jd_ats_response["category_scores"][category_name] = default_score
+                logger.warning(f"🔒 Enforced missing category score: {category_name}")
+        
+        # Ensure detailed_feedback structure exists
+        if "detailed_feedback" not in jd_ats_response:
+            jd_ats_response["detailed_feedback"] = required_sections["detailed_feedback"]
+        
+        # Ensure each detailed feedback section has the required structure
+        for feedback_name, default_structure in required_sections["detailed_feedback"].items():
+            if feedback_name not in jd_ats_response["detailed_feedback"]:
+                jd_ats_response["detailed_feedback"][feedback_name] = default_structure
+                logger.warning(f"🔒 Enforced missing detailed feedback: {feedback_name}")
+            else:
+                # Ensure each feedback section has required keys
+                for key, default_value in default_structure.items():
+                    if key not in jd_ats_response["detailed_feedback"][feedback_name]:
+                        jd_ats_response["detailed_feedback"][feedback_name][key] = default_value
+                        logger.warning(f"🔒 Enforced missing key in {feedback_name}: {key}")
+        
+        # Ensure extracted_text exists
+        if "extracted_text" not in jd_ats_response:
+            jd_ats_response["extracted_text"] = ""
+        
+        # Ensure strengths exists
+        if "strengths" not in jd_ats_response:
+            jd_ats_response["strengths"] = []
+        
+        # Ensure weaknesses exists
+        if "weaknesses" not in jd_ats_response:
+            jd_ats_response["weaknesses"] = []
+        
+        # Ensure recommendations exists
+        if "recommendations" not in jd_ats_response:
+            jd_ats_response["recommendations"] = []
+        
+        # Ensure missing_keywords exists
+        if "missing_keywords" not in jd_ats_response:
+            jd_ats_response["missing_keywords"] = []
+        
+        logger.info("✅ JD-ATS schema compliance enforcement completed")
+        return jd_ats_response
+
+    def _apply_dynamic_scoring(self, ats_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Apply dynamic scoring based on issues count to boost scores when issues are minimal
+        
+        Args:
+            ats_response: ATS analysis response dictionary
+            
+        Returns:
+            Updated ATS response with dynamic scoring applied
+        """
+        logger.info("🎯 Applying dynamic scoring based on issues count")
+        
+        # Count total issues across all categories
+        total_issues = 0
+        
+        # Count issues in detailed feedback sections
+        detailed_feedback = ats_response.get("detailed_feedback", {})
+        for category, feedback in detailed_feedback.items():
+            if isinstance(feedback, dict):
+                # Count issues in negatives, specific_issues, and suggestions
+                negatives = feedback.get("negatives", [])
+                specific_issues = feedback.get("specific_issues", [])
+                suggestions = feedback.get("suggestions", [])
+                
+                # Count non-empty issues
+                category_issues = len([item for item in negatives if item and item.strip()])
+                category_issues += len([item for item in specific_issues if item and item.strip()])
+                category_issues += len([item for item in suggestions if item and item.strip()])
+                
+                total_issues += category_issues
+        
+        # Count issues in weaknesses and recommendations
+        weaknesses = ats_response.get("weaknesses", [])
+        recommendations = ats_response.get("recommendations", [])
+        
+        total_issues += len([item for item in weaknesses if item and item.strip()])
+        total_issues += len([item for item in recommendations if item and item.strip()])
+        
+        # Determine bonus multiplier based on issues count
+        if total_issues == 0:
+            bonus_multiplier = 1.15
+            logger.info(f"🎯 No issues found - applying 1.15x bonus multiplier")
+        elif total_issues <= 2:
+            bonus_multiplier = 1.10
+            logger.info(f"🎯 {total_issues} issues found - applying 1.10x bonus multiplier")
+        elif total_issues <= 4:
+            bonus_multiplier = 1.05
+            logger.info(f"🎯 {total_issues} issues found - applying 1.05x bonus multiplier")
+        else:
+            bonus_multiplier = 1.0
+            logger.info(f"🎯 {total_issues} issues found - no bonus multiplier")
+        
+        # Apply bonus to category scores
+        category_scores = ats_response.get("category_scores", {})
+        updated_scores = {}
+        
+        for category, score in category_scores.items():
+            if isinstance(score, (int, float)) and score > 0:
+                # Apply bonus and ensure score is between 0-100
+                new_score = int(round(score * bonus_multiplier))
+                new_score = min(100, max(0, new_score))
+                updated_scores[category] = new_score
+                
+                if bonus_multiplier > 1.0:
+                    logger.info(f"🎯 {category}: {score} -> {new_score} (x{bonus_multiplier})")
+            else:
+                updated_scores[category] = score
+        
+        ats_response["category_scores"] = updated_scores
+        
+        # Recalculate overall score as weighted average
+        if updated_scores:
+            overall_score = int(round(sum(updated_scores.values()) / len(updated_scores)))
+            ats_response["overall_score"] = overall_score
+            logger.info(f"🎯 Overall score recalculated: {overall_score}")
+        
+        # Add dynamic scoring info to response
+        ats_response["dynamic_scoring"] = {
+            "total_issues_found": total_issues,
+            "bonus_multiplier_applied": bonus_multiplier,
+            "scoring_method": "dynamic_issue_based"
+        }
+        
+        logger.info(f"✅ Dynamic scoring applied successfully - {total_issues} issues, {bonus_multiplier}x multiplier")
+        return ats_response
+
+    def _final_ats_validation(self, jd_ats_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Final validation to ensure absolutely no "NA" values exist anywhere in the response.
+        This is the last line of defense against "NA" values.
+        """
+        na_variations = [
+            'NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE', 
+            'NOT APPLICABLE', 'NOT AVAILABLE', 'NONE', 'NULL', 'UNDEFINED',
+            'UNKNOWN', 'TBD', 'TO BE DETERMINED', 'PENDING', 'INVALID',
+            'ERROR', 'FAILED', 'MISSING', 'EMPTY', 'BLANK'
+        ]
+        
+        def validate_and_fix(value, path=""):
+            if isinstance(value, str):
+                value_str = value.strip().upper()
+                if value_str in na_variations:
+                    logger.error(f"🚨 FINAL JD-ATS VALIDATION: Found 'NA' value at {path}: '{value}' -> ''")
+                    return ""
+                return value
+            elif isinstance(value, list):
+                return [validate_and_fix(item, f"{path}[{i}]") for i, item in enumerate(value) if item is not None]
+            elif isinstance(value, dict):
+                return {k: validate_and_fix(v, f"{path}.{k}") for k, v in value.items()}
+            elif isinstance(value, (int, float)):
+                return value
+            else:
+                logger.warning(f"🚨 FINAL JD-ATS VALIDATION: Unexpected value type at {path}: {type(value)} - {value}")
+                return value
+        
+        # Perform final validation and fix any remaining "NA" values
+        validated_response = validate_and_fix(jd_ats_response, "root")
+        logger.info("🔒 Completed final JD-ATS validation - response is guaranteed to be NA-free")
+        return validated_response
+
+    def _validate_parsed_data(self, parsed_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate and clean parsed data to ensure accurate analysis
+        
+        Args:
+            parsed_data: Raw parsed resume data
+            
+        Returns:
+            Validated and cleaned parsed data
+        """
+        if not isinstance(parsed_data, dict):
+            logger.warning("Invalid parsed data format, returning empty dict")
+            return {}
+        
+        validated_data = {}
+        
+        # Check for common resume section keys and validate their content
+        section_mappings = {
+            "projects": ["projects", "project", "portfolio", "personal_projects"],
+            "experience": ["experience", "work_experience", "employment", "work_history"],
+            "education": ["education", "academic", "qualifications", "degrees"],
+            "contact": ["contact", "basic_details", "personal_info", "contact_info"],
+            "skills": ["skills", "competencies", "technical_skills", "soft_skills"],
+            "summary": ["summary", "objective", "profile", "professional_summary"],
+            "certifications": ["certificates", "certifications", "certificate", "licenses"],
+            "languages": ["languages", "language", "linguistic_skills"],
+            "references": ["references", "reference", "referees"]
+        }
+        
+        for section_name, possible_keys in section_mappings.items():
+            for key in possible_keys:
+                if key in parsed_data and parsed_data[key]:
+                    # Check if the data is not empty
+                    if isinstance(parsed_data[key], list) and len(parsed_data[key]) > 0:
+                        validated_data[section_name] = parsed_data[key]
+                        break
+                    elif isinstance(parsed_data[key], dict) and parsed_data[key]:
+                        validated_data[section_name] = parsed_data[key]
+                        break
+                    elif isinstance(parsed_data[key], str) and parsed_data[key].strip():
+                        validated_data[section_name] = parsed_data[key]
+                        break
+        
+        # Add any other non-empty fields
+        for key, value in parsed_data.items():
+            if key not in validated_data and value:
+                if isinstance(value, (list, dict)) and value:
+                    validated_data[key] = value
+                elif isinstance(value, str) and value.strip():
+                    validated_data[key] = value
+        
+        logger.info(f"Validated parsed data with {len(validated_data)} sections")
+        return validated_data
+
+    def _analyze_repetitions_debug(self, resume_text: str) -> Dict[str, Any]:
+        """
+        Analyze repetitions in resume text for debugging purposes - focusing only on action verbs and professional terms
+        
+        Args:
+            resume_text: Raw resume text to analyze
+            
+        Returns:
+            Dictionary containing repetition analysis with debug information
+        """
+        # Removed debug logging to reduce console output - analysis runs silently
+        
+        import re
+        from collections import defaultdict, Counter
+        
+        # Define action verbs and professional terms to focus on
+        action_verbs = {
+            'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered',
+            'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured',
+            'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained',
+            'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved',
+            'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified',
+            'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced',
+            'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed',
+            'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched',
+            'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received', 'utilized'
+        }
+        
+        professional_terms = {
+            'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced',
+            'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical',
+            'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined',
+            'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized',
+            'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform',
+            'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven'
+        }
+        
+        # Common words to ignore
+        common_words = {
+            'and', 'in', 'with', 'of', 'to', 'for', 'on', 'by', 'the', 'a', 'an', 'is', 'are', 'was', 'were',
+            'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+            'may', 'might', 'can', 'must', 'shall', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she',
+            'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'her', 'its', 'our', 'their'
+        }
+        
+        # Split resume into sections (basic section detection)
+        sections = self._split_resume_into_sections(resume_text)
+        
+        repetition_analysis = {
+            "total_words_analyzed": 0,
+            "action_verb_repetitions": {},
+            "professional_term_repetitions": {},
+            "section_analysis": {},
+            "summary": {
+                "total_action_verb_repetitions": 0,
+                "total_professional_term_repetitions": 0,
+                "most_repeated_action_verb": None,
+                "most_repeated_professional_term": None
+            }
+        }
+        
+        # Analyze each section
+        for section_name, section_text in sections.items():
+            if not section_text.strip():
+                continue
+                
+            # Clean and tokenize section text
+            words = re.findall(r'\b[a-zA-Z]+\b', section_text.lower())
+            repetition_analysis["total_words_analyzed"] += len(words)
+            
+            # Count action verbs and professional terms
+            action_verb_counts = Counter()
+            professional_term_counts = Counter()
+            
+            for word in words:
+                if word in action_verbs:
+                    action_verb_counts[word] += 1
+                elif word in professional_terms:
+                    professional_term_counts[word] += 1
+            
+            # Store repetitions (only words that appear more than once)
+            section_action_repetitions = {word: count for word, count in action_verb_counts.items() if count > 1}
+            section_professional_repetitions = {word: count for word, count in professional_term_counts.items() if count > 1}
+            
+            repetition_analysis["section_analysis"][section_name] = {
+                "action_verb_repetitions": section_action_repetitions,
+                "professional_term_repetitions": section_professional_repetitions,
+                "total_words": len(words)
+            }
+            
+            # Add to global counts
+            for word, count in section_action_repetitions.items():
+                if word not in repetition_analysis["action_verb_repetitions"]:
+                    repetition_analysis["action_verb_repetitions"][word] = 0
+                repetition_analysis["action_verb_repetitions"][word] += count
+                
+            for word, count in section_professional_repetitions.items():
+                if word not in repetition_analysis["professional_term_repetitions"]:
+                    repetition_analysis["professional_term_repetitions"][word] = 0
+                repetition_analysis["professional_term_repetitions"][word] += count
+        
+        # Calculate summary statistics
+        repetition_analysis["summary"]["total_action_verb_repetitions"] = sum(repetition_analysis["action_verb_repetitions"].values())
+        repetition_analysis["summary"]["total_professional_term_repetitions"] = sum(repetition_analysis["professional_term_repetitions"].values())
+        
+        if repetition_analysis["action_verb_repetitions"]:
+            repetition_analysis["summary"]["most_repeated_action_verb"] = max(
+                repetition_analysis["action_verb_repetitions"].items(), 
+                key=lambda x: x[1]
+            )
+        
+        if repetition_analysis["professional_term_repetitions"]:
+            repetition_analysis["summary"]["most_repeated_professional_term"] = max(
+                repetition_analysis["professional_term_repetitions"].items(), 
+                key=lambda x: x[1]
+            )
+        
+        return repetition_analysis
+
+    def _analyze_achievements_debug(self, resume_text: str) -> Dict[str, Any]:
+        """
+        Analyze achievements in resume text for debugging purposes - focusing on unquantified achievements
+        
+        Args:
+            resume_text: Raw resume text to analyze
+            
+        Returns:
+            Dictionary containing achievement analysis with debug information
+        """
+        logger.info("🎯 Starting comprehensive achievement analysis for debugging (unquantified achievements)")
+        
+        import re
+        from collections import defaultdict
+        
+        # Split resume into sections
+        sections = self._split_resume_into_sections(resume_text)
+        
+        achievement_analysis = {
+            "total_sentences_analyzed": 0,
+            "sections_analyzed": len(sections),
+            "unquantified_achievements": {},
+            "debug_info": {},
+            "summary": {
+                "total_unquantified_achievements": 0,
+                "sections_with_issues": 0
+            }
+        }
+        
+        # Patterns that indicate achievements or accomplishments
+        achievement_patterns = [
+            r'\b(achieved|accomplished|delivered|completed|implemented|developed|created|built|designed|led|managed|improved|enhanced|optimized|increased|reduced|saved|transformed|established|launched)\b',
+            r'\b(responsible for|resulted in|contributed to|successfully|effectively|efficiently)\b',
+            r'\b(project|initiative|solution|system|application|feature|process|strategy)\b'
+        ]
+        
+        # Patterns that indicate quantification (if these are missing, achievement is unquantified)
+        quantification_patterns = [
+            r'\d+\.?\d*\s*%',  # percentages
+            r'\$\d+',  # money
+            r'\d+\s*(million|thousand|k|m|billion)',  # large numbers
+            r'\d+\s*(hours?|days?|weeks?|months?|years?)',  # time
+            r'\d+\s*(people|users|customers|clients|team members?)',  # people
+            r'\d+\s*(projects?|systems?|applications?)',  # counts
+            r'(increased|decreased|improved|reduced|saved|enhanced)\s+by\s+\d+',  # improvement metrics
+            r'\d+\s*(times?|fold)',  # multipliers
+        ]
+        
+        for section_name, section_text in sections.items():
+            logger.info(f"🎯 Analyzing achievements in section: {section_name}")
+            
+            # Split into sentences
+            sentences = re.split(r'[.!?]+', section_text)
+            section_unquantified = []
+            
+            for sentence in sentences:
+                sentence = sentence.strip()
+                if len(sentence) < 20:  # Skip very short sentences
+                    continue
+                    
+                achievement_analysis["total_sentences_analyzed"] += 1
+                
+                # Check if sentence describes an achievement
+                is_achievement = False
+                for pattern in achievement_patterns:
+                    if re.search(pattern, sentence, re.IGNORECASE):
+                        is_achievement = True
+                        break
+                
+                if is_achievement:
+                    # Check if achievement has quantification
+                    is_quantified = False
+                    for pattern in quantification_patterns:
+                        if re.search(pattern, sentence, re.IGNORECASE):
+                            is_quantified = True
+                            break
+                    
+                    if not is_quantified:
+                        section_unquantified.append(sentence)
+                        achievement_id = sentence[:30].lower()
+                        
+                        achievement_analysis["debug_info"][f"{section_name}_{achievement_id}"] = {
+                            "achievement": sentence,
+                            "section": section_name,
+                            "context": sentence,
+                            "issue": "lacks_quantification"
+                        }
+                        
+                        logger.info(f"🎯 DEBUG ACHIEVEMENTS: Found unquantified achievement in {section_name}: {sentence[:50]}...")
+            
+            if section_unquantified:
+                achievement_analysis["unquantified_achievements"][section_name] = section_unquantified
+                achievement_analysis["summary"]["sections_with_issues"] += 1
+            else:
+                logger.info(f"🎯 No unquantified achievements found in {section_name}")
+        
+        # Calculate summary statistics
+        total_unquantified = sum(len(achievements) for achievements in achievement_analysis["unquantified_achievements"].values())
+        achievement_analysis["summary"]["total_unquantified_achievements"] = total_unquantified
+        
+        logger.info(f"🎯 ACHIEVEMENT ANALYSIS SUMMARY:")
+        logger.info(f"🎯 Total sentences analyzed: {achievement_analysis['total_sentences_analyzed']}")
+        logger.info(f"🎯 Sections analyzed: {achievement_analysis['sections_analyzed']}")
+        logger.info(f"🎯 Total unquantified achievements found: {total_unquantified}")
+        logger.info(f"🎯 Sections with achievement issues: {achievement_analysis['summary']['sections_with_issues']}")
+        
+        for section, achievements in achievement_analysis["unquantified_achievements"].items():
+            logger.info(f"🎯 {section}: {len(achievements)} unquantified achievements")
+            for achievement in achievements:
+                logger.info(f"🎯   - Achievement: {achievement[:80]}...")
+        
+        return achievement_analysis
+
+    def _split_resume_into_sections(self, resume_text: str) -> Dict[str, str]:
+        """
+        Split resume text into sections for analysis
+        
+        Args:
+            resume_text: Raw resume text
+            
+        Returns:
+            Dictionary with section names as keys and section text as values
+        """
+        import re
+        
+        # Define section patterns
+        section_patterns = {
+            'experience': r'(?i)(experience|work\s+history|employment|professional\s+experience)',
+            'education': r'(?i)(education|academic|qualifications|degrees)',
+            'skills': r'(?i)(skills|technical\s+skills|competencies|expertise)',
+            'projects': r'(?i)(projects|portfolio|work\s+samples)',
+            'summary': r'(?i)(summary|profile|objective|about)',
+            'certifications': r'(?i)(certifications|certificates|licenses)',
+            'achievements': r'(?i)(achievements|accomplishments|awards|honors)'
+        }
+        
+        sections = {}
+        lines = resume_text.split('\n')
+        current_section = 'other'
+        current_content = []
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Check if this line starts a new section
+            section_found = False
+            for section_name, pattern in section_patterns.items():
+                if re.match(pattern, line):
+                    # Save previous section
+                    if current_content:
+                        sections[current_section] = ' '.join(current_content)
+                    
+                    # Start new section
+                    current_section = section_name
+                    current_content = [line]
+                    section_found = True
+                    break
+            
+            if not section_found:
+                current_content.append(line)
+        
+        # Save the last section
+        if current_content:
+            sections[current_section] = ' '.join(current_content)
+        
+        return sections
+
+    def _validate_score(self, score: Any) -> int:
+        """
+        Validates and ensures the score is a number between 0 and 100.
+        If it's "NA", "N/A", or an invalid type, it defaults to 0.
+        """
+        if isinstance(score, str):
+            score_str = score.strip().upper()
+            na_variations = [
+                'NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NOT APPLICABLE', 
+                'NOT APPLICABLE', 'NOT AVAILABLE', 'NONE', 'NULL', 'UNDEFINED',
+                'UNKNOWN', 'TBD', 'TO BE DETERMINED', 'PENDING', 'INVALID',
+                'ERROR', 'FAILED', 'MISSING', 'EMPTY', 'BLANK'
+            ]
+            if score_str in na_variations:
+                logger.warning(f"⚠️ 'NA' score detected: '{score}', defaulting to 0.")
+                return 0
+        
+        if score is None:
+            logger.warning(f"⚠️ None score detected, defaulting to 0.")
+            return 0
+        
+        try:
+            score_int = int(score)
+            return max(0, min(100, score_int))
+        except (ValueError, TypeError):
+            logger.warning(f"⚠️ Invalid score '{score}' detected, defaulting to 0.")
+            return 0
+
+    def _validate_timestamp(self, timestamp: str) -> str:
+        """
+        Validates and ensures the timestamp is in a valid ISO format.
+        If it's not, it defaults to the current UTC timestamp.
+        """
+        try:
+            datetime.datetime.fromisoformat(timestamp)
+            return timestamp
+        except (ValueError, TypeError):
+            logger.warning(f"⚠️ Invalid timestamp '{timestamp}' detected, defaulting to current UTC timestamp.")
+            return datetime.datetime.utcnow().isoformat() + "Z"

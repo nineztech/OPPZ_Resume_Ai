@@ -24,7 +24,7 @@ export const templates: Template[] = [
     downloads: 1247,
     isPopular: true,
     features: ['Clean Layout', 'Professional Design', 'Easy Customization', 'ATS Friendly'],
-    colors: ['#2563eb', '#1e40af', '#1e3a8a', '#1e293b'],
+    colors: ['#2563eb', '#1e40af', '#2c5282', '#1e293b'],
     formats: ['PDF', 'DOCX', 'HTML']
   },
   {
@@ -75,7 +75,7 @@ export const templates: Template[] = [
     downloads: 856,
     isNew: true,
     features: ['Professional Layout', 'Modern Design', 'Business Focus', 'Clean Typography'],
-    colors: ['#1e40af', '#1e3a8a', '#1e293b', '#334155'],
+    colors: ['#1e40af', '#2c5282', '#1e293b', '#334155'],
     formats: ['PDF', 'DOCX', 'HTML']
   }
 ];

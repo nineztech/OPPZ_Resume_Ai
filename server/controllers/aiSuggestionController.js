@@ -260,5 +260,58 @@ export const compareResumeWithJD = async (req, res) => {
   }
 };
 
+// Enhance specific content with AI
+export const enhanceContentWithAI = async (req, res) => {
+  try {
+    const { content, prompt, type } = req.body;
+
+    // Validate input
+    if (!content || !prompt || !type) {
+      return res.status(400).json({
+        success: false,
+        message: 'Content, prompt, and type are required'
+      });
+    }
+
+    // Validate type
+    if (!['experience', 'project'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Type must be either "experience" or "project"'
+      });
+    }
+
+    console.log(`Enhancing ${type} content with AI`);
+
+    // Call Python service for content enhancement
+    const result = await callPythonService('enhance_content.py', [
+      JSON.stringify({ content: content.trim(), prompt: prompt.trim(), type })
+    ]);
+console.log(result)
+    if (!result) {
+      throw new Error(result.error || 'Enhancement failed');
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        success:true,
+        enhanced_content: result.enhanced_content,
+        original_content: result.original_content,
+        type: type,
+        prompt_used: result.prompt_used
+      }
+    });
+
+  } catch (error) {
+    console.error('Content enhancement error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to enhance content with AI',
+      error: error.message
+    });
+  }
+};
+
 // Export multer upload middleware
 export const uploadMiddleware = upload.single('resume');

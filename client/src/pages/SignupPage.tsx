@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { Eye, EyeOff, ArrowLeft, User, Mail, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { API_URL, logApiUrl } from '@/lib/apiConfig';
 
 const signupSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -46,8 +47,11 @@ const SignupPage = () => {
   const onSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
     
+    // Log API URL for debugging
+    logApiUrl();
+    
     try {
-      const response = await fetch('http://localhost:5006/api/user/register', {
+      const response = await fetch(`${API_URL}/user/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -70,7 +74,7 @@ const SignupPage = () => {
         } as any);
         
         // Redirect to login page
-        window.location.href = '/signin';
+        window.location.href = '/resume/login';
       } else {
         toast({
           title: "Registration failed",

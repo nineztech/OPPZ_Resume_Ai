@@ -327,6 +327,25 @@ const ATSScorePage: React.FC = () => {
         console.log('Could not extract file content for preview:', error);
       }
 
+      // Parse resume first to get structured data
+      console.log('Starting resume parsing...');
+      const parseResponse = await atsService.parseResume(selectedFile);
+      let parsedResumeData = null;
+      
+      console.log('Parse response:', parseResponse);
+      
+      if (parseResponse.success && parseResponse.data) {
+        parsedResumeData = parseResponse.data;
+        console.log('Resume parsed successfully:', parsedResumeData);
+      } else {
+        console.error('Resume parsing failed:', parseResponse.error);
+        toast({
+          title: 'Resume Parsing Warning',
+          description: 'Could not parse resume for suggestions. Apply Suggestions will be disabled.',
+          variant: 'destructive'
+        } as any);
+      }
+
       if (analysisType === 'standard') {
         const response = await atsService.analyzeResumeStandard(selectedFile);
         if (response.success && response.data) {
@@ -339,7 +358,8 @@ const ATSScorePage: React.FC = () => {
               analysisType: 'standard',
               fileName: selectedFile.name,
               fileContent: response.data.extracted_text || fileContent,
-              originalFile: selectedFile
+              originalFile: selectedFile,
+              parsedResumeData: parsedResumeData
             }
           });
         } else {
@@ -364,6 +384,7 @@ const ATSScorePage: React.FC = () => {
               fileName: selectedFile.name,
               fileContent: response.data.extracted_text || fileContent,
               originalFile: selectedFile,
+              parsedResumeData: parsedResumeData,
               jdInputType: jdInputType,
               jdFileName: jdInputType === 'file' ? jobDescriptionFile?.name : undefined
             }
@@ -1168,66 +1189,7 @@ const ATSScorePage: React.FC = () => {
           </p>
         </motion.div>
 
-        {/* ATS Requirements Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mb-8"
-        >
-          <Card className="bg-blue-50 border-blue-200">
-            <CardHeader>
-              <CardTitle className="flex items-center text-blue-800">
-                <AlertCircle className="w-5 h-5 mr-2" />
-                ATS Requirements Checklist
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Complete Name</span>
-                  </div>
-                  <p className="text-blue-700 ml-6">Must include first AND last name</p>
-                  
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Contact Information</span>
-                  </div>
-                  <p className="text-blue-700 ml-6">Email OR phone number required</p>
-                  
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Standard Sections</span>
-                  </div>
-                  <p className="text-blue-700 ml-6">Experience, Education, Skills clearly defined</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Keywords</span>
-                  </div>
-                  <p className="text-blue-700 ml-6">Relevant industry terms and skills</p>
-                  
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Formatting</span>
-                  </div>
-                  <p className="text-blue-700 ml-6">Clean, readable structure</p>
-                  
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="font-medium">Achievements</span>
-                  </div>
-                  <p className="text-blue-700 ml-6">Quantified results and metrics</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
+        
         {/* Analysis Type Selection */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -1262,6 +1224,7 @@ const ATSScorePage: React.FC = () => {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-8"
         >
+          {analysisType === 'standard' ? (
           <Card>
             <CardHeader>
               <CardTitle>Upload Your Resume</CardTitle>
@@ -1277,10 +1240,19 @@ const ATSScorePage: React.FC = () => {
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
               >
-                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                {!selectedFile && <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />}
                 <div className="space-y-2">
                   <p className="text-lg font-medium text-gray-700">
-                    {selectedFile ? selectedFile.name : 'Drop your resume here or click to browse'}
+                  {selectedFile ? (
+                    <div className="text-green-600">
+                      <CheckCircle className="w-6 h-6 mx-auto mb-1" />
+                      <p className="font-medium text-sm">{selectedFile.name}</p>
+                    </div>
+                  ) : (
+                    <p className="text-lg font-medium text-gray-700">
+                      Drop your resume here or click to browse
+                    </p>
+                  )}
                   </p>
                   <p className="text-sm text-gray-500">
                     Supports PDF, DOCX, and TXT files (max 10MB)
@@ -1301,16 +1273,59 @@ const ATSScorePage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Resume Upload */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Upload Your Resume</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      dragActive 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                  >
+                    {!selectedFile && <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-700">
+                      {selectedFile ? (
+                        <div className="text-green-600">
+                          <CheckCircle className="w-5 h-5 mx-auto mb-1" />
+                          <p className="font-medium text-xs">{selectedFile.name}</p>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-medium text-gray-700">
+                          Drop your resume here or click to browse
+                        </p>
+                      )}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Supports PDF, DOCX, and TXT files (max 10MB)
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.txt"
+                      onChange={(e) => handleFileChange(e.target.files)}
+                      className="hidden"
+                      id="resume-upload"
+                    />
+                    <label htmlFor="resume-upload">
+                      <Button variant="outline" size="sm" className="mt-3" asChild>
+                        <span className="cursor-pointer">Choose File</span>
+                      </Button>
+                    </label>
+                  </div>
+                </CardContent>
+              </Card>
 
-        {/* Job Description Input (for job-specific analysis) */}
-        {analysisType === 'job-specific' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="mb-8"
-          >
+              {/* Job Description Upload */}
             <Card>
               <CardHeader>
                 <CardTitle>Job Description</CardTitle>
@@ -1324,13 +1339,13 @@ const ATSScorePage: React.FC = () => {
                       name="jdInputType"
                       value="text"
                       checked={jdInputType === 'text'}
-                      onChange={(e) => {
+                      onChange={() => {
                         setJdInputType('text');
                         setJobDescriptionFile(null);
                       }}
                       className="text-blue-600"
                     />
-                    <span>Paste job description text</span>
+                      <span className="text-sm">Paste text</span>
                   </label>
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input
@@ -1338,30 +1353,30 @@ const ATSScorePage: React.FC = () => {
                       name="jdInputType"
                       value="file"
                       checked={jdInputType === 'file'}
-                      onChange={(e) => {
+                      onChange={() => {
                         setJdInputType('file');
                         setJobDescription('');
                       }}
                       className="text-blue-600"
                     />
-                    <span>Upload job description file</span>
+                      <span className="text-sm">Upload file</span>
                   </label>
                 </div>
 
                 {/* Text Input */}
                 {jdInputType === 'text' && (
                   <Textarea
-                    placeholder="Paste the job description here to analyze how well your resume matches the specific role..."
+                      placeholder="Paste the job description here..."
                     value={jobDescription}
                     onChange={(e) => setJobDescription(e.target.value)}
-                    className="min-h-[150px]"
+                      className="min-h-[120px]"
                   />
                 )}
 
                 {/* File Input */}
                 {jdInputType === 'file' && (
                   <div
-                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
                       jdDragActive 
                         ? 'border-blue-500 bg-blue-50' 
                         : 'border-gray-300 hover:border-gray-400'
@@ -1370,8 +1385,8 @@ const ATSScorePage: React.FC = () => {
                     onDragOver={handleJdDragOver}
                     onDragLeave={handleJdDragLeave}
                   >
-                    <FileText className="w-8 h-8 text-gray-400 mx-auto mb-3" />
-                    <div className="space-y-2">
+                      <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <div className="space-y-1">
                       <p className="text-sm font-medium text-gray-700">
                         {jobDescriptionFile ? jobDescriptionFile.name : 'Drop job description file here or click to browse'}
                       </p>
@@ -1387,7 +1402,7 @@ const ATSScorePage: React.FC = () => {
                       id="jd-upload"
                     />
                     <label htmlFor="jd-upload">
-                      <Button variant="outline" size="sm" className="mt-3" asChild>
+                        <Button variant="outline" size="sm" className="mt-2" asChild>
                         <span className="cursor-pointer">Choose File</span>
                       </Button>
                     </label>
@@ -1395,8 +1410,9 @@ const ATSScorePage: React.FC = () => {
                 )}
               </CardContent>
             </Card>
-          </motion.div>
+            </div>
         )}
+        </motion.div>
 
         {/* Analyze Button */}
         <motion.div
@@ -1428,6 +1444,95 @@ const ATSScorePage: React.FC = () => {
               </>
             )}
           </Button>
+        </motion.div>
+        {/* Enhanced ATS Requirements & Score Improvement Info */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mb-8"
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="bg-blue-50 border-blue-200">
+              <CardHeader>
+                <CardTitle className="flex items-center text-blue-800">
+                  <AlertCircle className="w-5 h-5 mr-2" />
+                  ATS Requirements Checklist
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="font-medium">Complete Name & Contact</span>
+                  </div>
+                  <p className="text-blue-700 ml-6">First & last name, email, phone number</p>
+                  
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="font-medium">Industry Keywords</span>
+                  </div>
+                  <p className="text-blue-700 ml-6">15-20 relevant technical & soft skills</p>
+                  
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="font-medium">Quantified Achievements</span>
+                  </div>
+                  <p className="text-blue-700 ml-6">Numbers, percentages, measurable results</p>
+                  
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="font-medium">Standard Sections</span>
+                  </div>
+                  <p className="text-blue-700 ml-6">Experience, Education, Skills, Projects</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-green-50 to-blue-50 border-green-200">
+              <CardHeader>
+                <CardTitle className="flex items-center text-green-800">
+                  <TrendingUp className="w-5 h-5 mr-2" />
+                  AI-Powered Score Improvement
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">🎯</span>
+                    </div>
+                    <span className="font-medium">Target: 90+ ATS Score</span>
+                  </div>
+                  <p className="text-green-700 ml-6">Our AI optimizes your resume for maximum ATS compatibility</p>
+                  
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">⚡</span>
+                    </div>
+                    <span className="font-medium">Smart Keyword Optimization</span>
+                  </div>
+                  <p className="text-blue-700 ml-6">Adds industry-specific terms and technologies</p>
+                  
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">📈</span>
+                    </div>
+                    <span className="font-medium">Achievement Enhancement</span>
+                  </div>
+                  <p className="text-purple-700 ml-6">Transforms descriptions into quantified results</p>
+                  
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">🔧</span>
+                    </div>
+                    <span className="font-medium">Format Optimization</span>
+                  </div>
+                  <p className="text-orange-700 ml-6">Ensures perfect ATS parsing and readability</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </motion.div>
 
         {/* Results */}

@@ -14,9 +14,10 @@ import ResumeBuilderPage from './pages/ResumeBuilderPage';
 import FeaturesPage from './pages/FeaturesPage';
 import ATSScorePage from './pages/ATSScorePage';
 import ATSResultsPage from './pages/ATSResultsPage';
+import ResumeCreator from './pages/ResumeCreator';
 import ATSTemplatesPage from './pages/ATSTemplatesPage';
 import AISuggestionsPage from './pages/AISuggestionsPage';
-import ResumeCreator from './pages/ResumeCreator';
+import MyResumesPage from './pages/MyResumesPage';
 
 function App() {
   return (
@@ -28,6 +29,16 @@ function App() {
             <Route path="/resume/login" element={<LoginPage />} />
             <Route path="/resume/signup" element={<SignupPage />} />
             <Route path="/resume/features" element={<Layout><FeaturesPage /></Layout>} />
+            <Route 
+              path="/my-resumes" 
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <MyResumesPage />
+                  </Layout>
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/resume/ats-score" 
               element={

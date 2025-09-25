@@ -1,5 +1,10 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { tokenUtils } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { API_URL } from '@/lib/apiConfig';
+// Updated for FlowCV-style customization
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -29,13 +34,168 @@ import { templates as templateData, getTemplateById } from '@/data/templates';
 import type { Template } from '@/data/templates';
 import ResumePreviewModal from '@/components/modals/ResumePreviewModal';
 import AddCustomSectionModal from '@/components/modals/AddCustomSectionModal';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import AIEnhancementModal from '@/components/modals/AIEnhancementModal';
+import ColorCustomizationPanel from '@/components/customization/ColorCustomizationPanel';
+import TypographyCustomizationPanel from '@/components/customization/TypographyCustomizationPanel';
+import LayoutCustomizationPanel from '@/components/customization/LayoutCustomizationPanel';
+import PresetThemesPanel from '@/components/customization/PresetThemesPanel';
+import SectionVisibilityOrderPanel from '@/components/customization/SectionVisibilityOrderPanel';
+import EntryLayoutPanel from '@/components/customization/EntryLayoutPanel';
+import NameCustomizationPanel from '@/components/customization/NameCustomizationPanel';
+import ProfessionalTitleCustomizationPanel from '@/components/customization/ProfessionalTitleCustomizationPanel';
+import { generatePDF, downloadPDF } from '@/services/pdfService';
+
+// Helper function to extract tech stack from project description
+const extractTechStackFromDescription = (description: string): string => {
+  if (!description || typeof description !== "string") return "";
+  
+  // Common technology patterns to look for
+  const techPatterns = [
+    // Programming Languages
+    /\b(JavaScript|TypeScript|Python|Java|C\+\+|C#|PHP|Ruby|Go|Rust|Swift|Kotlin|Scala|R|MATLAB|Perl)\b/gi,
+    // Frontend Frameworks
+    /\b(React|Angular|Vue|Vue\.js|Svelte|Ember|Backbone|jQuery|Bootstrap|Tailwind|TailwindCSS)\b/gi,
+    // Backend Frameworks
+    /\b(Express|Node\.js|NodeJS|Django|Flask|Spring|Laravel|Rails|ASP\.NET|FastAPI|NestJS)\b/gi,
+    // Databases
+    /\b(MySQL|PostgreSQL|MongoDB|Redis|Cassandra|DynamoDB|SQLite|MariaDB|SQL Server|Elasticsearch|Oracle)\b/gi,
+    // Cloud Platforms
+    /\b(AWS|Azure|GCP|Google Cloud|Docker|Kubernetes|Heroku|Vercel|Netlify|Firebase)\b/gi,
+    // Tools & Libraries
+    /\b(Git|GitHub|GitLab|Bitbucket|Jenkins|Docker|Kubernetes|Webpack|Babel|NPM|Yarn|Maven|Gradle)\b/gi,
+    // Testing
+    /\b(Jest|Cypress|Selenium|JUnit|Mocha|Jasmine|Pytest|RSpec)\b/gi,
+    // Other Technologies
+    /\b(HTML|CSS|SASS|SCSS|LESS|REST|GraphQL|SOAP|JSON|XML|OAuth|JWT)\b/gi
+  ];
+  
+  const foundTechs = new Set<string>();
+  
+  techPatterns.forEach(pattern => {
+    const matches = description.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        foundTechs.add(match.trim());
+      });
+    }
+  });
+  
+  return Array.from(foundTechs).join(', ');
+};
+
+// Helper function to safely process description text
+// const safeProcessDescription = (description: any): string[] => {
+//   // Handle null, undefined, or non-string values
+//   if (!description || typeof description !== "string") {
+//     return [];
+//   }
+//   if (description.trim().length === 0) {
+//     return [];
+//   }
+//   try {
+//     // Regex to check if any line starts with a bullet, asterisk, dash, or similar
+//     const bulletPattern = /^([.•*]\s+)/m;
+//     if (bulletPattern.test(description)) {
+//       // Split by line, keep only lines starting with a bullet, then remove the bullet marker
+//       return description
+//         .split(/\r?\n/)
+//         .map((line: string) => line.trim())
+//         .filter((line: string) => bulletPattern.test(line))
+//         .map((line: string) => line.replace(bulletPattern, ""))
+//         .filter((line: string) => line.length > 0);
+//     } else {
+//       // Otherwise, split by sentence-ending punctuation, keep only non-empty results
+//       return description
+//         .split(/(?<=[.!?])\s+/)
+//         .map((sent: string) => sent.trim())
+//         .filter((sent: string) => sent.length > 0);
+//     }
+//   } catch (error) {
+//     // Return the original description as array if error occurs
+//     console.warn('Error processing description:', error, 'Description:', description);
+//     return [String(description)];
+//   }
+// };
+// Always returns an array of bullet-ready strings
+const safeProcessDescription = (description: any): string[] => {
+  if (!description || typeof description !== "string") return [];
+  let text = description.trim();
+  if (!text) return [];
+
+  try {
+    // Normalize line endings and spaces
+    text = text.replace(/\r\n?/g, "\n").replace(/\u00A0/g, " "); // CRLF -> LF, nbsp -> space
+
+    // 1) Handle newline-separated descriptions (from backend parsing)
+    // Split on \n and filter out empty lines
+    const newlineParts = text
+      .split(/\n+/g)
+      .map(s => s.trim())
+      .filter(Boolean);
+    
+    if (newlineParts.length > 1) {
+      return newlineParts;
+    }
+
+    // 2) Normalize *any* bullet-like glyphs to a single marker "•"
+    //    Includes common MS Word / Wingdings private-use bullets like \uF0B7, etc.
+    const BULLET_CHARS = /[\u2022\u2023\u25CF\u25CB\u25A0\u25AA\u25AB\u00B7\u2219\u2043\u25E6\u2027\u25C9\u25C8\u25D8\uF0B7]/g;
+    text = text.replace(BULLET_CHARS, "•");
+
+    // 3) If bullets exist anywhere, split *on* them robustly.
+    //    Handles cases where "•" is on its own line (Word copy-paste) or inline.
+    if (text.includes("•")) {
+      // Ensure every bullet starts on a new line: turn spaces-before-• into newline + "• "
+      text = text.replace(/(?:^|[ \t]*\n|\s+)•\s*/g, "\n• ");
+      // Now split on "\n• " and drop empties
+      const partsFromBullets = text
+        .split(/\n•\s*/g)
+        .map(s => s.trim())
+        .filter(Boolean);
+      if (partsFromBullets.length > 0) return partsFromBullets;
+    }
+
+    // 4) Handle dash/asterisk style bullets at start of lines
+    const lines = text
+      .split("\n")
+      .map(l => l.trim())
+      .filter(Boolean);
+
+    const hasDashBullets = lines.some(l => /^[-*–—]\s+/.test(l));
+    if (hasDashBullets) {
+      return lines
+        .map(l => l.replace(/^[-*–—]\s+/, "").trim())
+        .filter(Boolean);
+    }
+
+    // 5) Sentence splitting even when there's NO space after punctuation.
+    //    Insert a newline after ., ?, ! if the next char is a letter/(
+    //    e.g., "compliance.Managed" -> "compliance.\nManaged"
+    text = text.replace(/([.!?])(?=[A-Za-z(])/g, "$1\n");
+    // Optionally treat semicolons as soft breaks:
+    text = text.replace(/;(?=\S)/g, ";\n");
+
+    const sentences = text
+      .split(/\n+/g)
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    if (sentences.length > 1) return sentences;
+
+    // 6) Absolute fallback: single bullet
+    return [text.trim()];
+  } catch (err) {
+    console.warn("Error processing description:", err, "Description:", description);
+    return [String(description)];
+  }
+};
+
+
 
 interface ResumeData {
   basicDetails: {
     fullName: string;
-    title: string;
+    professionalTitle: string;
     phone: string;
     email: string;
     location: string;
@@ -50,7 +210,8 @@ interface ResumeData {
     id: string;
     company: string;
     position: string;
-    duration: string;
+    startDate: string;
+    endDate: string;
     description: string;
     location: string;
   }>;
@@ -76,7 +237,7 @@ interface ResumeData {
   projects: Array<{
     id: string;
     name: string;
-    techStack: string;
+    techStack: string | null;
     startDate: string;
     endDate: string;
     description: string;
@@ -86,8 +247,7 @@ interface ResumeData {
     id: string;
     certificateName: string;
     link: string;
-    startDate: string;
-    endDate: string;
+    issueDate: string | null;
     instituteName: string;
   }>;
   references: Array<{
@@ -142,94 +302,291 @@ const ResumeBuilderPage = () => {
   const [templateScrollIndex, setTemplateScrollIndex] = useState(0);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isCustomSectionModalOpen, setIsCustomSectionModalOpen] = useState(false);
+  const [aiEnhancementModal, setAiEnhancementModal] = useState({
+    isOpen: false,
+    type: 'experience' as 'experience' | 'project',
+    itemId: '',
+    currentContent: '',
+    title: ''
+  });
   const resumeRef = useRef<HTMLDivElement>(null);
   const [appliedSuggestions, setAppliedSuggestions] = useState<any>(null);
   const [highlightedChanges, setHighlightedChanges] = useState<Set<string>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
+  const [resumeId, setResumeId] = useState<number | null>(null);
+  const [resumeTitle, setResumeTitle] = useState<string>('');
+  const { toast } = useToast();
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<string>('blue');
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set([
+    'basic-details',
+    'summary',
+    'skills',
+    'education',
+    'experience',
+    'activities',
+    'projects',
+    'certifications',
+    'references'
+  ]));
+  
+  // FlowCV-style customization state
+  const [customization, setCustomization] = useState({
+    theme: {
+      primaryColor: '#1f2937',
+      secondaryColor: '#374151',
+      textColor: '#000000',
+      backgroundColor: '#ffffff',
+      accentColor: '#1f2937',
+      borderColor: '#1f2937',
+      headerColor: '#1f2937'
+    },
+    // FlowCV-style color customization
+    colorMode: 'basic' as 'basic' | 'advanced' | 'border',
+    accentType: 'accent' as 'accent' | 'multi' | 'image',
+    selectedPalette: null as string | null,
+    applyAccentTo: {
+      name: true,
+      headings: true,
+      headerIcons: false,
+      dotsBarsBubbles: false,
+      dates: false,
+      linkIcons: false
+    },
+    // Entry layout customization
+    entryLayout: {
+      layoutType: 'two-lines' as 'text-left-icons-right' | 'icons-left-text-right' | 'icons-text-icons' | 'two-lines',
+      titleSize: 'medium' as 'small' | 'medium' | 'large',
+      subtitleStyle: 'normal' as 'normal' | 'bold' | 'italic',
+      subtitlePlacement: 'same-line' as 'same-line' | 'next-line',
+      indentBody: false,
+      listStyle: 'bullet' as 'bullet' | 'hyphen',
+      descriptionFormat: 'points' as 'paragraph' | 'points'
+    },
+    // Name customization
+    nameCustomization: {
+      size: 'm' as 'xs' | 's' | 'm' | 'l' | 'xl',
+      bold: true,
+      font: 'body' as 'body' | 'creative'
+    },
+    // Professional title customization
+    titleCustomization: {
+      size: 'm' as 's' | 'm' | 'l',
+      position: 'below' as 'same-line' | 'below',
+      style: 'normal' as 'normal' | 'italic',
+      separationType: 'vertical-line' as 'vertical-line' | 'bullet' | 'dash' | 'space'
+    },
+    typography: {
+      fontFamily: {
+        header: 'Arial, Helvetica, Calibri, sans-serif',
+        body: 'Arial, Helvetica, Calibri, sans-serif',
+        name: 'Arial, Helvetica, Calibri, sans-serif'
+      },
+      fontSize: {
+        name: 22,
+        title: 14,
+        headers: 13,
+        body: 12,
+        subheader: 12
+      },
+      fontWeight: {
+        name: 700,
+        headers: 700,
+        body: 500
+      }
+    },
+    layout: {
+      margins: { top: 0, bottom: 0, left: 8, right: 8 },
+      sectionSpacing: 0,
+      lineHeight: 1.2
+    }
+  });
+  
+  const [sidebarMode, setSidebarMode] = useState<'content' | 'customize'>('content');
+  
+  // Section order state - default order
+  const [sectionOrder, setSectionOrder] = useState([
+    'basic-details',
+    'summary',
+    'skills',
+    'experience',
+    'education',
+    'projects',
+    'certifications',
+    'activities',
+    'references'
+  ]);
+  
+  // Update customization function
+  const updateCustomization = (updates: any) => {
+    setCustomization(prev => ({ ...prev, ...updates }));
+  };
+
+  // Update entry layout function
+  const updateEntryLayout = (updates: any) => {
+    setCustomization(prev => ({
+      ...prev,
+      entryLayout: { ...prev.entryLayout, ...updates }
+    }));
+  };
+
+  // Update name customization function
+  const updateNameCustomization = (updates: any) => {
+    setCustomization(prev => ({
+      ...prev,
+      nameCustomization: { ...prev.nameCustomization, ...updates }
+    }));
+  };
+
+  // Update title customization function
+  const updateTitleCustomization = (updates: any) => {
+    setCustomization(prev => ({
+      ...prev,
+      titleCustomization: { ...prev.titleCustomization, ...updates }
+    }));
+  };
+
+  // Section reordering functions
+  const moveSectionUp = (sectionId: string) => {
+    setSectionOrder(prev => {
+      const currentIndex = prev.indexOf(sectionId);
+      if (currentIndex > 0) {
+        const newOrder = [...prev];
+        [newOrder[currentIndex], newOrder[currentIndex - 1]] = [newOrder[currentIndex - 1], newOrder[currentIndex]];
+        return newOrder;
+      }
+      return prev;
+    });
+  };
+
+  const moveSectionDown = (sectionId: string) => {
+    setSectionOrder(prev => {
+      const currentIndex = prev.indexOf(sectionId);
+      if (currentIndex < prev.length - 1) {
+        const newOrder = [...prev];
+        [newOrder[currentIndex], newOrder[currentIndex + 1]] = [newOrder[currentIndex + 1], newOrder[currentIndex]];
+        return newOrder;
+      }
+      return prev;
+    });
+  };
+
+  
+  // Sync selectedColor with customization theme
+  useEffect(() => {
+    setCustomization(prev => ({
+      ...prev,
+      theme: {
+        ...prev.theme,
+        primaryColor: selectedColor,
+        accentColor: selectedColor,
+        headerColor: selectedColor,
+        borderColor: selectedColor
+      }
+    }));
+  }, [selectedColor]);
   
   // Helper function to categorize skills into appropriate categories
   const categorizeSkill = (skill: string): string => {
-    const skillLower = skill.toLowerCase();
+    const skillLower = skill.toLowerCase().trim();
     
-    // Database technologies
-    if (skillLower.includes('mysql') || skillLower.includes('sql server') || skillLower.includes('oracle') || 
-        skillLower.includes('mongodb') || skillLower.includes('postgresql') || skillLower.includes('redis') ||
-        skillLower.includes('database') || skillLower.includes('db')) {
-      return 'Database';
-    }
-    
-    // Frameworks and Libraries
-    if (skillLower.includes('react') || skillLower.includes('angular') || skillLower.includes('vue') ||
-        skillLower.includes('express') || skillLower.includes('node.js') || skillLower.includes('jquery') ||
-        skillLower.includes('redux') || skillLower.includes('bootstrap') || skillLower.includes('tailwind') ||
-        skillLower.includes('framework') || skillLower.includes('library')) {
-      return 'Frameworks/Libraries';
-    }
-    
-    // Programming Languages
-    if (skillLower.includes('javascript') || skillLower.includes('typescript') || skillLower.includes('python') ||
-        skillLower.includes('java') || skillLower.includes('c#') || skillLower.includes('php') ||
-        skillLower.includes('html') || skillLower.includes('css') || skillLower.includes('sass') ||
-        skillLower.includes('language') || skillLower.includes('js')) {
+    // Programming Languages (most specific first)
+    if (skillLower === 'java' || skillLower === 'javascript' || skillLower === 'typescript' || skillLower === 'python' ||
+        skillLower === 'c#' || skillLower === 'c++' || skillLower === 'php' || skillLower === 'ruby' || 
+        skillLower === 'swift' || skillLower === 'kotlin' || skillLower === 'go' || skillLower === 'rust' ||
+        skillLower === 'scala' || skillLower === 'r' || skillLower === 'matlab' || skillLower === 'perl' ||
+        skillLower === 'html' || skillLower === 'css' || skillLower === 'sass' || skillLower === 'scss' ||
+        skillLower === 'less' || skillLower === 'jsx' || skillLower === 'tsx' || skillLower.startsWith('html') ||
+        skillLower.startsWith('css') || skillLower.includes(' programming') || skillLower.endsWith(' lang')) {
       return 'Languages';
     }
     
+    // Frameworks and Libraries
+    if (skillLower === 'react' || skillLower === 'angular' || skillLower === 'vue' || skillLower === 'vue.js' ||
+        skillLower === 'express' || skillLower === 'node.js' || skillLower === 'nodejs' || skillLower === 'jquery' ||
+        skillLower === 'redux' || skillLower === 'bootstrap' || skillLower === 'tailwind' || skillLower === 'tailwindcss' ||
+        skillLower === 'spring' || skillLower === 'django' || skillLower === 'flask' || skillLower === 'laravel' ||
+        skillLower === 'rails' || skillLower === 'ember' || skillLower === 'backbone' || skillLower === 'svelte' ||
+        skillLower.includes('framework') || skillLower.includes('library') || skillLower.includes('.js') ||
+        skillLower.includes(' js') || skillLower.endsWith('js')) {
+      return 'Frameworks/Libraries';
+    }
+    
+    // Database technologies
+    if (skillLower === 'mysql' || skillLower === 'postgresql' || skillLower === 'oracle' || skillLower === 'mongodb' ||
+        skillLower === 'redis' || skillLower === 'cassandra' || skillLower === 'dynamodb' || skillLower === 'sqlite' ||
+        skillLower === 'mariadb' || skillLower === 'sql server' || skillLower === 'elasticsearch' ||
+        skillLower.includes('database') || skillLower.includes('db') || skillLower.includes('sql') ||
+        skillLower.includes('nosql')) {
+      return 'Database';
+    }
+    
     // Cloud platforms
-    if (skillLower.includes('aws') || skillLower.includes('azure') || skillLower.includes('gcp') ||
-        skillLower.includes('cloud') || skillLower.includes('docker') || skillLower.includes('kubernetes')) {
+    if (skillLower === 'aws' || skillLower === 'azure' || skillLower === 'gcp' || skillLower === 'google cloud' ||
+        skillLower === 'docker' || skillLower === 'kubernetes' || skillLower === 'heroku' || skillLower === 'vercel' ||
+        skillLower === 'netlify' || skillLower.includes('cloud') || skillLower.includes('k8s')) {
       return 'Cloud';
     }
     
     // Version Control
-    if (skillLower.includes('git') || skillLower.includes('svn') || skillLower.includes('version control')) {
+    if (skillLower === 'git' || skillLower === 'github' || skillLower === 'gitlab' || skillLower === 'bitbucket' ||
+        skillLower === 'svn' || skillLower.includes('version control') || skillLower.includes('source control')) {
       return 'Version Control Tools';
     }
     
     // IDEs and Development Tools
-    if (skillLower.includes('visual studio') || skillLower.includes('pycharm') || skillLower.includes('intellij') ||
-        skillLower.includes('eclipse') || skillLower.includes('ide') || skillLower.includes('editor')) {
+    if (skillLower === 'visual studio' || skillLower === 'vs code' || skillLower === 'pycharm' || skillLower === 'intellij' ||
+        skillLower === 'eclipse' || skillLower === 'sublime' || skillLower === 'atom' || skillLower === 'vim' ||
+        skillLower === 'emacs' || skillLower.includes('ide') || skillLower.includes('editor')) {
       return 'IDEs';
     }
     
     // Web Technologies
-    if (skillLower.includes('web') || skillLower.includes('api') || skillLower.includes('rest') ||
-        skillLower.includes('http') || skillLower.includes('dom') || skillLower.includes('json')) {
+    if (skillLower === 'rest api' || skillLower === 'graphql' || skillLower === 'soap' || skillLower === 'json' ||
+        skillLower === 'xml' || skillLower === 'ajax' || skillLower === 'websockets' || skillLower === 'oauth' ||
+        skillLower.includes('web') || skillLower.includes('api') || skillLower.includes('rest') ||
+        skillLower.includes('http') || skillLower.includes('dom')) {
       return 'Web-Technologies';
     }
     
     // Web Servers
-    if (skillLower.includes('apache') || skillLower.includes('tomcat') || skillLower.includes('websphere') ||
-        skillLower.includes('nginx') || skillLower.includes('iis')) {
+    if (skillLower === 'apache' || skillLower === 'nginx' || skillLower === 'tomcat' || skillLower === 'iis' ||
+        skillLower === 'websphere' || skillLower.includes('server')) {
       return 'Web Server';
     }
     
     // Methodologies
-    if (skillLower.includes('agile') || skillLower.includes('waterfall') || skillLower.includes('sdlc') ||
-        skillLower.includes('scrum') || skillLower.includes('kanban') || skillLower.includes('methodology')) {
+    if (skillLower === 'agile' || skillLower === 'scrum' || skillLower === 'kanban' || skillLower === 'waterfall' ||
+        skillLower === 'sdlc' || skillLower === 'devops' || skillLower === 'ci/cd' ||
+        skillLower.includes('methodology') || skillLower.includes('agile')) {
       return 'Methodologies';
     }
     
     // Operating Systems
-    if (skillLower.includes('windows') || skillLower.includes('linux') || skillLower.includes('macos') ||
-        skillLower.includes('unix') || skillLower.includes('os')) {
+    if (skillLower === 'windows' || skillLower === 'linux' || skillLower === 'macos' || skillLower === 'ubuntu' ||
+        skillLower === 'centos' || skillLower === 'unix' || skillLower.includes('os')) {
       return 'Operating Systems';
     }
     
-    // Soft Skills and Professional Skills
+    // Professional/Soft Skills
     if (skillLower.includes('communication') || skillLower.includes('leadership') || skillLower.includes('team') ||
         skillLower.includes('problem-solving') || skillLower.includes('analytical') || skillLower.includes('collaboration') ||
-        skillLower.includes('self-motivated') || skillLower.includes('detail-oriented') || skillLower.includes('adaptability')) {
+        skillLower.includes('self-motivated') || skillLower.includes('detail-oriented') || skillLower.includes('adaptability') ||
+        skillLower.includes('management') || skillLower.includes('presentation')) {
       return 'Professional Skills';
     }
     
     // Testing and Quality Assurance
-    if (skillLower.includes('testing') || skillLower.includes('qa') || skillLower.includes('postman') ||
-        skillLower.includes('insomnia') || skillLower.includes('junit') || skillLower.includes('selenium')) {
+    if (skillLower === 'junit' || skillLower === 'selenium' || skillLower === 'postman' || skillLower === 'insomnia' ||
+        skillLower === 'jest' || skillLower === 'cypress' || skillLower === 'mocha' || skillLower === 'jasmine' ||
+        skillLower.includes('testing') || skillLower.includes('qa') || skillLower.includes('test')) {
       return 'Testing';
     }
     
     // Build and Deployment Tools
-    if (skillLower.includes('webpack') || skillLower.includes('babel') || skillLower.includes('npm') ||
-        skillLower.includes('yarn') || skillLower.includes('maven') || skillLower.includes('gradle')) {
+    if (skillLower === 'webpack' || skillLower === 'babel' || skillLower === 'npm' || skillLower === 'yarn' ||
+        skillLower === 'maven' || skillLower === 'gradle' || skillLower === 'gulp' || skillLower === 'grunt' ||
+        skillLower === 'jenkins' || skillLower.includes('build') || skillLower.includes('deploy')) {
       return 'Build Tools';
     }
     
@@ -240,7 +597,7 @@ const ResumeBuilderPage = () => {
   const [resumeData, setResumeData] = useState<ResumeData>({
     basicDetails: {
       fullName: '',
-      title: '',
+      professionalTitle: '',
       phone: '',
       email: '',
       location: '',
@@ -252,17 +609,22 @@ const ResumeBuilderPage = () => {
     objective: '',
     experience: [],
     education: [],
-    skills: {
-      "Languages": [],
-      "Frameworks": [],
-      "Frontend": [],
-      "Databases": [],
-      "Cloud": [],
-      "DevOps": [],
-      "Testing": [],
-      "Messaging/Event-Driven": [],
-      "Tools": []
-    },
+         skills: {
+       "Languages": [],
+       "Frameworks/Libraries": [],
+       "Database": [],
+       "Cloud": [],
+       "Version Control Tools": [],
+       "IDEs": [],
+       "Web-Technologies": [],
+       "Web Server": [],
+       "Methodologies": [],
+       "Operating Systems": [],
+       "Professional Skills": [],
+       "Testing": [],
+       "Build Tools": [],
+       "Other Tools": []
+     },
     languages: [],
     activities: [],
     projects: [],
@@ -277,287 +639,1061 @@ const ResumeBuilderPage = () => {
   }, [resumeData]);
 
   const templateId = location.state?.templateId || 'modern-professional';
-  const selectedColor = location.state?.selectedColor || 'blue';
 
   useEffect(() => {
     // Initialize selected template
     const currentTemplate = getTemplateById(templateId);
-    setSelectedTemplate(currentTemplate || templateData[0]);
-  }, [templateId]);
+    const template = currentTemplate || templateData[0];
+    setSelectedTemplate(template);
+    
+    // Set default color from template or location state
+    const defaultColor = location.state?.selectedColor || template?.colors?.[0] || 'blue';
+    setSelectedColor(defaultColor);
+  }, [templateId, location.state?.selectedColor]);
 
   useEffect(() => {
     console.log('ResumeBuilderPage useEffect - location.state:', location.state);
     
-    if (location.state?.extractedData && (location.state?.mode === 'raw' || location.state?.mode === 'ai' || location.state?.mode === 'ai-enhanced')) {
-      // Handle Gemini parsed data directly
-      const extractedData = location.state.extractedData;
-      console.log('Setting resume data from Gemini parser:', extractedData);
+    // Check if this is an edit mode and set resume ID and title
+    if (location.state?.mode === 'edit' && location.state?.resumeId) {
+      setResumeId(location.state.resumeId);
+      setResumeTitle(location.state.resumeTitle || 'Untitled Resume');
+    } else {
+      // Generate a default title for new resumes
+      const defaultTitle = `Resume - ${new Date().toLocaleDateString()}`;
+      setResumeTitle(defaultTitle);
+    }
+    
+    // Handle improved resume data from ATS results
+    if (location.state?.improvedResumeData && location.state?.fromATS) {
+      console.log('Setting resume data from ATS improved data:', location.state.improvedResumeData);
+      console.log('Improvement summary:', location.state.improvementSummary);
       
       // Store applied suggestions info for highlighting
-      if (location.state?.appliedSuggestions) {
-        setAppliedSuggestions(location.state.appliedSuggestions);
-        console.log('Applied suggestions detected:', location.state.appliedSuggestions);
+      if (location.state?.improvementSummary) {
+        setAppliedSuggestions(location.state.improvementSummary);
+        console.log('Applied ATS improvements detected:', location.state.improvementSummary);
       }
+      
+      // Handle both basicDetails and basic_details formats from ATS
+      const basicDetailsData = location.state.improvedResumeData.basicDetails || location.state.improvedResumeData.basic_details || {};
       
       // Ensure all required fields are present with proper defaults
       const processedData = {
         basicDetails: {
-          fullName: extractedData.basicDetails?.fullName || '',
-          title: extractedData.basicDetails?.title || '',
-          phone: extractedData.basicDetails?.phone || '',
-          email: extractedData.basicDetails?.email || '',
-          location: extractedData.basicDetails?.location || '',
-          website: extractedData.basicDetails?.website || '',
-          github: extractedData.basicDetails?.github || '',
-          linkedin: extractedData.basicDetails?.linkedin || ''
+          fullName: basicDetailsData.fullName || basicDetailsData['Full Name'] || '',
+          professionalTitle: basicDetailsData.professionalTitle || basicDetailsData.title || basicDetailsData['Professional Title'] || '',
+          phone: basicDetailsData.phone || basicDetailsData.Phone || '',
+          email: basicDetailsData.email || basicDetailsData.Email || '',
+          location: basicDetailsData.location || basicDetailsData.Location || '',
+          website: basicDetailsData.website || basicDetailsData.Website || '',
+          github: basicDetailsData.github || basicDetailsData.GitHub || '',
+          linkedin: basicDetailsData.linkedin || basicDetailsData.LinkedIn || ''
+        },
+        summary: location.state.improvedResumeData.summary || '',
+        objective: location.state.improvedResumeData.objective || '',
+        experience: (Array.isArray(location.state.improvedResumeData.experience) ? location.state.improvedResumeData.experience : []).map((exp: any) => {
+          console.log('Processing ATS experience item:', exp);
+          
+          const processedExp = {
+            id: exp.id || `exp-${Date.now()}-${Math.random()}`,
+            company: exp.Company || exp.company || '',
+            position: exp.Role || exp.position || exp.jobTitle || exp.title || exp.Job_Title || exp.Position || '',
+            startDate: exp['Start Date'] || exp.startDate || '',
+            endDate: exp['End Date'] || exp.endDate || '',
+            description: exp.Description || exp.description || '',
+            location: exp.Location || exp.location || ''
+          };
+          console.log('Processed ATS experience:', processedExp);
+          return processedExp;
+        }),
+        education: (Array.isArray(location.state.improvedResumeData.education) ? location.state.improvedResumeData.education : []).map((edu: any) => ({
+          id: edu.id || `edu-${Date.now()}-${Math.random()}`,
+          institution: edu.Institution || edu.institution || '',
+          degree: edu.Degree || edu.degree || '',
+          year: edu['End Date'] || edu.year || '',
+          description: edu.Description || edu.description || '',
+          grade: edu.Grade || edu.grade || '',
+          location: edu.Location || edu.location || ''
+        })),
+        skills: location.state.improvedResumeData.skills || {
+          "Languages": [],
+          "Frameworks/Libraries": [],
+          "Database": [],
+          "Cloud": [],
+          "Version Control Tools": [],
+          "IDEs": [],
+          "Web-Technologies": [],
+          "Web Server": [],
+          "Methodologies": [],
+          "Operating Systems": [],
+          "Professional Skills": [],
+          "Testing": [],
+          "Build Tools": [],
+          "Other Tools": []
+        },
+        languages: location.state.improvedResumeData.languages || [],
+        activities: location.state.improvedResumeData.activities || [],
+        projects: (location.state.improvedResumeData.projects || []).map((project: any) => {
+          let techStack = project['Tech Stack'] || project.techStack || '';
+          
+          // If tech stack is empty, try to extract from description
+          if (!techStack || techStack.trim() === '') {
+            const description = project.Description || project.description || '';
+            techStack = extractTechStackFromDescription(description);
+            // If extraction returns empty string, set to null to avoid showing placeholder
+            if (!techStack || techStack.trim() === '') {
+              techStack = null;
+            }
+          }
+          
+          return {
+            id: project.id || `project-${Date.now()}-${Math.random()}`,
+            name: project.Name || project.name || '',
+            techStack: techStack,
+            startDate: project['Start Date'] || project.startDate || '',
+            endDate: project['End Date'] || project.endDate || '',
+            description: project.Description || project.description || '',
+            link: project.Link || project.link || ''
+          };
+        }),
+        certifications: (location.state.improvedResumeData.certifications || []).map((cert: any) => {
+          let issueDate: string | null = cert.issueDate || cert.startDate || cert['Start Date'] || cert['Issue Date'] || '';
+          
+          // If issue date is empty, set to null to avoid showing placeholder
+          if (!issueDate || issueDate.trim() === '') {
+            issueDate = null;
+          }
+          
+          return {
+            id: cert.id || `cert-${Date.now()}-${Math.random()}`,
+            certificateName: cert.certificateName || cert.CertificateName || '',
+            link: cert.link || cert.Link || '',
+            issueDate: issueDate,
+            instituteName: cert.instituteName || cert.InstituteName || cert.institueName || ''
+          };
+        }),
+        references: location.state.improvedResumeData.references || [],
+        customSections: location.state.improvedResumeData.customSections || []
+      };
+      
+      // Track specific changes for highlighting
+      const changesSet = new Set<string>();
+      
+      // Add all improved fields to changes set
+      if (location.state.improvementSummary?.fields_improved) {
+        location.state.improvementSummary.fields_improved.forEach((field: string) => {
+          changesSet.add(`${field}-ats-improved`);
+        });
+      }
+      
+      // Set highlighted changes
+      setHighlightedChanges(changesSet);
+      
+      console.log('Processed ATS improved resume data:', processedData);
+      setResumeData(processedData);
+      return;
+    }
+    
+          if (location.state?.extractedData && (location.state?.mode === 'raw' || location.state?.mode === 'ai' || location.state?.mode === 'ai-enhanced' || location.state?.mode === 'edit')) {
+        // Handle Gemini parsed data directly
+        const extractedData = location.state.extractedData;
+        console.log('Setting resume data from Gemini parser:', extractedData);
+        
+        // Store applied suggestions info for highlighting
+        if (location.state?.appliedSuggestions) {
+          setAppliedSuggestions(location.state.appliedSuggestions);
+          console.log('Applied suggestions detected:', location.state.appliedSuggestions);
+        }
+        
+        // Handle both basicDetails and basic_details formats
+        const basicDetailsData = extractedData.basicDetails || extractedData.basic_details || {};
+        
+        // Ensure all required fields are present with proper defaults
+        const processedData = {
+        basicDetails: {
+          fullName: basicDetailsData.fullName || basicDetailsData['Full Name'] || basicDetailsData.name || '',
+          professionalTitle: basicDetailsData.professionalTitle || basicDetailsData.title || basicDetailsData['Professional Title'] || basicDetailsData.jobTitle || '',
+          phone: basicDetailsData.phone || basicDetailsData.Phone || basicDetailsData.phoneNumber || '',
+          email: basicDetailsData.email || basicDetailsData.Email || basicDetailsData.emailAddress || '',
+          location: basicDetailsData.location || basicDetailsData.Location || basicDetailsData.address || '',
+          website: basicDetailsData.website || basicDetailsData.Website || basicDetailsData.portfolio || '',
+          github: basicDetailsData.github || basicDetailsData.gitHub || basicDetailsData.GitHub || '',
+          linkedin: basicDetailsData.linkedin || basicDetailsData.linkedIn || basicDetailsData.LinkedIn || ''
         },
         summary: extractedData.summary || '',
         objective: extractedData.objective || '',
-        experience: extractedData.experience || [],
-        education: extractedData.education || [],
+        experience: (Array.isArray(extractedData.experience) ? extractedData.experience : []).map((exp: any) => {
+          console.log('Processing experience item:', exp);
+          
+          // Parse duration into start and end dates
+          let startDate = '';
+          let endDate = '';
+          if (exp.duration) {
+            if (exp.duration.includes(' - ')) {
+              const [start, end] = exp.duration.split(' - ').map((d: string) => d.trim());
+              startDate = start;
+              endDate = end;
+            } else {
+              startDate = exp.duration;
+              endDate = '';
+            }
+          } else {
+            startDate = exp['Start Date'] || exp.startDate || '';
+            endDate = exp['End Date'] || exp.endDate || '';
+          }
+          
+          const processedExp = {
+            id: exp.id || `exp-${Date.now()}-${Math.random()}`,
+            company: exp.Company || exp.company || '',
+            position: exp.Role || exp.position || exp.jobTitle || exp.title || exp.Job_Title || exp.Position || '',
+            startDate: startDate,
+            endDate: endDate,
+            description: exp.Description || exp.description || '',
+            location: exp.Location || exp.location || ''
+          };
+          console.log('Processed experience:', processedExp);
+          return processedExp;
+        }),
+        education: (Array.isArray(extractedData.education) ? extractedData.education : []).map((edu: any) => ({
+          id: edu.id || `edu-${Date.now()}-${Math.random()}`,
+          institution: edu.Institution || edu.institution || edu.school || edu.university || '',
+          degree: edu.Degree || edu.degree || edu.program || edu.major || '',
+          year: edu['End Date'] || edu.year || edu.graduationYear || edu.endYear || '',
+          description: edu.Description || edu.description || edu.notes || '',
+          grade: edu.Grade || edu.grade || edu.gpa || edu.score || '',
+          location: edu.Location || edu.location || edu.city || edu.country || ''
+        })),
         skills: extractedData.skills || [],
         languages: extractedData.languages || [],
         activities: extractedData.activities || [],
-        projects: extractedData.projects || [],
-        certifications: extractedData.certifications || [],
+        projects: (Array.isArray(extractedData.projects) ? extractedData.projects : []).map((project: any) => {
+          let techStack = project['Tech Stack'] || project.techStack || project.technologies || project.tech || '';
+          
+          // If tech stack is empty, try to extract from description
+          if (!techStack || techStack.trim() === '') {
+            const description = project.Description || project.description || project.summary || '';
+            techStack = extractTechStackFromDescription(description);
+            // If extraction returns empty string, set to null to avoid showing placeholder
+            if (!techStack || techStack.trim() === '') {
+              techStack = null;
+            }
+          }
+          
+          return {
+            id: project.id || `project-${Date.now()}-${Math.random()}`,
+            name: project.Name || project.name || project.title || project.projectName || '',
+            techStack: techStack,
+            startDate: project['Start Date'] || project.startDate || project.start || '',
+            endDate: project['End Date'] || project.endDate || project.end || '',
+            description: project.Description || project.description || project.summary || '',
+            link: project.Link || project.link || project.url || project.github || ''
+          };
+        }),
+        certifications: (extractedData.certifications || []).map((cert: any) => {
+          let issueDate: string | null = cert.issueDate || cert.startDate || cert['Start Date'] || cert['Issue Date'] || '';
+          
+          // If issue date is empty, set to null to avoid showing placeholder
+          if (!issueDate || issueDate.trim() === '') {
+            issueDate = null;
+          }
+          
+          return {
+            id: cert.id || `cert-${Date.now()}-${Math.random()}`,
+            certificateName: cert.certificateName || cert.CertificateName || cert.name || '',
+            link: cert.link || cert.Link || '',
+            issueDate: issueDate,
+            instituteName: cert.instituteName || cert.InstituteName || cert.institueName || cert.issuer || ''
+          };
+        }),
         references: extractedData.references || [],
         customSections: extractedData.customSections || []
       };
       
-      // Track changes and apply AI suggestions if in 'ai-enhanced' mode
+      // Update professional title with most recent role from experience
+      if (processedData.experience && processedData.experience.length > 0) {
+        const mostRecentExp = processedData.experience[0]; // Assuming experience is sorted by most recent first
+        if (mostRecentExp.position && mostRecentExp.position.trim()) {
+          processedData.basicDetails.professionalTitle = mostRecentExp.position;
+          console.log('Updated professional title to most recent role:', mostRecentExp.position);
+        }
+      }
+      
+      // Track specific changes for highlighting
       const changesSet = new Set<string>();
       
-             if (location.state?.mode === 'ai-enhanced' && location.state?.aiSuggestions) {
-         const aiSuggestions = location.state.aiSuggestions;
-         console.log('=== AI SUGGESTIONS DEBUG ===');
-         console.log('Full AI suggestions object:', JSON.stringify(aiSuggestions, null, 2));
-         console.log('Available properties:', Object.keys(aiSuggestions));
-         console.log('sectionAnalysis:', aiSuggestions.sectionAnalysis);
-         console.log('keywordAnalysis:', aiSuggestions.keywordAnalysis);
-         console.log('improvementPriority:', aiSuggestions.improvementPriority);
-         console.log('=== END DEBUG ===');
-         
-         // Ensure skills object is properly initialized for categorized structure
+      if (location.state?.mode === 'ai-enhanced' && location.state?.aiSuggestions) {
+        const aiSuggestions = location.state.aiSuggestions;
+        
+        // Apply AI suggestions from appliedRewrites if available
+        if (aiSuggestions.appliedRewrites) {
+          const rewrites = aiSuggestions.appliedRewrites;
+          
+          // Apply Professional Summary rewrite
+          if (rewrites.professionalSummary) {
+            console.log('Applying professional summary rewrite:', rewrites.professionalSummary);
+            processedData.summary = rewrites.professionalSummary;
+            changesSet.add('summary-ai-rewrite');
+          }
+          
+                  // Apply Skills rewrite - Merge with existing skills instead of replacing
+        if (rewrites.skills && rewrites.skills !== null) {
+          console.log('Processing skills rewrite:', rewrites.skills);
+          
+          // Start with existing skills structure, don't replace completely
+          const existingSkills = processedData.skills || {};
+          console.log('Existing skills:', existingSkills);
+          
+          // Helper function to ensure a category is an array
+          const ensureCategoryIsArray = (skillsObj: any, category: string): string[] => {
+            if (!skillsObj[category]) {
+              return [];
+            }
+            if (Array.isArray(skillsObj[category])) {
+              return [...skillsObj[category]];
+            }
+            if (typeof skillsObj[category] === 'string') {
+              return [skillsObj[category]];
+            }
+            return [];
+          };
+          
+          // Handle skills as object (AI response structure)
+          if (typeof rewrites.skills === 'object' && !Array.isArray(rewrites.skills)) {
+            console.log('Processing skills as object structure');
+            
+            // Merge existing skills with AI suggested skills
+            const mergedSkills = { ...existingSkills };
+            
+            // Process each category from AI suggestions
+            Object.entries(rewrites.skills).forEach(([category, skillsValue]) => {
+              if (skillsValue && typeof skillsValue === 'string') {
+                // Convert string to array
+                const newSkills = skillsValue.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                
+                console.log(`Processing category "${category}" with skills:`, newSkills);
+                
+                // Ensure the category exists and is an array
+                if (!mergedSkills[category]) {
+                  mergedSkills[category] = [];
+                } else if (typeof mergedSkills[category] === 'string') {
+                  mergedSkills[category] = [mergedSkills[category]];
+                }
+                
+                // Add new skills that don't already exist
+                newSkills.forEach(skill => {
+                  const existingSkillsInCategory = Array.isArray(mergedSkills[category]) 
+                    ? mergedSkills[category] 
+                    : [mergedSkills[category]];
+                  
+                  if (!existingSkillsInCategory.some(existingSkill => 
+                    existingSkill.toLowerCase().trim() === skill.toLowerCase().trim()
+                  )) {
+                    mergedSkills[category].push(skill);
+                    changesSet.add(`skill-${skill}`);
+                    console.log(`Added new skill "${skill}" to category "${category}"`);
+                  } else {
+                    console.log(`Skill "${skill}" already exists in category "${category}"`);
+                  }
+                });
+              }
+            });
+            
+            processedData.skills = mergedSkills;
+            changesSet.add('skills-ai-rewrite');
+            console.log('Final merged skills:', mergedSkills);
+          }
+          // Handle skills as array (legacy format)
+          else if (Array.isArray(rewrites.skills) && rewrites.skills.length > 0) {
+            console.log('Processing skills as array structure');
+            
+            // Ensure all default categories exist
+            const defaultCategories = {
+              "Languages": [],
+              "Frameworks/Libraries": [],
+              "Database": [],
+              "Cloud": [],
+              "Version Control Tools": [],
+              "IDEs": [],
+              "Web-Technologies": [],
+              "Web Server": [],
+              "Methodologies": [],
+              "Operating Systems": [],
+              "Professional Skills": [],
+              "Testing": [],
+              "Build Tools": [],
+              "Other Tools": []
+            };
+            
+            // Merge existing skills with default categories and ensure all are arrays
+            const mergedSkills: { [key: string]: string[] } = { ...defaultCategories };
+            
+            // Process existing skills and ensure they are arrays
+            Object.keys(defaultCategories).forEach(category => {
+              mergedSkills[category] = ensureCategoryIsArray(existingSkills, category);
+            });
+            
+            // Add any additional categories from existing skills that aren't in defaults
+            Object.keys(existingSkills).forEach(category => {
+              if (!mergedSkills.hasOwnProperty(category)) {
+                mergedSkills[category] = ensureCategoryIsArray(existingSkills, category);
+              }
+            });
+            
+            console.log('Merged skills structure:', mergedSkills);
+            
+            // Process each skill from the rewrite and add only missing skills
+            rewrites.skills.forEach((skillLine: string) => {
+              try {
+                if (skillLine && typeof skillLine === 'string') {
+                  console.log('Processing skill line:', skillLine);
+                  
+                  if (skillLine.includes(':')) {
+                    const [category, skillsString] = skillLine.split(':', 2);
+                    const categoryName = category.trim();
+                    const newSkills = skillsString.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                    
+                    console.log(`Category: "${categoryName}", Skills:`, newSkills);
+                    
+                    // Ensure the category exists and is an array
+                    if (!mergedSkills[categoryName]) {
+                      mergedSkills[categoryName] = [];
+                    } else {
+                      mergedSkills[categoryName] = ensureCategoryIsArray(mergedSkills, categoryName);
+                    }
+                    
+                    // Add only skills that don't already exist in that category
+                    newSkills.forEach(skill => {
+                      if (!mergedSkills[categoryName].includes(skill)) {
+                        mergedSkills[categoryName].push(skill);
+                        // Track individual skill additions for highlighting
+                        changesSet.add(`skill-${skill}`);
+                        console.log(`Added skill "${skill}" to category "${categoryName}"`);
+                      } else {
+                        console.log(`Skill "${skill}" already exists in category "${categoryName}"`);
+                      }
+                    });
+                  } else {
+                    // If no colon found, treat as a single skill and add to "Other Tools" if not already present
+                    const skill = skillLine.trim();
+                    
+                    // Ensure "Other Tools" is an array
+                    mergedSkills["Other Tools"] = ensureCategoryIsArray(mergedSkills, "Other Tools");
+                    
+                    if (!mergedSkills["Other Tools"].includes(skill)) {
+                      mergedSkills["Other Tools"].push(skill);
+                      // Track individual skill additions for highlighting
+                      changesSet.add(`skill-${skill}`);
+                      console.log(`Added skill "${skill}" to "Other Tools"`);
+                    } else {
+                      console.log(`Skill "${skill}" already exists in "Other Tools"`);
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error('Error processing skill line:', skillLine, error);
+                // Continue processing other skills even if one fails
+              }
+            });
+            
+            processedData.skills = mergedSkills;
+            changesSet.add('skills-ai-rewrite');
+            console.log('Final merged skills:', mergedSkills);
+          }
+        }
+          
+          // Apply Work Experience rewrites
+          if (rewrites.workExperience && rewrites.workExperience !== null) {
+            console.log('Applying work experience rewrites:', rewrites.workExperience);
+            
+            // Handle work experience as a single rewrite string
+            if (typeof rewrites.workExperience === 'string' && rewrites.workExperience.trim()) {
+              const rewriteText = rewrites.workExperience;
+              const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+              
+              // Find the first experience entry to update or create a new one
+              let firstExp;
+              if (processedData.experience.length > 0) {
+                firstExp = processedData.experience[0];
+                console.log('Updating existing experience entry');
+              } else {
+                // Create a new experience entry if none exists
+                firstExp = {
+                  id: `ai-exp-${Date.now()}`,
+                  company: '',
+                  position: '',
+                  startDate: '',
+                  endDate: '',
+                  description: '',
+                  location: ''
+                };
+                processedData.experience.push(firstExp);
+                console.log('Created new experience entry for AI rewrite');
+              }
+              
+              // Extract title and company from first line if it contains |
+              const titleLine = lines[0];
+              if (titleLine.includes('|')) {
+                const parts = titleLine.split('|').map((p: string) => p.trim());
+                if (parts.length >= 3) {
+                  firstExp.position = parts[0];
+                  firstExp.company = parts[1];
+                  // Parse duration into start and end dates
+                  const duration = parts[2];
+                  if (duration.includes(' - ')) {
+                    const [start, end] = duration.split(' - ').map((d: string) => d.trim());
+                    firstExp.startDate = start;
+                    firstExp.endDate = end;
+                  } else {
+                    firstExp.startDate = duration;
+                    firstExp.endDate = '';
+                  }
+                  if (parts.length >= 4) {
+                    firstExp.location = parts[3];
+                  }
+                }
+              }
+              
+              // Extract bullet points (lines starting with *)
+              const bulletPoints = lines.filter((line: string) => line.startsWith('*')).map((line: string) => line.substring(1).trim());
+              if (bulletPoints.length > 0) {
+                firstExp.description = bulletPoints.join('\n');
+              } else {
+                // If no bullet points, use the entire rewrite as description
+                firstExp.description = rewriteText;
+              }
+              
+              changesSet.add(`experience-0-ai-rewrite`);
+              console.log('Applied work experience rewrite successfully');
+            }
+            // Handle work experience as array (legacy support)
+            else if (Array.isArray(rewrites.workExperience) && rewrites.workExperience.length > 0) {
+              rewrites.workExperience.forEach((expRewrite: any, index: number) => {
+                if (expRewrite.rewrite && processedData.experience[index]) {
+                  // Parse the rewrite text to extract structured data
+                  const rewriteText = expRewrite.rewrite;
+                  const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+                  
+                  // Extract title and company from first line
+                  const titleLine = lines[0];
+                  if (titleLine.includes('|')) {
+                    const parts = titleLine.split('|').map((p: string) => p.trim());
+                    if (parts.length >= 3) {
+                      processedData.experience[index].position = parts[0];
+                      processedData.experience[index].company = parts[1];
+                      // Parse duration into start and end dates
+                      const duration = parts[2];
+                      if (duration.includes(' - ')) {
+                        const [start, end] = duration.split(' - ').map((d: string) => d.trim());
+                        processedData.experience[index].startDate = start;
+                        processedData.experience[index].endDate = end;
+                      } else {
+                        processedData.experience[index].startDate = duration;
+                        processedData.experience[index].endDate = '';
+                      }
+                      if (parts.length >= 4) {
+                        processedData.experience[index].location = parts[3];
+                      }
+                    }
+                  }
+                  
+                  // Extract bullet points (lines starting with *)
+                  const bulletPoints = lines.filter((line: string) => line.startsWith('*')).map((line: string) => line.substring(1).trim());
+                  if (bulletPoints.length > 0) {
+                    processedData.experience[index].description = bulletPoints.join('\n');
+                  }
+                  
+                  changesSet.add(`experience-${index}-ai-rewrite`);
+                } else if (processedData.experience[index]) {
+                  // If no rewrite available, preserve existing experience data
+                  console.log(`Preserving existing experience data for index ${index}:`, processedData.experience[index]);
+                }
+              });
+            }
+          }
+          
+          // Apply Education rewrites
+          if (rewrites.education && rewrites.education !== null) {
+            console.log('Applying education rewrites:', rewrites.education);
+            
+            // Handle education as a single rewrite string
+            if (typeof rewrites.education === 'string' && rewrites.education.trim()) {
+              const rewriteText = rewrites.education;
+              const lines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+              
+              // Find the first education entry to update or create a new one
+              let firstEdu;
+              if (processedData.education.length > 0) {
+                firstEdu = processedData.education[0];
+                console.log('Updating existing education entry');
+              } else {
+                // Create a new education entry if none exists
+                firstEdu = {
+                  id: `ai-edu-${Date.now()}`,
+                  degree: '',
+                  institution: '',
+                  year: '',
+                  description: ''
+                };
+                processedData.education.push(firstEdu);
+                console.log('Created new education entry for AI rewrite');
+              }
+              
+              // Extract degree and institution from first line if it contains |
+              const titleLine = lines[0];
+              if (titleLine.includes('|')) {
+                const parts = titleLine.split('|').map((p: string) => p.trim());
+                if (parts.length >= 3) {
+                  firstEdu.degree = parts[0];
+                  firstEdu.institution = parts[1];
+                  firstEdu.year = parts[2];
+                }
+              }
+              
+              // Extract bullet points for description
+              const bulletPoints = lines.filter((line: string) => line.startsWith('*')).map((line: string) => line.substring(1).trim());
+              if (bulletPoints.length > 0) {
+                firstEdu.description = bulletPoints.join('\n');
+              } else {
+                // If no bullet points, use the entire rewrite as description
+                firstEdu.description = rewriteText;
+              }
+              
+              changesSet.add(`education-0-ai-rewrite`);
+              console.log('Applied education rewrite successfully');
+            }
+            // Handle education as array (legacy support)
+            else if (Array.isArray(rewrites.education) && rewrites.education.length > 0) {
+              rewrites.education.forEach((eduRewrite: string, index: number) => {
+                if (eduRewrite && processedData.education[index]) {
+                  // Parse education rewrite
+                  const lines = eduRewrite.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+                  const titleLine = lines[0];
+                  
+                  if (titleLine.includes('|')) {
+                    const parts = titleLine.split('|').map((p: string) => p.trim());
+                    if (parts.length >= 3) {
+                      processedData.education[index].degree = parts[0];
+                      processedData.education[index].institution = parts[1];
+                      processedData.education[index].year = parts[2];
+                    }
+                  }
+                  
+                  // Extract bullet points for description
+                  const bulletPoints = lines.filter((line: string) => line.startsWith('*')).map((line: string) => line.substring(1).trim());
+                  if (bulletPoints.length > 0) {
+                    processedData.education[index].description = bulletPoints.join('\n');
+                  }
+                  
+                  changesSet.add(`education-${index}-ai-rewrite`);
+                } else if (processedData.education[index]) {
+                  // If no rewrite available, preserve existing education data
+                  console.log(`Preserving existing education data for index ${index}:`, processedData.education[index]);
+                }
+              });
+            }
+          }
+          
+          // Apply Projects rewrites
+          if (rewrites.projects && rewrites.projects !== null) {
+            console.log('Applying projects rewrites:', rewrites.projects);
+            
+            // Handle projects as array of objects (AI response structure)
+            if (Array.isArray(rewrites.projects) && rewrites.projects.length > 0) {
+              console.log('Processing AI suggested projects');
+              
+              // Convert AI project suggestions to resume format
+              const aiProjects = rewrites.projects.map((aiProject: any) => {
+                const description = aiProject.rewrite || aiProject.existing || '';
+                let techStack: string | null = '';
+                
+                // Try to extract tech stack from description
+                if (description) {
+                  techStack = extractTechStackFromDescription(description);
+                  // If extraction returns empty string, set to null to avoid showing placeholder
+                  if (!techStack || techStack.trim() === '') {
+                    techStack = null;
+                  }
+                }
+                
+                return {
+                  id: `project-${Date.now()}-${Math.random()}`,
+                  name: aiProject.name || 'Untitled Project',
+                  techStack: techStack,
+                  startDate: aiProject.startDate || '',
+                  endDate: aiProject.endDate || '',
+                  description: description,
+                  link: ''
+                };
+              });
+              
+              // If no existing projects, use AI projects
+              if (processedData.projects.length === 0) {
+                console.log('No existing projects, using AI suggested projects');
+                processedData.projects = aiProjects;
+              } else {
+                // Merge existing projects with AI suggestions
+                console.log('Merging existing projects with AI suggestions');
+                processedData.projects = [...processedData.projects, ...aiProjects];
+              }
+            }
+            // Handle projects as a single rewrite string (legacy format)
+            else if (typeof rewrites.projects === 'string' && rewrites.projects.trim()) {
+              const rewriteText = rewrites.projects;
+              console.log('Project suggestion from AI:', rewriteText);
+              // This is for new projects - let backend handle project creation
+            }
+          }
+          
+          // Ensure existing projects are preserved if no AI rewrites
+          if (!rewrites.projects || rewrites.projects === null) {
+            console.log('No AI project rewrites available, preserving existing projects:', processedData.projects);
+          }
+          
+          // Comprehensive project handling - check multiple sources
+          console.log('Checking for projects from multiple sources...');
+          console.log('Current projects count:', processedData.projects.length);
+          console.log('AI suggestions structure:', aiSuggestions);
+          
+          // Projects are now handled above - no need to add duplicate projects
+          console.log('Final projects count after AI processing:', processedData.projects.length);
+          
+          // Apply Certifications rewrites
+          if (rewrites.certifications && rewrites.certifications !== null) {
+            console.log('Applying certifications rewrites:', rewrites.certifications);
+            
+            // Handle certifications as array of objects (new structure)
+            if (Array.isArray(rewrites.certifications) && rewrites.certifications.length > 0) {
+              rewrites.certifications.forEach((certRewrite: any, index: number) => {
+                if (certRewrite && typeof certRewrite === 'object') {
+                  const newCertification = {
+                    id: `ai-cert-${index}-${Date.now()}`,
+                    certificateName: certRewrite.certificateName || certRewrite.name || '',
+                    link: certRewrite.link || '',
+                    issueDate: certRewrite.issueDate || certRewrite.startDate || '',
+                    instituteName: certRewrite.instituteName || certRewrite.issuer || certRewrite.organization || ''
+                  };
+                  
+                  processedData.certifications.push(newCertification);
+                  changesSet.add(`certification-${processedData.certifications.length - 1}-ai-rewrite`);
+                } else if (typeof certRewrite === 'string' && certRewrite.trim()) {
+                  // Handle string format (legacy support)
+                  const newCertification = {
+                    id: `ai-cert-${index}-${Date.now()}`,
+                    certificateName: certRewrite,
+                    link: '',
+                    issueDate: '',
+                    instituteName: ''
+                  };
+                  
+                  processedData.certifications.push(newCertification);
+                  changesSet.add(`certification-${processedData.certifications.length - 1}-ai-rewrite`);
+                }
+              });
+              
+              console.log('Applied certifications rewrite as new certifications');
+            }
+            // Handle certifications as a single rewrite string (legacy support)
+            else if (typeof rewrites.certifications === 'string' && rewrites.certifications.trim()) {
+              const rewriteText = rewrites.certifications;
+              
+              // Split by lines and filter out empty ones
+              const certLines = rewriteText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+              
+              // Create certifications from each line
+              certLines.forEach((certLine: string, index: number) => {
+                if (certLine.trim()) {
+                  const newCertification = {
+                    id: `ai-cert-${index}-${Date.now()}`,
+                    certificateName: certLine,
+                    link: '',
+                    issueDate: '',
+                    instituteName: ''
+                  };
+                  
+                  processedData.certifications.push(newCertification);
+                  changesSet.add(`certification-${processedData.certifications.length - 1}-ai-rewrite`);
+                }
+              });
+              
+              console.log('Applied certifications rewrite as new certifications');
+            }
+          }
+          
+          // Ensure existing certifications are preserved if no AI rewrites
+          if (!rewrites.certifications || rewrites.certifications === null) {
+            console.log('No AI certification rewrites available, preserving existing certifications:', processedData.certifications);
+          }
+        }
+        
+                 // Ensure skills object is properly initialized for categorized structure
          if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
            // Initialize with default categories if skills object is empty or malformed
            if (!processedData.skills || Object.keys(processedData.skills).length === 0) {
              processedData.skills = {
                "Languages": [],
-               "Frameworks": [],
-               "Frontend": [],
-               "Databases": [],
+               "Frameworks/Libraries": [],
+               "Database": [],
                "Cloud": [],
-               "DevOps": [],
+               "Version Control Tools": [],
+               "IDEs": [],
+               "Web-Technologies": [],
+               "Web Server": [],
+               "Methodologies": [],
+               "Operating Systems": [],
+               "Professional Skills": [],
                "Testing": [],
-               "Messaging/Event-Driven": [],
-               "Tools": []
+               "Build Tools": [],
+               "Other Tools": []
              };
            } else {
-             // Ensure all existing categories are arrays
-             Object.keys(processedData.skills).forEach(category => {
-               if (!Array.isArray(processedData.skills[category])) {
+             // Ensure all existing categories are arrays and add missing categories
+             const defaultCategories = {
+               "Languages": [],
+               "Frameworks/Libraries": [],
+               "Database": [],
+               "Cloud": [],
+               "Version Control Tools": [],
+               "IDEs": [],
+               "Web-Technologies": [],
+               "Web Server": [],
+               "Methodologies": [],
+               "Operating Systems": [],
+               "Professional Skills": [],
+               "Testing": [],
+               "Build Tools": [],
+               "Other Tools": []
+             };
+             
+             Object.keys(defaultCategories).forEach(category => {
+               if (!processedData.skills[category]) {
+                 processedData.skills[category] = [];
+               } else if (!Array.isArray(processedData.skills[category])) {
                  processedData.skills[category] = [];
                }
              });
            }
+         } else if (Array.isArray(processedData.skills)) {
+           // Convert flat array to categorized structure
+           const flatSkills = processedData.skills;
+           const categorizedSkills: { [key: string]: string[] } = {
+             "Languages": [],
+             "Frameworks/Libraries": [],
+             "Database": [],
+             "Cloud": [],
+             "Version Control Tools": [],
+             "IDEs": [],
+             "Web-Technologies": [],
+             "Web Server": [],
+             "Methodologies": [],
+             "Operating Systems": [],
+             "Professional Skills": [],
+             "Testing": [],
+             "Build Tools": [],
+             "Other Tools": []
+           };
+           
+           flatSkills.forEach((skill: string) => {
+             if (skill && typeof skill === 'string') {
+               const category = categorizeSkill(skill);
+               if (categorizedSkills[category]) {
+                 categorizedSkills[category].push(skill);
+               }
+             }
+           });
+           
+           processedData.skills = categorizedSkills;
+         }
+                
+        // Apply missing critical skills from AI analysis - Categorized approach
+         if (aiSuggestions.sectionAnalysis?.skillsSection?.suggestedData?.missingCriticalSkills?.length > 0) {
+           console.log('Adding missing critical skills:', aiSuggestions.sectionAnalysis.skillsSection.suggestedData.missingCriticalSkills);
+           
+           aiSuggestions.sectionAnalysis.skillsSection.suggestedData.missingCriticalSkills.forEach((skill: string) => {
+             const category = categorizeSkill(skill);
+             // Ensure the category exists and is an array
+             if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+               processedData.skills[category] = [];
+             }
+             if (!processedData.skills[category].includes(skill)) {
+               processedData.skills[category].push(skill);
+               // Track individual skill additions for highlighting
+               changesSet.add(`skill-${skill}`);
+             }
+           });
+         }
+         
+         // Apply skills by category if provided
+         if (aiSuggestions.sectionAnalysis?.skillsSection?.suggestedData?.skillsToAddByCategory) {
+           console.log('Adding skills by category:', aiSuggestions.sectionAnalysis.skillsSection.suggestedData.skillsToAddByCategory);
+           
+           Object.entries(aiSuggestions.sectionAnalysis.skillsSection.suggestedData.skillsToAddByCategory).forEach(([category, skills]: [string, any]) => {
+             if (Array.isArray(skills) && skills.length > 0) {
+               // Ensure the category exists and is an array
+               if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+                 processedData.skills[category] = [];
+               }
+               
+               skills.forEach((skill: string) => {
+                 if (skill && !processedData.skills[category].includes(skill)) {
+                   processedData.skills[category].push(skill);
+                   // Track individual skill additions for highlighting
+                   changesSet.add(`skill-${skill}`);
+                 }
+               });
+             }
+           });
          }
         
-        // Apply missing critical skills from AI analysis - Categorized approach
-        if (aiSuggestions.sectionAnalysis?.skillsSection?.missingCriticalSkills?.length > 0) {
-          console.log('Adding missing critical skills:', aiSuggestions.sectionAnalysis.skillsSection.missingCriticalSkills);
-          
-          if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
-            // Categorize skills into existing categories
-            aiSuggestions.sectionAnalysis.skillsSection.missingCriticalSkills.forEach((skill: string) => {
-              const category = categorizeSkill(skill);
-              // Ensure the category exists and is an array
-              if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
-                processedData.skills[category] = [];
-              }
-              if (!processedData.skills[category].includes(skill)) {
-                processedData.skills[category].push(skill);
-              }
-            });
-          } else {
-            // Handle flat skills array
-            const currentSkills = Array.isArray(processedData.skills) ? processedData.skills : [];
-            processedData.skills = [...new Set([...currentSkills, ...aiSuggestions.sectionAnalysis.skillsSection.missingCriticalSkills])];
-          }
-          changesSet.add('skills');
-        }
-        
-        // Apply missing keywords from keyword analysis - Categorized approach
-        if (aiSuggestions.keywordAnalysis?.missingKeywords?.length > 0) {
-          console.log('Adding missing keywords:', aiSuggestions.keywordAnalysis.missingKeywords);
-          
-          if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
-            // Categorize skills into existing categories
-            aiSuggestions.keywordAnalysis.missingKeywords.slice(0, 5).forEach((keyword: string) => {
-              const category = categorizeSkill(keyword);
-              // Ensure the category exists and is an array
-              if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
-                processedData.skills[category] = [];
-              }
-              if (!processedData.skills[category].includes(keyword)) {
-                processedData.skills[category].push(keyword);
-              }
-            });
-          } else {
-            // Add to flat skills array
-            const currentSkills = Array.isArray(processedData.skills) ? processedData.skills : [];
-            processedData.skills = [...new Set([...currentSkills, ...aiSuggestions.keywordAnalysis.missingKeywords.slice(0, 5)])];
-          }
-          changesSet.add('skills');
-        }
+                 // Apply missing keywords from keyword analysis - Categorized approach
+         if (aiSuggestions.keywordAnalysis?.missingKeywords?.length > 0) {
+           console.log('Adding missing keywords:', aiSuggestions.keywordAnalysis.missingKeywords);
+           
+           aiSuggestions.keywordAnalysis.missingKeywords.slice(0, 5).forEach((keyword: string) => {
+             const category = categorizeSkill(keyword);
+             // Ensure the category exists and is an array
+             if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+               processedData.skills[category] = [];
+             }
+             if (!processedData.skills[category].includes(keyword)) {
+               processedData.skills[category].push(keyword);
+               // Track individual keyword additions for highlighting
+               changesSet.add(`skill-${keyword}`);
+             }
+           });
+         }
         
         // Apply suggested summary rewrite
-        if (aiSuggestions.sectionAnalysis?.professionalSummary?.suggestedRewrite) {
+        if (aiSuggestions.sectionAnalysis?.professionalSummary?.suggestedData?.suggestedRewrite) {
           console.log('Applying suggested summary rewrite');
-          processedData.summary = aiSuggestions.sectionAnalysis.professionalSummary.suggestedRewrite;
-          changesSet.add('summary');
+          processedData.summary = aiSuggestions.sectionAnalysis.professionalSummary.suggestedData.suggestedRewrite;
+          changesSet.add('summary-ai-enhanced');
         }
         
-        // Apply work experience improvements
-        if (aiSuggestions.sectionAnalysis?.workExperience?.recommendations?.length > 0 && processedData.experience.length > 0) {
-          console.log('Enhancing work experience with AI recommendations');
-          processedData.experience = processedData.experience.map((exp: any, index: number) => {
-            const recommendations = aiSuggestions.sectionAnalysis.workExperience.recommendations;
-            if (recommendations[index] && exp.description) {
-              changesSet.add(`experience-${exp.id}`);
-              return {
-                ...exp,
-                description: `${exp.description}\n\n• ${recommendations[index]}`
-              };
-            } else if (recommendations.length > 0 && exp.description) {
-              // Use first recommendation if no specific match
-              changesSet.add(`experience-${exp.id}`);
-              return {
-                ...exp,
-                description: `${exp.description}\n\n• ${recommendations[0]}`
-              };
-            }
-            return exp;
-          });
-          changesSet.add('experience');
-        }
+                 // Apply work experience improvements
+         if (aiSuggestions.sectionAnalysis?.workExperience?.suggestedData?.recommendations?.length > 0 && processedData.experience.length > 0) {
+           console.log('Enhancing work experience with AI recommendations');
+           processedData.experience = processedData.experience.map((exp: any, index: number) => {
+             const recommendations = aiSuggestions.sectionAnalysis.workExperience.suggestedData.recommendations;
+             if (recommendations[index] && exp.description) {
+               changesSet.add(`experience-${index}-ai-enhanced`);
+               return {
+                 ...exp,
+                 description: `${exp.description}\n\n• ${recommendations[index]}`
+               };
+             } else if (recommendations.length > 0 && exp.description) {
+               // Use first recommendation if no specific match
+               changesSet.add(`experience-${index}-ai-enhanced`);
+               return {
+                 ...exp,
+                 description: `${exp.description}\n\n• ${recommendations[0]}`
+               };
+             }
+             return exp;
+           });
+         }
         
-        // Apply improvement priority actions
-        if (aiSuggestions.improvementPriority?.length > 0) {
-          console.log('Applying priority improvements:', aiSuggestions.improvementPriority);
-          
-          aiSuggestions.improvementPriority.forEach((improvement: any) => {
-            if (improvement.section === 'skillsSection' || improvement.section === 'skills') {
-              // Add high-priority skill improvements
-              if (improvement.action && improvement.action.includes('skill')) {
-                if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
-                  if (!processedData.skills['Priority Skills']) {
-                    processedData.skills['Priority Skills'] = [];
-                  }
-                  // Extract skills from action text (simple approach)
-                  const skillMatch = improvement.action.match(/add\s+([^.]+)/i);
-                  if (skillMatch) {
-                    processedData.skills['Priority Skills'].push(skillMatch[1].trim());
-                  }
-                }
-                changesSet.add('skills');
-              }
-            }
-          });
-        }
+                 // Apply improvement priority actions
+         if (aiSuggestions.improvementPriority?.length > 0) {
+           console.log('Applying priority improvements:', aiSuggestions.improvementPriority);
+           
+           aiSuggestions.improvementPriority.forEach((improvement: any) => {
+             if (improvement.section === 'skillsSection' || improvement.section === 'skills') {
+               // Add high-priority skill improvements
+               if (improvement.action && improvement.action.includes('skill')) {
+                 // Extract skills from action text (simple approach)
+                 const skillMatch = improvement.action.match(/add\s+([^.]+)/i);
+                 if (skillMatch) {
+                   const skill = skillMatch[1].trim();
+                   const category = categorizeSkill(skill);
+                   // Ensure the category exists and is an array
+                   if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+                     processedData.skills[category] = [];
+                   }
+                   if (!processedData.skills[category].includes(skill)) {
+                     processedData.skills[category].push(skill);
+                     changesSet.add(`skill-${skill}`);
+                   }
+                 }
+               }
+             }
+           });
+         }
+         
+         // Apply critical missing keywords as skills - Categorized approach
+         if (aiSuggestions.keywordAnalysis?.keywordImportance?.critical?.length > 0) {
+           console.log('Adding critical keywords:', aiSuggestions.keywordAnalysis.keywordImportance.critical);
+           
+           aiSuggestions.keywordAnalysis.keywordImportance.critical.slice(0, 3).forEach((keyword: string) => {
+             const category = categorizeSkill(keyword);
+             // Ensure the category exists and is an array
+             if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+               processedData.skills[category] = [];
+             }
+             if (!processedData.skills[category].includes(keyword)) {
+               processedData.skills[category].push(keyword);
+               changesSet.add(`skill-${keyword}`);
+             }
+           });
+         }
         
-        // Apply critical missing keywords as skills - Categorized approach
-        if (aiSuggestions.keywordAnalysis?.keywordImportance?.critical?.length > 0) {
-          console.log('Adding critical keywords:', aiSuggestions.keywordAnalysis.keywordImportance.critical);
-          
-          if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
-            // Categorize skills into existing categories
-            aiSuggestions.keywordAnalysis.keywordImportance.critical.slice(0, 3).forEach((keyword: string) => {
-              const category = categorizeSkill(keyword);
-              // Ensure the category exists and is an array
-              if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
-                processedData.skills[category] = [];
-              }
-              if (!processedData.skills[category].includes(keyword)) {
-                processedData.skills[category].push(keyword);
-              }
-            });
-          } else {
-            const currentSkills = Array.isArray(processedData.skills) ? processedData.skills : [];
-            processedData.skills = [...new Set([...currentSkills, ...aiSuggestions.keywordAnalysis.keywordImportance.critical.slice(0, 3)])];
-          }
-          changesSet.add('skills');
-        }
-        
-        // === FALLBACK: Handle current AISuggestionsPage structure ===
-        // Apply skills from skillsAnalysis (current structure) - Categorized approach
-        if (aiSuggestions.skillsAnalysis?.missingSkills?.length > 0) {
-          console.log('Adding missing skills from skillsAnalysis:', aiSuggestions.skillsAnalysis.missingSkills);
-          
-          if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
-            // Categorize skills into existing categories
-            aiSuggestions.skillsAnalysis.missingSkills.forEach((skill: string) => {
-              const category = categorizeSkill(skill);
-              // Ensure the category exists and is an array
-              if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
-                processedData.skills[category] = [];
-              }
-              if (!processedData.skills[category].includes(skill)) {
-                processedData.skills[category].push(skill);
-              }
-            });
-          } else {
-            const currentSkills = Array.isArray(processedData.skills) ? processedData.skills : [];
-            processedData.skills = [...new Set([...currentSkills, ...aiSuggestions.skillsAnalysis.missingSkills.slice(0, 5)])];
-          }
-          changesSet.add('skills');
-        }
-        
-        // Apply skills to add - Categorized approach
-        if (aiSuggestions.skillsAnalysis?.skillsToAdd?.length > 0) {
-          console.log('Adding skills to add:', aiSuggestions.skillsAnalysis.skillsToAdd);
-          
-          if (typeof processedData.skills === 'object' && !Array.isArray(processedData.skills)) {
-            // Categorize skills into existing categories
-            aiSuggestions.skillsAnalysis.skillsToAdd.forEach((skill: string) => {
-              const category = categorizeSkill(skill);
-              // Ensure the category exists and is an array
-              if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
-                processedData.skills[category] = [];
-              }
-              if (!processedData.skills[category].includes(skill)) {
-                processedData.skills[category].push(skill);
-              }
-            });
-          } else {
-            const currentSkills = Array.isArray(processedData.skills) ? processedData.skills : [];
-            processedData.skills = [...new Set([...currentSkills, ...aiSuggestions.skillsAnalysis.skillsToAdd])];
-          }
-          changesSet.add('skills');
-        }
+                 // === FALLBACK: Handle current AISuggestionsPage structure ===
+         // Apply skills from skillsAnalysis (current structure) - Categorized approach
+         if (aiSuggestions.skillsAnalysis?.missingSkills?.length > 0) {
+           console.log('Adding missing skills from skillsAnalysis:', aiSuggestions.skillsAnalysis.missingSkills);
+           
+           aiSuggestions.skillsAnalysis.missingSkills.forEach((skill: string) => {
+             const category = categorizeSkill(skill);
+             // Ensure the category exists and is an array
+             if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+               processedData.skills[category] = [];
+             }
+             if (!processedData.skills[category].includes(skill)) {
+               processedData.skills[category].push(skill);
+               changesSet.add(`skill-${skill}`);
+             }
+           });
+         }
+         
+         // Apply skills to add - Categorized approach
+         if (aiSuggestions.skillsAnalysis?.skillsToAdd?.length > 0) {
+           console.log('Adding skills to add:', aiSuggestions.skillsAnalysis.skillsToAdd);
+           
+           aiSuggestions.skillsAnalysis.skillsToAdd.forEach((skill: string) => {
+             const category = categorizeSkill(skill);
+             // Ensure the category exists and is an array
+             if (!processedData.skills[category] || !Array.isArray(processedData.skills[category])) {
+               processedData.skills[category] = [];
+             }
+             if (!processedData.skills[category].includes(skill)) {
+               processedData.skills[category].push(skill);
+               changesSet.add(`skill-${skill}`);
+             }
+           });
+         }
         
         // Apply suggested summary from sectionRecommendations
         if (aiSuggestions.sectionRecommendations?.summary?.suggested) {
           console.log('Applying summary from sectionRecommendations');
           processedData.summary = aiSuggestions.sectionRecommendations.summary.suggested;
-          changesSet.add('summary');
+          changesSet.add('summary-ai-enhanced');
         }
         
-        // Apply experience enhancements
-        if (aiSuggestions.experienceAnalysis?.experienceEnhancements?.length > 0 && processedData.experience.length > 0) {
-          console.log('Applying experience enhancements');
-          processedData.experience = processedData.experience.map((exp: any, index: number) => {
-            const enhancement = aiSuggestions.experienceAnalysis.experienceEnhancements[index];
-            if (enhancement && exp.description) {
-              changesSet.add(`experience-${exp.id}`);
-              return {
-                ...exp,
-                description: `${exp.description}\n\n• AI Enhancement: ${enhancement}`
-              };
-            }
-            return exp;
-          });
-          changesSet.add('experience');
-        }
+                 // Apply experience enhancements
+         if (aiSuggestions.experienceAnalysis?.experienceEnhancements?.length > 0 && processedData.experience.length > 0) {
+           console.log('Applying experience enhancements');
+           processedData.experience = processedData.experience.map((exp: any, index: number) => {
+             const enhancement = aiSuggestions.experienceAnalysis.experienceEnhancements[index];
+             if (enhancement && exp.description) {
+               changesSet.add(`experience-${index}-ai-enhanced`);
+               return {
+                 ...exp,
+                 description: `${exp.description}\n\n• AI Enhancement: ${enhancement}`
+               };
+             }
+             return exp;
+           });
+         }
         
         console.log('Changes applied to sections:', Array.from(changesSet));
         console.log('Updated skills:', processedData.skills);
@@ -574,7 +1710,7 @@ const ResumeBuilderPage = () => {
       setResumeData({
         basicDetails: {
           fullName: defaultData.personalInfo.name || '',
-          title: defaultData.personalInfo.title || '',
+          professionalTitle: defaultData.personalInfo.title || '',
           phone: defaultData.personalInfo.phone || '',
           email: defaultData.personalInfo.email || '',
           location: defaultData.personalInfo.address || '',
@@ -588,7 +1724,8 @@ const ResumeBuilderPage = () => {
           id: Date.now().toString() + Math.random(),
           company: exp.company || '',
           position: exp.title || '',
-          duration: exp.dates || '',
+          startDate: exp.startDate || '',
+          endDate: exp.endDate || '',
           description: exp.achievements?.join('\n') || '',
           location: exp.location || ''
         })) || [],
@@ -604,8 +1741,45 @@ const ResumeBuilderPage = () => {
         skills: defaultData.skills?.technical || [],
         languages: defaultData.additionalInfo?.languages || [],
         activities: [],
-        projects: [],
-        certifications: [],
+        projects: defaultData.projects?.map((project: any) => {
+          let techStack = project.Tech_Stack || '';
+          
+          // If tech stack is empty, try to extract from description
+          if (!techStack || techStack.trim() === '') {
+            const description = project.Description || '';
+            techStack = extractTechStackFromDescription(description);
+            // If extraction returns empty string, set to null to avoid showing placeholder
+            if (!techStack || techStack.trim() === '') {
+              techStack = null;
+            }
+          }
+          
+          return {
+            id: Date.now().toString() + Math.random(),
+            name: project.Name || '',
+            techStack: techStack,
+            startDate: project.Start_Date || '',
+            endDate: project.End_Date || '',
+            description: project.Description || '',
+            link: project.Link || ''
+          };
+        }) || [],
+        certifications: defaultData.certifications?.map((cert: any) => {
+          let issueDate = cert.issueDate || cert.startDate || '';
+          
+          // If issue date is empty, set to null to avoid showing placeholder
+          if (!issueDate || issueDate.trim() === '') {
+            issueDate = null;
+          }
+          
+          return {
+            id: Date.now().toString() + Math.random(),
+            certificateName: cert.certificateName || '',
+            instituteName: cert.instituteName || '',
+            issueDate: issueDate,
+            link: cert.link || ''
+          };
+        }) || [],
         references: [],
         customSections: []
       });
@@ -632,7 +1806,8 @@ const ResumeBuilderPage = () => {
       id: Date.now().toString(),
       company: '',
       position: '',
-      duration: '',
+      startDate: '',
+      endDate: '',
       description: '',
       location: ''
     };
@@ -755,8 +1930,7 @@ const ResumeBuilderPage = () => {
       id: Date.now().toString(),
       certificateName: '',
       link: '',
-      startDate: '',
-      endDate: '',
+      issueDate: '',
       instituteName: ''
     };
     setResumeData(prev => ({
@@ -827,6 +2001,8 @@ const ResumeBuilderPage = () => {
       ...prev,
       customSections: [...prev.customSections, newSection]
     }));
+    // Automatically make the new custom section visible
+    setVisibleSections(prev => new Set([...prev, `custom-${newSection.id}`]));
     setIsCustomSectionModalOpen(false);
   };
 
@@ -866,15 +2042,149 @@ const ResumeBuilderPage = () => {
     });
   };
 
+  // AI Enhancement Functions
+  const openAIEnhancementModal = (type: 'experience' | 'project', itemId: string, currentContent: string, title: string) => {
+    setAiEnhancementModal({
+      isOpen: true,
+      type,
+      itemId,
+      currentContent,
+      title
+    });
+  };
+
+  const handleExperienceEnhance = (id: string, content: string, title: string) => {
+    openAIEnhancementModal('experience', id, content, title);
+  };
+
+  const handleProjectEnhance = (id: string, content: string, title: string) => {
+    openAIEnhancementModal('project', id, content, title);
+  };
+
+  const closeAIEnhancementModal = () => {
+    setAiEnhancementModal({
+      isOpen: false,
+      type: 'experience',
+      itemId: '',
+      currentContent: '',
+      title: ''
+    });
+  };
+
+  const handleAIEnhancementApply = (enhance_content: string) => {
+    const { type, itemId } = aiEnhancementModal;
+    
+    if (type === 'experience') {
+      updateExperience(itemId, 'description', enhance_content);
+    } else if (type === 'project') {
+      updateProject(itemId, 'description', enhance_content);
+    }
+    
+    // Add highlighting for the enhanced item
+    setHighlightedChanges(prev => new Set([...prev, `${type}-${itemId}-ai-enhanced`]));
+    
+    closeAIEnhancementModal();
+  };
+
+  const toggleSectionVisibility = (sectionId: string) => {
+    setVisibleSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionId)) {
+        newSet.delete(sectionId);
+      } else {
+        newSet.add(sectionId);
+      }
+      return newSet;
+    });
+  };
+
   const handleTemplateChange = (template: Template) => {
     setSelectedTemplate(template);
+    // Set the template's default color (first color in the colors array)
+    if (template.colors && template.colors.length > 0) {
+      setSelectedColor(template.colors[0]);
+    }
   };
 
   const scrollTemplates = (direction: 'left' | 'right') => {
     if (direction === 'left' && templateScrollIndex > 0) {
       setTemplateScrollIndex(templateScrollIndex - 1);
-    } else if (direction === 'right' && templateScrollIndex < templateData.length - 4) {
+    } else if (direction === 'right' && templateScrollIndex < templateData.length - 3) {
       setTemplateScrollIndex(templateScrollIndex + 1);
+    }
+  };
+
+  const handleSaveResume = async () => {
+    try {
+      setIsSaving(true);
+      const token = tokenUtils.getToken();
+      
+      if (!token) {
+        toast({
+          title: 'Authentication Required',
+          description: 'Please log in to save your resume.',
+          variant: 'destructive',
+        });
+        navigate('/resume/login');
+        return;
+      }
+
+      const saveData = {
+        title: resumeTitle,
+        templateId: selectedTemplate?.id || templateId,
+        selectedColor: selectedColor,
+        resumeData: resumeData
+      };
+
+      let response;
+      if (resumeId) {
+        // Update existing resume
+        response = await fetch(`${API_URL}/resume/${resumeId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(saveData),
+        });
+      } else {
+        // Create new resume
+        response = await fetch(`${API_URL}/resume`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(saveData),
+        });
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save resume');
+      }
+
+      const result = await response.json();
+      
+      // If this was a new resume, set the ID for future saves
+      if (!resumeId && result.resume?.id) {
+        setResumeId(result.resume.id);
+      }
+
+      toast({
+        title: 'Success',
+        description: resumeId ? 'Resume updated successfully!' : 'Resume saved successfully!',
+      });
+
+    } catch (error) {
+      console.error('Error saving resume:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to save resume. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -882,79 +2192,83 @@ const ResumeBuilderPage = () => {
     if (!resumeRef.current) return;
 
     try {
-      // Create a temporary container for the resume
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.width = '800px';
-      tempContainer.style.backgroundColor = 'white';
-      tempContainer.style.padding = '40px';
-      document.body.appendChild(tempContainer);
-
-      // Clone the resume content
-      const resumeClone = resumeRef.current.cloneNode(true) as HTMLElement;
-      tempContainer.appendChild(resumeClone);
-
-      // Wait for any images to load
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Convert to canvas
-      const canvas = await html2canvas(tempContainer, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: 800,
-        height: tempContainer.scrollHeight
+      setIsDownloading(true);
+      
+      // Get the HTML content from the resume
+      const htmlContent = resumeRef.current.outerHTML;
+      
+      // Generate PDF using the service
+      const blob = await generatePDF({
+        htmlContent,
+        templateId: selectedTemplate?.id || 'modern-professional',
+        resumeData: resumeData
       });
 
-      // Remove temporary container
-      document.body.removeChild(tempContainer);
-
-      // Create PDF
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-
-      let position = 0;
-
-      // Add first page
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      // Add additional pages if needed
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
       // Download the PDF
-      const fileName = `${resumeData.basicDetails.fullName.replace(/\s+/g, '_')}_Resume.pdf`;
-      pdf.save(fileName);
+      const filename = `${resumeData.basicDetails.fullName.replace(/\s+/g, '_')}_Resume.pdf`;
+      downloadPDF(blob, filename);
+
+      toast({
+        title: 'Success',
+        description: 'PDF generated and downloaded successfully!',
+      });
+
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Error generating PDF. Please try again.');
+      toast({
+        title: 'Error',
+        description: 'Failed to generate PDF. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
-  const sections = [
+
+  const baseSections = [
     { id: 'basic-details', label: 'Basic details', icon: User },
     { id: 'summary', label: 'Summary & Objective', icon: FileText },
     { id: 'skills', label: 'Skills and expertise', icon: Award },
-    { id: 'education', label: 'Education', icon: GraduationCap },
     { id: 'experience', label: 'Experience', icon: Briefcase },
-    { id: 'activities', label: 'Activities', icon: Activity },
     { id: 'projects', label: 'Projects', icon: Code },
+    { id: 'education', label: 'Education', icon: GraduationCap },
     { id: 'certifications', label: 'Certifications', icon: Award },
+    { id: 'activities', label: 'Activities', icon: Activity },
     { id: 'references', label: 'References', icon: Users }
   ];
+
+  // Create ordered sections based on sectionOrder
+  const getOrderedSections = (): Array<{
+    id: string;
+    label: string;
+    icon: any;
+  }> => {
+    const orderedSections: Array<{
+      id: string;
+      label: string;
+      icon: any;
+    }> = [];
+    
+    // Add sections in the custom order
+    sectionOrder.forEach(sectionId => {
+      const section = baseSections.find(s => s.id === sectionId);
+      if (section) {
+        orderedSections.push(section);
+      }
+    });
+    
+    // Add any sections not in the order (like custom sections)
+    baseSections.forEach(section => {
+      if (!sectionOrder.includes(section.id)) {
+        orderedSections.push(section);
+      }
+    });
+    
+    return orderedSections;
+  };
+
+  const sections = getOrderedSections();
 
   // Add custom sections to the sections array
   const allSections = [
@@ -973,6 +2287,14 @@ const ResumeBuilderPage = () => {
     isCustom?: boolean;
     customData?: any;
   }>;
+
+  // Filter sections based on visibility
+  // const visibleSectionsList = allSections.filter(section => visibleSections.has(section.id));
+
+  // Get visible custom sections for template rendering
+  const visibleCustomSections = resumeData.customSections.filter(section => 
+    visibleSections.has(`custom-${section.id}`)
+  );
 
   return (
     <>
@@ -997,28 +2319,31 @@ const ResumeBuilderPage = () => {
             scrollbar-width: thick;
             scrollbar-color: #cbd5e0 #f7fafc;
           }
-          .ai-enhanced-section {
-            background: linear-gradient(90deg, rgba(255, 235, 59, 0.2) 0%, rgba(255, 235, 59, 0.1) 100%);
-            border-left: 4px solid #ffc107;
-            position: relative;
-            animation: highlightPulse 2s ease-in-out infinite;
+          
+          /* PDF Link Styling */
+          @media print {
+            a {
+              color: #0077b5 !important;
+              text-decoration: underline !important;
+            }
+            a:visited {
+              color: #0077b5 !important;
+            }
+            a:hover {
+              color: #005885 !important;
+            }
           }
-          .ai-enhanced-section::before {
-            content: "✨ AI Enhanced";
-            position: absolute;
-            top: -8px;
-            right: 8px;
-            background: #ffc107;
-            color: #fff;
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 8px;
-            font-weight: 500;
-            z-index: 10;
+          
+          /* Ensure links are blue in PDF generation */
+          .resume-pdf a {
+            color: #0077b5 !important;
+            text-decoration: underline !important;
           }
-          @keyframes highlightPulse {
-            0%, 100% { background-color: rgba(255, 235, 59, 0.1); }
-            50% { background-color: rgba(255, 235, 59, 0.2); }
+          .resume-pdf a:visited {
+            color: #0077b5 !important;
+          }
+          .resume-pdf a:hover {
+            color: #005885 !important;
           }
         `}
       </style>
@@ -1031,10 +2356,10 @@ const ResumeBuilderPage = () => {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium text-green-800">
-                  AI suggestions applied successfully!
+                  {location.state?.fromATS ? 'ATS improvements applied successfully!' : 'AI suggestions applied successfully!'}
                 </span>
                 <span className="text-xs text-green-600 ml-2">
-                  {highlightedChanges.size} sections enhanced
+                  {highlightedChanges.size} enhancements applied
                 </span>
                 <Button
                   variant="ghost"
@@ -1050,7 +2375,17 @@ const ResumeBuilderPage = () => {
               </div>
               <p className="text-xs text-green-700 mt-1">
                 {highlightedChanges.size > 0 
-                  ? `Enhanced sections are highlighted in yellow: ${Array.from(highlightedChanges).join(', ')}. You can continue editing to fine-tune your resume.`
+                  ? `Enhanced elements are highlighted in yellow. Applied changes include: ${Array.from(highlightedChanges).map(change => {
+                      if (change.includes('summary-ai-rewrite') || change.includes('summary-ats-improved')) return 'Professional Summary';
+                      if (change.includes('skills-ai-rewrite') || change.includes('skills-ats-improved')) return 'Skills Section';
+                      if (change.includes('experience') && (change.includes('ai-rewrite') || change.includes('ats-improved'))) return 'Work Experience';
+                      if (change.includes('education') && (change.includes('ai-rewrite') || change.includes('ats-improved'))) return 'Education';
+                      if (change.includes('project') && (change.includes('ai-rewrite') || change.includes('ats-improved'))) return 'Projects';
+                      if (change.includes('certification') && (change.includes('ai-rewrite') || change.includes('ats-improved'))) return 'Certifications';
+                      if (change.includes('skill-')) return 'Individual Skills';
+                      if (change.includes('ats-improved')) return change.replace('-ats-improved', '');
+                      return change;
+                    }).filter((value, index, self) => self.indexOf(value) === index).join(', ')}.`
                   : 'AI analysis completed. Check the console for detailed logs of applied changes.'
                 }
               </p>
@@ -1059,21 +2394,66 @@ const ResumeBuilderPage = () => {
                   Note: If no changes were applied, the AI may have determined your resume already meets the job requirements.
                 </p>
               )}
+              
+              {/* Show specific skills that were added */}
+              {Array.from(highlightedChanges).some(change => change.includes('skill-')) && (
+                <div className="mt-2 p-2 bg-blue-50 rounded border-l-4 border-blue-500">
+                  <p className="text-xs text-blue-800 font-medium mb-1">New Skills Added:</p>
+                  <div className="text-xs text-blue-700">
+                    {Array.from(highlightedChanges)
+                      .filter(change => change.includes('skill-'))
+                      .map(change => change.replace('skill-', ''))
+                      .slice(0, 5) // Show first 5 skills
+                      .join(', ')}
+                    {Array.from(highlightedChanges).filter(change => change.includes('skill-')).length > 5 && 
+                      ` and ${Array.from(highlightedChanges).filter(change => change.includes('skill-')).length - 5} more...`
+                    }
+                  </div>
+                </div>
+              )}
+              
+              {/* Show ATS improvement summary if available */}
+              {location.state?.fromATS && location.state?.improvementSummary && (
+                <div className="mt-2 p-2 bg-blue-50 rounded border-l-4 border-blue-500">
+                  <p className="text-xs text-blue-800 font-medium mb-1">ATS Improvements Applied:</p>
+                  <div className="text-xs text-blue-700">
+                    <p>• {location.state.improvementSummary.total_changes} total improvements</p>
+                    <p>• Areas improved: {location.state.improvementSummary.improvement_areas?.join(', ') || 'Multiple sections'}</p>
+                    <p>• Fields enhanced: {location.state.improvementSummary.fields_improved?.join(', ') || 'Various fields'}</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           
           <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/resume/templates')}
-              className="text-gray-600 hover:text-gray-900"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Templates
-            </Button>
+            <div className="flex items-center gap-0">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/resume/templates')}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="w-4 h-4 " />
+                {/* Back to Templates */}
+              </Button>
+              
+              {/* Resume Title Input */}
+              <div className="flex items-center gap-2">
+                <Label htmlFor="resumeTitle" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                  Title:
+                </Label>
+                <Input
+                  id="resumeTitle"
+                  value={resumeTitle}
+                  onChange={(e) => setResumeTitle(e.target.value)}
+                  className="w-48 h-8 text-sm"
+                  placeholder="Enter resume title"
+                />
+              </div>
+            </div>
             
             {/* Centered Template Selector */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0">
               <Button
                 variant="ghost"
                 size="sm"
@@ -1085,7 +2465,7 @@ const ResumeBuilderPage = () => {
               </Button>
               
               <div className="flex items-center gap-1">
-                {templateData.slice(templateScrollIndex, templateScrollIndex + 4).map((template) => (
+                {templateData.slice(templateScrollIndex, templateScrollIndex + 3).map((template) => (
                   <button
                     key={template.id}
                     onClick={() => handleTemplateChange(template)}
@@ -1104,12 +2484,13 @@ const ResumeBuilderPage = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => scrollTemplates('right')}
-                disabled={templateScrollIndex >= templateData.length - 4}
+                disabled={templateScrollIndex >= templateData.length - 3}
                 className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-50"
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
+            
             
             <div className="flex items-center gap-2">
               <Button 
@@ -1117,8 +2498,8 @@ const ResumeBuilderPage = () => {
                 size="sm"
                 onClick={() => setIsPreviewModalOpen(true)}
               >
-                <Eye className="w-4 h-4 mr-2" />
-                Preview
+                <Eye className="w-4 h-4" />
+              
               </Button>
               <Button 
                 variant="outline" 
@@ -1128,127 +2509,179 @@ const ResumeBuilderPage = () => {
                 <Award className="w-4 h-4 mr-2" />
                 Check ATS
               </Button>
-              <Button variant="outline" size="sm">
-                <Save className="w-4 h-4 mr-2" />
-                Save
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleSaveResume}
+                disabled={isSaving}
+              >
+                <Save className="w-4 h-4 " />
+                {/* {isSaving ? 'Saving...' : 'Save'} */}
               </Button>
-              <Button size="sm" onClick={handleDownloadPDF}>
+              <Button 
+                size="sm" 
+                disabled={isDownloading}
+                onClick={handleDownloadPDF}
+                className="bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm transition-all duration-200 hover:shadow-md"
+              >
                 <Download className="w-4 h-4 mr-2" />
-                Download
+                {isDownloading ? 'Generating...' : 'Download'}
               </Button>
             </div>
           </div>
         </div>
 
         <div className="flex h-[calc(100vh-140px)]">
+          
           {/* Left Panel - Resume Preview */}
           <div className="w-[60%] bg-white border-r border-gray-200 overflow-auto custom-scrollbar">
-            <div className="p-6" ref={resumeRef}>
-              <TemplateRenderer
-                templateId={selectedTemplate?.id || templateId}
-                data={{
-                  personalInfo: {
+            <div className="p-6 resume-pdf" ref={resumeRef}>
+                  <TemplateRenderer
+                    templateId={selectedTemplate?.id || templateId}
+                    visibleSections={visibleSections}
+                    customization={customization}
+                    sectionOrder={sectionOrder}
+                    data={{
+                  personalInfo: visibleSections.has('basic-details') ? {
                     name: resumeData.basicDetails.fullName,
-                    title: resumeData.basicDetails.title,
+                    title: resumeData.basicDetails.professionalTitle,
                     address: resumeData.basicDetails.location,
                     email: resumeData.basicDetails.email,
                     website: resumeData.basicDetails.website,
+                    github: resumeData.basicDetails.github,
+                    linkedin: resumeData.basicDetails.linkedin,
                     phone: resumeData.basicDetails.phone
-                  },
-                  summary: resumeData.summary,
-                  skills: {
+                  } : null,
+                  summary: visibleSections.has('summary') ? resumeData.summary : '',
+                  skills: visibleSections.has('skills') ? {
                     technical: resumeData.skills,
                     professional: resumeData.languages.map(lang => lang.name)
-                  },
-                  experience: resumeData.experience.map(exp => ({
+                  } : null,
+                  experience: visibleSections.has('experience') ? resumeData.experience.map(exp => ({
                     title: exp.position,
                     company: exp.company,
-                    dates: exp.duration,
-                    achievements: (() => {
-                      // Parse description into bullet points by splitting on full stops
-                      if (exp.description) {
-                        // Check if description already contains bullet points
-                        if (exp.description.includes('•') || exp.description.includes('*') || exp.description.includes('-')) {
-                          // Split by bullet characters and filter out empty strings
-                          const bullets = exp.description
-                            .split(/[•*\-]/)
-                            .map(bullet => bullet.trim())
-                            .filter(bullet => bullet.length > 0);
-                          return bullets.length > 0 ? bullets : [exp.description];
-                        } else {
-                          // Split by full stops and filter out empty strings, remove trailing dots
-                          const bullets = exp.description
-                            .split('.')
-                            .map(bullet => bullet.trim())
-                            .filter(bullet => bullet.length > 0)
-                            .map(bullet => bullet.replace(/\.$/, '')); // Remove trailing dots
-                          return bullets.length > 0 ? bullets : [exp.description];
-                        }
-                      }
-                      return [];
-                    })(),
-                    description: exp.description // Keep original description as fallback
-                  })),
-                  education: resumeData.education.map(edu => ({
+                    dates: exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || exp.endDate || '',
+                    achievements: safeProcessDescription(exp.description),
+                    description: exp.description, // Keep original description as fallback
+                    location: exp.location, // Add location for templates that need it
+                    startDate: exp.startDate, // Add individual start date for templates
+                    endDate: exp.endDate // Add individual end date for templates
+                  })) : [],
+                  education: visibleSections.has('education') ? resumeData.education.map(edu => ({
                     degree: edu.degree,
                     institution: edu.institution,
                     dates: edu.year,
-                    details: [edu.description]
-                  })),
-                  // Note: projects are not part of the standard TemplateData interface
-                  // They will be handled by the template renderer if supported
+                    details: safeProcessDescription(edu.description),
+                    location: edu.location
+                  })) : [],
+                  projects: visibleSections.has('projects') ? resumeData.projects.map(project => ({
+                    Name: project.name,
+                    Description: project.description,
+                    Tech_Stack: project.techStack,
+                    Start_Date: project.startDate,
+                    End_Date: project.endDate,
+                    Link: project.link
+                  })) : [],
+                  certifications: visibleSections.has('certifications') ? resumeData.certifications.map(cert => ({
+                    certificateName: cert.certificateName,
+                    instituteName: cert.instituteName,
+            issueDate: cert.issueDate,
+                    link: cert.link
+                  })) : [],
                   additionalInfo: {
-                    languages: resumeData.languages.map(lang => lang.name)
+                    languages: visibleSections.has('skills') ? resumeData.languages.map(lang => lang.name) : [],
+                    awards: []
                   },
-                  customSections: resumeData.customSections
-                }}
+                  customSections: visibleCustomSections
+                } as any}
                 color={selectedColor}
-                highlightedSections={highlightedChanges}
               />
             </div>
           </div>
 
-          {/* Right Panel - Editing Panel */}
+          {/* Right Panel - Sidebar with Toggle */}
           <div className="w-[40%] bg-gray-50 overflow-auto custom-scrollbar">
-            <div className="p-6">
-              {/* Navigation */}
+              <div className="p-6">
+              {/* Sidebar Mode Toggle */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Edit Resume</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {sidebarMode === 'content' ? 'Edit Resume' : 'Customize Resume'}
+                  </h2>
+                  {sidebarMode === 'content' && (
                   <Button
-                    variant="outline"
+                      variant="outline"
                     size="sm"
-                    onClick={() => setIsCustomSectionModalOpen(true)}
+                      onClick={() => setIsCustomSectionModalOpen(true)}
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Section
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Section
                   </Button>
+                  )}
                 </div>
+                
+                {/* Mode Toggle Buttons */}
+                <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
+                  <button
+                    onClick={() => setSidebarMode('content')}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      sidebarMode === 'content'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Content
+                  </button>
+                  <button
+                    onClick={() => setSidebarMode('customize')}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      sidebarMode === 'customize'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Customize
+                  </button>
+                </div>
+              </div>
+
+              {/* Content Mode */}
+              {sidebarMode === 'content' && (
+                <div>
+                  {/* Navigation */}
+                <div className="mb-6">
                 <div className="space-y-1">
                   {allSections.map((section) => {
                     const Icon = section.icon;
+                    const isVisible = visibleSections.has(section.id);
                     return (
                       <div key={section.id}>
-                        <button
-                          onClick={() => setActiveSection(activeSection === section.id ? '' : section.id)}
-                          className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
-                            activeSection === section.id
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : 'hover:bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Icon className="w-4 h-4" />
-                            <span className="font-medium">{section.label}</span>
-                          </div>
-                          <div className={`w-4 h-4 transition-transform ${activeSection === section.id ? 'rotate-90' : ''}`}>→</div>
-                        </button>
+                        <div className="flex items-center gap-2 p-3 rounded-lg">
+                          <input
+                            type="checkbox"
+                            checked={isVisible}
+                            onChange={() => toggleSectionVisibility(section.id)}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <button
+                            onClick={() => setActiveSection(activeSection === section.id ? '' : section.id)}
+                            className={`flex-1 flex items-center justify-between p-2 rounded-lg text-left transition-colors ${
+                              activeSection === section.id
+                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                : 'hover:bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Icon className="w-4 h-4" />
+                              <span className={`font-medium ${!isVisible ? 'opacity-50' : ''}`}>{section.label}</span>
+                            </div>
+                            <div className={`w-4 h-4 transition-transform ${activeSection === section.id ? 'rotate-90' : ''}`}>→</div>
+                          </button>
+                        </div>
                         
                         {/* Dropdown Content */}
                         {activeSection === section.id && (
-                          <div className={`mt-2 bg-white rounded-lg border border-gray-200 p-4 ${
-                            highlightedChanges.has(section.id.replace('custom-', '')) ? 'ai-enhanced-section' : ''
-                          }`}>
+                          <div className="mt-2 bg-white rounded-lg border border-gray-200 p-4">
                             {section.id === 'basic-details' && (
                               <BasicDetailsSection
                                 data={resumeData.basicDetails}
@@ -1273,6 +2706,16 @@ const ResumeBuilderPage = () => {
                                 onAdd={addExperience}
                                 onUpdate={updateExperience}
                                 onRemove={removeExperience}
+                                onEnhance={handleExperienceEnhance}
+                              />
+                            )}
+                            {section.id === 'projects' && (
+                              <ProjectsSection
+                                projects={resumeData.projects}
+                                onAdd={addProject}
+                                onUpdate={updateProject}
+                                onRemove={removeProject}
+                                onEnhance={handleProjectEnhance}
                               />
                             )}
 
@@ -1294,14 +2737,7 @@ const ResumeBuilderPage = () => {
                               />
                             )}
 
-                            {section.id === 'projects' && (
-                              <ProjectsSection
-                                projects={resumeData.projects}
-                                onAdd={addProject}
-                                onUpdate={updateProject}
-                                onRemove={removeProject}
-                              />
-                            )}
+                            
 
                             {section.id === 'certifications' && (
                               <CertificationsSection
@@ -1349,7 +2785,149 @@ const ResumeBuilderPage = () => {
                     );
                   })}
                 </div>
+                </div>
               </div>
+              )}
+
+              {/* Customize Mode */}
+              {sidebarMode === 'customize' && (
+                <div className="space-y-6">
+                {/* Name Customization */}
+                <NameCustomizationPanel 
+                  nameCustomization={customization.nameCustomization} 
+                  updateNameCustomization={updateNameCustomization} 
+                />
+
+                {/* Professional Title Customization */}
+                <ProfessionalTitleCustomizationPanel 
+                  titleCustomization={customization.titleCustomization} 
+                  updateTitleCustomization={updateTitleCustomization} 
+                />
+                
+                {/* Typography */}
+                <TypographyCustomizationPanel 
+                  customization={customization} 
+                  updateCustomization={updateCustomization} 
+                />
+                
+                {/* Layout */}
+                <LayoutCustomizationPanel 
+                  customization={customization} 
+                  updateCustomization={updateCustomization} 
+                />
+
+                {/* Entry Layout */}
+                <EntryLayoutPanel 
+                  entryLayout={customization.entryLayout} 
+                  updateEntryLayout={updateEntryLayout} 
+                />
+                
+                {/* Preset Themes */}
+                <PresetThemesPanel 
+                  customization={customization} 
+                  updateCustomization={updateCustomization} 
+                />
+
+                  {/* FlowCV-style Colors Panel */}
+                  <ColorCustomizationPanel 
+                    customization={customization} 
+                    updateCustomization={updateCustomization} 
+                  />
+                  
+                   {/* Section Visibility & Order */}
+                   <SectionVisibilityOrderPanel 
+                     allSections={allSections}
+                     visibleSections={visibleSections}
+                     sectionOrder={sectionOrder}
+                     toggleSectionVisibility={toggleSectionVisibility}
+                     moveSectionUp={moveSectionUp}
+                     moveSectionDown={moveSectionDown}
+                   />
+                        
+                  {/* Reset Button */}
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setCustomization({
+                          theme: {
+                            primaryColor: '#1f2937',
+                            secondaryColor: '#374151',
+                            textColor: '#000000',
+                            backgroundColor: '#ffffff',
+                            accentColor: '#1f2937',
+                            borderColor: '#1f2937',
+                            headerColor: '#1f2937'
+                          },
+                          // FlowCV-style color customization
+                          colorMode: 'basic' as 'basic' | 'advanced' | 'border',
+                          accentType: 'accent' as 'accent' | 'multi' | 'image',
+                          selectedPalette: null as string | null,
+                          applyAccentTo: {
+                            name: true,
+                            headings: true,
+                            headerIcons: false,
+                            dotsBarsBubbles: false,
+                            dates: false,
+                            linkIcons: false
+                          },
+                          // Entry layout customization
+                          entryLayout: {
+                            layoutType: 'two-lines' as 'text-left-icons-right' | 'icons-left-text-right' | 'icons-text-icons' | 'two-lines',
+                            titleSize: 'medium' as 'small' | 'medium' | 'large',
+                            subtitleStyle: 'normal' as 'normal' | 'bold' | 'italic',
+                            subtitlePlacement: 'same-line' as 'same-line' | 'next-line',
+                            indentBody: false,
+                            listStyle: 'bullet' as 'bullet' | 'hyphen',
+                            descriptionFormat: 'paragraph' as 'paragraph' | 'points'
+                          },
+                          // Name customization
+                          nameCustomization: {
+                            size: 'm' as 'xs' | 's' | 'm' | 'l' | 'xl',
+                            bold: true,
+                            font: 'body' as 'body' | 'creative'
+                          },
+                          // Professional title customization
+                          titleCustomization: {
+                            size: 'm' as 's' | 'm' | 'l',
+                            position: 'below' as 'same-line' | 'below',
+                            style: 'normal' as 'normal' | 'italic',
+                            separationType: 'vertical-line' as 'vertical-line' | 'bullet' | 'dash' | 'space'
+                          },
+                          typography: {
+                            fontFamily: {
+                              header: 'Arial, Helvetica, Calibri, sans-serif',
+                              body: 'Arial, Helvetica, Calibri, sans-serif',
+                              name: 'Arial, Helvetica, Calibri, sans-serif'
+                            },
+                            fontSize: {
+                              name: 22,
+                              title: 14,
+                              headers: 13,
+                              body: 11,
+                              subheader: 12
+                            },
+                            fontWeight: {
+                              name: 700,
+                              headers: 700,
+                              body: 500
+                            }
+                          },
+                          layout: {
+                            margins: { top: 0, bottom: 0, left: 8, right: 8 },
+                            sectionSpacing: 16,
+                            lineHeight: 1.3
+                          }
+                        });
+                      }}
+                      className="w-full"
+                    >
+                      Reset to Default
+                    </Button>
+                  </div>
+                          </div>
+                        )}
             </div>
           </div>
         </div>
@@ -1360,62 +2938,60 @@ const ResumeBuilderPage = () => {
         isOpen={isPreviewModalOpen}
         onClose={() => setIsPreviewModalOpen(false)}
         templateId={selectedTemplate?.id || templateId}
+        visibleSections={visibleSections}
+        customization={customization}
         data={{
-          personalInfo: {
+          personalInfo: visibleSections.has('basic-details') ? {
             name: resumeData.basicDetails.fullName,
-            title: resumeData.basicDetails.title,
+            title: resumeData.basicDetails.professionalTitle,
             address: resumeData.basicDetails.location,
             email: resumeData.basicDetails.email,
             website: resumeData.basicDetails.website,
+            github: resumeData.basicDetails.github,
+            linkedin: resumeData.basicDetails.linkedin,
             phone: resumeData.basicDetails.phone
-          },
-          summary: resumeData.summary,
-          skills: {
+          } : null,
+          summary: visibleSections.has('summary') ? resumeData.summary : '',
+          skills: visibleSections.has('skills') ? {
             technical: resumeData.skills,
             professional: resumeData.languages.map(lang => lang.name)
-          },
-                  experience: resumeData.experience.map(exp => ({
-          title: exp.position,
-          company: exp.company,
-          dates: exp.duration,
-          achievements: (() => {
-            // Parse description into bullet points by splitting on full stops
-            if (exp.description) {
-              // Check if description already contains bullet points
-              if (exp.description.includes('•') || exp.description.includes('*') || exp.description.includes('-')) {
-                // Split by bullet characters and filter out empty strings
-                const bullets = exp.description
-                  .split(/[•*\-]/)
-                  .map(bullet => bullet.trim())
-                  .filter(bullet => bullet.length > 0);
-                return bullets.length > 0 ? bullets : [exp.description];
-              } else {
-                // Split by full stops and filter out empty strings, remove trailing dots
-                const bullets = exp.description
-                  .split('.')
-                  .map(bullet => bullet.trim())
-                  .filter(bullet => bullet.length > 0)
-                  .map(bullet => bullet.replace(/\.$/, '')); // Remove trailing dots
-                return bullets.length > 0 ? bullets : [exp.description];
-              }
-            }
-            return [];
-          })(),
-          description: exp.description // Keep original description as fallback
-        })),
-          education: resumeData.education.map(edu => ({
+          } : null,
+          experience: visibleSections.has('experience') ? resumeData.experience.map(exp => ({
+            title: exp.position,
+            company: exp.company,
+            dates: exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || exp.endDate || '',
+            achievements: safeProcessDescription(exp.description),
+            description: exp.description, // Keep original description as fallback
+            location: exp.location, // Add location for templates that need it
+            startDate: exp.startDate, // Add individual start date for templates
+            endDate: exp.endDate // Add individual end date for templates
+          })) : [],
+          education: visibleSections.has('education') ? resumeData.education.map(edu => ({
             degree: edu.degree,
             institution: edu.institution,
             dates: edu.year,
-            details: [edu.description]
-          })),
-          // Note: projects are not part of the standard TemplateData interface
-          // They will be handled by the template renderer if supported
+            details: safeProcessDescription(edu.description)
+          })) : [],
+          projects: visibleSections.has('projects') ? resumeData.projects.map(project => ({
+            Name: project.name,
+            Description: project.description,
+            Tech_Stack: project.techStack,
+            Start_Date: project.startDate,
+            End_Date: project.endDate,
+            Link: project.link
+          })) : [],
+          certifications: visibleSections.has('certifications') ? resumeData.certifications.map(cert => ({
+            certificateName: cert.certificateName,
+            instituteName: cert.instituteName,
+            issueDate: cert.issueDate,
+            link: cert.link
+          })) : [],
           additionalInfo: {
-            languages: resumeData.languages.map(lang => lang.name)
+            languages: visibleSections.has('skills') ? resumeData.languages.map(lang => lang.name) : [],
+            awards: []
           },
-          customSections: resumeData.customSections
-        }}
+          customSections: visibleCustomSections
+        } as any}
         color={selectedColor}
       />
 
@@ -1424,6 +3000,16 @@ const ResumeBuilderPage = () => {
         isOpen={isCustomSectionModalOpen} 
         onClose={() => setIsCustomSectionModalOpen(false)} 
         onAdd={addCustomSection} 
+      />
+
+      {/* AI Enhancement Modal */}
+      <AIEnhancementModal
+        isOpen={aiEnhancementModal.isOpen}
+        onClose={closeAIEnhancementModal}
+        onApply={handleAIEnhancementApply}
+        currentContent={aiEnhancementModal.currentContent}
+        type={aiEnhancementModal.type}
+        title={aiEnhancementModal.title}
       />
     </>
   );
@@ -1444,11 +3030,11 @@ const BasicDetailsSection = ({ data, onChange }: { data: any; onChange: (data: a
       </div>
 
       <div>
-        <Label htmlFor="title">Professional Title</Label>
+        <Label htmlFor="professionalTitle">Professional Title</Label>
         <Input
-          id="title"
-          value={data.title}
-          onChange={(e) => onChange({ ...data, title: e.target.value })}
+          id="professionalTitle"
+          value={data.professionalTitle}
+          onChange={(e) => onChange({ ...data, professionalTitle: e.target.value })}
           placeholder="e.g., Frontend Developer"
         />
       </div>
@@ -1522,18 +3108,23 @@ const SkillsSection = ({ skills, languages, onChange }: { skills: any; languages
   const isCategorizedSkills = skills && typeof skills === 'object' && !Array.isArray(skills);
   const safeLanguages = Array.isArray(languages) ? languages : [];
 
-  // Initialize categorized skills if not present
-  const defaultCategories = {
-    "Languages": [],
-    "Frameworks": [],
-    "Frontend": [],
-    "Databases": [],
-    "Cloud": [],
-    "DevOps": [],
-    "Testing": [],
-    "Messaging/Event-Driven": [],
-    "Tools": []
-  };
+     // Initialize categorized skills if not present
+   const defaultCategories = {
+     "Languages": [],
+     "Frameworks/Libraries": [],
+     "Database": [],
+     "Cloud": [],
+     "Version Control Tools": [],
+     "IDEs": [],
+     "Web-Technologies": [],
+     "Web Server": [],
+     "Methodologies": [],
+     "Operating Systems": [],
+     "Professional Skills": [],
+     "Testing": [],
+     "Build Tools": [],
+     "Other Tools": []
+   };
 
   const currentSkills = isCategorizedSkills ? skills : defaultCategories;
 
@@ -1681,11 +3272,12 @@ const SkillsSection = ({ skills, languages, onChange }: { skills: any; languages
 };
 
 // Experience Section Component
-const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove }: { 
+const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove, onEnhance }: { 
   experience: any[]; 
   onAdd: () => void; 
   onUpdate: (id: string, field: string, value: string) => void;
   onRemove: (id: string) => void;
+  onEnhance?: (id: string, content: string, title: string) => void;
 }) => {
   // Ensure experience is always an array
   const safeExperience = Array.isArray(experience) ? experience : [];
@@ -1714,13 +3306,23 @@ const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove }: {
               </div>
             </div>
             
-            <div>
-              <Label>Duration</Label>
-              <Input
-                value={exp.duration}
-                onChange={(e) => onUpdate(exp.id, 'duration', e.target.value)}
-                placeholder="e.g., Jan 2020 - Present"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Start Date</Label>
+                <Input
+                  value={exp.startDate || ''}
+                  onChange={(e) => onUpdate(exp.id, 'startDate', e.target.value)}
+                  placeholder="e.g., Jan 2020"
+                />
+              </div>
+              <div>
+                <Label>End Date</Label>
+                <Input
+                  value={exp.endDate || ''}
+                  onChange={(e) => onUpdate(exp.id, 'endDate', e.target.value)}
+                  placeholder="e.g., Present"
+                />
+              </div>
             </div>
 
             <div>
@@ -1742,14 +3344,27 @@ const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove }: {
               />
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onRemove(exp.id)}
-              className="text-red-600 hover:text-red-700"
-            >
-              Remove Experience
-            </Button>
+            <div className="flex gap-2">
+              {onEnhance && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEnhance(exp.id, exp.description, `${exp.position} at ${exp.company}`)}
+                  className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  disabled={!exp.description || !exp.description.trim()}
+                >
+                  ✨ Enhance with AI
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onRemove(exp.id)}
+                className="text-red-600 hover:text-red-700"
+              >
+                Remove Experience
+              </Button>
+            </div>
           </div>
         </Card>
       ))}
@@ -1905,11 +3520,12 @@ const ActivitiesSection = ({ activities, onAdd, onUpdate, onRemove }: {
 };
 
 // Projects Section Component
-const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove }: { 
+const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove, onEnhance }: { 
   projects: any[]; 
   onAdd: () => void; 
   onUpdate: (id: string, field: string, value: string) => void;
   onRemove: (id: string) => void;
+  onEnhance?: (id: string, content: string, title: string) => void;
 }) => {
   return (
     <div className="space-y-4">
@@ -1930,7 +3546,7 @@ const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove }: {
               <Input
                 value={project.techStack}
                 onChange={(e) => onUpdate(project.id, 'techStack', e.target.value)}
-                placeholder="e.g., React, Node.js, MongoDB"
+                placeholder={project.techStack && project.techStack.trim() !== "" ? "" : "e.g., React, Node.js, MongoDB"}
               />
             </div>
 
@@ -1938,7 +3554,7 @@ const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove }: {
                <div>
                  <Label>Start Date</Label>
                  <Input
-                   value={project.startDate}
+                   value={project.startDate || ''}
                    onChange={(e) => onUpdate(project.id, 'startDate', e.target.value)}
                    placeholder="e.g., Jan 2022"
                  />
@@ -1946,7 +3562,7 @@ const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove }: {
                <div>
                  <Label>End Date</Label>
                  <Input
-                   value={project.endDate}
+                   value={project.endDate || ''}
                    onChange={(e) => onUpdate(project.id, 'endDate', e.target.value)}
                    placeholder="e.g., Dec 2022"
                  />
@@ -1972,14 +3588,27 @@ const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove }: {
               />
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onRemove(project.id)}
-              className="text-red-600 hover:text-red-700"
-            >
-              Remove Project
-            </Button>
+            <div className="flex gap-2">
+              {onEnhance && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEnhance(project.id, project.description, project.name)}
+                  className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  disabled={!project.description || !project.description.trim()}
+                >
+                  ✨ Enhance with AI
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onRemove(project.id)}
+                className="text-red-600 hover:text-red-700"
+              >
+                Remove Project
+              </Button>
+            </div>
           </div>
         </Card>
       ))}
@@ -2012,23 +3641,13 @@ const CertificationsSection = ({ certifications, onAdd, onUpdate, onRemove }: {
               />
             </div>
 
-                         <div className="grid grid-cols-2 gap-4">
                <div>
-                 <Label>Start Date</Label>
+              <Label>Issue Date</Label>
                  <Input
-                   value={cert.startDate}
-                   onChange={(e) => onUpdate(cert.id, 'startDate', e.target.value)}
-                   placeholder="e.g., Jan 2023"
+                value={cert.issueDate}
+                onChange={(e) => onUpdate(cert.id, 'issueDate', e.target.value)}
+                   placeholder={cert.issueDate && cert.issueDate.trim() !== "" ? "" : "e.g., Jan 2023"}
                  />
-               </div>
-               <div>
-                 <Label>End Date</Label>
-                 <Input
-                   value={cert.endDate}
-                   onChange={(e) => onUpdate(cert.id, 'endDate', e.target.value)}
-                   placeholder="e.g., Present"
-                 />
-               </div>
              </div>
 
             <div>
@@ -2549,7 +4168,5 @@ const CustomSectionEditor = ({
     </div>
   );
 };
-
-
 
 export default ResumeBuilderPage; 
