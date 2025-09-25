@@ -4,7 +4,7 @@ import {
   getAISuggestions,
   parseResume,
   compareResumeWithJD,
-  enhanceContent,
+  enhanceContentWithAI,
   uploadMiddleware
 } from "../controllers/aiSuggestionController.js";
 
@@ -23,6 +23,6 @@ router.post("/parse-resume", uploadMiddleware, parseResume);
 router.post("/compare-resume", compareResumeWithJD);
 
 // Enhance specific content with AI
-router.post("/enhance-content", enhanceContent);
+router.post("/enhance-content", enhanceContentWithAI);
 
 export default router;

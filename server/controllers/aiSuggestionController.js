@@ -261,7 +261,7 @@ export const compareResumeWithJD = async (req, res) => {
 };
 
 // Enhance specific content with AI
-export const enhanceContent = async (req, res) => {
+export const enhanceContentWithAI = async (req, res) => {
   try {
     const { content, prompt, type } = req.body;
 
@@ -273,7 +273,7 @@ export const enhanceContent = async (req, res) => {
       });
     }
 
-    // Validate content type
+    // Validate type
     if (!['experience', 'project'].includes(type)) {
       return res.status(400).json({
         success: false,
@@ -281,39 +281,33 @@ export const enhanceContent = async (req, res) => {
       });
     }
 
-    // Validate that content and prompt are not empty
-    if (!content.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Content cannot be empty'
-      });
-    }
-
-    if (!prompt.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Enhancement prompt cannot be empty'
-      });
-    }
-
     console.log(`Enhancing ${type} content with AI`);
 
     // Call Python service for content enhancement
     const result = await callPythonService('enhance_content.py', [
-      JSON.stringify({ content, prompt, type })
+      JSON.stringify({ content: content.trim(), prompt: prompt.trim(), type })
     ]);
+console.log(result)
+    if (!result) {
+      throw new Error(result.error || 'Enhancement failed');
+    }
 
     res.status(200).json({
       success: true,
-      data: result,
-      enhancedAt: new Date().toISOString()
+      data: {
+        success:true,
+        enhanced_content: result.enhanced_content,
+        original_content: result.original_content,
+        type: type,
+        prompt_used: result.prompt_used
+      }
     });
 
   } catch (error) {
     console.error('Content enhancement error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to enhance content',
+      message: 'Failed to enhance content with AI',
       error: error.message
     });
   }
