@@ -2410,7 +2410,7 @@ def improve_resume():
             "error": f"Failed to improve resume: {str(e)}"
         }), 500
 
-@app.route('/enhance-content', methods=['POST'])
+@app.route('/ai/enhance-content', methods=['POST'])
 def enhance_content_endpoint():
     """Enhance specific resume content based on user prompt"""
     try:
