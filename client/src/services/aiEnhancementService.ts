@@ -1,12 +1,13 @@
 import { API_URL } from '@/lib/apiConfig';
 
-export interface EnhanceContentRequest {
+// Types for the enhancement service
+export interface EnhancementRequest {
   content: string;
   prompt: string;
   type: 'experience' | 'project';
 }
 
-export interface EnhanceContentResponse {
+export interface EnhancementResponse {
   success: boolean;
   data?: {
     enhanced_content: string;
@@ -14,117 +15,191 @@ export interface EnhanceContentResponse {
     type: string;
     prompt_used: string;
   };
-  message?: string;
   error?: string;
+  message?: string;
 }
 
-/**
- * Enhance content using AI based on user prompt
- */
+// Enhancement suggestions based on content type
+export const getEnhancementSuggestions = (type: 'experience' | 'project'): string[] => {
+  if (type === 'experience') {
+    return [
+      'Add more technical details and quantify achievements',
+      'Make it more results-oriented with metrics',
+      'Focus on leadership and team management aspects',
+      'Highlight problem-solving and innovation',
+      'Emphasize collaboration and communication skills',
+      'Add industry-specific keywords and terminology'
+    ];
+  } else {
+    return [
+      'Add more technical implementation details',
+      'Include specific technologies and frameworks used',
+      'Highlight challenges overcome and solutions implemented',
+      'Quantify project impact and results',
+      'Add more about the development process',
+      'Include performance optimizations and best practices'
+    ];
+  }
+};
+
+// Validate enhancement prompt
+export const validateEnhancementPrompt = (prompt: string): { isValid: boolean; error?: string } => {
+  if (!prompt || !prompt.trim()) {
+    return { isValid: false, error: 'Enhancement prompt is required' };
+  }
+  
+  if (prompt.trim().length < 10) {
+    return { isValid: false, error: 'Enhancement prompt must be at least 10 characters long' };
+  }
+  
+  if (prompt.length > 500) {
+    return { isValid: false, error: 'Enhancement prompt must be less than 500 characters' };
+  }
+  
+  return { isValid: true };
+};
+
+// Format content for display (handle line breaks and formatting)
+export const formatContentForDisplay = (content: string): string => {
+  if (!content) return '';
+  
+  // Replace \n with actual line breaks for display
+  return content.replace(/\\n/g, '\n').trim();
+};
+
+// Main function to enhance content with AI
 export const enhanceContentWithAI = async (
   content: string,
   prompt: string,
   type: 'experience' | 'project'
-): Promise<EnhanceContentResponse> => {
+): Promise<EnhancementResponse> => {
   try {
-    // Validate input
+    // Validate inputs
     if (!content || !content.trim()) {
-      throw new Error('Content cannot be empty');
+      return {
+        success: false,
+        error: 'Content cannot be empty'
+      };
     }
 
     if (!prompt || !prompt.trim()) {
-      throw new Error('Enhancement prompt cannot be empty');
+      return {
+        success: false,
+        error: 'Enhancement prompt cannot be empty'
+      };
     }
 
-    if (!['experience', 'project'].includes(type)) {
-      throw new Error('Type must be either "experience" or "project"');
+    if (!type || !['experience', 'project'].includes(type)) {
+      return {
+        success: false,
+        error: 'Type must be either "experience" or "project"'
+      };
     }
 
+    // Prepare request data
+    const requestData: EnhancementRequest = {
+      content: content.trim(),
+      prompt: prompt.trim(),
+      type
+    };
+
+    console.log('Sending enhancement request:', { type, promptLength: prompt.length });
+
+    // Make API request
     const response = await fetch(`${API_URL}/ai/enhance-content`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        content: content.trim(),
-        prompt: prompt.trim(),
-        type
-      }),
+      body: JSON.stringify(requestData),
     });
-    console.log("REsponsee",response)
-    const result = await response.json();
-    console.log("Result",result)
+
+    // Check if response is ok
     if (!response.ok) {
-      throw new Error(result.message || result.error || 'Failed to enhance content');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    // Parse response
+    const result: EnhancementResponse = await response.json();
+    
+    console.log('Enhancement response:', { success: result.success, hasData: !!result.data });
+
+    // Validate response structure
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || result.message || 'Enhancement failed'
+      };
+    }
+
+    if (!result.data || !result.data.enhanced_content) {
+      return {
+        success: false,
+        error: 'Invalid response: enhanced content not found'
+      };
     }
 
     return result;
+
   } catch (error) {
-    console.error('AI enhancement error:', error);
+    console.error('Enhancement service error:', error);
+    
+    // Handle different types of errors
+    if (error instanceof Error) {
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        return {
+          success: false,
+          error: 'Network error. Please check your connection and try again.'
+        };
+      }
+      
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-      message: 'Failed to enhance content with AI'
+      error: 'An unexpected error occurred. Please try again.'
     };
   }
 };
 
-/**
- * Get enhancement suggestions for common prompts
- */
-export const getEnhancementSuggestions = (type: 'experience' | 'project'): string[] => {
-  if (type === 'experience') {
-    return [
-      'Add more metrics and quantifiable achievements',
-      'Make it more action-oriented with strong verbs',
-      'Emphasize leadership and team collaboration',
-      'Focus on business impact and results',
-      'Include relevant technologies and tools',
-      'Highlight problem-solving abilities',
-      'Make it more concise and impactful'
-    ];
-  } else {
-    return [
-      'Add more technical details and technologies used',
-      'Emphasize problem-solving and innovation',
-      'Include project outcomes and impact',
-      'Highlight technical challenges overcome',
-      'Add metrics about performance or scale',
-      'Focus on your specific contributions',
-      'Make it more technical and detailed'
-    ];
-  }
+// Utility function to check if enhancement is available
+export const isEnhancementAvailable = (): boolean => {
+  // Check if API URL is configured
+  return !!API_URL;
 };
 
-/**
- * Validate enhancement prompt
- */
-export const validateEnhancementPrompt = (prompt: string): { isValid: boolean; error?: string } => {
-  if (!prompt || !prompt.trim()) {
-    return { isValid: false, error: 'Prompt cannot be empty' };
-  }
-
-  if (prompt.trim().length < 5) {
-    return { isValid: false, error: 'Prompt must be at least 5 characters long' };
-  }
-
-  if (prompt.trim().length > 500) {
-    return { isValid: false, error: 'Prompt must be less than 500 characters' };
-  }
-
-  return { isValid: true };
-};
-
-/**
- * Format content for display
- */
-export const formatContentForDisplay = (content: string): string => {
-  if (!content) return '';
+// Utility function to get enhancement statistics
+export const getEnhancementStats = (originalContent: string, enhancedContent: string) => {
+  const originalWords = originalContent.split(/\s+/).length;
+  const enhancedWords = enhancedContent.split(/\s+/).length;
+  const originalLines = originalContent.split('\n').filter(line => line.trim()).length;
+  const enhancedLines = enhancedContent.split('\n').filter(line => line.trim()).length;
   
-  // Clean up common formatting issues
-  return content
-    .trim()
-    .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
-    .replace(/^\s+/gm, '') // Remove leading whitespace from lines
-    .replace(/\s+$/gm, ''); // Remove trailing whitespace from lines
+  return {
+    wordCount: {
+      original: originalWords,
+      enhanced: enhancedWords,
+      difference: enhancedWords - originalWords
+    },
+    lineCount: {
+      original: originalLines,
+      enhanced: enhancedLines,
+      difference: enhancedLines - originalLines
+    },
+    improvementRatio: originalWords > 0 ? ((enhancedWords - originalWords) / originalWords * 100).toFixed(1) : '0'
+  };
+};
+
+export default {
+  enhanceContentWithAI,
+  getEnhancementSuggestions,
+  validateEnhancementPrompt,
+  formatContentForDisplay,
+  isEnhancementAvailable,
+  getEnhancementStats
 };
