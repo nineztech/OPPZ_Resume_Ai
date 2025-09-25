@@ -12,12 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { 
   ArrowLeft, 
   Save, 
@@ -33,14 +27,14 @@ import {
   ChevronRight,
   Code,
   Users,
-  Plus,
-  File
+  Plus
 } from 'lucide-react';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 import { templates as templateData, getTemplateById } from '@/data/templates';
 import type { Template } from '@/data/templates';
 import ResumePreviewModal from '@/components/modals/ResumePreviewModal';
 import AddCustomSectionModal from '@/components/modals/AddCustomSectionModal';
+import AIEnhancementModal from '@/components/modals/AIEnhancementModal';
 import ColorCustomizationPanel from '@/components/customization/ColorCustomizationPanel';
 import TypographyCustomizationPanel from '@/components/customization/TypographyCustomizationPanel';
 import LayoutCustomizationPanel from '@/components/customization/LayoutCustomizationPanel';
@@ -50,7 +44,6 @@ import EntryLayoutPanel from '@/components/customization/EntryLayoutPanel';
 import NameCustomizationPanel from '@/components/customization/NameCustomizationPanel';
 import ProfessionalTitleCustomizationPanel from '@/components/customization/ProfessionalTitleCustomizationPanel';
 import { generatePDF, downloadPDF } from '@/services/pdfService';
-import { generateWord, downloadWord } from '@/services/wordService';
 
 // Helper function to extract tech stack from project description
 const extractTechStackFromDescription = (description: string): string => {
@@ -309,6 +302,13 @@ const ResumeBuilderPage = () => {
   const [templateScrollIndex, setTemplateScrollIndex] = useState(0);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isCustomSectionModalOpen, setIsCustomSectionModalOpen] = useState(false);
+  const [aiEnhancementModal, setAiEnhancementModal] = useState({
+    isOpen: false,
+    type: 'experience' as 'experience' | 'project',
+    itemId: '',
+    currentContent: '',
+    title: ''
+  });
   const resumeRef = useRef<HTMLDivElement>(null);
   const [appliedSuggestions, setAppliedSuggestions] = useState<any>(null);
   const [highlightedChanges, setHighlightedChanges] = useState<Set<string>>(new Set());
@@ -361,7 +361,7 @@ const ResumeBuilderPage = () => {
       subtitlePlacement: 'same-line' as 'same-line' | 'next-line',
       indentBody: false,
       listStyle: 'bullet' as 'bullet' | 'hyphen',
-      descriptionFormat: 'paragraph' as 'paragraph' | 'points'
+      descriptionFormat: 'points' as 'paragraph' | 'points'
     },
     // Name customization
     nameCustomization: {
@@ -371,9 +371,9 @@ const ResumeBuilderPage = () => {
     },
     // Professional title customization
     titleCustomization: {
-      size: 's' as 's' | 'm' | 'l',
-      position: 'same-line' as 'same-line' | 'below',
-      style: 'italic' as 'normal' | 'italic',
+      size: 'm' as 's' | 'm' | 'l',
+      position: 'below' as 'same-line' | 'below',
+      style: 'normal' as 'normal' | 'italic',
       separationType: 'vertical-line' as 'vertical-line' | 'bullet' | 'dash' | 'space'
     },
     typography: {
@@ -386,7 +386,7 @@ const ResumeBuilderPage = () => {
         name: 22,
         title: 14,
         headers: 13,
-        body: 11,
+        body: 12,
         subheader: 12
       },
       fontWeight: {
@@ -397,8 +397,8 @@ const ResumeBuilderPage = () => {
     },
     layout: {
       margins: { top: 0, bottom: 0, left: 8, right: 8 },
-      sectionSpacing: 16,
-      lineHeight: 1.3
+      sectionSpacing: 0,
+      lineHeight: 1.2
     }
   });
   
@@ -2042,6 +2042,50 @@ const ResumeBuilderPage = () => {
     });
   };
 
+  // AI Enhancement Functions
+  const openAIEnhancementModal = (type: 'experience' | 'project', itemId: string, currentContent: string, title: string) => {
+    setAiEnhancementModal({
+      isOpen: true,
+      type,
+      itemId,
+      currentContent,
+      title
+    });
+  };
+
+  const handleExperienceEnhance = (id: string, content: string, title: string) => {
+    openAIEnhancementModal('experience', id, content, title);
+  };
+
+  const handleProjectEnhance = (id: string, content: string, title: string) => {
+    openAIEnhancementModal('project', id, content, title);
+  };
+
+  const closeAIEnhancementModal = () => {
+    setAiEnhancementModal({
+      isOpen: false,
+      type: 'experience',
+      itemId: '',
+      currentContent: '',
+      title: ''
+    });
+  };
+
+  const handleAIEnhancementApply = (enhancedContent: string) => {
+    const { type, itemId } = aiEnhancementModal;
+    
+    if (type === 'experience') {
+      updateExperience(itemId, 'description', enhancedContent);
+    } else if (type === 'project') {
+      updateProject(itemId, 'description', enhancedContent);
+    }
+    
+    // Add highlighting for the enhanced item
+    setHighlightedChanges(prev => new Set([...prev, `${type}-${itemId}-ai-enhanced`]));
+    
+    closeAIEnhancementModal();
+  };
+
   const toggleSectionVisibility = (sectionId: string) => {
     setVisibleSections(prev => {
       const newSet = new Set(prev);
@@ -2181,42 +2225,6 @@ const ResumeBuilderPage = () => {
     }
   };
 
-  const handleDownloadWord = async () => {
-    if (!resumeRef.current) return;
-
-    try {
-      setIsDownloading(true);
-      
-      // Get the HTML content from the resume
-      const htmlContent = resumeRef.current.outerHTML;
-      
-      // Generate Word document using the service
-      const blob = await generateWord({
-        htmlContent,
-        templateId: selectedTemplate?.id || 'modern-professional',
-        resumeData: resumeData
-      });
-
-      // Download the Word document
-      const filename = `${resumeData.basicDetails.fullName.replace(/\s+/g, '_')}_Resume.docx`;
-      downloadWord(blob, filename);
-
-      toast({
-        title: 'Success',
-        description: 'Word document generated and downloaded successfully!',
-      });
-
-    } catch (error) {
-      console.error('Error generating Word document:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to generate Word document. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsDownloading(false);
-    }
-  };
 
   const baseSections = [
     { id: 'basic-details', label: 'Basic details', icon: User },
@@ -2483,27 +2491,6 @@ const ResumeBuilderPage = () => {
               </Button>
             </div>
             
-            {/* Color Picker */}
-            {selectedTemplate && selectedTemplate.colors && selectedTemplate.colors.length > 0 && (
-              <div className="flex items-center gap-2 ml-4">
-                <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Color:</span>
-                <div className="flex items-center gap-1">
-                  {selectedTemplate.colors.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setSelectedColor(color)}
-                      className={`w-5 h-5 rounded-full border-2 transition-all duration-200 hover:scale-90 ${
-                        selectedColor === color
-                          ? 'border-gray-800 scale-110 shadow-md ring-2 ring-gray-300'
-                          : 'border-gray-300 hover:border-gray-500'
-                      }`}
-                      style={{ backgroundColor: color }}
-                      title={`Select ${color}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
             
             <div className="flex items-center gap-2">
               <Button 
@@ -2531,37 +2518,15 @@ const ResumeBuilderPage = () => {
                 <Save className="w-4 h-4 " />
                 {/* {isSaving ? 'Saving...' : 'Save'} */}
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    size="sm" 
-                    disabled={isDownloading}
-                    className="bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm transition-all duration-200 hover:shadow-md"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    {isDownloading ? 'Generating...' : 'Download'}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent 
-                  align="end" 
-                  className="w-48 bg-white border border-gray-200 rounded-lg shadow-lg p-1 mt-2"
-                >
-                  <DropdownMenuItem 
-                    onClick={handleDownloadPDF}
-                    className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md cursor-pointer transition-colors duration-150"
-                  >
-                    <FileText className="w-4 h-4 mr-3 text-blue-600" />
-                    <span className="font-medium">Download as PDF</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={handleDownloadWord}
-                    className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md cursor-pointer transition-colors duration-150"
-                  >
-                    <File className="w-4 h-4 mr-3 text-blue-600" />
-                    <span className="font-medium">Download as Doc</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button 
+                size="sm" 
+                disabled={isDownloading}
+                onClick={handleDownloadPDF}
+                className="bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm transition-all duration-200 hover:shadow-md"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                {isDownloading ? 'Generating...' : 'Download'}
+              </Button>
             </div>
           </div>
         </div>
@@ -2741,6 +2706,7 @@ const ResumeBuilderPage = () => {
                                 onAdd={addExperience}
                                 onUpdate={updateExperience}
                                 onRemove={removeExperience}
+                                onEnhance={handleExperienceEnhance}
                               />
                             )}
                             {section.id === 'projects' && (
@@ -2749,6 +2715,7 @@ const ResumeBuilderPage = () => {
                                 onAdd={addProject}
                                 onUpdate={updateProject}
                                 onRemove={removeProject}
+                                onEnhance={handleProjectEnhance}
                               />
                             )}
 
@@ -2923,9 +2890,9 @@ const ResumeBuilderPage = () => {
                           },
                           // Professional title customization
                           titleCustomization: {
-                            size: 's' as 's' | 'm' | 'l',
-                            position: 'same-line' as 'same-line' | 'below',
-                            style: 'italic' as 'normal' | 'italic',
+                            size: 'm' as 's' | 'm' | 'l',
+                            position: 'below' as 'same-line' | 'below',
+                            style: 'normal' as 'normal' | 'italic',
                             separationType: 'vertical-line' as 'vertical-line' | 'bullet' | 'dash' | 'space'
                           },
                           typography: {
@@ -3033,6 +3000,16 @@ const ResumeBuilderPage = () => {
         isOpen={isCustomSectionModalOpen} 
         onClose={() => setIsCustomSectionModalOpen(false)} 
         onAdd={addCustomSection} 
+      />
+
+      {/* AI Enhancement Modal */}
+      <AIEnhancementModal
+        isOpen={aiEnhancementModal.isOpen}
+        onClose={closeAIEnhancementModal}
+        onApply={handleAIEnhancementApply}
+        currentContent={aiEnhancementModal.currentContent}
+        type={aiEnhancementModal.type}
+        title={aiEnhancementModal.title}
       />
     </>
   );
@@ -3295,11 +3272,12 @@ const SkillsSection = ({ skills, languages, onChange }: { skills: any; languages
 };
 
 // Experience Section Component
-const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove }: { 
+const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove, onEnhance }: { 
   experience: any[]; 
   onAdd: () => void; 
   onUpdate: (id: string, field: string, value: string) => void;
   onRemove: (id: string) => void;
+  onEnhance?: (id: string, content: string, title: string) => void;
 }) => {
   // Ensure experience is always an array
   const safeExperience = Array.isArray(experience) ? experience : [];
@@ -3366,14 +3344,27 @@ const ExperienceSection = ({ experience, onAdd, onUpdate, onRemove }: {
               />
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onRemove(exp.id)}
-              className="text-red-600 hover:text-red-700"
-            >
-              Remove Experience
-            </Button>
+            <div className="flex gap-2">
+              {onEnhance && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEnhance(exp.id, exp.description, `${exp.position} at ${exp.company}`)}
+                  className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  disabled={!exp.description || !exp.description.trim()}
+                >
+                  ✨ Enhance with AI
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onRemove(exp.id)}
+                className="text-red-600 hover:text-red-700"
+              >
+                Remove Experience
+              </Button>
+            </div>
           </div>
         </Card>
       ))}
@@ -3529,11 +3520,12 @@ const ActivitiesSection = ({ activities, onAdd, onUpdate, onRemove }: {
 };
 
 // Projects Section Component
-const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove }: { 
+const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove, onEnhance }: { 
   projects: any[]; 
   onAdd: () => void; 
   onUpdate: (id: string, field: string, value: string) => void;
   onRemove: (id: string) => void;
+  onEnhance?: (id: string, content: string, title: string) => void;
 }) => {
   return (
     <div className="space-y-4">
@@ -3596,14 +3588,27 @@ const ProjectsSection = ({ projects, onAdd, onUpdate, onRemove }: {
               />
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onRemove(project.id)}
-              className="text-red-600 hover:text-red-700"
-            >
-              Remove Project
-            </Button>
+            <div className="flex gap-2">
+              {onEnhance && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEnhance(project.id, project.description, project.name)}
+                  className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  disabled={!project.description || !project.description.trim()}
+                >
+                  ✨ Enhance with AI
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onRemove(project.id)}
+                className="text-red-600 hover:text-red-700"
+              >
+                Remove Project
+              </Button>
+            </div>
           </div>
         </Card>
       ))}

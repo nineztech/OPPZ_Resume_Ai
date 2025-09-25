@@ -34,13 +34,13 @@ const PresetThemesPanel: React.FC<PresetThemesPanelProps> = ({
           size="sm"
           onClick={() => updateCustomization({
             theme: {
-              primaryColor: '#1f2937',
-              secondaryColor: '#374151',
+              primaryColor: '#1e293b',
+              secondaryColor: '#374154',
               textColor: '#000000',
               backgroundColor: '#ffffff',
-              accentColor: '#1f2937',
-              borderColor: '#1f2937',
-              headerColor: '#1f2937'
+              accentColor: '#1e293b',
+              borderColor: '#1e293b',
+              headerColor: '#1e293b'
             }
           })}
           className="text-xs"
@@ -52,31 +52,13 @@ const PresetThemesPanel: React.FC<PresetThemesPanelProps> = ({
           size="sm"
           onClick={() => updateCustomization({
             theme: {
-              primaryColor: '#dc2626',
-              secondaryColor: '#991b1b',
+              primaryColor: '#374154',
+              secondaryColor: '#1e293b',
               textColor: '#000000',
               backgroundColor: '#ffffff',
-              accentColor: '#dc2626',
-              borderColor: '#dc2626',
-              headerColor: '#dc2626'
-            }
-          })}
-          className="text-xs"
-        >
-          Creative
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => updateCustomization({
-            theme: {
-              primaryColor: '#059669',
-              secondaryColor: '#047857',
-              textColor: '#000000',
-              backgroundColor: '#ffffff',
-              accentColor: '#059669',
-              borderColor: '#059669',
-              headerColor: '#059669'
+              accentColor: '#374154',
+              borderColor: '#374154',
+              headerColor: '#374154'
             }
           })}
           className="text-xs"
@@ -88,31 +70,13 @@ const PresetThemesPanel: React.FC<PresetThemesPanelProps> = ({
           size="sm"
           onClick={() => updateCustomization({
             theme: {
-              primaryColor: '#7c3aed',
-              secondaryColor: '#5b21b6',
+              primaryColor: '#2c5282',
+              secondaryColor: '#1e40af',
               textColor: '#000000',
               backgroundColor: '#ffffff',
-              accentColor: '#7c3aed',
-              borderColor: '#7c3aed',
-              headerColor: '#7c3aed'
-            }
-          })}
-          className="text-xs"
-        >
-          Elegant
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => updateCustomization({
-            theme: {
-              primaryColor: '#0891b2',
-              secondaryColor: '#0e7490',
-              textColor: '#000000',
-              backgroundColor: '#ffffff',
-              accentColor: '#0891b2',
-              borderColor: '#0891b2',
-              headerColor: '#0891b2'
+              accentColor: '#2c5282',
+              borderColor: '#2c5282',
+              headerColor: '#2c5282'
             }
           })}
           className="text-xs"
@@ -124,18 +88,18 @@ const PresetThemesPanel: React.FC<PresetThemesPanelProps> = ({
           size="sm"
           onClick={() => updateCustomization({
             theme: {
-              primaryColor: '#ea580c',
-              secondaryColor: '#c2410c',
+              primaryColor: '#1e40af',
+              secondaryColor: '#2c5282',
               textColor: '#000000',
               backgroundColor: '#ffffff',
-              accentColor: '#ea580c',
-              borderColor: '#ea580c',
-              headerColor: '#ea580c'
+              accentColor: '#1e40af',
+              borderColor: '#1e40af',
+              headerColor: '#1e40af'
             }
           })}
           className="text-xs"
         >
-          Vibrant
+          Executive
         </Button>
       </div>
     </div>
