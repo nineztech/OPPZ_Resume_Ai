@@ -24,6 +24,7 @@ from services.ats_service import StandardATSService, JDSpecificATSService
 from services.ai_suggestion_service_optimized import AISuggestionServiceOptimized
 from services.resume_improvement_service import ResumeImprovementService
 from utils.pdf_extractor import DocumentExtractor
+from enhance_content import enhance_content
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -441,6 +442,7 @@ HTML_TEMPLATE = """
             <button class="tab" onclick="showTab('standard-ats')">Standard ATS</button>
             <button class="tab" onclick="showTab('jd-ats')">JD-Specific ATS</button>
             <button class="tab" onclick="showTab('ai-suggestions')">AI Suggestions</button>
+            <button class="tab" onclick="showTab('content-enhancement')">Content Enhancement</button>
         </div>
 
         <!-- Resume Parsing Tab -->
@@ -572,6 +574,58 @@ HTML_TEMPLATE = """
             </div>
 
             <div class="ats-results" id="aiSuggestionsResults"></div>
+        </div>
+
+        <!-- Content Enhancement Tab -->
+        <div id="content-enhancement" class="tab-content">
+            <div class="upload-section">
+                <h3>AI Content Enhancement</h3>
+                <p style="color: #666; margin-bottom: 20px;">Enhance specific resume content (experience or project descriptions) based on your custom prompts</p>
+                <form id="contentEnhancementForm">
+                    <div style="margin: 20px 0;">
+                        <label for="contentType"><strong>Content Type:</strong></label>
+                        <div style="margin: 10px 0;">
+                            <input type="radio" id="experienceType" name="contentType" value="experience" checked>
+                            <label for="experienceType" style="margin-left: 5px;">Work Experience</label>
+                        </div>
+                        <div style="margin: 10px 0;">
+                            <input type="radio" id="projectType" name="contentType" value="project">
+                            <label for="projectType" style="margin-left: 5px;">Project Description</label>
+                        </div>
+                    </div>
+                    
+                    <div style="margin: 20px 0;">
+                        <label for="originalContent"><strong>Original Content:</strong></label>
+                        <textarea 
+                            id="originalContent" 
+                            name="originalContent" 
+                            class="job-description-input"
+                            placeholder="Paste your original work experience or project description here..."
+                            required
+                        ></textarea>
+                    </div>
+                    
+                    <div style="margin: 20px 0;">
+                        <label for="enhancementPrompt"><strong>Enhancement Prompt:</strong></label>
+                        <textarea 
+                            id="enhancementPrompt" 
+                            name="enhancementPrompt" 
+                            class="job-description-input"
+                            placeholder="Describe how you want to enhance the content. For example: 'Add more technical details and quantify achievements', 'Make it more results-oriented with metrics', 'Focus on leadership and team management aspects'..."
+                            required
+                        ></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="contentEnhancementBtn">Enhance Content</button>
+                </form>
+            </div>
+
+            <div class="loading" id="contentEnhancementLoading">
+                <div class="spinner"></div>
+                <p>Enhancing content with AI... This may take a few moments.</p>
+            </div>
+
+            <div class="ats-results" id="contentEnhancementResults"></div>
         </div>
 
         <div id="errorMessage"></div>
@@ -815,6 +869,58 @@ HTML_TEMPLATE = """
             } finally {
                 document.getElementById('aiSuggestionsLoading').style.display = 'none';
                 document.getElementById('aiSuggestionsBtn').disabled = false;
+            }
+        });
+
+        // Content Enhancement Analysis
+        document.getElementById('contentEnhancementForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const originalContent = document.getElementById('originalContent').value;
+            const enhancementPrompt = document.getElementById('enhancementPrompt').value;
+            const contentType = document.querySelector('input[name="contentType"]:checked').value;
+            
+            if (!originalContent.trim()) {
+                showError('Please enter the original content to enhance.');
+                return;
+            }
+
+            if (!enhancementPrompt.trim()) {
+                showError('Please enter an enhancement prompt.');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('contentEnhancementLoading').style.display = 'block';
+            document.getElementById('contentEnhancementResults').innerHTML = '';
+            document.getElementById('errorMessage').innerHTML = '';
+            document.getElementById('contentEnhancementBtn').disabled = true;
+
+            try {
+                const response = await fetch('/enhance-content', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: originalContent,
+                        prompt: enhancementPrompt,
+                        type: contentType
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showContentEnhancementResults(result.data);
+                } else {
+                    showError('Content enhancement failed: ' + result.error);
+                }
+            } catch (error) {
+                showError('Error: ' + error.message);
+            } finally {
+                document.getElementById('contentEnhancementLoading').style.display = 'none';
+                document.getElementById('contentEnhancementBtn').disabled = false;
             }
         });
 
@@ -1805,6 +1911,109 @@ HTML_TEMPLATE = """
             resultsDiv.innerHTML = html;
         }
 
+        function showContentEnhancementResults(data) {
+            const resultsDiv = document.getElementById('contentEnhancementResults');
+            
+            if (!resultsDiv) {
+                console.error('contentEnhancementResults element not found');
+                return;
+            }
+            
+            if (!data || typeof data !== 'object') {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <h3>Error: Invalid Data Received</h3>
+                        <p>The content enhancement returned invalid data. Please try again.</p>
+                        <div class="json-output">${formatJSON(JSON.stringify(data, null, 2))}</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <h3>✨ AI Content Enhancement Results</h3>
+                
+                <div class="detail-card">
+                    <h4>📝 Enhancement Summary</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                        <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #007bff;">${data.type || 'N/A'}</div>
+                            <div style="color: #6c757d; font-size: 12px;">Content Type</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 20px; font-weight: bold; color: #28a745;">Enhanced</div>
+                            <div style="color: #6c757d; font-size: 12px;">Status</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <h4>📋 Original Content</h4>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #6c757d; margin-bottom: 20px;">
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; line-height: 1.6;">${data.original_content || 'N/A'}</pre>
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <h4>🎯 Enhancement Prompt Used</h4>
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
+                        <p style="margin: 0; line-height: 1.6; color: #856404;">${data.prompt_used || 'N/A'}</p>
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <h4>✨ Enhanced Content</h4>
+                    <div style="background: #d4edda; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745; margin-bottom: 20px;">
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; line-height: 1.6; color: #155724;">${data.enhanced_content || 'N/A'}</pre>
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <h4>📊 Enhancement Analysis</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; text-align: center;">
+                        <div style="padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 18px; font-weight: bold; color: #007bff;">${(data.enhanced_content || '').split('\\n').filter(line => line.trim()).length || 0}</div>
+                            <div style="font-size: 11px; color: #666;">Bullet Points</div>
+                        </div>
+                        <div style="padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 18px; font-weight: bold; color: #28a745;">${(data.enhanced_content || '').length || 0}</div>
+                            <div style="font-size: 11px; color: #666;">Characters</div>
+                        </div>
+                        <div style="padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 18px; font-weight: bold; color: #ffc107;">${(data.enhanced_content || '').split(' ').length || 0}</div>
+                            <div style="font-size: 11px; color: #666;">Words</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Complete JSON output (collapsible)
+            html += `
+                <div style="margin-top: 30px;">
+                    <h4 style="cursor: pointer; display: flex; align-items: center;" onclick="toggleContentEnhancementJson()">
+                        <span id="contentEnhancementJsonToggle">▶️</span> Complete Enhancement Data (JSON)
+                    </h4>
+                    <div id="contentEnhancementJsonContainer" class="json-output" style="max-height: 400px; overflow-y: auto; display: none;">
+                        ${formatJSON(JSON.stringify(data, null, 2))}
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.innerHTML = html;
+        }
+
+        function toggleContentEnhancementJson() {
+            const container = document.getElementById('contentEnhancementJsonContainer');
+            const toggle = document.getElementById('contentEnhancementJsonToggle');
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                toggle.textContent = '🔽';
+            } else {
+                container.style.display = 'none';
+                toggle.textContent = '▶️';
+            }
+        }
+
         function toggleJsonOutput() {
             const container = document.getElementById('jsonOutputContainer');
             const toggle = document.getElementById('jsonToggle');
@@ -2201,6 +2410,76 @@ def improve_resume():
             "error": f"Failed to improve resume: {str(e)}"
         }), 500
 
+@app.route('/enhance-content', methods=['POST'])
+def enhance_content_endpoint():
+    """Enhance specific resume content based on user prompt"""
+    try:
+        # Check if request has JSON data
+        if not request.is_json:
+            return jsonify({
+                "success": False,
+                "error": "Request must be JSON"
+            }), 400
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['content', 'prompt', 'type']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    "success": False,
+                    "error": f"{field} is required"
+                }), 400
+        
+        content = data['content']
+        prompt = data['prompt']
+        content_type = data['type']
+        
+        # Validate content type
+        if content_type not in ['experience', 'project']:
+            return jsonify({
+                "success": False,
+                "error": "Content type must be 'experience' or 'project'"
+            }), 400
+        
+        # Validate that content and prompt are not empty
+        if not content.strip():
+            return jsonify({
+                "success": False,
+                "error": "Content cannot be empty"
+            }), 400
+        
+        if not prompt.strip():
+            return jsonify({
+                "success": False,
+                "error": "Enhancement prompt cannot be empty"
+            }), 400
+        
+        # Enhance content using the enhance_content function
+        logger.info(f"Enhancing {content_type} content with user prompt")
+        enhanced_content = enhance_content(content, prompt, content_type)
+        
+        logger.info("Successfully enhanced content")
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "enhanced_content": enhanced_content,
+                "original_content": content,
+                "type": content_type,
+                "prompt_used": prompt
+            },
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to enhance content: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"Failed to enhance content: {str(e)}"
+        }), 500
+
 @app.route('/health')
 def health():
     """Health check endpoint"""
@@ -2230,6 +2509,7 @@ if __name__ == '__main__':
     print("  • Standard ATS Analysis (General optimization)")
     print("  • JD-Specific ATS Analysis (Job matching)")
     print("  • AI-Powered Resume Suggestions (Job description generation + comparison)")
+    print("  • Content Enhancement (Custom prompt-based content improvement)")
     print("\nPress Ctrl+C to stop the server")
     
     app.run(debug=True, host='0.0.0.0', port=5000)
