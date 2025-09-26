@@ -8,71 +8,173 @@ from .openai_parser_service import OpenAIResumeParser
 
 logger = logging.getLogger(__name__)
 
-def _collect_used_power_words_from_text(text: str) -> List[str]:
+def _detect_all_repeating_words_with_ai(text: str, client: Any, model_name: str, temperature: float, top_p: float) -> Dict[str, Any]:
     """
-    Collect action verbs and professional terms already present in the resume text.
+    Use AI to detect ALL repeating words in resume text in one comprehensive analysis.
+    
+    Args:
+        text: Resume text to analyze
+        client: OpenAI client
+        model_name: Model name to use
+        temperature: Temperature for generation
+        top_p: Top-p for generation
+        
+    Returns:
+        Dictionary containing comprehensive repetition analysis
+    """
+    try:
+        prompt = f"""
+        Analyze the following resume text and identify ALL repeating words with their counts and locations.
+        
+        TASK: Find every word that appears 2 or more times in the resume text and categorize them.
+        
+        ANALYSIS REQUIREMENTS:
+        1. Count every word that appears 2+ times
+        2. Categorize each repeated word as:
+           - "action_verb": Words describing actions (implemented, managed, developed, created, built, designed, led, executed, delivered, optimized, analyzed, coordinated, supervised, trained, established, launched, completed, achieved, increased, reduced, saved, transformed, migrated, upgraded, refactored, debugged, tested, validated, verified, documented, presented, communicated, facilitated, directed, guided, influenced, negotiated, planned, organized, scheduled, prioritized, evaluated, assessed, reviewed, recommended, proposed, suggested, identified, discovered, investigated, researched, studied, learned, acquired, gained, obtained, secured, earned, won, received, utilized)
+           - "professional_term": Technical/business descriptive words (scalable, secure, efficient, robust, reliable, flexible, comprehensive, advanced, innovative, cutting-edge, state-of-the-art, high-performance, enterprise-grade, mission-critical, cost-effective, user-friendly, intuitive, seamless, integrated, automated, streamlined, optimized, enhanced, improved, upgraded, modernized, standardized, centralized, distributed, cloud-based, web-based, mobile-first, responsive, cross-platform, real-time, high-availability, fault-tolerant, load-balanced, microservices, api-driven)
+           - "other": Any other repeated words (excluding common words like "and", "the", "or", "in", "on", "at", "to", "for", "with", "by", "of", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "can", "must", "shall")
+        
+        3. For each repeated word, provide:
+           - Total count across entire resume
+           - Section breakdown (which sections contain the word)
+           - Sample contexts where the word appears
+        
+        EXCLUSIONS:
+        - DO NOT include: job titles, company names, technologies, frameworks, languages, tools, methodologies, certifications, degrees, locations, dates, numbers, pronouns, articles, prepositions, conjunctions
+        - DO NOT include: "devops", "agile", "scrum", "kubernetes", "docker", "react", "python", "java", "aws", "azure", "gcp", "bachelor", "master", "phd", "certified", "engineer", "developer", "manager", "director", "senior", "junior", "lead", "principal", "architect", "analyst", "consultant", "specialist", "expert"
+        - DO NOT include common words: "and", "the", "or", "in", "on", "at", "to", "for", "with", "by", "of", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "can", "must", "shall"
+        
+        REQUIREMENTS:
+        - Return ONLY valid JSON (no markdown, no code fences, no explanations)
+        - Use lowercase for all words
+        - Include base forms (e.g., "develop" not "developed")
+        - Be comprehensive - find ALL repeating words
+        
+        RESUME TEXT:
+        {text[:3000]}  # Increased limit for comprehensive analysis
+        
+        OUTPUT FORMAT:
+        {{
+            "action_verbs": {{
+                "word1": {{
+                    "total_count": 3,
+                    "sections": ["experience", "projects"],
+                    "contexts": ["Developed web application", "Developed mobile app", "Developed API"]
+                }},
+                "word2": {{
+                    "total_count": 2,
+                    "sections": ["experience"],
+                    "contexts": ["Managed team of 5", "Managed project timeline"]
+                }}
+            }},
+            "professional_terms": {{
+                "term1": {{
+                    "total_count": 4,
+                    "sections": ["experience", "projects"],
+                    "contexts": ["Scalable architecture", "Scalable solution", "Scalable system", "Scalable platform"]
+                }}
+            }},
+            "other": {{
+                "word1": {{
+                    "total_count": 2,
+                    "sections": ["education"],
+                    "contexts": ["Bachelor degree", "Bachelor program"]
+                }}
+            }}
+        }}
+        """
+        
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+            top_p=top_p,
+            max_tokens=2000
+        )
+        
+        response_text = response.choices[0].message.content.strip()
+        
+        # Clean response text
+        if response_text.startswith('```json'):
+            response_text = response_text[7:]
+        if response_text.endswith('```'):
+            response_text = response_text[:-3]
+        if response_text.startswith('```'):
+            response_text = response_text[3:]
+        
+        import json
+        result = json.loads(response_text)
+        
+        # Process and validate the results
+        processed_result = {
+            "action_verbs": {},
+            "professional_terms": {},
+            "other": {},
+            "total_repetitions_found": 0
+        }
+        
+        # Process each category
+        for category in ["action_verbs", "professional_terms", "other"]:
+            for word, data in result.get(category, {}).items():
+                word_lower = word.lower().strip()
+                if (len(word_lower) > 2 and 
+                    word_lower not in {'devops', 'agile', 'scrum', 'kubernetes', 'docker', 'react', 'python', 'java', 'aws', 'azure', 'gcp', 'bachelor', 'master', 'phd', 'certified', 'engineer', 'developer', 'manager', 'director', 'senior', 'junior', 'lead', 'principal', 'architect', 'analyst', 'consultant', 'specialist', 'expert', 'and', 'the', 'or', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'of', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'must', 'shall'}):
+                    
+                    processed_result[category][word_lower] = {
+                        "total_count": data.get("total_count", 0),
+                        "sections": data.get("sections", []),
+                        "contexts": data.get("contexts", [])
+                    }
+                    processed_result["total_repetitions_found"] += 1
+        
+        logger.info(f"🤖 AI detected {processed_result['total_repetitions_found']} total repeating words")
+        logger.info(f"🤖 Action verbs: {len(processed_result['action_verbs'])}")
+        logger.info(f"🤖 Professional terms: {len(processed_result['professional_terms'])}")
+        logger.info(f"🤖 Other words: {len(processed_result['other'])}")
+        
+        return processed_result
+        
+    except Exception as e:
+        logger.warning(f"⚠️ AI comprehensive detection failed, using fallback: {e}")
+        # Fallback to basic detection
+        return {
+            "action_verbs": {},
+            "professional_terms": {},
+            "other": {},
+            "total_repetitions_found": 0
+        }
+
+def _collect_used_power_words_from_text(text: str, client: Any = None, model_name: str = "gpt-4o-mini", temperature: float = 0.1, top_p: float = 0.8) -> List[str]:
+    """
+    Collect action verbs and professional terms already present in the resume text using AI detection.
     Used to avoid suggesting synonyms that are already present in the resume.
     """
     import re as _re
-    action_verbs = {
-        'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered',
-        'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured',
-        'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained',
-        'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved',
-        'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified',
-        'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced',
-        'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed',
-        'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched',
-        'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received',
-        'engineered', 'constructed', 'architected', 'fabricated', 'assembled', 'crafted', 'forged', 'molded',
-        'shaped', 'formed', 'generated', 'produced', 'manufactured', 'fashioned', 'devised', 'conceived',
-        'invented', 'innovated', 'pioneered', 'spearheaded', 'championed', 'advocated', 'promoted', 'endorsed',
-        'supported', 'backed', 'sponsored', 'funded', 'financed', 'invested', 'contributed', 'donated',
-        'provided', 'supplied', 'delivered', 'distributed', 'allocated', 'assigned', 'designated', 'appointed',
-        'selected', 'chosen', 'picked', 'elected', 'voted', 'decided', 'determined', 'resolved', 'settled',
-        'concluded', 'finalized', 'completed', 'finished', 'accomplished', 'achieved', 'attained', 'reached',
-        'obtained', 'acquired', 'gained', 'earned', 'won', 'secured', 'captured', 'seized', 'grasped',
-        'gripped', 'held', 'maintained', 'retained', 'preserved', 'conserved', 'protected', 'safeguarded',
-        'defended', 'shielded', 'guarded', 'watched', 'monitored', 'observed', 'tracked', 'followed',
-        'pursued', 'chased', 'hunted', 'searched', 'explored', 'investigated', 'examined', 'studied',
-        'analyzed', 'evaluated', 'assessed', 'reviewed', 'inspected', 'checked', 'verified', 'confirmed',
-        'validated', 'authenticated', 'certified', 'approved', 'endorsed', 'sanctioned', 'authorized',
-        'permitted', 'allowed', 'enabled', 'facilitated', 'assisted', 'helped', 'aided', 'supported',
-        'backed', 'sponsored', 'promoted', 'advanced', 'progressed', 'moved', 'shifted', 'transferred',
-        'relocated', 'migrated', 'transported', 'conveyed', 'carried', 'delivered', 'distributed', 'spread',
-        'extended', 'expanded', 'enlarged', 'increased', 'boosted', 'enhanced', 'improved', 'upgraded',
-        'refined', 'polished', 'perfected', 'optimized', 'maximized', 'minimized', 'reduced', 'decreased',
-        'lowered', 'diminished', 'lessened', 'cut', 'trimmed', 'slashed', 'eliminated', 'removed',
-        'deleted', 'erased', 'wiped', 'cleared', 'cleaned', 'purified', 'sanitized', 'sterilized',
-        'disinfected', 'decontaminated', 'neutralized', 'balanced', 'stabilized', 'secured', 'fixed',
-        'repaired', 'restored', 'renewed', 'refreshed', 'revitalized', 'rejuvenated', 'regenerated',
-        'rebuilt', 'reconstructed', 'reassembled', 'repaired', 'mended', 'patched', 'fixed', 'corrected',
-        'adjusted', 'modified', 'altered', 'changed', 'transformed', 'converted', 'adapted', 'customized',
-        'personalized', 'tailored', 'fitted', 'sized', 'scaled', 'proportioned', 'balanced', 'harmonized',
-        'synchronized', 'coordinated', 'orchestrated', 'conducted', 'directed', 'managed', 'administered',
-        'supervised', 'oversaw', 'controlled', 'governed', 'regulated', 'monitored', 'tracked', 'followed',
-        'pursued', 'chased', 'hunted', 'searched', 'explored', 'investigated', 'examined', 'studied',
-        'analyzed', 'evaluated', 'assessed', 'reviewed', 'inspected', 'checked', 'verified', 'confirmed',
-        'validated', 'authenticated', 'certified', 'approved', 'endorsed', 'sanctioned', 'authorized',
-        'permitted', 'allowed', 'enabled', 'facilitated', 'assisted', 'helped', 'aided', 'supported','utilized'
-    }
-    professional_terms = {
-        'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced',
-        'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical',
-        'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined',
-        'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized',
-        'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform',
-        'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven',
-        'protected', 'safe', 'guarded', 'shielded', 'defended', 'secured', 'fortified', 'reinforced',
-        'strengthened', 'hardened', 'toughened', 'solidified', 'stabilized', 'balanced', 'harmonized',
-        'synchronized', 'coordinated', 'orchestrated', 'conducted', 'directed', 'managed', 'administered',
-        'supervised', 'oversaw', 'controlled', 'governed', 'regulated', 'monitored', 'tracked', 'followed',
-        'modular', 'service-oriented', 'component-based', 'object-oriented', 'functional', 'procedural',
-        'declarative', 'imperative', 'reactive', 'event-driven', 'message-driven', 'data-driven', 'test-driven',
-        'behavior-driven', 'domain-driven', 'model-driven', 'architecture-driven', 'design-driven', 'user-driven',
-        'customer-driven', 'business-driven', 'market-driven', 'performance-driven', 'quality-driven',
-        'security-driven', 'compliance-driven', 'agile-driven', 'lean-driven', 'devops-driven', 'cloud-driven'
-    }
+    
+    # Use AI to detect ALL repeating words comprehensively
+    if client:
+        try:
+            comprehensive_analysis = _detect_all_repeating_words_with_ai(text, client, model_name, temperature, top_p)
+            
+            # Extract all detected words from comprehensive analysis
+            all_detected_words = set()
+            for category in ["action_verbs", "professional_terms", "other"]:
+                for word in comprehensive_analysis.get(category, {}).keys():
+                    all_detected_words.add(word)
+            
+            action_verbs = set(comprehensive_analysis.get("action_verbs", {}).keys())
+            professional_terms = set(comprehensive_analysis.get("professional_terms", {}).keys())
+            
+        except Exception as e:
+            logger.warning(f"⚠️ AI comprehensive detection failed, using fallback: {e}")
+            # Fallback to comprehensive set
+            action_verbs = {'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered', 'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured', 'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained', 'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved', 'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified', 'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced', 'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed', 'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched', 'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received', 'utilized'}
+            professional_terms = {'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced', 'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical', 'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined', 'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized', 'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform', 'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven'}
+    else:
+        # Fallback to comprehensive set if no client provided
+        action_verbs = {'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered', 'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured', 'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained', 'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved', 'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified', 'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced', 'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed', 'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched', 'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received', 'utilized'}
+        professional_terms = {'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced', 'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical', 'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined', 'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized', 'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform', 'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven'}
     
     # Use more comprehensive regex to capture all forms including past tense and participles
     tokens = _re.findall(r'\b[a-zA-Z]+(?:ed|ing|s)?\b', (text or '').lower())
@@ -189,7 +291,7 @@ def _augment_repetition_suggestions_with_debug(ats_response: Dict[str, Any], rep
         action_verbs_found = repetition_debug.get("action_verbs_found", {})
 
         # Build forbidden words list from resume text (verbs/terms already present)
-        forbidden_words = set(_collect_used_power_words_from_text(resume_text))
+        forbidden_words = set(_collect_used_power_words_from_text(resume_text, client, model_name, temperature, top_p)) 
         logger.info(f"🔍 DEBUG: Forbidden words list (already in resume): {sorted(forbidden_words)}")
 
         # Add all repeated words to forbidden list so they aren't suggested as alternatives
@@ -426,6 +528,9 @@ class StandardATSService:
         self.model_name = model_name
         self.temperature = temperature
         self.top_p = top_p
+        
+        # Cache for repetition analysis to avoid re-analyzing same resume
+        self._repetition_cache = {}
     
     def update_generation_parameters(self, temperature: float = None, top_p: float = None):
         """
@@ -1601,7 +1706,7 @@ class StandardATSService:
 
     def _analyze_repetitions_debug(self, resume_text: str) -> Dict[str, Any]:
         """
-        Analyze repetitions in resume text for debugging purposes - focusing only on action verbs and professional terms
+        Analyze repetitions in resume text for debugging purposes - using AI to detect ALL repeating words with caching
         
         Args:
             resume_text: Raw resume text to analyze
@@ -1609,32 +1714,40 @@ class StandardATSService:
         Returns:
             Dictionary containing repetition analysis with debug information
         """
-        # Removed debug logging to reduce console output - analysis runs silently
+        # Create cache key based on resume text hash
+        import hashlib
+        cache_key = hashlib.md5(resume_text.encode()).hexdigest()
+        
+        # Check if we already have cached results for this resume
+        if cache_key in self._repetition_cache:
+            logger.info("🔄 Using cached repetition analysis results")
+            return self._repetition_cache[cache_key]
+        
+        logger.info("🎯 Performing comprehensive repetition analysis (caching results)")
         
         import re
         from collections import defaultdict, Counter
         
-        # Define action verbs and professional terms to focus on
-        action_verbs = {
-            'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered',
-            'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured',
-            'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained',
-            'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved',
-            'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified',
-            'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced',
-            'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed',
-            'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched',
-            'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received', 'utilized'
-        }
-        
-        professional_terms = {
-            'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced',
-            'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical',
-            'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined',
-            'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized',
-            'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform',
-            'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven'
-        }
+        # Use AI to detect ALL repeating words comprehensively
+        try:
+            comprehensive_analysis = _detect_all_repeating_words_with_ai(resume_text, self.client, self.model_name, self.temperature, self.top_p)
+            
+            # Extract action verbs and professional terms from comprehensive analysis
+            action_verbs = set(comprehensive_analysis.get("action_verbs", {}).keys())
+            professional_terms = set(comprehensive_analysis.get("professional_terms", {}).keys())
+            
+            # Also get all other repeating words for complete analysis
+            all_repeating_words = {}
+            for category in ["action_verbs", "professional_terms", "other"]:
+                for word, data in comprehensive_analysis.get(category, {}).items():
+                    all_repeating_words[word] = data.get("total_count", 0)
+            
+        except Exception as e:
+            logger.warning(f"⚠️ AI comprehensive detection failed in repetition analysis, using fallback: {e}")
+            # Fallback to comprehensive set
+            action_verbs = {'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered', 'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured', 'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained', 'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved', 'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified', 'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced', 'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed', 'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched', 'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received', 'utilized'}
+            professional_terms = {'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced', 'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical', 'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined', 'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized', 'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform', 'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven'}
+            all_repeating_words = {}
         
         # Common words to ignore
         common_words = {
@@ -1700,6 +1813,10 @@ class StandardATSService:
                     }
             
             repetition_analysis["total_words_analyzed"] += len(words)
+        
+        # Cache the results for future use
+        self._repetition_cache[cache_key] = repetition_analysis
+        logger.info(f"💾 Cached repetition analysis results for future use")
         
         return repetition_analysis
 
@@ -1926,6 +2043,9 @@ class JDSpecificATSService:
         self.model = self.parser.model
         self.temperature = temperature
         self.top_p = top_p
+        
+        # Cache for repetition analysis to avoid re-analyzing same resume
+        self._repetition_cache = {}
     
     def update_generation_parameters(self, temperature: float = None, top_p: float = None):
         """
@@ -2751,7 +2871,7 @@ class JDSpecificATSService:
 
     def _analyze_repetitions_debug(self, resume_text: str) -> Dict[str, Any]:
         """
-        Analyze repetitions in resume text for debugging purposes - focusing only on action verbs and professional terms
+        Analyze repetitions in resume text for debugging purposes - using AI to detect ALL repeating words with caching
         
         Args:
             resume_text: Raw resume text to analyze
@@ -2759,32 +2879,40 @@ class JDSpecificATSService:
         Returns:
             Dictionary containing repetition analysis with debug information
         """
-        # Removed debug logging to reduce console output - analysis runs silently
+        # Create cache key based on resume text hash
+        import hashlib
+        cache_key = hashlib.md5(resume_text.encode()).hexdigest()
+        
+        # Check if we already have cached results for this resume
+        if cache_key in self._repetition_cache:
+            logger.info("🔄 Using cached repetition analysis results")
+            return self._repetition_cache[cache_key]
+        
+        logger.info("🎯 Performing comprehensive repetition analysis (caching results)")
         
         import re
         from collections import defaultdict, Counter
         
-        # Define action verbs and professional terms to focus on
-        action_verbs = {
-            'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered',
-            'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured',
-            'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained',
-            'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved',
-            'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified',
-            'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced',
-            'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed',
-            'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched',
-            'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received', 'utilized'
-        }
-        
-        professional_terms = {
-            'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced',
-            'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical',
-            'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined',
-            'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized',
-            'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform',
-            'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven'
-        }
+        # Use AI to detect ALL repeating words comprehensively
+        try:
+            comprehensive_analysis = _detect_all_repeating_words_with_ai(resume_text, self.client, self.model_name, self.temperature, self.top_p)
+            
+            # Extract action verbs and professional terms from comprehensive analysis
+            action_verbs = set(comprehensive_analysis.get("action_verbs", {}).keys())
+            professional_terms = set(comprehensive_analysis.get("professional_terms", {}).keys())
+            
+            # Also get all other repeating words for complete analysis
+            all_repeating_words = {}
+            for category in ["action_verbs", "professional_terms", "other"]:
+                for word, data in comprehensive_analysis.get(category, {}).items():
+                    all_repeating_words[word] = data.get("total_count", 0)
+            
+        except Exception as e:
+            logger.warning(f"⚠️ AI comprehensive detection failed in repetition analysis, using fallback: {e}")
+            # Fallback to comprehensive set
+            action_verbs = {'implemented', 'managed', 'developed', 'created', 'built', 'designed', 'led', 'executed', 'delivered', 'optimized', 'improved', 'enhanced', 'streamlined', 'automated', 'deployed', 'integrated', 'configured', 'maintained', 'monitored', 'analyzed', 'resolved', 'coordinated', 'collaborated', 'mentored', 'trained', 'established', 'initiated', 'launched', 'completed', 'achieved', 'increased', 'reduced', 'saved', 'transformed', 'migrated', 'upgraded', 'refactored', 'debugged', 'tested', 'validated', 'verified', 'documented', 'presented', 'communicated', 'facilitated', 'supervised', 'directed', 'guided', 'influenced', 'negotiated', 'planned', 'organized', 'scheduled', 'prioritized', 'evaluated', 'assessed', 'reviewed', 'recommended', 'proposed', 'suggested', 'identified', 'discovered', 'investigated', 'researched', 'studied', 'learned', 'acquired', 'gained', 'obtained', 'secured', 'earned', 'won', 'received', 'utilized'}
+            professional_terms = {'scalable', 'secure', 'efficient', 'robust', 'reliable', 'flexible', 'comprehensive', 'advanced', 'innovative', 'cutting-edge', 'state-of-the-art', 'high-performance', 'enterprise-grade', 'mission-critical', 'cost-effective', 'user-friendly', 'intuitive', 'seamless', 'integrated', 'automated', 'streamlined', 'optimized', 'enhanced', 'improved', 'upgraded', 'modernized', 'standardized', 'centralized', 'distributed', 'cloud-based', 'web-based', 'mobile-first', 'responsive', 'cross-platform', 'real-time', 'high-availability', 'fault-tolerant', 'load-balanced', 'microservices', 'api-driven'}
+            all_repeating_words = {}
         
         # Common words to ignore
         common_words = {
@@ -2865,6 +2993,10 @@ class JDSpecificATSService:
                 repetition_analysis["professional_term_repetitions"].items(), 
                 key=lambda x: x[1]
             )
+        
+        # Cache the results for future use
+        self._repetition_cache[cache_key] = repetition_analysis
+        logger.info(f"💾 Cached repetition analysis results for future use")
         
         return repetition_analysis
 

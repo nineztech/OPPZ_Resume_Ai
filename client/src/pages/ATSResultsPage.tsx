@@ -149,16 +149,59 @@ const ATSResultsPage: React.FC = () => {
     }
 
     const feedback = state.results.detailed_feedback;
-    return Object.entries(feedback).map(([key, section]) => ({
-      id: key,
-      title: section.title,
-      score: section.score,
-      description: section.description,
-      positives: section.positives || [],
-      negatives: section.negatives || [],
-      suggestions: section.suggestions || [],
-      isActive: activeSection === key
-    }));
+    
+    // Define expected categories for each analysis type
+    const standardCategories = [
+      'keyword_usage_placement',
+      'skills_match_alignment', 
+      'formatting_layout_ats',
+      'section_organization',
+      'achievements_impact_metrics',
+      'grammar_spelling_quality',
+      'header_consistency',
+      'clarity_brevity',
+      'repetition_avoidance',
+      'contact_information_completeness',
+      'resume_length_optimization'
+    ];
+
+    const jobSpecificCategories = [
+      'keyword_match_skills',
+      'experience_relevance',
+      'education_certifications', 
+      'achievements_impact',
+      'formatting_structure',
+      'soft_skills_match',
+      'repetition_avoidance',
+      'contact_information_completeness',
+      'resume_length_optimization'
+    ];
+
+    // Filter categories based on analysis type
+    const expectedCategories = state?.analysisType === 'job-specific' 
+      ? jobSpecificCategories 
+      : standardCategories;
+
+    const sections = Object.entries(feedback)
+      .filter(([key]) => expectedCategories.includes(key))
+      .map(([key, section]) => ({
+        id: key,
+        title: section.title || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        score: section.score || 0,
+        description: section.description || '',
+        positives: section.positives || [],
+        negatives: section.negatives || [],
+        suggestions: section.suggestions || [],
+        isActive: activeSection === key
+      }));
+
+    // Debug logging to help identify missing categories
+    console.log('Analysis type:', state?.analysisType);
+    console.log('Expected categories:', expectedCategories);
+    console.log('Available categories:', Object.keys(feedback));
+    console.log('Filtered sections:', sections.map(s => ({ id: s.id, title: s.title, score: s.score })));
+    
+    return sections;
   };
 
 
@@ -281,44 +324,87 @@ const ATSResultsPage: React.FC = () => {
         {/* Left Sidebar - Exactly like Resume Worded */}
         <div className="w-80 border-r border-gray-200 bg-gray-50 min-h-screen">
           <div className="p-6">
-            {/* Overall Score Circle */}
-            <div className="text-center mb-8">
-              <div className="relative inline-flex items-center justify-center w-32 h-32 mb-4">
-                <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 120 120">
-                  <circle
-                    cx="60"
-                    cy="60"
-                    r="50"
-                    fill="none"
-                    stroke="#e5e7eb"
-                    strokeWidth="8"
-                  />
-                  <circle
-                    cx="60"
-                    cy="60"
-                    r="50"
-                    fill="none"
-                    stroke={getScoreColor(currentScore)}
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    strokeDasharray={`${(currentScore / 100) * 314} 314`}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-4xl font-bold" style={{ color: getScoreColor(currentScore) }}>
-                      {currentScore}
-                    </div>
-                    <div className="text-sm text-gray-600 uppercase tracking-wide">
-                      OVERALL
+            {/* Overall Score Circle - Only show for standard ATS analysis */}
+            {state?.analysisType === 'standard' && (
+              <div className="text-center mb-8">
+                <div className="relative inline-flex items-center justify-center w-32 h-32 mb-4">
+                  <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 120 120">
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="50"
+                      fill="none"
+                      stroke="#e5e7eb"
+                      strokeWidth="8"
+                    />
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="50"
+                      fill="none"
+                      stroke={getScoreColor(currentScore)}
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(currentScore / 100) * 314} 314`}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-4xl font-bold" style={{ color: getScoreColor(currentScore) }}>
+                        {currentScore}
+                      </div>
+                      <div className="text-sm text-gray-600 uppercase tracking-wide">
+                        OVERALL
+                      </div>
                     </div>
                   </div>
                 </div>
+                <div className="text-sm text-gray-600 mb-2">
+                  This is your overall score, which is made up of all the checks below.
+                </div>
               </div>
-              <div className="text-sm text-gray-600 mb-2">
-                This is your overall score, which is made up of all the checks below.
+            )}
+
+            {/* Job Match Percentage - Only show for job-specific analysis */}
+            {state?.analysisType === 'job-specific' && state?.results && 'match_percentage' in state.results && (
+              <div className="text-center mb-8">
+                <div className="relative inline-flex items-center justify-center w-32 h-32 mb-4">
+                  <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 120 120">
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="50"
+                      fill="none"
+                      stroke="#e5e7eb"
+                      strokeWidth="8"
+                    />
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="50"
+                      fill="none"
+                      stroke={getScoreColor((state.results as JDSpecificATSResult).match_percentage)}
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                      strokeDasharray={`${((state.results as JDSpecificATSResult).match_percentage / 100) * 314} 314`}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-4xl font-bold" style={{ color: getScoreColor((state.results as JDSpecificATSResult).match_percentage) }}>
+                        {(state.results as JDSpecificATSResult).match_percentage}%
+                      </div>
+                      <div className="text-sm text-gray-600 uppercase tracking-wide">
+                        JOB MATCH
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-600 mb-2">
+                  How well your resume matches the job requirements.
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Top Fixes Section */}
             <div className="mb-8">
@@ -342,7 +428,7 @@ const ATSResultsPage: React.FC = () => {
                         />
                         <span className={`text-sm font-medium ${
                           section.isActive ? 'text-blue-800' : 'text-gray-700'
-                        }`}>{section.title}</span>
+                        }`}>{section.title || section.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <span 
@@ -351,7 +437,7 @@ const ATSResultsPage: React.FC = () => {
                           }`}
                           style={{ color: section.isActive ? '' : getScoreColor(section.score) }}
                         >
-                          {section.score}
+                          {section.score || 0}
                         </span>
                         <div 
                           className="w-1 h-1 rounded-full"
