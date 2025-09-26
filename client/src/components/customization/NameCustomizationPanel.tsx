@@ -52,23 +52,21 @@ const NameCustomizationPanel: React.FC<NameCustomizationPanelProps> = ({
         </label>
       </div>
 
-      {/* Boldness Dropdown - Only show when bold is selected */}
-      {nameCustomization.bold && (
-        <div className="mb-4">
-          <label className="block text-xs text-gray-600 mb-2">Font Weight</label>
-          <select
-            value={nameCustomization.fontWeight || 700}
-            onChange={(e) => updateNameCustomization({ fontWeight: parseInt(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="400">Normal (400)</option>
-            <option value="500">Medium (500)</option>
-            <option value="600">Semi Bold (600)</option>
-            <option value="700">Bold (700)</option>
-            <option value="800">Extra Bold (800)</option>
-          </select>
-        </div>
-      )}
+      {/* Boldness Dropdown */}
+      <div className="mb-4">
+        <label className="block text-xs text-gray-600 mb-2">Font Weight</label>
+        <select
+          value={nameCustomization.fontWeight || 700}
+          onChange={(e) => updateNameCustomization({ fontWeight: parseInt(e.target.value) })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+        >
+          <option value="400">Normal (400)</option>
+          <option value="500">Medium (500)</option>
+          <option value="600">Semi Bold (600)</option>
+          <option value="700">Bold (700)</option>
+          <option value="800">Extra Bold (800)</option>
+        </select>
+      </div>
 
 
       {/* Font Options */}

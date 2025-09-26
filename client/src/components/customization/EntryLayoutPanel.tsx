@@ -3,7 +3,6 @@ import React from 'react';
 interface EntryLayoutPanelProps {
   entryLayout: {
     layoutType: 'text-left-icons-right' | 'icons-left-text-right' | 'icons-text-icons' | 'two-lines';
-    titleSize: 'small' | 'medium' | 'large';
     subtitleStyle: 'normal' | 'bold' | 'italic';
     subtitlePlacement: 'same-line' | 'next-line';
     indentBody: boolean;
@@ -22,26 +21,6 @@ const EntryLayoutPanel: React.FC<EntryLayoutPanelProps> = ({
     <div className="bg-white rounded-lg p-4 border border-gray-200">
       <h4 className="text-sm font-medium text-gray-700 mb-4">Entry Layout</h4>
       
-      {/* Title & Subtitle Size */}
-      <div className="mb-4">
-        <label className="block text-xs text-gray-600 mb-2">Title & subtitle size</label>
-        <div className="flex gap-2">
-          {(['small', 'medium', 'large'] as const).map((size) => (
-            <button
-              key={size}
-              onClick={() => updateEntryLayout({ titleSize: size })}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                entryLayout.titleSize === size
-                  ? 'bg-purple-100 text-purple-700 border border-purple-300'
-                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              {size === 'small' ? 'S' : size === 'medium' ? 'M' : 'L'}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Subtitle Style */}
       <div className="mb-4">
         <label className="block text-xs text-gray-600 mb-2">Subtitle style</label>
@@ -100,26 +79,6 @@ const EntryLayoutPanel: React.FC<EntryLayoutPanelProps> = ({
         </div>
       </div>
 
-      {/* List Style */}
-      <div className="mb-4">
-        <label className="block text-xs text-gray-600 mb-2">List style</label>
-        <div className="flex gap-2">
-          {(['bullet', 'hyphen'] as const).map((style) => (
-            <button
-              key={style}
-              onClick={() => updateEntryLayout({ listStyle: style })}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                entryLayout.listStyle === style
-                  ? 'bg-purple-100 text-purple-700 border border-purple-300'
-                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              {style === 'bullet' ? '• Bullet' : '– Hyphen'}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Description Format */}
       <div className="mb-4">
         <label className="block text-xs text-gray-600 mb-2">Description</label>
@@ -139,6 +98,28 @@ const EntryLayoutPanel: React.FC<EntryLayoutPanelProps> = ({
           ))}
         </div>
       </div>
+
+      {/* List Style - Only show when points is selected */}
+      {entryLayout.descriptionFormat === 'points' && (
+        <div className="mb-4">
+          <label className="block text-xs text-gray-600 mb-2">List style</label>
+          <div className="flex gap-2">
+            {(['bullet', 'hyphen'] as const).map((style) => (
+              <button
+                key={style}
+                onClick={() => updateEntryLayout({ listStyle: style })}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  entryLayout.listStyle === style
+                    ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                    : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {style === 'bullet' ? '• Bullet' : '– Hyphen'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -126,6 +126,7 @@ interface CleanMinimalProps {
       size: 'xs' | 's' | 'm' | 'l' | 'xl';
       bold: boolean;
       font: 'body' | 'creative';
+      fontWeight?: number;
     };
     // Professional title customization
     titleCustomization?: {
@@ -162,6 +163,14 @@ interface CleanMinimalProps {
       };
       sectionSpacing: number;
       lineHeight: number;
+    };
+    // Section headings customization
+    sectionHeadings?: {
+      style: 'left-align-underline' | 'center-align-underline' | 'center-align-no-line' | 'box-style' | 'double-line' | 'left-extended' | 'wavy-line';
+      alignment: 'left' | 'center' | 'right';
+      showUnderline: boolean;
+      underlineStyle: 'solid' | 'dashed' | 'dotted' | 'double' | 'wavy';
+      underlineColor: string;
     };
   };
 }
@@ -336,16 +345,6 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
   ];
 
   // Helper functions for entry layout
-  const getTitleSize = () => {
-    const entryLayout = customization?.entryLayout;
-    const sizes = {
-      small: '10px',
-      medium: '11px',
-      large: '12px'
-    };
-    return sizes[entryLayout?.titleSize || 'medium'];
-  };
-
   const getSubtitleStyle = () => {
     const entryLayout = customization?.entryLayout;
     return {
@@ -376,6 +375,9 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
 
   const getNameFontWeight = () => {
     const nameCustomization = customization?.nameCustomization;
+    if (nameCustomization?.fontWeight) {
+      return nameCustomization.fontWeight.toString();
+    }
     return nameCustomization?.bold ? 'bold' : 'normal';
   };
 
@@ -436,12 +438,14 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
 
   const orderedSections = sectionOrder || defaultSectionOrder;
 
-  // Function to render sections in order
-  const renderOrderedSections = () => {
-    const sectionComponents: { [key: string]: React.ReactElement } = {
-      'summary': (
-        <div key="summary" style={{ position: 'relative', marginBottom: 'var(--section-spacing)' }}>
-          <h2 className="text-left font-bold mb-0 uppercase" style={{ 
+  // Helper function to render section headings based on customization
+  const renderSectionHeading = (title: string) => {
+    const headingStyle = customization?.sectionHeadings;
+    if (!headingStyle) {
+      // Default heading style
+      return (
+        <>
+          <h2 className="text-left mb-0 uppercase" style={{ 
             fontSize: 'var(--font-size-headers)',
             fontWeight: 'var(--font-weight-headers)',
             fontFamily: 'var(--font-family-header)',
@@ -449,9 +453,219 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
             lineHeight: '2.5',
             color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
           }}>
-            SUMMARY
+            {title}
           </h2>
           <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--border-color)' }}></div>
+        </>
+      );
+    }
+
+    const getAlignmentClass = () => {
+      switch (headingStyle.alignment) {
+        case 'center': return 'text-center';
+        case 'right': return 'text-right';
+        default: return 'text-left';
+      }
+    };
+
+    const getUnderlineStyle = () => {
+      if (!headingStyle.showUnderline) return 'none';
+      
+      const color = headingStyle.underlineColor || 'var(--border-color)';
+      switch (headingStyle.underlineStyle) {
+        case 'dashed': return `2px dashed ${color}`;
+        case 'dotted': return `2px dotted ${color}`;
+        case 'double': return `2px double ${color}`;
+        case 'wavy': return `2px wavy ${color}`;
+        default: return `2px solid ${color}`;
+      }
+    };
+
+    const renderHeadingContent = () => {
+      switch (headingStyle.style) {
+        case 'left-align-underline':
+          return (
+            <>
+              <h2 className={`${getAlignmentClass()} mb-0 uppercase`} style={{ 
+                fontSize: 'var(--font-size-headers)',
+                fontWeight: 'var(--font-weight-headers)',
+                fontFamily: 'var(--font-family-header)',
+                letterSpacing: '0.5px',
+                lineHeight: '2.5',
+                color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+              }}>
+                {title}
+              </h2>
+              {headingStyle.showUnderline && (
+                <div className="w-full -mt-2 mb-2" style={{ 
+                  borderTop: getUnderlineStyle(),
+                  height: '0'
+                }}></div>
+              )}
+            </>
+          );
+
+        case 'center-align-underline':
+          return (
+            <>
+              <h2 className={`${getAlignmentClass()} mb-0 uppercase`} style={{ 
+                fontSize: 'var(--font-size-headers)',
+                fontWeight: 'var(--font-weight-headers)',
+                fontFamily: 'var(--font-family-header)',
+                letterSpacing: '0.5px',
+                lineHeight: '2.5',
+                color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+              }}>
+                {title}
+              </h2>
+              {headingStyle.showUnderline && (
+                <div className="w-full -mt-2 mb-2" style={{ 
+                  borderTop: getUnderlineStyle(),
+                  height: '0'
+                }}></div>
+              )}
+            </>
+          );
+
+        case 'center-align-no-line':
+          return (
+            <h2 className={`${getAlignmentClass()} mb-2 uppercase`} style={{ 
+              fontSize: 'var(--font-size-headers)',
+              fontWeight: 'var(--font-weight-headers)',
+              fontFamily: 'var(--font-family-header)',
+              letterSpacing: '0.5px',
+              lineHeight: '2.5',
+              color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+            }}>
+              {title}
+            </h2>
+          );
+
+        case 'box-style':
+          return (
+            <div className="rounded-md p-0 mb-2" style={{
+              backgroundColor: '#f3f4f6',
+              border: 'none'
+            }}>
+              <h2 className="text-center mb-0 uppercase" style={{ 
+                fontSize: 'var(--font-size-headers)',
+                fontWeight: 'var(--font-weight-headers)',
+                fontFamily: 'var(--font-family-header)',
+                letterSpacing: '0.5px',
+                lineHeight: '2.5',
+                color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+              }}>
+                {title}
+              </h2>
+            </div>
+          );
+
+        case 'double-line':
+          return (
+            <>
+              <div className="w-full mb-1" style={{ 
+                borderTop: getUnderlineStyle(),
+                height: '0'
+              }}></div>
+              <h2 className={`${getAlignmentClass()} mb-0 uppercase`} style={{ 
+                fontSize: 'var(--font-size-headers)',
+                fontWeight: 'var(--font-weight-headers)',
+                fontFamily: 'var(--font-family-header)',
+                letterSpacing: '0.5px',
+                lineHeight: '2.5',
+                color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+              }}>
+                {title}
+              </h2>
+              <div className="w-full -mt-1 mb-2" style={{ 
+                borderTop: getUnderlineStyle(),
+                height: '0'
+              }}></div>
+            </>
+          );
+
+        case 'left-extended':
+          return (
+            <>
+              <div className="flex items-center mb-2">
+                <div className="w-4 h-1 mr-2" style={{
+                  backgroundColor: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--border-color)',
+                  borderRadius: '2px'
+                }}></div>
+                <h2 className="mb-0 uppercase" style={{ 
+                  fontSize: 'var(--font-size-headers)',
+                  fontWeight: 'var(--font-weight-headers)',
+                  fontFamily: 'var(--font-family-header)',
+                  letterSpacing: '0.5px',
+                  lineHeight: '2.5',
+                  color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+                }}>
+                  {title}
+                </h2>
+                <div className="flex-1 ml-2" style={{ 
+                  borderTop: getUnderlineStyle(),
+                  height: '0'
+                }}></div>
+              </div>
+            </>
+          );
+
+        case 'wavy-line':
+          return (
+            <>
+              <h2 className={`${getAlignmentClass()} mb-0 uppercase`} style={{ 
+                fontSize: 'var(--font-size-headers)',
+                fontWeight: 'var(--font-weight-headers)',
+                fontFamily: 'var(--font-family-header)',
+                letterSpacing: '0.5px',
+                lineHeight: '2.5',
+                color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+              }}>
+                {title}
+              </h2>
+              {headingStyle.showUnderline && (
+                <div className="-mt-2 mb-2" style={{ 
+                  borderTop: getUnderlineStyle(),
+                  height: '0',
+                  width: 'fit-content'
+                }}></div>
+              )}
+            </>
+          );
+
+        default:
+          return (
+            <>
+              <h2 className={`${getAlignmentClass()} mb-0 uppercase`} style={{ 
+                fontSize: 'var(--font-size-headers)',
+                fontWeight: 'var(--font-weight-headers)',
+                fontFamily: 'var(--font-family-header)',
+                letterSpacing: '0.5px',
+                lineHeight: '2.5',
+                color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
+              }}>
+                {title}
+              </h2>
+              {headingStyle.showUnderline && (
+                <div className="w-full -mt-2 mb-2" style={{ 
+                  borderTop: getUnderlineStyle(),
+                  height: '0'
+                }}></div>
+              )}
+            </>
+          );
+      }
+    };
+
+    return renderHeadingContent();
+  };
+
+  // Function to render sections in order
+  const renderOrderedSections = () => {
+    const sectionComponents: { [key: string]: React.ReactElement } = {
+      'summary': (
+        <div key="summary" style={{ position: 'relative', marginBottom: 'var(--section-spacing)' }}>
+          {renderSectionHeading('SUMMARY')}
           <div className="ml-0 mt-0 mb-0 p-0" >
             <div className="text-sm" style={{ 
               fontSize: 'var(--font-size-body)',
@@ -470,17 +684,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
       ),
       'skills': (
         <div key="skills" style={{ marginBottom: 'var(--section-spacing)' }}>
-          <h2 className="text-left font-bold mb-0 uppercase" style={{ 
-            fontSize: 'var(--font-size-headers)',
-            fontWeight: 'var(--font-weight-headers)',
-            fontFamily: 'var(--font-family-header)',
-            letterSpacing: '0.5px',
-            lineHeight: '2.5',
-            color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
-          }}>
-            TECHNICAL SKILLS
-          </h2>
-          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--border-color)' }}></div>
+          {renderSectionHeading('TECHNICAL SKILLS')}
           <div className="space-y-0">
             {templateData.skills?.technical && templateData.skills.technical !== null && templateData.skills.technical !== undefined ? (
               typeof templateData.skills.technical === 'object' && !Array.isArray(templateData.skills.technical) ? (
@@ -500,7 +704,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                       lineHeight: 'var(--line-height)',
                       color: 'var(--text-color)'
                     }}>
-                      <span className="font-bold" style={{ fontWeight: 'var(--font-weight-headers)', color: 'var(--header-color)', fontSize: 'var(--font-size-subheader)' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
+                      <span className="" style={{ fontWeight: 'var(--font-weight-headers)', color: 'var(--header-color)', fontSize: 'var(--font-size-subheader)' }}>{category}:</span> {skillsArray.filter(skill => skill && typeof skill === 'string').join(', ')}
                     </div>
                   );
                 }).filter(Boolean) // Remove null entries
@@ -518,7 +722,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                         lineHeight: 'var(--line-height)',
                         color: 'var(--text-color)'
                       }}>
-                        <span className="font-bold" style={{ fontWeight: 'var(--font-weight-headers)', color: 'var(--header-color)', fontSize: 'var(--font-size-subheader)' }}>{key.trim()}:</span> {value.trim()}
+                        <span className="" style={{ fontWeight: 'var(--font-weight-headers)', color: 'var(--header-color)', fontSize: 'var(--font-size-subheader)' }}>{key.trim()}:</span> {value.trim()}
                       </div>
                     );
                   } else {
@@ -561,22 +765,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
       ),
       'experience': (
         <div key="experience" style={{ marginBottom: 'var(--section-spacing)' }}>
-          <h2 className="text-left font-bold  uppercase" style={{ 
-            fontSize: 'var(--font-size-headers)',
-            fontWeight: 'var(--font-weight-headers)',
-            fontFamily: 'var(--font-family-header)',
-            lineHeight: '2.5',  
-            letterSpacing: '0.5px',
-            color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
-          }}>
-            PROFESSIONAL EXPERIENCE
-          </h2>
-          <div className="w-full border-t-2 -mt-2 mb-0" style={{ borderColor: 'var(--border-color)' }}></div>
-          <div className="-space-y-2">
+          {renderSectionHeading('PROFESSIONAL EXPERIENCE')}
+          <div className="-space-y-2 -mt-3">
             {Array.isArray(templateData.experience) && templateData.experience.length > 0 ? (
               templateData.experience.map((exp, index) => {
                 const entryLayout = customization?.entryLayout;
-                const titleSize = getTitleSize();
                 const subtitleStyle = getSubtitleStyle();
                 const descriptionStyle = getDescriptionStyle();
                 const layoutType = getEntryLayout();
@@ -615,11 +808,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                   switch (layoutType) {
                     case 'text-left-icons-right':
                       return (
-                        <div className="flex justify-between items-start">
+                        <div className="flex justify-between  items-start">
                           <div className="flex-1">
                             {shouldShowSubtitleOnSameLine ? (
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }} >
-                                <h3 className="font-bold" style={{ 
+                                <h3 className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -637,7 +830,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               </div>
                             ) : (
                               <>
-                                <h3 className="font-bold" style={{ 
+                                <h3 className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -660,13 +853,14 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                             )}
                           </div>
                           <div className="flex items-center gap-2 ml-2">
-                            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                            <div className="font-bold text-right" style={{ 
-                              fontSize: titleSize,
+                            <div className="w-3  h-3 bg-gray-400 rounded-full"></div>
+                            <div className=" text-right" style={{ 
+                              fontSize: 'var(--font-size-subheader)',
                               fontWeight: 'var(--font-weight-headers)',
+                              fontFamily: 'var(--font-family-header)',
                               letterSpacing: '0.2px'
                             }}>
-                              <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
+                              <span className="" style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
                                 {exp.dates || 'Start Date - End Date'}
                               </span>
                             </div>
@@ -682,7 +876,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                             <div className="flex-1">
                               {shouldShowSubtitleOnSameLine ? (
                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                  <h3 className="font-bold" style={{ 
+                                  <h3 className="" style={{ 
                                     fontSize: 'var(--font-size-subheader)',
                                     fontWeight: 'var(--font-weight-headers)',
                                     letterSpacing: '0.3px',
@@ -700,7 +894,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                                 </div>
                               ) : (
                                 <>
-                                  <h3 className="font-bold" style={{ 
+                                  <h3 className="" style={{ 
                                     fontSize: 'var(--font-size-subheader)',
                                     fontWeight: 'var(--font-weight-headers)',
                                     letterSpacing: '0.3px',
@@ -722,9 +916,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               )}
                             </div>
                           </div>
-                          <div className="font-bold text-right mt-2" style={{ 
-                            fontSize: titleSize,
+                          <div className="text-right mt-2" style={{ 
+                            fontSize: 'var(--font-size-subheader)',
                             fontWeight: 'var(--font-weight-headers)',
+                            fontFamily: 'var(--font-family-header)',
                             letterSpacing: '0.2px'
                           }}>
                             <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
@@ -741,7 +936,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                           <div className="flex-1 mx-2">
                             {shouldShowSubtitleOnSameLine ? (
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                <h3 className="font-bold" style={{ 
+                                <h3 className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -759,7 +954,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               </div>
                             ) : (
                               <>
-                                <h3 className="font-bold" style={{ 
+                                <h3 className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -782,9 +977,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="font-bold text-right" style={{ 
-                              fontSize: titleSize,
+                            <div className="text-right" style={{ 
+                              fontSize: 'var(--font-size-subheader)',
                               fontWeight: 'var(--font-weight-headers)',
+                              fontFamily: 'var(--font-family-header)',
                               letterSpacing: '0.2px'
                             }}>
                               <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
@@ -803,7 +999,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                           <div className="flex-1">
                             {shouldShowSubtitleOnSameLine ? (
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                <h3 className="font-bold" style={{ 
+                                <h3 className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -821,7 +1017,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               </div>
                             ) : (
                               <>
-                                <h3 className="font-bold" style={{ 
+                                <h3 className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -843,9 +1039,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               </>
                             )}
                           </div>
-                          <div className="font-bold text-right mt-2" style={{ 
-                            fontSize: titleSize,
+                          <div className="text-right mt-2" style={{ 
+                            fontSize: 'var(--font-size-subheader)',
                             fontWeight: 'var(--font-weight-headers)',
+                            fontFamily: 'var(--font-family-header)',
                             letterSpacing: '0.2px'
                           }}>
                             <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
@@ -934,22 +1131,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
       ),
       'projects': (
         <div key="projects" style={{ marginBottom: 'var(--section-spacing)' }}>
-          <h2 className="text-left font-bold mb-0 uppercase" style={{ 
-            fontSize: 'var(--font-size-headers)',
-            fontWeight: 'var(--font-weight-headers)',
-            fontFamily: 'var(--font-family-header)',
-            letterSpacing: '0.5px',
-            lineHeight: '2.5',  
-            color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
-          }}>
-            PROJECTS
-          </h2>
-          <div className="w-full border-t-2 -mt-2 mb-0" style={{ borderColor: 'var(--border-color)' }}></div>
-          <div className="-space-y-2 -mt-1">
+          {renderSectionHeading('PROJECTS')}
+          <div className="-space-y-2 -mt-3">
             {Array.isArray(templateData.projects) && templateData.projects.length > 0 ? (
               templateData.projects.map((project, index) => {
                 const entryLayout = customization?.entryLayout;
-                const titleSize = getTitleSize();
                 const subtitleStyle = getSubtitleStyle();
                 const descriptionStyle = getDescriptionStyle();
                 const layoutType = getEntryLayout();
@@ -966,7 +1152,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                           <div className="flex-1 ">
                             {shouldShowSubtitleOnSameLine ? (
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                <h3 className="font-bold" style={{ 
+                                <h3 className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -986,7 +1172,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               </div>
                             ) : (
                               <>
-                                <h3 className="font-bold" style={{ 
+                                <h3 className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -1007,9 +1193,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                           </div>
                           <div className="flex items-center gap-2 ml-2">
                             <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                            <div className="font-bold" style={{ 
-                              fontSize: titleSize,
+                            <div className="" style={{ 
+                              fontSize: 'var(--font-size-subheader)',
                               fontWeight: 'var(--font-weight-headers)',
+                              fontFamily: 'var(--font-family-header)',
                               letterSpacing: '0.2px'
                             }}>
                               {(project.Start_Date || project.End_Date) ? (
@@ -1040,8 +1227,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                             <div className="flex-1">
                               {shouldShowSubtitleOnSameLine ? (
                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                  <h3 className="font-bold" style={{ 
-                                    fontSize: titleSize,
+                                  <h3 className="" style={{ 
+                                    fontSize: 'var(--font-size-subheader)',
                                     fontWeight: 'var(--font-weight-headers)',
                                     letterSpacing: '0.3px',
                                     color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
@@ -1060,8 +1247,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                                 </div>
                               ) : (
                                 <>
-                                  <h3 className="font-bold" style={{ 
-                                    fontSize: titleSize,
+                                  <h3 className="" style={{ 
+                                    fontSize: 'var(--font-size-subheader)',
                                     fontWeight: 'var(--font-weight-headers)',
                                     letterSpacing: '0.3px',
                                     color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
@@ -1080,8 +1267,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               )}
                             </div>
                           </div>
-                          <div className="font-bold" style={{ 
-                            fontSize: titleSize,
+                          <div className="" style={{ 
+                            fontSize: 'var(--font-size-subheader)',
                             fontWeight: 'var(--font-weight-headers)',
                             letterSpacing: '0.2px'
                           }}>
@@ -1111,7 +1298,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                           <div className="flex-1 mx-2">
                             {shouldShowSubtitleOnSameLine ? (
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                <h3 className="font-bold" style={{ 
+                                <h3 className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -1131,7 +1318,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               </div>
                             ) : (
                               <>
-                                <h3 className="font-bold" style={{ 
+                                <h3 className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -1151,9 +1338,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="font-bold" style={{ 
-                              fontSize: titleSize,
+                            <div className="" style={{ 
+                              fontSize: 'var(--font-size-subheader)',
                               fontWeight: 'var(--font-weight-headers)',
+                              fontFamily: 'var(--font-family-header)',
                               letterSpacing: '0.2px'
                             }}>
                               {(project.Start_Date || project.End_Date) ? (
@@ -1184,7 +1372,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                           <div className="flex items-center gap-2">
                             {shouldShowSubtitleOnSameLine ? (
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                <h3 className="font-bold" style={{ 
+                                <h3 className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -1204,7 +1392,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               </div>
                             ) : (
                               <>
-                                <h3 className="font-bold" style={{ 
+                                <h3 className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -1223,8 +1411,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               </>
                             )}
                           </div>
-                          <div className="font-bold" style={{ 
-                            fontSize: titleSize,
+                          <div className="" style={{ 
+                            fontSize: 'var(--font-size-subheader)',
                             fontWeight: 'var(--font-weight-headers)',
                             letterSpacing: '0.2px'
                           }}>
@@ -1319,22 +1507,11 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
       ),
       'education': (
         <div key="education" style={{ marginBottom: 'var(--section-spacing)' }}>
-          <h2 className="text-left font-bold uppercase" style={{ 
-            fontSize: 'var(--font-size-headers)',
-            fontWeight: 'var(--font-weight-headers)',
-            fontFamily: 'var(--font-family-header)',
-            lineHeight: '2.5',  
-            letterSpacing: '0.5px',
-            color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
-          }}>
-            EDUCATION
-          </h2>
-          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--border-color)' }}></div>
+          {renderSectionHeading('EDUCATION')}
           <div className="space-y-0">
             {Array.isArray(templateData.education) && templateData.education.length > 0 ? (
               templateData.education.map((edu, index) => {
                 const entryLayout = customization?.entryLayout;
-                const titleSize = getTitleSize();
                 const subtitleStyle = getSubtitleStyle();
                 const layoutType = getEntryLayout();
                 
@@ -1350,7 +1527,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                           <div className="flex-1">
                             {shouldShowSubtitleOnSameLine ? (
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                <div className="font-bold" style={{ 
+                                <div className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -1372,7 +1549,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               </div>
                             ) : (
                               <>
-                                <div className="font-bold" style={{ 
+                                <div className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -1396,9 +1573,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                           </div>
                           <div className="flex items-center gap-2 ml-2">
                             <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                            <div className="font-bold" style={{ 
-                              fontSize: titleSize,
+                            <div className="" style={{ 
+                              fontSize: 'var(--font-size-subheader)',
                               fontWeight: 'var(--font-weight-headers)',
+                              fontFamily: 'var(--font-family-header)',
                               letterSpacing: '0.2px'
                             }}>
                               <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
@@ -1417,8 +1595,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                             <div className="flex-1">
                               {shouldShowSubtitleOnSameLine ? (
                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                  <div className="font-bold" style={{ 
-                                    fontSize: titleSize,
+                                  <div className="" style={{ 
+                                    fontSize: 'var(--font-size-subheader)',
                                     fontWeight: 'var(--font-weight-headers)',
                                     letterSpacing: '0.3px',
                                     color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)',
@@ -1439,8 +1617,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                                 </div>
                               ) : (
                                 <>
-                                  <div className="font-bold" style={{ 
-                                    fontSize: titleSize,
+                                  <div className="" style={{ 
+                                    fontSize: 'var(--font-size-subheader)',
                                     fontWeight: 'var(--font-weight-headers)',
                                     letterSpacing: '0.3px',
                                     color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
@@ -1462,8 +1640,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               )}
                             </div>
                           </div>
-                          <div className="font-bold" style={{ 
-                            fontSize: titleSize,
+                          <div className="" style={{ 
+                            fontSize: 'var(--font-size-subheader)',
                             fontWeight: 'var(--font-weight-headers)',
                             letterSpacing: '0.2px'
                           }}>
@@ -1481,7 +1659,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                           <div className="flex-1 mx-2">
                             {shouldShowSubtitleOnSameLine ? (
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                <div className="font-bold" style={{ 
+                                <div className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -1503,7 +1681,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               </div>
                             ) : (
                               <>
-                                <div className="font-bold" style={{ 
+                                <div className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -1526,9 +1704,10 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="font-bold" style={{ 
-                              fontSize: titleSize,
+                            <div className="" style={{ 
+                              fontSize: 'var(--font-size-subheader)',
                               fontWeight: 'var(--font-weight-headers)',
+                              fontFamily: 'var(--font-family-header)',
                               letterSpacing: '0.2px'
                             }}>
                               <span style={{ color: customization?.applyAccentTo?.dates ? 'var(--accent-color)' : 'var(--text-color)' }}>
@@ -1547,7 +1726,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                           <div>
                             {shouldShowSubtitleOnSameLine ? (
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                <div className="font-bold" style={{ 
+                                <div className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -1569,7 +1748,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               </div>
                             ) : (
                               <>
-                                <div className="font-bold" style={{ 
+                                <div className="" style={{ 
                                   fontSize: 'var(--font-size-subheader)',
                                   fontWeight: 'var(--font-weight-headers)',
                                   letterSpacing: '0.3px',
@@ -1591,8 +1770,8 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                               </>
                             )}
                           </div>
-                          <div className="font-bold" style={{ 
-                            fontSize: titleSize,
+                          <div className="" style={{ 
+                            fontSize: 'var(--font-size-subheader)',
                             fontWeight: 'var(--font-weight-headers)',
                             letterSpacing: '0.2px'
                           }}>
@@ -1615,7 +1794,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
               // Show placeholder when no education entries
               <div className="flex justify-between items-start" style={{ marginBottom: '6px' }}>
                 <div>
-                  <div className="font-bold" style={{ 
+                  <div className="" style={{ 
                     fontSize: 'var(--font-size-body)',
                     fontWeight: 'var(--font-weight-headers)',
                     letterSpacing: '0.3px',
@@ -1628,7 +1807,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                     Degree/Program
                   </div>
                 </div>
-                <div className="font-bold" style={{ 
+                <div className="" style={{ 
                   fontSize: 'var(--font-size-body)',
                   fontWeight: 'var(--font-weight-headers)',
                   letterSpacing: '0.2px',
@@ -1644,17 +1823,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
       ),
       'certifications': (
         <div key="certifications" style={{ marginBottom: 'var(--section-spacing)' }}>
-          <h2 className="text-left font-bold mb-0 mt-4 uppercase" style={{ 
-            fontSize: 'var(--font-size-headers)',
-            fontWeight: 'var(--font-weight-headers)',
-            fontFamily: 'var(--font-family-header)',
-            letterSpacing: '0.5px',
-            lineHeight: '2.5',  
-            color: customization?.applyAccentTo?.headings ? 'var(--accent-color)' : 'var(--header-color)'
-          }}>
-            CERTIFICATIONS
-          </h2>
-          <div className="w-full border-t-2 -mt-2 mb-2" style={{ borderColor: customization?.applyAccentTo?.dotsBarsBubbles ? 'var(--accent-color)' : 'var(--border-color)' }}></div>
+          {renderSectionHeading('CERTIFICATIONS')}
           <div className="space-y-0">
             {Array.isArray(templateData.certifications) && templateData.certifications.length > 0 ? (
               templateData.certifications.map((cert, index) => (
@@ -1676,7 +1845,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                     </div>
                   </div>
                   {cert.issueDate ? (
-                    <div className="font-bold" style={{ 
+                    <div className="" style={{ 
                       fontSize: 'var(--font-size-body)',
                       fontWeight: 'var(--font-weight-headers)',
                       letterSpacing: '0.2px'
@@ -1684,7 +1853,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                       {cert.issueDate}
                     </div>
                   ) : (
-                    <div className="font-bold" style={{ 
+                    <div className="" style={{ 
                       fontSize: 'var(--font-size-body)',
                       fontWeight: 'var(--font-weight-headers)',
                       letterSpacing: '0.2px',
@@ -1709,7 +1878,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
                     <span style={{ fontWeight: 'var(--font-weight-headers)', fontSize: 'var(--font-size-subheader)' }}>Certificate Name</span> - <span style={{ color: '#666666' }}>Issuing Organization</span>
                   </div>
                 </div>
-                <div className="font-bold" style={{ 
+                <div className="" style={{ 
                   fontSize: 'var(--font-size-body)',
                   fontWeight: 'var(--font-weight-headers)',
                   letterSpacing: '0.2px',
@@ -1788,9 +1957,9 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
     '--font-size-headers': `${typography.fontSize.headers}px`,
     '--font-size-body': `${typography.fontSize.body}px`,
     '--font-size-subheader': `${typography.fontSize.subheader}px`,
-    '--font-weight-name': typography.fontWeight.name,
-    '--font-weight-headers': typography.fontWeight.headers,
-    '--font-weight-body': typography.fontWeight.body,
+    '--font-weight-name': typography.fontWeight.name.toString(),
+    '--font-weight-headers': typography.fontWeight.headers.toString(),
+    '--font-weight-body': typography.fontWeight.body.toString(),
     '--section-spacing': `${layout.sectionSpacing}px`,
     '--line-height': layout.lineHeight,
     fontFamily: typography.fontFamily.body,
@@ -1804,14 +1973,24 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
   } as React.CSSProperties;
 
   return (
-    <div className="max-w-4xl mx-auto px-2 mt-0 bg-white" style={customStyles}>
+    <div className="max-w-4xl mx-auto px-2 mt-0 bg-white" style={{
+      ...customStyles,
+      border: customization?.colorMode === 'border' ? '2px solid var(--accent-color)' : 'none',
+      borderRadius: customization?.colorMode === 'border' ? '8px' : '0',
+      padding: customization?.colorMode === 'border' ? '20px' : '0'
+    }}>
       {/* Header */}
-      <div className="text-center mb-0 -mt-4">
+      <div className="text-center mb-0 -mt-4" style={{
+        backgroundColor: customization?.colorMode === 'advanced' ? 'var(--accent-color)' : 'transparent',
+        padding: customization?.colorMode === 'advanced' ? '20px' : '0',
+        borderRadius: customization?.colorMode === 'advanced' ? '8px' : '0',
+        marginBottom: customization?.colorMode === 'advanced' ? '20px' : '0'
+      }}>
         {templateData.personalInfo && (
           <>
             {shouldShowTitleBelow() ? (
               <>
-                <h1 className="text-2xl py-0 my-0 -mb-3 font-bold" style={{
+                <h1 className="text-2xl py-0 my-0 -mb-3" style={{
                   fontSize: getNameSize(),
                   fontWeight: getNameFontWeight(),
                   fontFamily: getNameFontFamily(),
@@ -1832,7 +2011,7 @@ const ResumePDF: React.FC<CleanMinimalProps> = ({ data, color, visibleSections, 
               </>
             ) : (
               <div className="flex items-center justify-center gap-1 -mb-3">
-                <h1 className="font-bold" style={{
+                <h1 className="" style={{
                   fontSize: getNameSize(),
                   fontWeight: getNameFontWeight(),
                   fontFamily: getNameFontFamily(),

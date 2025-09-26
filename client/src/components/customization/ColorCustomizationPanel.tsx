@@ -13,7 +13,7 @@ const colorPalettes = [
 ];
 
 const predefinedColors = [
-  '#ffffff', '#0f766e', '#0d9488', '#14b8a6', '#0f766e', '#64748b', '#3b82f6', '#2563eb', '#1d4ed8', '#3b82f6', '#93c5fd', '#1e40af', '#7c3aed', '#a21caf', '#ec4899', '#f97316', '#000000', 'multi'
+  '#ffffff', '#495963', '#547980', '#93B7BE', '#348AA7', '#355C7D', '#386FA4', '#6798C0', '#59A5D8', '#84D2F6', '#432371', '#672D50', '#C06C84', '#a21caf', '#C06C84', '#C7417B','#F45B69', '#000000', 'multi'
 ];
 
 interface ColorCustomizationPanelProps {

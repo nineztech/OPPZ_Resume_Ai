@@ -39,11 +39,11 @@ import { ContentEnhancementModal } from '@/components/modals/ContentEnhancementM
 import ColorCustomizationPanel from '@/components/customization/ColorCustomizationPanel';
 import TypographyCustomizationPanel from '@/components/customization/TypographyCustomizationPanel';
 import LayoutCustomizationPanel from '@/components/customization/LayoutCustomizationPanel';
-import PresetThemesPanel from '@/components/customization/PresetThemesPanel';
 import SectionVisibilityOrderPanel from '@/components/customization/SectionVisibilityOrderPanel';
 import EntryLayoutPanel from '@/components/customization/EntryLayoutPanel';
 import NameCustomizationPanel from '@/components/customization/NameCustomizationPanel';
 import ProfessionalTitleCustomizationPanel from '@/components/customization/ProfessionalTitleCustomizationPanel';
+import SectionHeadingsPanel from '@/components/customization/SectionHeadingsPanel';
 import { generatePDF, downloadPDF } from '@/services/pdfService';
 
 // Helper function to extract tech stack from project description
@@ -353,7 +353,6 @@ const ResumeBuilderPage = () => {
     // Entry layout customization
     entryLayout: {
       layoutType: 'two-lines' as 'text-left-icons-right' | 'icons-left-text-right' | 'icons-text-icons' | 'two-lines',
-      titleSize: 'medium' as 'small' | 'medium' | 'large',
       subtitleStyle: 'normal' as 'normal' | 'bold' | 'italic',
       subtitlePlacement: 'same-line' as 'same-line' | 'next-line',
       indentBody: false,
@@ -364,7 +363,8 @@ const ResumeBuilderPage = () => {
     nameCustomization: {
       size: 'm' as 'xs' | 's' | 'm' | 'l' | 'xl',
       bold: true,
-      font: 'body' as 'body' | 'creative'
+      font: 'body' as 'body' | 'creative',
+      fontWeight: 700
     },
     // Professional title customization
     titleCustomization: {
@@ -382,9 +382,9 @@ const ResumeBuilderPage = () => {
       fontSize: {
         name: 22,
         title: 14,
-        headers: 13,
+        headers: 12,
         body: 12,
-        subheader: 12
+        subheader: 10
       },
       fontWeight: {
         name: 700,
@@ -396,6 +396,14 @@ const ResumeBuilderPage = () => {
       margins: { top: 0, bottom: 0, left: 8, right: 8 },
       sectionSpacing: 0,
       lineHeight: 1.2
+    },
+    // Section headings customization
+    sectionHeadings: {
+      style: 'left-align-underline' as 'left-align-underline' | 'center-align-underline' | 'center-align-no-line' | 'box-style' | 'double-line' | 'left-extended' | 'wavy-line',
+      alignment: 'left' as 'left' | 'center' | 'right',
+      showUnderline: true,
+      underlineStyle: 'solid' as 'solid' | 'dashed' | 'dotted' | 'double' | 'wavy',
+      underlineColor: '#000000'
     }
   });
   
@@ -440,6 +448,14 @@ const ResumeBuilderPage = () => {
     setCustomization(prev => ({
       ...prev,
       titleCustomization: { ...prev.titleCustomization, ...updates }
+    }));
+  };
+
+  // Update section headings function
+  const updateSectionHeadings = (updates: any) => {
+    setCustomization(prev => ({
+      ...prev,
+      sectionHeadings: { ...prev.sectionHeadings, ...updates }
     }));
   };
 
@@ -2758,6 +2774,12 @@ const ResumeBuilderPage = () => {
                   titleCustomization={customization.titleCustomization} 
                   updateTitleCustomization={updateTitleCustomization} 
                 />
+
+                {/* Section Headings */}
+                <SectionHeadingsPanel 
+                  sectionHeadings={customization.sectionHeadings} 
+                  updateSectionHeadings={updateSectionHeadings} 
+                />
                 
                 {/* Typography */}
                 <TypographyCustomizationPanel 
@@ -2775,12 +2797,6 @@ const ResumeBuilderPage = () => {
                 <EntryLayoutPanel 
                   entryLayout={customization.entryLayout} 
                   updateEntryLayout={updateEntryLayout} 
-                />
-                
-                {/* Preset Themes */}
-                <PresetThemesPanel 
-                  customization={customization} 
-                  updateCustomization={updateCustomization} 
                 />
 
                   {/* FlowCV-style Colors Panel */}
@@ -2830,7 +2846,6 @@ const ResumeBuilderPage = () => {
                           // Entry layout customization
                           entryLayout: {
                             layoutType: 'two-lines' as 'text-left-icons-right' | 'icons-left-text-right' | 'icons-text-icons' | 'two-lines',
-                            titleSize: 'medium' as 'small' | 'medium' | 'large',
                             subtitleStyle: 'normal' as 'normal' | 'bold' | 'italic',
                             subtitlePlacement: 'same-line' as 'same-line' | 'next-line',
                             indentBody: false,
@@ -2841,7 +2856,8 @@ const ResumeBuilderPage = () => {
                           nameCustomization: {
                             size: 'm' as 'xs' | 's' | 'm' | 'l' | 'xl',
                             bold: true,
-                            font: 'body' as 'body' | 'creative'
+                            font: 'body' as 'body' | 'creative',
+                            fontWeight: 700
                           },
                           // Professional title customization
                           titleCustomization: {
@@ -2859,9 +2875,9 @@ const ResumeBuilderPage = () => {
                             fontSize: {
                               name: 22,
                               title: 14,
-                              headers: 13,
+                              headers: 12,
                               body: 11,
-                              subheader: 12
+                              subheader: 10
                             },
                             fontWeight: {
                               name: 700,
@@ -2873,6 +2889,14 @@ const ResumeBuilderPage = () => {
                             margins: { top: 0, bottom: 0, left: 8, right: 8 },
                             sectionSpacing: 16,
                             lineHeight: 1.3
+                          },
+                          // Section headings customization
+                          sectionHeadings: {
+                            style: 'left-align-underline' as 'left-align-underline' | 'center-align-underline' | 'center-align-no-line' | 'box-style' | 'double-line' | 'left-extended' | 'wavy-line',
+                            alignment: 'left' as 'left' | 'center' | 'right',
+                            showUnderline: true,
+                            underlineStyle: 'solid' as 'solid' | 'dashed' | 'dotted' | 'double' | 'wavy',
+                            underlineColor: '#000000'
                           }
                         });
                       }}

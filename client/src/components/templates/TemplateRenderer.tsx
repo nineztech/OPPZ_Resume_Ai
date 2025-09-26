@@ -105,6 +105,12 @@ interface TemplateRendererProps {
       borderColor: string;
       headerColor: string;
     };
+    nameCustomization?: {
+      size: 'xs' | 's' | 'm' | 'l' | 'xl';
+      bold: boolean;
+      font: 'body' | 'creative';
+      fontWeight?: number;
+    };
     typography: {
       fontFamily: {
         header: string;
