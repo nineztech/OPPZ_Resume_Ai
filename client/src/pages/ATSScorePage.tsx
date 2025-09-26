@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { atsService } from '@/services/atsService';
 import type { ATSAnalysisResult, JDSpecificATSResult } from '@/services/atsService';
 import PDFViewer, { type ATSIssue } from '@/components/ui/pdf-viewer';
+import ATSLoadingPage from '@/components/ui/ATSLoadingPage';
 
 const ATSScorePage: React.FC = () => {
   const navigate = useNavigate();
@@ -23,6 +24,8 @@ const ATSScorePage: React.FC = () => {
   const [jobResults, setJobResults] = useState<JDSpecificATSResult | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [jdDragActive, setJdDragActive] = useState(false);
+  const [showLoadingPage, setShowLoadingPage] = useState(false);
+  const [analysisData, setAnalysisData] = useState<any>(null);
   const { toast } = useToast();
 
   // Convert ATS analysis results to visual issues for highlighting
@@ -317,19 +320,26 @@ const ATSScorePage: React.FC = () => {
       }
     }
 
+    // Show loading page immediately
+    setShowLoadingPage(true);
     setIsAnalyzing(true);
 
+    // Perform analysis in background
+    performAnalysis();
+  };
+
+  const performAnalysis = async () => {
     try {
       let fileContent: string | undefined;
       try {
-        fileContent = await extractFileContent(selectedFile);
+        fileContent = await extractFileContent(selectedFile!);
       } catch (error) {
         console.log('Could not extract file content for preview:', error);
       }
 
       // Parse resume first to get structured data
       console.log('Starting resume parsing...');
-      const parseResponse = await atsService.parseResume(selectedFile);
+      const parseResponse = await atsService.parseResume(selectedFile!);
       let parsedResumeData = null;
       
       console.log('Parse response:', parseResponse);
@@ -346,48 +356,40 @@ const ATSScorePage: React.FC = () => {
         } as any);
       }
 
+      let response;
       if (analysisType === 'standard') {
-        const response = await atsService.analyzeResumeStandard(selectedFile);
+        response = await atsService.analyzeResumeStandard(selectedFile!);
         if (response.success && response.data) {
           setStandardResults(response.data);
-          
-          // Navigate to results page with data
-          navigate('/resume/ats-results', {
-            state: {
-              results: response.data,
-              analysisType: 'standard',
-              fileName: selectedFile.name,
-              fileContent: response.data.extracted_text || fileContent,
-              originalFile: selectedFile,
-              parsedResumeData: parsedResumeData
-            }
+          setAnalysisData({
+            results: response.data,
+            analysisType: 'standard',
+            fileName: selectedFile!.name,
+            fileContent: response.data.extracted_text || fileContent,
+            originalFile: selectedFile!,
+            parsedResumeData: parsedResumeData
           });
         } else {
           throw new Error(response.error || 'Analysis failed');
         }
       } else {
-        let response;
         if (jdInputType === 'text') {
-          response = await atsService.analyzeResumeForJob(selectedFile, jobDescription);
+          response = await atsService.analyzeResumeForJob(selectedFile!, jobDescription);
         } else {
-          response = await atsService.analyzeResumeForJobFile(selectedFile, jobDescriptionFile!);
+          response = await atsService.analyzeResumeForJobFile(selectedFile!, jobDescriptionFile!);
         }
         
         if (response.success && response.data) {
           setJobResults(response.data);
-          
-          // Navigate to results page with data
-          navigate('/resume/ats-results', {
-            state: {
-              results: response.data,
-              analysisType: 'job-specific',
-              fileName: selectedFile.name,
-              fileContent: response.data.extracted_text || fileContent,
-              originalFile: selectedFile,
-              parsedResumeData: parsedResumeData,
-              jdInputType: jdInputType,
-              jdFileName: jdInputType === 'file' ? jobDescriptionFile?.name : undefined
-            }
+          setAnalysisData({
+            results: response.data,
+            analysisType: 'job-specific',
+            fileName: selectedFile!.name,
+            fileContent: response.data.extracted_text || fileContent,
+            originalFile: selectedFile!,
+            parsedResumeData: parsedResumeData,
+            jdInputType: jdInputType,
+            jdFileName: jdInputType === 'file' ? jobDescriptionFile?.name : undefined
           });
         } else {
           throw new Error(response.error || 'Analysis failed');
@@ -399,8 +401,17 @@ const ATSScorePage: React.FC = () => {
         description: error instanceof Error ? error.message : 'Something went wrong. Please try again.',
         variant: 'destructive'
       } as any);
+      setShowLoadingPage(false);
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleLoadingComplete = () => {
+    if (analysisData) {
+      navigate('/resume/ats-results', {
+        state: analysisData
+      });
     }
   };
 
@@ -1172,7 +1183,16 @@ const ATSScorePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <>
+      {showLoadingPage ? (
+        <ATSLoadingPage
+          fileName={selectedFile?.name || 'Resume'}
+          analysisType={analysisType}
+          onComplete={handleLoadingComplete}
+          isAnalysisComplete={!!analysisData}
+        />
+      ) : (
+        <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -1432,17 +1452,10 @@ const ATSScorePage: React.FC = () => {
             size="lg"
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
           >
-            {isAnalyzing ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Analyzing Resume...
-              </>
-            ) : (
-              <>
-                <Zap className="w-4 h-4 mr-2" />
-                Analyze Resume
-              </>
-            )}
+            <>
+              <Zap className="w-4 h-4 mr-2" />
+              Analyze Resume
+            </>
           </Button>
         </motion.div>
         {/* Enhanced ATS Requirements & Score Improvement Info */}
@@ -1540,6 +1553,8 @@ const ATSScorePage: React.FC = () => {
         {analysisType === 'job-specific' && jobResults && renderJobResults()}
       </div>
     </div>
+      )}
+    </>
   );
 };
 
