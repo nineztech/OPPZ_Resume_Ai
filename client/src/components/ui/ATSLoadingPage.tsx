@@ -31,49 +31,49 @@ const ATSLoadingPage: React.FC<ATSLoadingPageProps> = ({ fileName, analysisType,
       title: 'Parsing Resume',
       description: 'Extracting text and structure from your resume',
       icon: <FileText className="w-6 h-6" />,
-      duration: 6000
+      duration: 15000
     },
     {
       id: 'analyze-summary',
       title: 'Analyzing Summary',
       description: 'Evaluating professional summary and objectives',
       icon: <Search className="w-6 h-6" />,
-      duration: 5500
+      duration: 18000
     },
     {
       id: 'analyze-experience',
       title: 'Analyzing Experience',
       description: 'Reviewing work history and achievements',
       icon: <BarChart3 className="w-6 h-6" />,
-      duration: 7000
+      duration: 20000
     },
     {
       id: 'analyze-skills',
       title: 'Analyzing Skills',
       description: 'Evaluating technical and soft skills',
       icon: <Target className="w-6 h-6" />,
-      duration: 5000
+      duration: 15000
     },
     {
       id: 'ats-scoring',
       title: 'ATS Scoring',
       description: 'Calculating compatibility scores',
       icon: <Zap className="w-6 h-6" />,
-      duration: 6500
+      duration: 20000
     },
     {
       id: 'generating-suggestions',
       title: 'Generating Suggestions',
       description: 'Creating personalized recommendations',
       icon: <Brain className="w-6 h-6" />,
-      duration: 6000
+      duration: 18000
     },
     {
       id: 'finalizing',
       title: 'Finalizing Report',
       description: 'Preparing your detailed analysis',
       icon: <TrendingUp className="w-6 h-6" />,
-      duration: 4000
+      duration: 10000
     }
   ];
 
