@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FileText, Sparkles, ArrowRight, Upload, CheckCircle, Building2, Globe, User, ArrowLeft } from 'lucide-react';
 import countryList from 'react-select-country-list';
-import { geminiParserService } from '@/services/geminiParserService';
+import AILoadingComponent from '@/components/ui/AILoadingComponent';
 
 const ResumeProcessingPage = () => {
   const navigate = useNavigate();
@@ -24,16 +24,18 @@ const ResumeProcessingPage = () => {
   const [designation, setDesignation] = useState('');
   const [countries] = useState(() => countryList().getData());
   const [aiUploadedFile, setAiUploadedFile] = useState<File | null>(uploadedFile || null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isAIActivated, setIsAIActivated] = useState(directToAI || false);
-  const [loadingTexts] = useState([
-    "You're almost there! 🚀",
-    "Our AI is analyzing your resume...",
-    "Finding the perfect suggestions for you...",
-    "Crafting personalized recommendations...",
-    "Almost ready to transform your career! ✨"
-  ]);
-  const [currentLoadingText, setCurrentLoadingText] = useState(0);
+  const [showAILoading, setShowAILoading] = useState(false);
+
+  // Pre-populate AI form if coming from error
+  useEffect(() => {
+    if (directToAI && location.state) {
+      const { sector: prevSector, country: prevCountry, designation: prevDesignation } = location.state;
+      if (prevSector) setSector(prevSector);
+      if (prevCountry) setCountry(prevCountry);
+      if (prevDesignation) setDesignation(prevDesignation);
+    }
+  }, [directToAI, location.state]);
 
   // Redirect back if no template data and not coming from direct AI flow
   useEffect(() => {
@@ -89,63 +91,8 @@ const ResumeProcessingPage = () => {
     const params = { sector, country, designation };
 
     if (aiUploadedFile) {
-      // Process with AI suggestions
-      setIsProcessing(true);
-      setCurrentLoadingText(0);
-      
-      // Start the loading text animation
-      const textInterval = setInterval(() => {
-        setCurrentLoadingText(prev => {
-          if (prev < loadingTexts.length - 1) {
-            return prev + 1;
-          }
-          return prev;
-        });
-      }, 5000);
-
-      try {
-        // Simulate processing steps with delays
-        await new Promise(resolve => setTimeout(resolve, 1500)); // First text
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Second text
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Third text
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Fourth text
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Fifth text
-        
-        // Actual AI processing
-        const results = await geminiParserService.getAISuggestions(aiUploadedFile, params.sector, params.country, params.designation);
-        
-        clearInterval(textInterval);
-        
-        // Navigate to AI suggestions page with results
-        const jobDescription = {
-          jobTitle: `${params.designation} in ${params.sector}`,
-          sector: params.sector,
-          country: params.country
-        };
-        
-        navigate('/resume/ai-suggestions', {
-          state: {
-            suggestions: results.suggestions || {},
-            jobDescription,
-            sector: params.sector,
-            country: params.country,
-            designation: params.designation,
-            aiResults: results,
-            resumeFile: aiUploadedFile || undefined,
-            // Add template info for returning to builder
-            templateId,
-            selectedColor,
-            extractedData
-          }
-        });
-      } catch (error) {
-        clearInterval(textInterval);
-        console.error('AI processing error:', error);
-        alert('Failed to process resume with AI. Please try again.');
-      } finally {
-        setIsProcessing(false);
-        setCurrentLoadingText(0);
-      }
+      // Show AI loading component instead of navigating
+      setShowAILoading(true);
     } else {
       // Continue without resume
       navigate("/resume/builder", { 
@@ -159,51 +106,49 @@ const ResumeProcessingPage = () => {
     }
   };
 
+  const handleAILoadingComplete = (results: any) => {
+    // Navigate to AI suggestions with real results
+    navigate('/resume/ai-suggestions', {
+      state: results
+    });
+  };
+
+  const handleAILoadingError = (error: any) => {
+    console.error('AI processing error:', error);
+    
+    // Show error message to user instead of navigating with empty data
+    alert('AI processing failed. Please try again or contact support if the issue persists.');
+    
+    // Hide loading and go back to form
+    setShowAILoading(false);
+  };
+
   const isFormValid = sector && country && designation;
-  const canContinue = isFormValid && !isProcessing;
+  const canContinue = isFormValid;
 
   if (!templateId && !directToAI) {
     return null; // Will redirect in useEffect
   }
 
+  // Show AI loading component if loading
+  if (showAILoading && aiUploadedFile) {
+    return (
+      <AILoadingComponent
+        uploadedFile={aiUploadedFile}
+        sector={sector}
+        country={country}
+        designation={designation}
+        templateId={templateId}
+        selectedColor={selectedColor}
+        extractedData={extractedData}
+        onComplete={handleAILoadingComplete}
+        onError={handleAILoadingError}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Loading Overlay */}
-      {isProcessing && (
-        <div className="fixed inset-0 z-50 bg-white/80 backdrop-blur-sm flex items-center justify-center">
-          <div className="text-center space-y-4 max-w-sm mx-auto px-6">
-            {/* Spinner */}
-            <div className="relative flex justify-center">
-              <div className="w-12 h-12 border-3 border-purple-200 rounded-full"></div>
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-12 h-12 border-3 border-purple-600 rounded-full border-t-transparent"></div>
-            </div>
-            
-            {/* Loading Text */}
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-gray-900">Processing with AI...</h3>
-              <div className="min-h-[3rem] flex items-center justify-center">
-                <p className="text-base text-purple-600 font-medium">
-                  {loadingTexts[currentLoadingText]}
-                </p>
-              </div>
-            </div>
-            
-            {/* Progress Dots */}
-            <div className="flex justify-center space-x-2">
-              {loadingTexts.map((_, index) => (
-                <div
-                  key={index}
-                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                    index <= currentLoadingText 
-                      ? 'bg-purple-600' 
-                      : 'bg-purple-200'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div className="w-full px-4 py-4">
@@ -331,7 +276,6 @@ const ResumeProcessingPage = () => {
                         onChange={handleFileUpload}
                         className="hidden"
                         id="resume-upload"
-                        disabled={isProcessing}
                       />
                       <label
                         htmlFor="resume-upload"
@@ -371,7 +315,6 @@ const ResumeProcessingPage = () => {
                       onChange={(e) => setSector(e.target.value)}
                       placeholder="e.g., Technology, Healthcare, Finance"
                       className="w-full py-1.5"
-                      disabled={isProcessing}
                     />
                   </div>
 
@@ -387,7 +330,6 @@ const ResumeProcessingPage = () => {
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
                       className="w-full px-2 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100 text-sm"
-                      disabled={isProcessing}
                     >
                       <option value="">Select a country</option>
                       {countries.map((countryOption: any) => (
@@ -411,7 +353,6 @@ const ResumeProcessingPage = () => {
                       onChange={(e) => setDesignation(e.target.value)}
                       placeholder="e.g., Software Engineer, Marketing Manager"
                       className="w-full py-1.5"
-                      disabled={isProcessing}
                     />
                   </div>
 
@@ -423,19 +364,10 @@ const ResumeProcessingPage = () => {
                     disabled={!canContinue}
                     className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed py-1.5"
                   >
-                    {isProcessing ? (
-                      <>
-                        <div className="w-3 h-3 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-3 h-3 mr-2" />
-                        {aiUploadedFile ? 'Continue with AI Analysis' : 'Continue with AI'}
-                      </>
-                    )}
+                    <Sparkles className="w-3 h-3 mr-2" />
+                    {aiUploadedFile ? 'Continue with AI Analysis' : 'Continue with AI'}
                   </Button>
-                  {aiUploadedFile && !isProcessing && (
+                  {aiUploadedFile && (
                     <p className="text-xs text-center text-gray-500 mt-1">
                       Your resume will be analyzed and compared with job requirements
                     </p>
